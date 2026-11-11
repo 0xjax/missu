@@ -51,9 +51,8 @@ export default function AccountScreen() {
   };
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} style={[styles.screen, { backgroundColor: theme.background }]}>
+    <SafeAreaView edges={['bottom']} style={[styles.screen, { backgroundColor: theme.background }]}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <ThemedText type="subtitle">我的</ThemedText>
         {!ready && <ActivityIndicator color={theme.text} style={styles.state} />}
         {ready && !user && (
           <View style={styles.form}>

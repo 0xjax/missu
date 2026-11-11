@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -58,7 +58,8 @@ export default function HomeScreen() {
   };
 
   const submitSearch = (query: string) => {
-    router.push({ pathname: '/latest', params: { query, source: '/new', title: '' } });
+    // NOTE: typed routes 对目录 index 的生成不稳定，运行时 '/latest' 才是列表页。
+    router.push({ pathname: '/latest', params: { query, source: '/new', title: '' } } as unknown as Href);
   };
 
   const retry = () => {
@@ -68,12 +69,11 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} style={[styles.screen, { backgroundColor: theme.background }]}>
+    <SafeAreaView edges={['bottom']} style={[styles.screen, { backgroundColor: theme.background }]}>
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
-        <ThemedText type="subtitle">MissAV</ThemedText>
         <SearchBox value={input} onChangeText={setInput} onSearch={submitSearch} />
         {loading && <ActivityIndicator color={theme.text} style={styles.state} />}
         {error && (
@@ -97,7 +97,7 @@ export default function HomeScreen() {
             <View style={styles.sectionHeader}>
               <ThemedText type="headline">{section.title}</ThemedText>
               {section.morePath && (
-                <Pressable accessibilityRole="button" hitSlop={8} onPress={() => router.push({ pathname: '/latest', params: { source: section.morePath, title: section.title, query: '' } })}>
+                <Pressable accessibilityRole="button" hitSlop={8} onPress={() => router.push({ pathname: '/latest', params: { source: section.morePath, title: section.title, query: '' } } as unknown as Href)}>
                   <ThemedText type="small" themeColor="textSecondary">更多</ThemedText>
                 </Pressable>
               )}

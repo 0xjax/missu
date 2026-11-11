@@ -1,4 +1,4 @@
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
 
@@ -52,7 +52,7 @@ export default function SavedScreen() {
           ) : !user ? (
             <>
               <ThemedText themeColor="textSecondary">登录后查看云端收藏</ThemedText>
-              <Pressable accessibilityRole="button" onPress={() => router.push('/account')} style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
+              <Pressable accessibilityRole="button" onPress={() => router.push('/account' as Href)} style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
                 <ThemedText type="smallBold">前往登录</ThemedText>
               </Pressable>
             </>

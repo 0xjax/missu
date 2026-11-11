@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Snackbar } from 'react-native-paper';
@@ -45,7 +45,7 @@ export default function VideoDetailScreen() {
   const toggleSaved = async () => {
     if (!detail?.internalId) return;
     if (!user) {
-      router.push('/account');
+      router.push('/account' as Href);
       return;
     }
     setSaving(true);

@@ -119,7 +119,7 @@ export default function DiscoverScreen() {
   };
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} style={[styles.screen, { backgroundColor: theme.background }]}>
+    <SafeAreaView edges={['bottom']} style={[styles.screen, { backgroundColor: theme.background }]}>
       <FlatList
         contentContainerStyle={styles.content}
         columnWrapperStyle={styles.row}
@@ -142,7 +142,6 @@ export default function DiscoverScreen() {
         ListFooterComponent={loadingMore ? <ActivityIndicator color={theme.text} /> : undefined}
         ListHeaderComponent={(
           <View style={styles.header}>
-            <ThemedText type="subtitle">发现</ThemedText>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.choices}>
               {tabs.map((item) => (
                 <Chip key={item.id} compact selected={tab === item.id} onPress={() => {

@@ -37,7 +37,7 @@ export default function HistoryScreen() {
   };
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} style={[styles.screen, { backgroundColor: theme.background }]}>
+    <SafeAreaView edges={['bottom']} style={[styles.screen, { backgroundColor: theme.background }]}>
       <FlatList
         contentContainerStyle={styles.content}
         columnWrapperStyle={styles.row}
@@ -50,7 +50,6 @@ export default function HistoryScreen() {
         )}
         ListHeaderComponent={(
           <View style={styles.header}>
-            <ThemedText type="subtitle">观看历史</ThemedText>
             {videos.length > 0 && (
               <Pressable accessibilityRole="button" onPress={confirmClear} style={[styles.clear, { backgroundColor: theme.backgroundElement }]}>
                 <ThemedText type="smallBold">清空历史</ThemedText>

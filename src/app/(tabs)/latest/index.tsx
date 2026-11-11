@@ -142,7 +142,6 @@ function LatestView({ params }: { params: LatestParams }) {
 
   const header = (
     <View style={styles.header}>
-      <ThemedText type="subtitle">MissAV</ThemedText>
       <SearchBox value={input} onChangeText={(nextInput) => {
         setInput(nextInput);
         if (!nextInput.trim() && keyword) {
@@ -201,7 +200,7 @@ function LatestView({ params }: { params: LatestParams }) {
   );
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} style={[styles.screen, { backgroundColor: theme.background }]}>
+    <SafeAreaView edges={['bottom']} style={[styles.screen, { backgroundColor: theme.background }]}>
       <FlatList
         contentContainerStyle={styles.content}
         columnWrapperStyle={styles.row}
