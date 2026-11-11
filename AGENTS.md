@@ -2,6 +2,8 @@
 
 Expo SDK 58 + React Native + TypeScript + Expo Router；源码在 `src/`，文件路由在 `src/app/`。
 
+Design context @DESIGN.md
+
 包管理用 **bun**，NEVER npm/npx/pnpm。
 
 ```bash
@@ -21,6 +23,7 @@ bunx expo export --platform android
 
 ## Code Constraints
 
+- 仅适配 Android（设计与验收均以 Android 真机为准）；iOS / Web 不为交付目标，不新增平台专属实现。
 - Comment tags: `CRITICAL` = errors/crashes/data-loss; `WARNING` = risks/edge cases/side effects; `TODO` = incomplete work/tech debt; `NOTE` = non-obvious design decisions.
 - Round to business precision before float compare/accumulate/chain; NEVER raw `===` or epsilon.
 - 代码注释与提交信息用中文；提交信息遵循 Conventional Commits。
@@ -50,4 +53,4 @@ bunx expo export --platform android
 
 - 类型检查：`bun check`；Lint：`bun run lint`。
 - Android 生产 JS 打包：`bunx expo export --platform android`；除非明确要求原生构建，NEVER 使用 Gradle。
-- After structural changes, update stale descriptions in AGENTS.md proactively.
+- After structural changes, update stale descriptions in AGENTS.md and DESIGN.md proactively.
