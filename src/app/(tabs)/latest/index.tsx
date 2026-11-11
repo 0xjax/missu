@@ -149,7 +149,8 @@ function LatestView({ params }: { params: LatestParams }) {
   const filterChoices = [
     {
       key: 'filter',
-      text: `筛选 · ${filterLabel}`,
+      // NOTE: 触发器只显示当前选项值；维度由按钮位置表达，不再加「筛选 / 排序」前缀。
+      text: filterLabel,
       value: filter ?? NO_FILTER,
       options: filterOptions,
       onChange: (value: string) => {
@@ -159,7 +160,7 @@ function LatestView({ params }: { params: LatestParams }) {
     },
     {
       key: 'sort',
-      text: `排序 · ${sortLabel}`,
+      text: sortLabel,
       value: sort ?? NO_SORT,
       options: sortOptions,
       onChange: (value: string) => {
