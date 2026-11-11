@@ -37,7 +37,14 @@ export type DirectoryList = {
   nextPage: number | null;
 };
 
-export type VideoFilter = 'individual' | 'multiple' | 'chinese-subtitle';
+export type VideoFilter =
+  | 'individual'
+  | 'multiple'
+  | 'chinese-subtitle'
+  | 'jav'
+  | 'asiaav'
+  | 'uncensored-leak'
+  | 'uncensored';
 export type VideoSort = 'released_at' | 'published_at' | 'saved' | 'today_views' | 'weekly_views' | 'monthly_views' | 'views';
 export type VideoQuery = {
   page?: number;

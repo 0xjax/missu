@@ -4,12 +4,10 @@ import {
   ActivityIndicator,
   FlatList,
   Pressable,
-  ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Chip } from 'react-native-paper';
 
 import {
   getVideos,
@@ -23,25 +21,11 @@ import {
 import { SearchBox } from '@/components/search-box';
 import { ThemedText } from '@/components/themed-text';
 import { VideoCard } from '@/components/video-card';
+import { VideoFilterBar } from '@/components/video-filter-bar';
 import { Radius, Spacing, TabBarInset } from '@/constants/theme';
+import { SEARCH_FILTER_OPTIONS, VIDEO_FILTER_OPTIONS } from '@/constants/video-options';
 import { useTheme } from '@/hooks/use-theme';
 
-const filters: { label: string; value?: VideoFilter }[] = [
-  { label: '全部' },
-  { label: '单人作品', value: 'individual' },
-  { label: '多人作品', value: 'multiple' },
-  { label: '中文字幕', value: 'chinese-subtitle' },
-];
-const sorts: { label: string; value?: VideoSort }[] = [
-  { label: '默认' },
-  { label: '发行日期', value: 'released_at' },
-  { label: '最近更新', value: 'published_at' },
-  { label: '收藏数', value: 'saved' },
-  { label: '今日浏览', value: 'today_views' },
-  { label: '本周浏览', value: 'weekly_views' },
-  { label: '本月浏览', value: 'monthly_views' },
-  { label: '总浏览量', value: 'views' },
-];
 const sourceTitles: Record<string, string> = {
   '/new': '最近更新',
   '/release': '新作上市',
@@ -85,7 +69,7 @@ function LatestView({ params }: { params: LatestParams }) {
     const controller = new AbortController();
     let active = true;
     const request = keyword
-      ? searchVideos(keyword, {}, controller.signal)
+      ? searchVideos(keyword, { filters: filter, sort }, controller.signal)
       : getVideos(source, { filters: filter, sort }, controller.signal);
     request.then((result) => {
       if (!active) return;
@@ -108,7 +92,7 @@ function LatestView({ params }: { params: LatestParams }) {
     setError(undefined);
     try {
       const result = keyword
-        ? await searchVideos(keyword)
+        ? await searchVideos(keyword, { filters: filter, sort })
         : await getVideos(source, { filters: filter, sort });
       setVideos(result.videos);
       setNextPage(result.nextPage);
@@ -146,6 +130,7 @@ function LatestView({ params }: { params: LatestParams }) {
         setInput(nextInput);
         if (!nextInput.trim() && keyword) {
           beginRequest();
+          setFilter(undefined);
           setKeyword('');
         }
       }} onSearch={(nextKeyword) => {
@@ -154,35 +139,25 @@ function LatestView({ params }: { params: LatestParams }) {
           return;
         }
         beginRequest();
+        setFilter(undefined);
         setKeyword(nextKeyword);
       }} />
       <ThemedText type="smallBold">
         {keyword ? `搜索：${keyword}` : params.title || sourceTitles[source] || '视频列表'}
       </ThemedText>
-      {!keyword && (
-        <>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.choices}>
-            {filters.map((item) => (
-              <Chip key={item.label} compact selected={filter === item.value} onPress={() => {
-                beginRequest();
-                setFilter(item.value);
-              }} style={[styles.choice, { backgroundColor: filter === item.value ? theme.accent : theme.backgroundElement }]} textStyle={{ color: filter === item.value ? theme.onAccent : theme.text }}>
-                {item.label}
-              </Chip>
-            ))}
-          </ScrollView>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.choices}>
-            {sorts.map((item) => (
-              <Chip key={item.label} compact selected={sort === item.value} onPress={() => {
-                beginRequest();
-                setSort(item.value);
-              }} style={[styles.choice, { backgroundColor: sort === item.value ? theme.accent : theme.backgroundElement }]} textStyle={{ color: sort === item.value ? theme.onAccent : theme.text }}>
-                {item.label}
-              </Chip>
-            ))}
-          </ScrollView>
-        </>
-      )}
+      <VideoFilterBar
+        filter={filter}
+        filters={keyword ? SEARCH_FILTER_OPTIONS : VIDEO_FILTER_OPTIONS}
+        onFilterChange={(value) => {
+          beginRequest();
+          setFilter(value);
+        }}
+        onSortChange={(value) => {
+          beginRequest();
+          setSort(value);
+        }}
+        sort={sort}
+      />
     </View>
   );
 
@@ -247,14 +222,6 @@ const styles = StyleSheet.create({
   header: {
     gap: Spacing.md,
     marginBottom: Spacing.xl,
-  },
-  choices: {
-    gap: Spacing.sm,
-  },
-  choice: {
-    borderRadius: Radius.sm,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
   },
   initialState: {
     alignItems: 'center',
