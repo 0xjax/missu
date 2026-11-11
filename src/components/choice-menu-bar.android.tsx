@@ -51,7 +51,9 @@ export function ChoiceMenuBar({ choices }: { choices: Choice[] }) {
               <DropdownMenu.Items>
                 {choice.options.map((option) => (
                   <DropdownMenuItem
-                    elementColors={option.value === choice.value ? { textColor: theme.accent } : undefined}
+                    // NOTE: 两项都显式传色——只给选中项传对象、其余传 undefined 时，
+                    // 原生视图复用会让上一次的强调色留在旧项上。
+                    elementColors={{ textColor: option.value === choice.value ? theme.accent : theme.text }}
                     key={option.value}
                     onClick={() => {
                       setOpenKey(undefined);

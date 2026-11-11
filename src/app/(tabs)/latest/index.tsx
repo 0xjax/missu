@@ -76,8 +76,9 @@ function LatestView({ params }: { params: LatestParams }) {
     label: item.label,
     value: item.value ?? NO_SORT,
   }));
-  const filterLabel = filter ? filterOptions.find((item) => item.value === filter)?.label : undefined;
-  const sortLabel = sort ? sortOptions.find((item) => item.value === sort)?.label : undefined;
+  // NOTE: 触发器始终显示当前选项（含默认的「全部 / 默认」），否则收起时看不出选中了哪个。
+  const filterLabel = filterOptions.find((item) => item.value === (filter ?? NO_FILTER))?.label ?? '全部';
+  const sortLabel = sortOptions.find((item) => item.value === (sort ?? NO_SORT))?.label ?? '默认';
 
   const beginRequest = useCallback(() => {
     setLoading(true);
@@ -148,7 +149,7 @@ function LatestView({ params }: { params: LatestParams }) {
   const filterChoices = [
     {
       key: 'filter',
-      text: filterLabel ? `筛选 · ${filterLabel}` : '筛选',
+      text: `筛选 · ${filterLabel}`,
       value: filter ?? NO_FILTER,
       options: filterOptions,
       onChange: (value: string) => {
@@ -158,7 +159,7 @@ function LatestView({ params }: { params: LatestParams }) {
     },
     {
       key: 'sort',
-      text: sortLabel ? `排序 · ${sortLabel}` : '排序',
+      text: `排序 · ${sortLabel}`,
       value: sort ?? NO_SORT,
       options: sortOptions,
       onChange: (value: string) => {
