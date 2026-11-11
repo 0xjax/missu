@@ -8,6 +8,7 @@ import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { OfflineBanner } from '@/components/offline-banner';
 import { Colors } from '@/constants/theme';
 import { AuthProvider } from '@/stores/auth';
+import { LanguageProvider } from '@/stores/language';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -25,22 +26,25 @@ export default function RootLayout() {
       <PaperProvider theme={paperTheme}>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <AuthProvider>
-            <AnimatedSplashOverlay />
-            <Stack screenOptions={{
-              contentStyle: { backgroundColor: colors.background },
-              headerStyle: { backgroundColor: colors.background },
-              headerTintColor: colors.text,
-            }}>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="login" options={{ title: '登录' }} />
-              <Stack.Screen name="saved" options={{ title: '我的收藏' }} />
-              <Stack.Screen name="history" options={{ title: '观看历史' }} />
-              <Stack.Screen name="playlists/index" options={{ title: '我的片单' }} />
-              <Stack.Screen name="playlists/[id]" options={{ title: '片单' }} />
-              <Stack.Screen name="settings" options={{ title: '设置' }} />
-              <Stack.Screen name="video/[id]" options={{ title: '视频详情' }} />
-            </Stack>
-            <OfflineBanner />
+            <LanguageProvider>
+              <AnimatedSplashOverlay />
+              <Stack screenOptions={{
+                contentStyle: { backgroundColor: colors.background },
+                headerStyle: { backgroundColor: colors.background },
+                headerTintColor: colors.text,
+              }}>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="login" options={{ title: '登录' }} />
+                <Stack.Screen name="saved" options={{ title: '我的收藏' }} />
+                <Stack.Screen name="history" options={{ title: '观看历史' }} />
+                <Stack.Screen name="playlists/index" options={{ title: '我的片单' }} />
+                <Stack.Screen name="playlists/[id]" options={{ title: '片单' }} />
+                <Stack.Screen name="settings" options={{ title: '设置' }} />
+                <Stack.Screen name="language" options={{ title: '内容语言' }} />
+                <Stack.Screen name="video/[id]" options={{ title: '视频详情' }} />
+              </Stack>
+              <OfflineBanner />
+            </LanguageProvider>
           </AuthProvider>
         </ThemeProvider>
       </PaperProvider>

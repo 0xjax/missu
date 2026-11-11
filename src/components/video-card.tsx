@@ -7,10 +7,10 @@ import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-// NOTE: 角标文案来自卡片 HTML；颜色只按语义分档，不做标签白名单。
+// NOTE: 角标文案来自卡片 HTML，且随内容语言变化（中文字幕 / Uncensored）；颜色只按语义分档，不做标签白名单。
 const badgeBackground = (label: string) => {
-  if (label.includes('字幕')) return 'rgba(153, 27, 27, 0.85)';
-  if (label.includes('碼') || label.includes('码')) return 'rgba(30, 64, 175, 0.85)';
+  if (/字幕|subtitle/i.test(label)) return 'rgba(153, 27, 27, 0.85)';
+  if (/碼|码|uncensored/i.test(label)) return 'rgba(30, 64, 175, 0.85)';
   return 'rgba(31, 41, 55, 0.85)';
 };
 

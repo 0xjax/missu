@@ -34,6 +34,7 @@ import {
   VIDEO_SORT_OPTIONS,
 } from '@/constants/video-options';
 import { useTheme } from '@/hooks/use-theme';
+import { useLanguage } from '@/stores/language';
 
 type Tab = 'hot' | 'genres' | 'actresses' | 'makers' | 'ranking';
 type Period = 'today' | 'weekly' | 'monthly';
@@ -64,6 +65,12 @@ const directoryColumns: Partial<Record<Tab, number>> = {
 };
 
 export default function DiscoverScreen() {
+  const { language } = useLanguage();
+  // NOTE: 语言切换会改变请求 URL，换 key 重建列表状态并重新拉取。
+  return <DiscoverView key={language} />;
+}
+
+function DiscoverView() {
   const theme = useTheme();
   const params = useLocalSearchParams<DiscoverParams>();
   const isHotShortcut = params.tab === 'hot' && periods.some((item) => item.id === params.period);

@@ -33,6 +33,28 @@ export type {
 
 let xsrfToken: string | undefined;
 
+export type ContentLanguage = 'tw' | 'cn' | 'en' | 'ja' | 'ko' | 'ms' | 'th';
+
+// NOTE: 站点把语言偏好放在路径段（/cn/new、/en/search/x），无前缀即繁體中文。
+// 解析出的链接还会混入站点自己的 /dmXXXX 前缀，这里统一剥掉再按当前语言重建，调用点无需关心。
+const LANGUAGE_SEGMENTS: readonly ContentLanguage[] = ['cn', 'en', 'ja', 'ko', 'ms', 'th'];
+let contentLanguage: ContentLanguage = 'cn';
+
+export function setContentLanguage(language: ContentLanguage): void {
+  contentLanguage = language;
+}
+
+function localizedPath(path: string): string {
+  const [pathname, search] = path.split('?');
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments[0] && /^dm\d+$/.test(segments[0])) segments.shift();
+  if (segments[0] && (LANGUAGE_SEGMENTS as readonly string[]).includes(segments[0])) segments.shift();
+  const clean = `/${segments.join('/')}`;
+  const suffix = search ? `?${search}` : '';
+  if (contentLanguage === 'tw') return `${clean}${suffix}`;
+  return clean === '/' ? `/${contentLanguage}${suffix}` : `/${contentLanguage}${clean}${suffix}`;
+}
+
 export type AccountUser = {
   email: string;
   username?: string;
@@ -68,7 +90,7 @@ function captureXsrfToken(response: Response): void {
 
 async function fetchHtml(path: string, baseUrl = SOURCE_BASE_URL, signal?: AbortSignal): Promise<string> {
   return withTimeout(async (requestSignal) => {
-    const response = await fetch(new URL(path, baseUrl), {
+    const response = await fetch(new URL(localizedPath(path), baseUrl), {
       headers: {
         Accept: 'text/html,application/xhtml+xml',
       },

@@ -1,17 +1,22 @@
 import Constants from 'expo-constants';
+import { useRouter } from 'expo-router';
 import { Alert, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SettingsRow } from '@/components/settings-row';
+import { languageLabel } from '@/constants/languages';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { clearHistory } from '@/storage/history';
 import { clearSearchHistory } from '@/storage/search-history';
+import { useLanguage } from '@/stores/language';
 
 const CANCEL = { text: '取消', style: 'cancel' } as const;
 
 export default function SettingsScreen() {
   const theme = useTheme();
+  const router = useRouter();
+  const { language } = useLanguage();
   const version = Constants.expoConfig?.version ?? '—';
 
   const confirmClearSearch = () => {
@@ -43,6 +48,7 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView edges={['bottom']} style={[styles.screen, { backgroundColor: theme.background }]}>
       <ScrollView contentContainerStyle={styles.content}>
+        <SettingsRow detail={languageLabel(language)} label="内容语言" onPress={() => router.push('/language')} />
         <SettingsRow detail="本机搜索记录" label="清空搜索历史" onPress={confirmClearSearch} />
         <SettingsRow detail="本机观看记录" label="清空观看历史" onPress={confirmClearHistory} />
         <SettingsRow detail={`v${version}`} label="版本" />
