@@ -37,7 +37,7 @@ const tabs: { id: Tab; label: string }[] = [
   { id: 'genres', label: '分类' },
   { id: 'actresses', label: '女优' },
   { id: 'makers', label: '厂商' },
-  { id: 'ranking', label: '女优榜' },
+  { id: 'ranking', label: '排行' },
 ];
 const periods: { id: Period; label: string; path: string }[] = [
   { id: 'today', label: '今日', path: '/today-hot' },
