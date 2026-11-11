@@ -167,8 +167,9 @@ export default function DiscoverScreen() {
   };
 
   const periodLabel = periods.find((item) => item.id === period)?.label ?? '今日';
-  const filterLabel = filter ? VIDEO_FILTER_OPTIONS.find((item) => item.value === filter)?.label : undefined;
-  const sortLabel = sort ? VIDEO_SORT_OPTIONS.find((item) => item.value === sort)?.label : undefined;
+  // NOTE: 触发器始终显示当前选项（含默认的「全部 / 默认」）。
+  const filterLabel = VIDEO_FILTER_OPTIONS.find((item) => (item.value ?? NO_FILTER) === (filter ?? NO_FILTER))?.label ?? '全部';
+  const sortLabel = VIDEO_SORT_OPTIONS.find((item) => (item.value ?? NO_SORT) === (sort ?? NO_SORT))?.label ?? '默认';
 
   const hotChoices = [
     {
@@ -183,7 +184,7 @@ export default function DiscoverScreen() {
     },
     {
       key: 'filter',
-      text: filterLabel ? `筛选 · ${filterLabel}` : '筛选',
+      text: `筛选 · ${filterLabel}`,
       value: filter ?? NO_FILTER,
       options: VIDEO_FILTER_OPTIONS.map((item) => ({ label: item.label, value: item.value ?? NO_FILTER })),
       onChange: (value: string) => {
@@ -193,7 +194,7 @@ export default function DiscoverScreen() {
     },
     {
       key: 'sort',
-      text: sortLabel ? `排序 · ${sortLabel}` : '排序',
+      text: `排序 · ${sortLabel}`,
       value: sort ?? NO_SORT,
       options: VIDEO_SORT_OPTIONS.map((item) => ({ label: item.label, value: item.value ?? NO_SORT })),
       onChange: (value: string) => {
