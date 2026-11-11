@@ -1,118 +1,47 @@
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { useRouter, type Href } from 'expo-router';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ThemedText } from '@/components/themed-text';
-import { Radius, Spacing, TabBarInset } from '@/constants/theme';
+import { SettingsRow } from '@/components/settings-row';
+import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/stores/auth';
-import { errorHaptic, successHaptic } from '@/utils/haptics';
 
 export default function AccountScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const { user, ready, login, logout } = useAuth();
+  const { user, ready, logout } = useAuth();
   const displayName = user?.username && user.username !== user.email ? user.username : user?.email;
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string>();
-
-  const submit = async () => {
-    if (!email.trim() || !password) {
-      setError('请输入邮箱和密码');
-      return;
-    }
-    setSubmitting(true);
-    setError(undefined);
-    try {
-      await login(email.trim(), password);
-      setPassword('');
-      successHaptic();
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : '登录失败');
-      errorHaptic();
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   const signOut = async () => {
-    setSubmitting(true);
-    setError(undefined);
     try {
       await logout();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : '退出失败');
-    } finally {
-      setSubmitting(false);
+      Alert.alert('退出失败', reason instanceof Error ? reason.message : '请稍后重试');
     }
   };
 
+  if (!ready) {
+    return (
+      <View style={[styles.state, { backgroundColor: theme.background }]}>
+        <ActivityIndicator color={theme.text} />
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView edges={['bottom']} style={[styles.screen, { backgroundColor: theme.background }]}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {!ready && <ActivityIndicator color={theme.text} style={styles.state} />}
-        {ready && !user && (
-          <View style={styles.form}>
-            <ThemedText type="headline">登录 MissAV 账号</ThemedText>
-            <TextInput
-              accessibilityLabel="邮箱"
-              autoCapitalize="none"
-              autoComplete="email"
-              keyboardType="email-address"
-              onChangeText={setEmail}
-              placeholder="邮箱"
-              placeholderTextColor={theme.textSecondary}
-              style={[styles.input, { backgroundColor: theme.backgroundElement, color: theme.text }]}
-              textContentType="emailAddress"
-              value={email}
-            />
-            <TextInput
-              accessibilityLabel="密码"
-              autoCapitalize="none"
-              autoComplete="password"
-              onChangeText={setPassword}
-              onSubmitEditing={submit}
-              placeholder="密码"
-              placeholderTextColor={theme.textSecondary}
-              secureTextEntry
-              style={[styles.input, { backgroundColor: theme.backgroundElement, color: theme.text }]}
-              textContentType="password"
-              value={password}
-            />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityState={{ busy: submitting, disabled: submitting }}
-              disabled={submitting}
-              onPress={submit}
-              style={[styles.button, { backgroundColor: theme.accent }]}>
-              <ThemedText type="smallBold" style={{ color: theme.onAccent }}>{submitting ? '登录中…' : '登录'}</ThemedText>
-            </Pressable>
-            <ThemedText type="small" themeColor="textSecondary">密码仅用于本次登录，不保存到本地。</ThemedText>
-          </View>
+      <ScrollView contentContainerStyle={styles.content}>
+        {user ? (
+          <SettingsRow detail={displayName === user.email ? undefined : user.email} label={displayName ?? user.email} />
+        ) : (
+          <SettingsRow label="登录 MissAV 账号" onPress={() => router.push('/login' as Href)} />
         )}
-        {ready && user && (
-          <View style={styles.form}>
-            <ThemedText type="headline">{displayName}</ThemedText>
-            {displayName !== user.email && (
-              <ThemedText selectable themeColor="textSecondary">{user.email}</ThemedText>
-            )}
-            <Pressable accessibilityRole="button" onPress={() => router.push('/saved')} style={[styles.button, { backgroundColor: theme.backgroundSelected }]}>
-              <ThemedText type="smallBold">我的云端收藏</ThemedText>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityState={{ busy: submitting, disabled: submitting }}
-              disabled={submitting}
-              onPress={signOut}
-              style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
-              <ThemedText type="smallBold">{submitting ? '退出中…' : '退出登录'}</ThemedText>
-            </Pressable>
-          </View>
-        )}
-        {error && <ThemedText selectable type="small" style={{ color: theme.danger }}>{error}</ThemedText>}
+        {user && <SettingsRow label="我的收藏" onPress={() => router.push('/saved' as Href)} />}
+        <SettingsRow label="观看历史" onPress={() => router.push('/history' as Href)} />
+        {user && <SettingsRow label="我的片单" onPress={() => router.push('/playlists' as Href)} />}
+        <SettingsRow label="设置" onPress={() => router.push('/settings' as Href)} />
+        {user && <SettingsRow danger label="退出登录" onPress={() => void signOut()} />}
       </ScrollView>
     </SafeAreaView>
   );
@@ -123,27 +52,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    flexGrow: 1,
-    gap: Spacing.lg,
-    padding: Spacing.lg,
-    paddingBottom: Spacing.xxxl + TabBarInset,
+    paddingVertical: Spacing.sm,
   },
   state: {
-    paddingVertical: Spacing.huge,
-  },
-  form: {
-    gap: Spacing.md,
-    marginTop: Spacing.sm,
-  },
-  input: {
-    borderRadius: Radius.md,
-    fontSize: 16,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-  },
-  button: {
     alignItems: 'center',
-    borderRadius: Radius.md,
-    paddingVertical: Spacing.md,
+    flex: 1,
+    justifyContent: 'center',
   },
 });
