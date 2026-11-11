@@ -1,0 +1,2 @@
+* text=auto eol=lf
+app/src/main/assets/literature.db filter=lfs diff=lfs merge=lfs -text

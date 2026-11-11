@@ -1,0 +1,101 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Captured API",
+    "version": "0.1.0",
+    "description": "由脱敏 HAR 自动生成的草稿；路径参数、语义和认证方式需要人工校正。",
+    "license": {
+      "name": "UNLICENSED"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://missav.ai"
+    }
+  ],
+  "security": [],
+  "paths": {
+    "/dm339": {
+      "get": {
+        "operationId": "getDm339",
+        "summary": "GET /dm339",
+        "responses": {
+          "200": {
+            "description": "HTTP 200",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dm539/new": {
+      "get": {
+        "operationId": "getDm539New",
+        "summary": "GET /dm539/new",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HTTP 200",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/search/SONE": {
+      "get": {
+        "operationId": "getSearchSone",
+        "summary": "GET /search/SONE",
+        "responses": {
+          "200": {
+            "description": "HTTP 200",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sone-955": {
+      "get": {
+        "operationId": "getSone955",
+        "summary": "GET /sone-955",
+        "responses": {
+          "200": {
+            "description": "HTTP 200",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
