@@ -8,6 +8,7 @@ export default function TabsLayout() {
 
   return (
     <NativeTabs
+      activityEnabled
       backgroundColor={theme.background}
       iconColor={{ default: theme.textSecondary, selected: theme.accent }}
       labelStyle={{ default: { color: theme.textSecondary }, selected: { color: theme.accent } }}

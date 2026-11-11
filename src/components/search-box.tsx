@@ -43,6 +43,7 @@ export function SearchBox({ value, onChangeText, onSearch }: Props) {
           setFocused(true);
           void getSearchHistory().then(setHistory);
         }}
+        onIconPress={() => submit(value)}
         onSubmitEditing={() => submit(value)}
         placeholder="搜索视频"
         placeholderTextColor={theme.textSecondary}

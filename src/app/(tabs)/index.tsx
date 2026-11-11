@@ -58,7 +58,7 @@ export default function HomeScreen() {
   };
 
   const submitSearch = (query: string) => {
-    router.push({ pathname: '/latest', params: { query } });
+    router.push({ pathname: '/latest', params: { query, source: '/new', title: '' } });
   };
 
   const retry = () => {
@@ -97,7 +97,7 @@ export default function HomeScreen() {
             <View style={styles.sectionHeader}>
               <ThemedText type="headline">{section.title}</ThemedText>
               {section.morePath && (
-                <Pressable accessibilityRole="button" hitSlop={8} onPress={() => router.push({ pathname: '/latest', params: { source: section.morePath } })}>
+                <Pressable accessibilityRole="button" hitSlop={8} onPress={() => router.push({ pathname: '/latest', params: { source: section.morePath, title: section.title, query: '' } })}>
                   <ThemedText type="small" themeColor="textSecondary">更多</ThemedText>
                 </Pressable>
               )}

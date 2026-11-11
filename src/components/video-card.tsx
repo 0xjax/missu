@@ -21,7 +21,7 @@ export function VideoCard({ video, width }: { video: VideoSummary; width?: numbe
       style={({ pressed }) => [styles.card, { width: cardWidth }, pressed && styles.pressed]}>
       <View style={[styles.imageContainer, { backgroundColor: theme.backgroundElement }]}>
         {video.thumbnailUrl && (
-          <Image source={{ uri: video.thumbnailUrl }} style={styles.image} contentFit="cover" transition={200} />
+          <Image source={{ uri: video.thumbnailUrl }} style={styles.image} contentFit="cover" recyclingKey={video.id} transition={200} />
         )}
         {video.duration && (
           <View style={styles.durationBadge}>

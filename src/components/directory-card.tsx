@@ -17,9 +17,9 @@ export function DirectoryCard({ item }: { item: DirectoryItem }) {
     <Pressable
       accessibilityLabel={item.name}
       accessibilityRole="button"
-      onPress={() => router.push({ pathname: '/latest', params: { source: item.path, title: item.name } })}
+      onPress={() => router.push({ pathname: '/latest', params: { source: item.path, title: item.name, query: '' } })}
       style={({ pressed }) => [styles.card, { width, backgroundColor: theme.backgroundElement }, pressed && styles.pressed]}>
-      {item.imageUrl && <Image source={{ uri: item.imageUrl }} style={styles.image} contentFit="cover" transition={200} />}
+      {item.imageUrl && <Image source={{ uri: item.imageUrl }} style={styles.image} contentFit="cover" recyclingKey={item.id} transition={200} />}
       <View style={styles.content}>
         <ThemedText type="smallBold" numberOfLines={2}>{item.name}</ThemedText>
         {item.subtitle && <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>{item.subtitle}</ThemedText>}
