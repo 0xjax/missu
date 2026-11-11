@@ -5,12 +5,16 @@
 ## 能力
 
 - 公共 GET 内容缓存：首页、列表、搜索、目录和详情。
+- `GET /api/content?path=...` 返回解析后的 JSON（`{ kind, data }`），客户端设置 `EXPO_PUBLIC_BFF_URL` 时优先使用。
+- 未设置 BFF 时客户端仍直连源站并在本地解析 HTML，作为开发/降级路径。
 - 相同 URL 的并发请求合并。
 - 上游请求间隔 400ms。
 - GET 403 退避后重试一次；公共内容失败时可回退到过期缓存。
 - 登录、退出、云端收藏状态/写操作和 HLS 始终由手机原生直连；这些账号 Cookie 不与 BFF 共享。
 - 公共响应 Cookie 在本地 HTTP 开发时会调整 Domain/Secure/SameSite 属性。
 - 公共 GET 遇到 403、连接重置或超时时，可选 FlareSolverr 持久浏览器会话恢复；不自动处理 CAPTCHA。
+
+JSON 解析逻辑位于 `src/api/parse.ts`，由客户端和 BFF 共用；部署 `server/` 时必须同时保留该文件及其依赖。真实账号 Cookie 和收藏写操作仍直连源站，不经过 `/api/content`。
 
 默认上游为 `https://missav.ai`，默认仅监听 `127.0.0.1:3000`。不要未经额外鉴权和 TLS 加固就暴露到公网。
 
