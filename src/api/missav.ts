@@ -1,11 +1,16 @@
 import {
+  isLoginPage,
   parseDirectory,
   parseHome,
+  parsePlaylistDetail,
+  parsePlaylists,
   parseVideoDetail,
   parseVideoList,
   SOURCE_BASE_URL,
   type DirectoryList,
   type HomeSection,
+  type PlaylistDetail,
+  type PlaylistSummary,
   type VideoDetail,
   type VideoList,
   type VideoQuery,
@@ -16,6 +21,8 @@ export type {
   DirectoryItem,
   DirectoryList,
   HomeSection,
+  PlaylistDetail,
+  PlaylistSummary,
   VideoDetail,
   VideoFilter,
   VideoList,
@@ -41,6 +48,13 @@ export class HttpError extends Error {
   }
 }
 
+export class SessionExpiredError extends Error {
+  constructor() {
+    super('登录已失效，请重新登录');
+    this.name = 'SessionExpiredError';
+  }
+}
+
 function captureXsrfToken(response: Response): void {
   const cookie = response.headers.get('set-cookie');
   const value = cookie?.match(/(?:^|,\s*)XSRF-TOKEN=([^;]+)/i)?.[1];
@@ -55,7 +69,9 @@ function captureXsrfToken(response: Response): void {
 async function fetchHtml(path: string, baseUrl = SOURCE_BASE_URL, signal?: AbortSignal): Promise<string> {
   return withTimeout(async (requestSignal) => {
     const response = await fetch(new URL(path, baseUrl), {
-      headers: { Accept: 'text/html,application/xhtml+xml' },
+      headers: {
+        Accept: 'text/html,application/xhtml+xml',
+      },
       signal: requestSignal,
     });
     captureXsrfToken(response);
@@ -90,6 +106,10 @@ async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
       const firstError = data?.errors ? Object.values(data.errors)[0]?.[0] : undefined;
       throw new Error(firstError ?? data?.message ?? `请求失败（HTTP ${response.status}）`);
     }
+    if (data === null) {
+      const contentType = response.headers.get('content-type') ?? '';
+      throw new Error(contentType.includes('text/html') ? '源站暂时拦截了请求，请稍后再试' : '请求返回异常，请稍后重试');
+    }
     return data as T;
   }, signal);
 }
@@ -119,7 +139,21 @@ export async function getDirectory(path: string, page = 1, signal?: AbortSignal)
 
 export async function getSavedVideos(options: VideoQuery = {}, signal?: AbortSignal): Promise<VideoList> {
   const page = options.page ?? 1;
-  return parseVideoList(await fetchHtml(queryPath('/saved', options), SOURCE_BASE_URL, signal), page);
+  const html = await fetchHtml(queryPath('/saved', options), SOURCE_BASE_URL, signal);
+  if (isLoginPage(html)) throw new SessionExpiredError();
+  return parseVideoList(html, page);
+}
+
+export async function getPlaylists(signal?: AbortSignal): Promise<PlaylistSummary[]> {
+  const html = await fetchHtml('/playlists', undefined, signal);
+  if (isLoginPage(html)) throw new SessionExpiredError();
+  return parsePlaylists(html);
+}
+
+export async function getPlaylistDetail(id: string, signal?: AbortSignal): Promise<PlaylistDetail> {
+  const html = await fetchHtml(`/playlists/${encodeURIComponent(id)}`, undefined, signal);
+  if (isLoginPage(html)) throw new SessionExpiredError();
+  return parsePlaylistDetail(html);
 }
 
 export async function searchVideos(keyword: string, options: VideoQuery = {}, signal?: AbortSignal): Promise<VideoList> {
@@ -144,12 +178,22 @@ export function setVideoSaved(internalId: string, saved: boolean): Promise<unkno
 }
 
 export async function login(email: string, password: string): Promise<AccountUser> {
-  const result = await fetchJson<{ user: { name?: string } }>('/api/login', {
+  const result = await fetchJson<{ user?: { name?: string } }>('/api/login', {
     method: 'POST',
     body: JSON.stringify({ email, password, remember: true }),
   });
   // NOTE: 源站只返回 name，客户端用本次登录邮箱补全 AccountUser。
-  return { email, username: result.user?.name };
+  return { email, username: result?.user?.name };
+}
+
+/** 启动时校验服务端会话是否还有效；网络/风控失败时按“仍然有效”处理，避免误登出。 */
+export async function checkSession(signal?: AbortSignal): Promise<boolean> {
+  try {
+    const html = await fetchHtml('/playlists', undefined, signal);
+    return !isLoginPage(html);
+  } catch {
+    return true;
+  }
 }
 
 export async function logout(): Promise<void> {
