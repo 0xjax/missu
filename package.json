@@ -17,6 +17,7 @@
     "expo-splash-screen": "~58.0.13",
     "expo-sqlite": "~58.0.16",
     "expo-symbols": "~58.0.5",
+    "expo-system-ui": "~58.0.7",
     "expo-video": "~58.0.14",
     "node-html-parser": "^9.0.7",
     "react": "19.3.0",
