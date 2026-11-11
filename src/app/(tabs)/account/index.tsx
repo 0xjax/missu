@@ -1,4 +1,3 @@
-import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
@@ -8,6 +7,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing, TabBarInset } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/stores/auth';
+import { errorHaptic, successHaptic } from '@/utils/haptics';
 
 export default function AccountScreen() {
   const router = useRouter();
@@ -29,10 +29,10 @@ export default function AccountScreen() {
     try {
       await login(email.trim(), password);
       setPassword('');
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      successHaptic();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : '登录失败');
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      errorHaptic();
     } finally {
       setSubmitting(false);
     }
