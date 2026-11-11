@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useContext, useEffect, useState, type PropsWithChildren } from 'react';
 
 import {
@@ -6,6 +5,7 @@ import {
   logout as logoutRequest,
   type AccountUser,
 } from '@/api/missav';
+import Storage, { migrateLegacyStorage } from '@/storage/kv';
 
 const PROFILE_KEY = 'missav:profile:v1';
 
@@ -23,7 +23,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem(PROFILE_KEY).then((value) => {
+    migrateLegacyStorage().then(() => Storage.getItem(PROFILE_KEY)).then((value) => {
       if (value) setUser(JSON.parse(value) as AccountUser);
     }).finally(() => setReady(true));
   }, []);
@@ -31,13 +31,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const login = async (email: string, password: string) => {
     const nextUser = await loginRequest(email, password);
     setUser(nextUser);
-    await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(nextUser));
+    await Storage.setItem(PROFILE_KEY, JSON.stringify(nextUser));
   };
 
   const logout = async () => {
     await logoutRequest();
     setUser(null);
-    await AsyncStorage.removeItem(PROFILE_KEY);
+    await Storage.removeItem(PROFILE_KEY);
   };
 
   return (

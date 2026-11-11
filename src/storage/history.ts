@@ -1,6 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
 import type { VideoSummary } from '@/api/missav';
+import Storage, { migrateLegacyStorage } from '@/storage/kv';
 
 const STORAGE_KEY = 'missav:history:v1';
 const HISTORY_LIMIT = 100;
@@ -10,7 +9,8 @@ export type HistoryEntry = VideoSummary & {
 };
 
 export async function getHistory(): Promise<HistoryEntry[]> {
-  const value = await AsyncStorage.getItem(STORAGE_KEY);
+  await migrateLegacyStorage();
+  const value = await Storage.getItem(STORAGE_KEY);
   if (!value) return [];
   try {
     return JSON.parse(value) as HistoryEntry[];
@@ -30,9 +30,9 @@ export async function addToHistory(video: VideoSummary): Promise<void> {
     viewedAt: new Date().toISOString(),
   };
   const next = [entry, ...current.filter((item) => item.id !== video.id)].slice(0, HISTORY_LIMIT);
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  await Storage.setItem(STORAGE_KEY, JSON.stringify(next));
 }
 
 export function clearHistory(): Promise<void> {
-  return AsyncStorage.removeItem(STORAGE_KEY);
+  return Storage.removeItem(STORAGE_KEY);
 }

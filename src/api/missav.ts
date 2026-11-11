@@ -1,5 +1,8 @@
 import { parse, type HTMLElement } from 'node-html-parser';
 
+import { formatTime } from '@/utils/format-time';
+import { withTimeout } from './with-timeout';
+
 const SOURCE_BASE_URL = 'https://missav.ai';
 const CONTENT_BASE_URL = process.env.EXPO_PUBLIC_BFF_URL || SOURCE_BASE_URL;
 let xsrfToken: string | undefined;
@@ -81,13 +84,15 @@ function captureXsrfToken(response: Response): void {
 }
 
 async function fetchHtml(path: string, baseUrl = CONTENT_BASE_URL, signal?: AbortSignal): Promise<string> {
-  const response = await fetch(new URL(path, baseUrl), {
-    headers: { Accept: 'text/html,application/xhtml+xml' },
-    signal,
-  });
-  captureXsrfToken(response);
-  if (!response.ok) throw new HttpError(response.status);
-  return response.text();
+  return withTimeout(async (requestSignal) => {
+    const response = await fetch(new URL(path, baseUrl), {
+      headers: { Accept: 'text/html,application/xhtml+xml' },
+      signal: requestSignal,
+    });
+    captureXsrfToken(response);
+    if (!response.ok) throw new HttpError(response.status);
+    return response.text();
+  }, signal);
 }
 
 export function isAbortError(error: unknown): boolean {
@@ -95,25 +100,29 @@ export function isAbortError(error: unknown): boolean {
 }
 
 async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(new URL(path, SOURCE_BASE_URL), {
-    ...init,
-    headers: {
-      Accept: 'application/json',
-      ...(init.body ? { 'Content-Type': 'application/json' } : {}),
-      ...(xsrfToken ? { 'X-XSRF-TOKEN': xsrfToken } : {}),
-      ...init.headers,
-    },
-  });
-  captureXsrfToken(response);
-  const data = await response.json().catch(() => null) as {
-    message?: string;
-    errors?: Record<string, string[]>;
-  } | null;
-  if (!response.ok) {
-    const firstError = data?.errors ? Object.values(data.errors)[0]?.[0] : undefined;
-    throw new Error(firstError ?? data?.message ?? `请求失败（HTTP ${response.status}）`);
-  }
-  return data as T;
+  const { signal, ...requestInit } = init;
+  return withTimeout(async (requestSignal) => {
+    const response = await fetch(new URL(path, SOURCE_BASE_URL), {
+      ...requestInit,
+      headers: {
+        Accept: 'application/json',
+        ...(requestInit.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(xsrfToken ? { 'X-XSRF-TOKEN': xsrfToken } : {}),
+        ...requestInit.headers,
+      },
+      signal: requestSignal,
+    });
+    captureXsrfToken(response);
+    const data = await response.json().catch(() => null) as {
+      message?: string;
+      errors?: Record<string, string[]>;
+    } | null;
+    if (!response.ok) {
+      const firstError = data?.errors ? Object.values(data.errors)[0]?.[0] : undefined;
+      throw new Error(firstError ?? data?.message ?? `请求失败（HTTP ${response.status}）`);
+    }
+    return data as T;
+  }, signal);
 }
 
 function absoluteUrl(value: string | undefined): string | undefined {
@@ -279,12 +288,7 @@ function meta(root: HTMLElement, property: string, name = 'property'): string | 
 
 function formatDuration(seconds: number): string | undefined {
   if (!Number.isFinite(seconds) || seconds < 0) return undefined;
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const remainder = Math.floor(seconds % 60);
-  return hours > 0
-    ? `${hours}:${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`
-    : `${minutes}:${String(remainder).padStart(2, '0')}`;
+  return formatTime(seconds);
 }
 
 export function parseVideoDetail(html: string, id: string): VideoDetail {
@@ -329,10 +333,6 @@ export async function getVideos(path: string, options: VideoQuery = {}, signal?:
 export async function getDirectory(path: string, page = 1, signal?: AbortSignal): Promise<DirectoryList> {
   const kind = path.includes('/actresses') ? 'actresses' : path.includes('/makers') ? 'makers' : 'genres';
   return parseDirectory(await fetchHtml(queryPath(path, { page }), undefined, signal), kind, page);
-}
-
-export function getLatestVideos(options: VideoQuery = {}, signal?: AbortSignal): Promise<VideoList> {
-  return getVideos('/new', options, signal);
 }
 
 export async function getSavedVideos(options: VideoQuery = {}, signal?: AbortSignal): Promise<VideoList> {
