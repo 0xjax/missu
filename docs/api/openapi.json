@@ -1,0 +1,420 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "MissAV Web Source API",
+    "version": "0.1.0",
+    "description": "基于 2026-11-11 真实浏览器流量整理的非官方客户端契约。源站返回服务端渲染 HTML，而不是 JSON；components 中的模型仅描述客户端解析目标。动态 dm 路径前缀通过稳定入口 / 和 /new 的重定向处理。",
+    "license": {
+      "name": "UNLICENSED"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://missav.ai"
+    }
+  ],
+  "security": [],
+  "tags": [
+    {
+      "name": "videos",
+      "description": "视频列表、搜索和详情页面。"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "tags": ["videos"],
+        "operationId": "getHome",
+        "summary": "获取首页",
+        "description": "跟随源站重定向到当前首页路径，解析返回的 HTML 视频分区。",
+        "responses": {
+          "200": {
+            "description": "首页 HTML",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                },
+                "x-extraction": {
+                  "$ref": "#/components/schemas/VideoList"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/new": {
+      "get": {
+        "tags": ["videos"],
+        "operationId": "getLatestVideos",
+        "summary": "获取最近更新列表",
+        "description": "跟随源站重定向到当前列表路径。",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "视频列表 HTML",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                },
+                "x-extraction": {
+                  "$ref": "#/components/schemas/VideoList"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/search/{keyword}": {
+      "get": {
+        "tags": ["videos"],
+        "operationId": "searchVideos",
+        "summary": "搜索视频",
+        "parameters": [
+          {
+            "name": "keyword",
+            "in": "path",
+            "required": true,
+            "description": "搜索关键词，作为单个 URL 路径段编码。",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "搜索结果 HTML",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                },
+                "x-extraction": {
+                  "$ref": "#/components/schemas/VideoList"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/{videoId}": {
+      "get": {
+        "tags": ["videos"],
+        "operationId": "getVideoDetail",
+        "summary": "获取视频详情及播放器引导信息",
+        "parameters": [
+          {
+            "name": "videoId",
+            "in": "path",
+            "required": true,
+            "description": "源站视频标识，例如 sone-955。",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9-]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "视频详情 HTML；播放地址由内联播放器脚本在运行时生成。",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                },
+                "x-extraction": {
+                  "$ref": "#/components/schemas/VideoDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        },
+        "x-playback": {
+          "protocol": "HLS",
+          "mediaType": "application/vnd.apple.mpegurl",
+          "source": "详情页内联播放器脚本",
+          "urlPolicy": "播放 URL 是不透明运行时值；不得固化或持久化，也不得将媒体分片记录为业务 API。"
+        }
+      }
+    },
+    "/saved": {
+      "get": {
+        "tags": ["videos"],
+        "operationId": "getSavedVideos",
+        "summary": "获取当前账号的云端视频收藏",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "收藏列表 HTML，需要登录会话。",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                },
+                "x-extraction": {
+                  "$ref": "#/components/schemas/VideoList"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
+      }
+    },
+    "/api/login": {
+      "post": {
+        "operationId": "login",
+        "summary": "登录账号",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password"
+                  },
+                  "remember": {
+                    "type": "boolean",
+                    "default": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "登录成功，返回基本账号资料并设置会话 Cookie。"
+          },
+          "422": {
+            "description": "表单校验失败。"
+          }
+        }
+      }
+    },
+    "/logout": {
+      "get": {
+        "operationId": "logout",
+        "summary": "退出当前账号",
+        "responses": {
+          "200": {
+            "description": "退出成功。"
+          }
+        }
+      }
+    },
+    "/api/items/{internalId}/view": {
+      "get": {
+        "operationId": "getVideoViewState",
+        "summary": "记录查看并读取收藏状态",
+        "parameters": [
+          {
+            "name": "internalId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "返回 user 和 saved；user 在未登录时为 null。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["user", "saved"],
+                  "properties": {
+                    "user": {
+                      "type": ["object", "null"]
+                    },
+                    "saved": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/items/{internalId}/save": {
+      "post": {
+        "operationId": "saveVideo",
+        "summary": "添加云端收藏",
+        "parameters": [
+          {
+            "name": "internalId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "收藏成功。"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "unsaveVideo",
+        "summary": "取消云端收藏",
+        "parameters": [
+          {
+            "name": "internalId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "取消收藏成功。"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "Page": {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "页码，从 1 开始；省略时返回第一页。",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        }
+      }
+    },
+    "responses": {
+      "Forbidden": {
+        "description": "请求被源站或 Cloudflare 拒绝；客户端应展示可重试错误，不应尝试绕过验证。",
+        "content": {
+          "text/html": {
+            "schema": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "VideoList": {
+        "type": "object",
+        "description": "客户端从 HTML 提取的列表模型，不是源站 JSON 响应。",
+        "required": ["videos"],
+        "properties": {
+          "videos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VideoSummary"
+            }
+          },
+          "nextPage": {
+            "type": ["integer", "null"],
+            "minimum": 2,
+            "description": "下一页页码；没有下一页时为 null。"
+          }
+        }
+      },
+      "VideoSummary": {
+        "type": "object",
+        "required": ["id", "title", "pageUrl"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "pageUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "duration": {
+            "type": "string",
+            "description": "源站显示的时长文本，例如 1:03:10。"
+          }
+        }
+      },
+      "VideoDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/VideoSummary"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "playback": {
+                "type": "object",
+                "required": ["type", "url"],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "const": "hls"
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "运行时提取的临时 HLS 播放地址。"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

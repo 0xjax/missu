@@ -1,0 +1,3 @@
+[install]
+# 仅允许安装发布至少 3 天的依赖版本，降低供应链攻击风险。
+minimumReleaseAge = 259200
