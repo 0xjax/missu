@@ -12,7 +12,7 @@ import { useTheme } from '@/hooks/use-theme';
 import type { Choice } from './choice-menu-bar.types';
 
 /**
- * Android 原生筛选工具栏：M3 TextButton 作为触发器，点开是系统 DropdownMenu。
+ * Android 原生工具栏：M3 TextButton 作为触发器，点开是系统 DropdownMenu。
  * NOTE: 用 DropdownMenuItem 而不是 SelectableDropdownMenuItem——Expo Go 内置的 ExpoUI 还没有后者；
  * 选中态用文字颜色表达，不插入 ✓ 前缀（会让菜单项左右跳动）。
  */
@@ -24,6 +24,17 @@ export function ChoiceMenuBar({ choices }: { choices: Choice[] }) {
     <Host matchContents>
       <Row horizontalArrangement={{ spacedBy: 4 }} verticalAlignment="center">
         {choices.map((choice) => {
+          if (choice.onPress) {
+            return (
+              <TextButton
+                contentPadding={{ start: 10, top: 8, end: 10, bottom: 8 }}
+                key={choice.key}
+                onClick={choice.onPress}>
+                <Text>{choice.text}</Text>
+              </TextButton>
+            );
+          }
+
           const expanded = openKey === choice.key;
           return (
             <DropdownMenu

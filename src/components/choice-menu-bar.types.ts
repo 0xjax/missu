@@ -7,4 +7,6 @@ export type Choice = {
   value: string;
   options: ChoiceOption[];
   onChange: (value: string) => void;
+  /** 有值时渲染成普通按钮（例如打开筛选面板），不弹菜单。 */
+  onPress?: () => void;
 };

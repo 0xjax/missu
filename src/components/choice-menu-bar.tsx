@@ -16,27 +16,33 @@ export function ChoiceMenuBar({ choices }: { choices: Choice[] }) {
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bar}>
       {choices.map((choice) => (
-        <Menu
-          anchor={(
-            <Button compact mode="text" onPress={() => setOpenKey(choice.key)}>
-              {`${choice.text} ▾`}
-            </Button>
-          )}
-          key={choice.key}
-          onDismiss={() => setOpenKey(undefined)}
-          visible={openKey === choice.key}>
-          {choice.options.map((option) => (
-            <Menu.Item
-              key={option.value}
-              onPress={() => {
-                setOpenKey(undefined);
-                choice.onChange(option.value);
-              }}
-              style={option.value === choice.value ? { backgroundColor: theme.backgroundSelected } : undefined}
-              title={option.label}
-            />
-          ))}
-        </Menu>
+        choice.onPress ? (
+          <Button compact key={choice.key} mode="text" onPress={choice.onPress}>
+            {choice.text}
+          </Button>
+        ) : (
+          <Menu
+            anchor={(
+              <Button compact mode="text" onPress={() => setOpenKey(choice.key)}>
+                {`${choice.text} ▾`}
+              </Button>
+            )}
+            key={choice.key}
+            onDismiss={() => setOpenKey(undefined)}
+            visible={openKey === choice.key}>
+            {choice.options.map((option) => (
+              <Menu.Item
+                key={option.value}
+                onPress={() => {
+                  setOpenKey(undefined);
+                  choice.onChange(option.value);
+                }}
+                style={option.value === choice.value ? { backgroundColor: theme.backgroundSelected } : undefined}
+                title={option.label}
+              />
+            ))}
+          </Menu>
+        )
       ))}
     </ScrollView>
   );
