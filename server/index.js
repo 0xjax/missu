@@ -1,3 +1,5 @@
+import { parseDirectory, parseHome, parseVideoDetail, parseVideoList } from '../src/api/parse.ts';
+
 const UPSTREAM = process.env.UPSTREAM_URL || 'https://missav.ai';
 const FLARESOLVERR_URL = process.env.FLARESOLVERR_URL;
 const HOST = process.env.HOST || '127.0.0.1';
@@ -152,6 +154,39 @@ async function fetchPublic(request, target) {
   };
 }
 
+function parseContent(path, html) {
+  const url = new URL(path, UPSTREAM);
+  const pathname = url.pathname;
+  const page = Number(url.searchParams.get('page') || 1);
+
+  if (pathname === '/') return { kind: 'home', data: parseHome(html) };
+  if (pathname === '/saved') throw new Error('unsupported path');
+  if (pathname.startsWith('/search/') || /^\/(?:new|release|fc2|today-hot|weekly-hot|monthly-hot)$/.test(pathname)) {
+    return { kind: 'videos', data: parseVideoList(html, page) };
+  }
+  if (/^\/(?:genres|actresses|makers)(?:\/|$)/.test(pathname)) {
+    const kind = pathname.includes('/actresses') ? 'actresses' : pathname.includes('/makers') ? 'makers' : 'genres';
+    return { kind: 'directory', data: parseDirectory(html, kind, page) };
+  }
+  const id = pathname.split('/').filter(Boolean).at(-1);
+  if (!id) throw new Error('unsupported path');
+  return { kind: 'detail', data: parseVideoDetail(html, id) };
+}
+
+async function contentResponse(request, path) {
+  const target = new URL(path, UPSTREAM).toString();
+  const pathname = new URL(target).pathname;
+  if (!inFlight.has(target)) {
+    inFlight.set(target, publicRequest(request, target, pathname).finally(() => inFlight.delete(target)));
+  }
+  const { entry, cacheState } = await inFlight.get(target);
+  if (entry.status !== 200) {
+    return Response.json({ message: '上游暂时不可用，请稍后重试' }, { status: 502 });
+  }
+  const html = typeof entry.body === 'string' ? entry.body : new TextDecoder().decode(entry.body);
+  return Response.json(parseContent(path, html), { headers: { 'x-bff-cache': cacheState } });
+}
+
 async function publicRequest(request, target, path) {
   const cached = cache.get(target);
   if (cached && cached.expiresAt > Date.now()) {
@@ -184,6 +219,18 @@ Bun.serve({
       return new Response('Method not allowed', { status: 405 });
     }
     try {
+      if (request.method === 'GET' && url.pathname === '/api/content') {
+        const path = url.searchParams.get('path');
+        if (!path || !path.startsWith('/')) {
+          return Response.json({ message: 'path 无效' }, { status: 400 });
+        }
+        try {
+          return await contentResponse(request, path);
+        } catch (error) {
+          console.error('BFF content error', { path, error: String(error) });
+          return Response.json({ message: '内容解析失败' }, { status: 400 });
+        }
+      }
       if (request.method === 'GET' && CACHEABLE_GET.test(url.pathname)) {
         if (!inFlight.has(target)) {
           inFlight.set(target, publicRequest(request, target, url.pathname).finally(() => inFlight.delete(target)));
