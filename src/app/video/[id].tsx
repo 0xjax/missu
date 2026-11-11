@@ -45,7 +45,7 @@ export default function VideoDetailScreen() {
   const toggleSaved = async () => {
     if (!detail?.internalId) return;
     if (!user) {
-      router.push('/account' as Href);
+      router.push({ pathname: '/login', params: { next: `/video/${encodeURIComponent(id)}` } } as unknown as Href);
       return;
     }
     setSaving(true);

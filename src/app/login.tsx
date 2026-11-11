@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
@@ -8,8 +8,11 @@ import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/stores/auth';
 import { errorHaptic, successHaptic } from '@/utils/haptics';
 
+type LoginParams = { next?: string };
+
 export default function LoginScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<LoginParams>();
   const theme = useTheme();
   const { user, login } = useAuth();
   const [email, setEmail] = useState('');
@@ -28,7 +31,11 @@ export default function LoginScreen() {
       await login(email.trim(), password);
       setPassword('');
       successHaptic();
-      if (router.canGoBack()) router.back();
+      if (params.next) {
+        router.replace(params.next as Href);
+      } else if (router.canGoBack()) {
+        router.back();
+      }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : '登录失败');
       errorHaptic();

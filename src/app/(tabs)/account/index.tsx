@@ -13,6 +13,15 @@ export default function AccountScreen() {
   const { user, ready, logout } = useAuth();
   const displayName = user?.username && user.username !== user.email ? user.username : user?.email;
 
+  /** NOTE: 未登录时把登录页作为中转，登录成功后直接落到目标页。 */
+  const openProtected = (next: string) => {
+    if (user) {
+      router.push(next as Href);
+      return;
+    }
+    router.push({ pathname: '/login', params: { next } } as unknown as Href);
+  };
+
   const signOut = async () => {
     try {
       await logout();
@@ -37,9 +46,17 @@ export default function AccountScreen() {
         ) : (
           <SettingsRow label="登录 MissAV 账号" onPress={() => router.push('/login' as Href)} />
         )}
-        {user && <SettingsRow label="我的收藏" onPress={() => router.push('/saved' as Href)} />}
+        <SettingsRow
+          detail={user ? undefined : '登录后可用'}
+          label="我的收藏"
+          onPress={() => openProtected('/saved')}
+        />
         <SettingsRow label="观看历史" onPress={() => router.push('/history' as Href)} />
-        {user && <SettingsRow label="我的片单" onPress={() => router.push('/playlists' as Href)} />}
+        <SettingsRow
+          detail={user ? undefined : '登录后可用'}
+          label="我的片单"
+          onPress={() => openProtected('/playlists')}
+        />
         <SettingsRow label="设置" onPress={() => router.push('/settings' as Href)} />
         {user && <SettingsRow danger label="退出登录" onPress={() => void signOut()} />}
       </ScrollView>
