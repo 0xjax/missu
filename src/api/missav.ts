@@ -24,8 +24,6 @@ export type {
   VideoSummary,
 } from './parse';
 
-const BFF_BASE_URL = process.env.EXPO_PUBLIC_BFF_URL;
-const CONTENT_BASE_URL = BFF_BASE_URL || SOURCE_BASE_URL;
 let xsrfToken: string | undefined;
 
 export type AccountUser = {
@@ -54,7 +52,7 @@ function captureXsrfToken(response: Response): void {
   }
 }
 
-async function fetchHtml(path: string, baseUrl = CONTENT_BASE_URL, signal?: AbortSignal): Promise<string> {
+async function fetchHtml(path: string, baseUrl = SOURCE_BASE_URL, signal?: AbortSignal): Promise<string> {
   return withTimeout(async (requestSignal) => {
     const response = await fetch(new URL(path, baseUrl), {
       headers: { Accept: 'text/html,application/xhtml+xml' },
@@ -96,23 +94,6 @@ async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   }, signal);
 }
 
-async function fetchBffContent<T>(path: string, signal?: AbortSignal): Promise<T> {
-  if (!BFF_BASE_URL) throw new Error('BFF 未配置');
-  const url = new URL('/api/content', BFF_BASE_URL);
-  url.searchParams.set('path', path);
-
-  return withTimeout(async (requestSignal) => {
-    const response = await fetch(url, {
-      headers: { Accept: 'application/json' },
-      signal: requestSignal,
-    });
-    if (!response.ok) throw new HttpError(response.status);
-    const payload = await response.json() as { data?: T };
-    if (payload.data == null) throw new Error('BFF 返回数据为空');
-    return payload.data;
-  }, signal);
-}
-
 function queryPath(path: string, { page = 1, filters, sort }: VideoQuery): string {
   const params = new URLSearchParams();
   if (filters) params.set('filters', filters);
@@ -123,22 +104,17 @@ function queryPath(path: string, { page = 1, filters, sort }: VideoQuery): strin
 }
 
 export async function getHome(signal?: AbortSignal): Promise<HomeSection[]> {
-  if (BFF_BASE_URL) return fetchBffContent<HomeSection[]>('/', signal);
   return parseHome(await fetchHtml('/', undefined, signal));
 }
 
 export async function getVideos(path: string, options: VideoQuery = {}, signal?: AbortSignal): Promise<VideoList> {
   const page = options.page ?? 1;
-  const pathWithQuery = queryPath(path, options);
-  if (BFF_BASE_URL) return fetchBffContent<VideoList>(pathWithQuery, signal);
-  return parseVideoList(await fetchHtml(pathWithQuery, undefined, signal), page);
+  return parseVideoList(await fetchHtml(queryPath(path, options), undefined, signal), page);
 }
 
 export async function getDirectory(path: string, page = 1, signal?: AbortSignal): Promise<DirectoryList> {
   const kind = path.includes('/actresses') ? 'actresses' : path.includes('/makers') ? 'makers' : 'genres';
-  const pathWithQuery = queryPath(path, { page });
-  if (BFF_BASE_URL) return fetchBffContent<DirectoryList>(pathWithQuery, signal);
-  return parseDirectory(await fetchHtml(pathWithQuery, undefined, signal), kind, page);
+  return parseDirectory(await fetchHtml(queryPath(path, { page }), undefined, signal), kind, page);
 }
 
 export async function getSavedVideos(options: VideoQuery = {}, signal?: AbortSignal): Promise<VideoList> {
@@ -148,16 +124,11 @@ export async function getSavedVideos(options: VideoQuery = {}, signal?: AbortSig
 
 export async function searchVideos(keyword: string, options: VideoQuery = {}, signal?: AbortSignal): Promise<VideoList> {
   const page = options.page ?? 1;
-  const pathWithQuery = queryPath(`/search/${encodeURIComponent(keyword)}`, options);
-  if (BFF_BASE_URL) return fetchBffContent<VideoList>(pathWithQuery, signal);
-  return parseVideoList(await fetchHtml(pathWithQuery, undefined, signal), page);
+  return parseVideoList(await fetchHtml(queryPath(`/search/${encodeURIComponent(keyword)}`, options), undefined, signal), page);
 }
 
 export async function getVideoDetail(id: string, signal?: AbortSignal): Promise<VideoDetail> {
-  const path = `/${encodeURIComponent(id)}`;
-  const detail = BFF_BASE_URL
-    ? await fetchBffContent<VideoDetail>(path, signal)
-    : parseVideoDetail(await fetchHtml(path, undefined, signal), id);
+  const detail = parseVideoDetail(await fetchHtml(`/${encodeURIComponent(id)}`, undefined, signal), id);
   if (!detail.internalId) return detail;
   try {
     const state = await fetchJson<{ saved: boolean }>(`/api/items/${detail.internalId}/view`, { signal });

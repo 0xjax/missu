@@ -39,7 +39,6 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "server": "bun server/index.js",
-    "lint": "oxlint src server scripts"
+    "lint": "oxlint src scripts"
   }
 }
