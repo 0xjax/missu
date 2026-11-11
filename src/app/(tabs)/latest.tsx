@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -50,8 +50,16 @@ const sourceTitles: Record<string, string> = {
 
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : '加载失败，请稍后重试';
 
+type LatestParams = { query?: string; source?: string; title?: string };
+
 export default function LatestScreen() {
-  const params = useLocalSearchParams<{ query?: string; source?: string; title?: string }>();
+  const params = useLocalSearchParams<LatestParams>();
+  const key = `${params.query ?? ''}|${params.source ?? ''}|${params.title ?? ''}`;
+
+  return <LatestView key={key} params={params} />;
+}
+
+function LatestView({ params }: { params: LatestParams }) {
   const theme = useTheme();
   const initialKeyword = params.query ?? '';
   const source = params.source ?? '/new';
@@ -65,6 +73,13 @@ export default function LatestScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string>();
+
+  const beginRequest = useCallback(() => {
+    setLoading(true);
+    setVideos([]);
+    setError(undefined);
+    setNextPage(null);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -87,13 +102,6 @@ export default function LatestScreen() {
       controller.abort();
     };
   }, [filter, keyword, sort, source]);
-
-  const beginRequest = () => {
-    setLoading(true);
-    setVideos([]);
-    setError(undefined);
-    setNextPage(null);
-  };
 
   const refresh = async () => {
     setRefreshing(true);
@@ -135,7 +143,13 @@ export default function LatestScreen() {
   const header = (
     <View style={styles.header}>
       <ThemedText type="subtitle">MissAV</ThemedText>
-      <SearchBox value={input} onChangeText={setInput} onSearch={(nextKeyword) => {
+      <SearchBox value={input} onChangeText={(nextInput) => {
+        setInput(nextInput);
+        if (!nextInput.trim() && keyword) {
+          beginRequest();
+          setKeyword('');
+        }
+      }} onSearch={(nextKeyword) => {
         if (nextKeyword === keyword) {
           void refresh();
           return;
@@ -144,7 +158,7 @@ export default function LatestScreen() {
         setKeyword(nextKeyword);
       }} />
       <ThemedText type="smallBold">
-        {keyword ? `搜索：${keyword}` : params.title ?? sourceTitles[source] ?? '视频列表'}
+        {keyword ? `搜索：${keyword}` : params.title || sourceTitles[source] || '视频列表'}
       </ThemedText>
       {!keyword && (
         <>
