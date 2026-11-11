@@ -110,28 +110,38 @@ export function parseVideoList(html: string, page = 1): VideoList {
 
 export function parseHome(html: string): HomeSection[] {
   const root = parse(html);
-  const sectionIds: Record<string, string> = {
+  // NOTE: 标题文案随语言变化（繁/简/英/日…），只在没有「更多」链接的板块靠标题兜底。
+  const sectionTitles: Record<string, string> = {
     新作上市: 'release',
     最近更新: 'new',
     無碼影片: 'fc2',
+    无码影片: 'fc2',
     隨機: 'random',
+    随机: 'random',
   };
+  const sectionPaths = new Set(['new', 'release', 'fc2', 'random']);
 
   return root.querySelectorAll('h1,h2,h3').flatMap((heading) => {
     const title = heading.text.trim();
-    const id = sectionIds[title];
+    // 「更多」链接在标题所在行，用路径末段识别板块，避免依赖各语言的标题文案。
+    // 页脚也有指向 new/release 的链接（同一行多条），只认唯一命中的标题行。
+    const row = heading.parentNode?.parentNode as HTMLElement | undefined;
+    const links = (row?.querySelectorAll('a[href]') ?? []).flatMap((anchor) => {
+      const href = anchor.getAttribute('href');
+      if (!href) return [];
+      const path = new URL(href, SOURCE_BASE_URL).pathname;
+      const id = path.split('/').filter(Boolean).at(-1);
+      return id && sectionPaths.has(id) ? [{ id, path }] : [];
+    });
+    const link = new Set(links.map((item) => item.id)).size === 1 ? links[0] : undefined;
+
+    const id = sectionTitles[title] ?? link?.id;
     if (!id) return [];
     const section = heading.parentNode?.parentNode?.parentNode as HTMLElement | undefined;
     if (!section) return [];
     const videos = parseVideoCards(section);
     if (videos.length === 0) return [];
-    const moreHref = section.querySelectorAll('a').find((anchor) => anchor.text.trim() === '更多')?.getAttribute('href');
-    return [{
-      id,
-      title,
-      videos,
-      morePath: moreHref ? new URL(moreHref, SOURCE_BASE_URL).pathname : undefined,
-    }];
+    return [{ id, title, videos, morePath: link?.path }];
   });
 }
 
@@ -148,7 +158,9 @@ export function parseDirectory(html: string, kind: 'genres' | 'actresses' | 'mak
     const raw = anchor.text.trim().replace(/\s+/g, ' ');
     if (!raw) continue;
 
-    const name = raw.split(/\s+(?:\d+\s+條影片|第\s+\d+\s+名)/)[0].trim();
+    // NOTE: 计数文案随语言变化（條影片 / 条影片 / 本の動画 / videos），名字在计数前，不能用固定繁体词切。
+    const cut = raw.search(/(?:\s+\d+\s+(?:條|条)?影片|\s+\d+\s+本の動画|\s+\d+\s+videos?\b|\s+第\s*\d+\s*名|\s+(?:No\.?|#)\s*\d+)/i);
+    const name = (cut > 0 ? raw.slice(0, cut) : raw).trim();
     if (!name) continue;
     const parentText = (anchor.parentNode as HTMLElement).text.trim().replace(/\s+/g, ' ');
     const subtitle = raw.slice(name.length).trim() || parentText.replace(raw, '').trim() || undefined;
@@ -300,8 +312,8 @@ export function parsePlaylists(html: string): PlaylistSummary[] {
     const lines = anchor.text.split('\n').map((line) => line.trim()).filter(Boolean);
     const name = lines[0];
     if (!name) return [];
-    const visibility = lines.find((line) => line === '私人' || line === '公開');
-    const updatedLine = lines.find((line) => line.includes('更新'));
+    const visibility = lines.find((line) => /^(私人|公開|公开|Private|Public)$/i.test(line));
+    const updatedLine = lines.find((line) => /更新|Updated/i.test(line));
     const updatedAt = updatedLine?.match(/\d{4}-\d{2}-\d{2}/)?.[0];
     const owner = lines.find((line) => line !== name && line !== visibility && !line.includes('更新'));
 
@@ -319,7 +331,7 @@ export function parsePlaylists(html: string): PlaylistSummary[] {
 export function parsePlaylistDetail(html: string): PlaylistDetail {
   const root = parse(html);
   return {
-    name: (root.querySelector('h1')?.text.trim() ?? '').replace(/^片單[:：]\s*/, '').trim(),
+    name: (root.querySelector('h1')?.text.trim() ?? '').replace(/^(?:片單|片单|Playlist)[:：]\s*/i, '').trim(),
     videos: parseVideoCards(root),
   };
 }

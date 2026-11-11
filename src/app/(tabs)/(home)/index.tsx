@@ -17,10 +17,17 @@ import { ThemedText } from '@/components/themed-text';
 import { VideoCard } from '@/components/video-card';
 import { Radius, Spacing, TabBarInset } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useLanguage } from '@/stores/language';
 
 const HOT_PREVIEW_LIMIT = 8;
 
 export default function HomeScreen() {
+  const { language } = useLanguage();
+  // NOTE: 语言切换会改变请求 URL，换 key 重建列表状态并重新拉取。
+  return <HomeView key={language} />;
+}
+
+function HomeView() {
   const router = useRouter();
   const theme = useTheme();
   const [sections, setSections] = useState<HomeSection[]>([]);

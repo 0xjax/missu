@@ -31,6 +31,7 @@ import {
   VIDEO_SORT_OPTIONS,
 } from '@/constants/video-options';
 import { useTheme } from '@/hooks/use-theme';
+import { useLanguage } from '@/stores/language';
 
 const sources = [
   { label: '最近更新', path: '/new' },
@@ -44,7 +45,8 @@ type LatestParams = { query?: string; source?: string; title?: string };
 
 export default function LatestScreen() {
   const params = useLocalSearchParams<LatestParams>();
-  const key = `${params.query ?? ''}|${params.source ?? ''}|${params.title ?? ''}`;
+  const { language } = useLanguage();
+  const key = `${language}|${params.query ?? ''}|${params.source ?? ''}|${params.title ?? ''}`;
 
   return <LatestView key={key} params={params} />;
 }

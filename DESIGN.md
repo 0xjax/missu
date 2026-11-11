@@ -62,6 +62,7 @@
 | 视频卡封面角标 | `VideoCard` | 左下变体标签（中文字幕 / 无码影片），右下时长；标签取自卡片 HTML，不新增请求 |
 | 女优筛选 | `BottomSheet` + 4 × `Picker` | 2×2 排布、内容自适应高度；排序走 `ChoiceMenuBar` 菜单 |
 | 搜索 | `SearchBox` | Paper Searchbar，列表页与首页共用 |
+| 内容语言 | 设置行 → `/language` 子页 | 7 种语言，当前项 accent 色；路径前缀由 api 层统一拼接，切换后列表换 key 重拉 |
 | 反馈 | Snackbar + haptics | 收藏、登录、播放手势 |
 
 NEVER 把多个 Compose `TextField` 塞进同一个 `Host` 并排——它们都是 `fillMaxWidth`，会互相挤扁。需要多控件时每个控件独立 `Host` 定宽。
@@ -79,6 +80,8 @@ NEVER 把多个 Compose `TextField` 塞进同一个 `Host` 并排——它们都
 - 同上原因，`ListItem` 的 `colors` 会抛 `Cannot set prop 'modifiers'` 红条，个人中心/设置改用 `SettingsRow` 自建行
 - 不做 iOS / Web 适配：非 Android 平台走通用回退实现，不接受为其新增平台代码
 - 频道分组是静态清单（`src/constants/channel-groups.ts`），站点改版需手工同步
+- 内容语言只切换站点数据（路径前缀 `/cn`、`/en` …），App 界面文案仍为中文；「随机」板块在非中文语言下没有「更多」链接，可能不显示
+- `ko / ms / th` 语言只在站点菜单中确认存在，Cloudflare 拦截导致尚未拿到 200 实测
 - `expo-router/unstable-native-tabs` 已废弃，待迁移到 `expo-router/native-tabs`
 
 ## Technical Stack

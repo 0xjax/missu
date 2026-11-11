@@ -9,6 +9,7 @@ type Props = {
   label: string;
   detail?: string;
   danger?: boolean;
+  selected?: boolean;
   onPress?: () => void;
 };
 
@@ -17,7 +18,7 @@ type Props = {
  * NOTE: 不用 @expo/ui 的 List/ListItem——Expo Go 内置的 ExpoUI 版本对 ListItem 的 colors 属性
  * 会抛 "Cannot set prop 'modifiers'"，导致 dev 下红条报错，因此这里用 RN 行保持同样的视觉。
  */
-export function SettingsRow({ label, detail, danger, onPress }: Props) {
+export function SettingsRow({ label, detail, danger, selected, onPress }: Props) {
   const theme = useTheme();
 
   return (
@@ -27,10 +28,17 @@ export function SettingsRow({ label, detail, danger, onPress }: Props) {
       onPress={onPress}
       style={({ pressed }) => [styles.row, pressed && onPress ? styles.pressed : undefined]}>
       <View style={styles.text}>
-        <ThemedText style={danger ? { color: theme.danger } : undefined}>{label}</ThemedText>
+        <ThemedText
+          style={[
+            danger ? { color: theme.danger } : undefined,
+            // NOTE: 选中态只用强调色表达，不加 ✓，避免文字位移。
+            selected ? { color: theme.accent } : undefined,
+          ]}>
+          {label}
+        </ThemedText>
         {detail && <ThemedText type="small" themeColor="textSecondary">{detail}</ThemedText>}
       </View>
-      {onPress && <Ionicons color={theme.textSecondary} name="chevron-forward" size={18} />}
+      {onPress && !selected && <Ionicons color={theme.textSecondary} name="chevron-forward" size={18} />}
     </Pressable>
   );
 }
