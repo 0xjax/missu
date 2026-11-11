@@ -57,6 +57,7 @@
 | 个人中心 | `SettingsRow` | 56dp 行、透明容器、右侧 chevron；二级页走根 Stack |
 | 频道 / 周期 / 筛选 / 排序 | `ChoiceMenuBar` | 40dp TextButton + 系统 DropdownMenu（Compose） |
 | 一级分类（发现页） | `DiscoverTabs` | `SingleChoiceSegmentedButtonRow`，等分整宽 |
+| 厂商频道组 | `CollapsibleGroup` + `SettingsRow` | 默认折叠三组（素人/无码影片/亚洲 AV），路径见 `src/constants/channel-groups.ts` |
 | 搜索 | `SearchBox` | Paper Searchbar，列表页与首页共用 |
 | 反馈 | Snackbar + haptics | 收藏、登录、播放手势 |
 
@@ -74,6 +75,7 @@ NEVER 把多个 Compose `TextField` 塞进同一个 `Host` 并排——它们都
 - Expo Go 内置的 ExpoUI 版本落后 npm 包：`SelectableDropdownMenuItem` 会白屏，菜单选中态用 `✓` 文案代替
 - 同上原因，`ListItem` 的 `colors` 会抛 `Cannot set prop 'modifiers'` 红条，个人中心/设置改用 `SettingsRow` 自建行
 - 不做 iOS / Web 适配：非 Android 平台走通用回退实现，不接受为其新增平台代码
+- 频道分组是静态清单（`src/constants/channel-groups.ts`），站点改版需手工同步
 - `expo-router/unstable-native-tabs` 已废弃，待迁移到 `expo-router/native-tabs`
 
 ## Technical Stack

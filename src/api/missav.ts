@@ -76,7 +76,11 @@ async function fetchHtml(path: string, baseUrl = SOURCE_BASE_URL, signal?: Abort
     });
     captureXsrfToken(response);
     if (!response.ok) throw new HttpError(response.status);
-    return response.text();
+    const html = await response.text();
+    if (/<title>\s*Just a moment\.\.\.\s*<\/title>/i.test(html)) {
+      throw new Error('源站暂时拦截了请求，请稍后重试');
+    }
+    return html;
   }, signal);
 }
 
