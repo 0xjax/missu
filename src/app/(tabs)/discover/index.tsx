@@ -1,8 +1,7 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Chip } from 'react-native-paper';
 
 import {
   getDirectory,
@@ -15,6 +14,7 @@ import {
 } from '@/api/missav';
 import { ChoiceMenuBar } from '@/components/choice-menu-bar';
 import { DirectoryCard } from '@/components/directory-card';
+import { DiscoverTabs } from '@/components/discover-tabs';
 import { ThemedText } from '@/components/themed-text';
 import { VideoCard } from '@/components/video-card';
 import { Radius, Spacing, TabBarInset } from '@/constants/theme';
@@ -36,7 +36,7 @@ const tabs: { id: Tab; label: string }[] = [
   { id: 'genres', label: '分类' },
   { id: 'actresses', label: '女优' },
   { id: 'makers', label: '厂商' },
-  { id: 'ranking', label: '女优排行' },
+  { id: 'ranking', label: '女优榜' },
 ];
 const periods: { id: Period; label: string; path: string }[] = [
   { id: 'today', label: '今日', path: '/today-hot' },
@@ -207,16 +207,14 @@ export default function DiscoverScreen() {
         ListFooterComponent={loadingMore ? <ActivityIndicator color={theme.text} /> : undefined}
         ListHeaderComponent={(
           <View style={styles.header}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.choices}>
-              {tabs.map((item) => (
-                <Chip key={item.id} compact selected={tab === item.id} onPress={() => {
-                  beginRequest();
-                  setTab(item.id);
-                }} style={[styles.choice, { backgroundColor: tab === item.id ? theme.accent : theme.backgroundElement }]} textStyle={{ color: tab === item.id ? theme.onAccent : theme.text, fontSize: 13 }}>
-                  {item.label}
-                </Chip>
-              ))}
-            </ScrollView>
+            <DiscoverTabs
+              items={tabs}
+              onChange={(next) => {
+                beginRequest();
+                setTab(next);
+              }}
+              value={tab}
+            />
             {tab === 'hot' && <ChoiceMenuBar choices={hotChoices} />}
           </View>
         )}
@@ -248,14 +246,6 @@ const styles = StyleSheet.create({
   header: {
     gap: Spacing.md,
     marginBottom: Spacing.xl,
-  },
-  choices: {
-    gap: Spacing.sm,
-  },
-  choice: {
-    borderRadius: Radius.sm,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 2,
   },
   empty: {
     alignItems: 'center',
