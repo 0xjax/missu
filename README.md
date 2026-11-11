@@ -27,4 +27,4 @@ bunx expo export --platform android
 - 免登录本地观看历史
 - 账号登录/退出及云端视频收藏
 
-数据层位于 `src/api/missav.ts`。源站提供 HTML 页面而非 JSON API，解析契约见 `docs/api/openapi.json`，HAR 草稿重新生成方式见 `docs/api/README.md`。Bun BFF 的缓存、频控和可选浏览器恢复配置见 [Bun BFF 与上游恢复](docs/bff.md)。
+数据层位于 `src/api/missav.ts`。源站提供 HTML 页面而非 JSON API，客户端直连并在本机解析；解析契约见 `docs/api/openapi.json`，HAR 草稿重新生成方式见 `docs/api/README.md`。
