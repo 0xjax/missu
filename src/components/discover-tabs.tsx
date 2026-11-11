@@ -19,6 +19,7 @@ export function DiscoverTabs<T extends string>({ items, value, onChange }: Disco
           key={item.id}
           onPress={() => onChange(item.id)}
           selected={item.id === value}
+          showSelectedCheck={false}
           style={[styles.choice, { backgroundColor: item.id === value ? theme.accent : theme.backgroundElement }]}
           textStyle={{ color: item.id === value ? theme.onAccent : theme.text, fontSize: 13 }}>
           {item.label}

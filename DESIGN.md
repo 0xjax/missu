@@ -45,7 +45,7 @@
 1. **原生优先** — 能用 `@expo/ui`（真 Compose）就不用 JS 自绘；Paper 仅保留 Searchbar、Snackbar、搜索历史标签。
 2. **同维度单一控件** — 一个维度只允许一种控件形态；频道、周期、筛选、排序各自最多占一个按钮。
 3. **尺寸守规范** — 控件高 40dp（分段/菜单）、页面左右留白 16dp；验收时用 `uiautomator dump` 量真实 bounds，不靠肉眼。
-4. **选中态轻量表达** — 选中写进按钮文案（`筛选 · 中文字幕`）或分段高亮，不用整块色块抢注意力。
+4. **选中态轻量表达** — 选中写进按钮文案（`筛选 · 中文字幕`）或分段高亮，不用整块色块抢注意力；菜单里的选中项只改文字颜色，不插入 `✓` 之类的字符前缀（会撑动布局、行宽跳动）。
 5. **状态一致** — 加载、空、错误、重试在首页/列表/发现/详情用同一套表达，错误必须可重试。
 
 ## Control Map
@@ -56,7 +56,7 @@
 | 页头 | 各 tab 独立 Stack header | 大标题 + 右侧图标 |
 | 个人中心 | `SettingsRow` | 56dp 行、透明容器、右侧 chevron；二级页走根 Stack |
 | 频道 / 周期 / 筛选 / 排序 | `ChoiceMenuBar` | 40dp TextButton + 系统 DropdownMenu（Compose） |
-| 一级分类（发现页） | `DiscoverTabs` | `SingleChoiceSegmentedButtonRow`，等分整宽 |
+| 一级分类（发现页） | `DiscoverTabs` | 单行原生 `ToggleButton`（热门/分类/女优/厂商/排行），选中仅填充色 |
 | 厂商频道组 | `CollapsibleGroup` + `SettingsRow` | 默认折叠三组（素人/无码影片/亚洲 AV），路径见 `src/constants/channel-groups.ts` |
 | 目录栅格 | `FlatList` + `DirectoryCard` | 女优 / 女优榜 3 列（低分辨率竖图），分类 / 厂商 2 列（文字块） |
 | 搜索 | `SearchBox` | Paper Searchbar，列表页与首页共用 |
