@@ -12,7 +12,7 @@ export default function TabsLayout() {
       iconColor={{ default: theme.textSecondary, selected: theme.accent }}
       labelStyle={{ default: { color: theme.textSecondary }, selected: { color: theme.accent } }}
       tintColor={theme.accent}>
-      <NativeTabs.Trigger labelVisibilityMode="labeled" name="index">
+      <NativeTabs.Trigger labelVisibilityMode="labeled" name="(home)">
         <NativeTabs.Trigger.Icon sf="house.fill" md="home" />
         <NativeTabs.Trigger.Label>首页</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>

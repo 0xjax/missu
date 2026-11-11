@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import type { DirectoryItem } from '@/api/missav';
@@ -17,7 +17,7 @@ export function DirectoryCard({ item }: { item: DirectoryItem }) {
     <Pressable
       accessibilityLabel={item.name}
       accessibilityRole="button"
-      onPress={() => router.push({ pathname: '/latest', params: { source: item.path, title: item.name, query: '' } })}
+      onPress={() => router.push({ pathname: '/latest', params: { source: item.path, title: item.name, query: '' } } as unknown as Href)}
       style={({ pressed }) => [styles.card, { width, backgroundColor: theme.backgroundElement }, pressed && styles.pressed]}>
       {item.imageUrl && <Image source={{ uri: item.imageUrl }} style={styles.image} contentFit="cover" recyclingKey={item.id} transition={200} />}
       <View style={styles.content}>
