@@ -247,3 +247,61 @@ export function parseVideoDetail(html: string, id: string): VideoDetail {
     saved: false,
   };
 }
+
+export type PlaylistSummary = {
+  id: string;
+  path: string;
+  name: string;
+  visibility?: string;
+  owner?: string;
+  updatedAt?: string;
+};
+
+export type PlaylistDetail = {
+  name: string;
+  videos: VideoSummary[];
+};
+
+/** 源站未登录时会直接渲染登录表单，用这个判断会话是否还有效。 */
+export function isLoginPage(html: string): boolean {
+  return html.includes('id="login_email"');
+}
+
+export function parsePlaylists(html: string): PlaylistSummary[] {
+  const root = parse(html);
+  const seen = new Set<string>();
+
+  return root.querySelectorAll('a[href*="/playlists/"]').flatMap((anchor) => {
+    const href = anchor.getAttribute('href');
+    if (!href) return [];
+    const path = new URL(href, SOURCE_BASE_URL).pathname;
+    if (!/^\/playlists\/[^/]+$/.test(path) || path === '/playlists/create') return [];
+    if (seen.has(path)) return [];
+    seen.add(path);
+
+    const lines = anchor.text.split('\n').map((line) => line.trim()).filter(Boolean);
+    const name = lines[0];
+    if (!name) return [];
+    const visibility = lines.find((line) => line === '私人' || line === '公開');
+    const updatedLine = lines.find((line) => line.includes('更新'));
+    const updatedAt = updatedLine?.match(/\d{4}-\d{2}-\d{2}/)?.[0];
+    const owner = lines.find((line) => line !== name && line !== visibility && !line.includes('更新'));
+
+    return [{
+      id: path.split('/').filter(Boolean).at(-1)!,
+      path,
+      name,
+      visibility,
+      owner,
+      updatedAt,
+    }];
+  });
+}
+
+export function parsePlaylistDetail(html: string): PlaylistDetail {
+  const root = parse(html);
+  return {
+    name: (root.querySelector('h1')?.text.trim() ?? '').replace(/^片單[:：]\s*/, '').trim(),
+    videos: parseVideoCards(root),
+  };
+}

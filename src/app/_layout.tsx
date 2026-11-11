@@ -35,7 +35,8 @@ export default function RootLayout() {
               <Stack.Screen name="login" options={{ title: '登录' }} />
               <Stack.Screen name="saved" options={{ title: '我的收藏' }} />
               <Stack.Screen name="history" options={{ title: '观看历史' }} />
-              <Stack.Screen name="playlists" options={{ title: '我的片单' }} />
+              <Stack.Screen name="playlists/index" options={{ title: '我的片单' }} />
+              <Stack.Screen name="playlists/[id]" options={{ title: '片单' }} />
               <Stack.Screen name="settings" options={{ title: '设置' }} />
               <Stack.Screen name="video/[id]" options={{ title: '视频详情' }} />
             </Stack>

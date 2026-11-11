@@ -2,7 +2,7 @@ import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
 
-import { getSavedVideos, isAbortError, type VideoSummary } from '@/api/missav';
+import { getSavedVideos, isAbortError, SessionExpiredError, type VideoSummary } from '@/api/missav';
 import { ThemedText } from '@/components/themed-text';
 import { VideoCard } from '@/components/video-card';
 import { Radius, Spacing } from '@/constants/theme';
@@ -12,7 +12,7 @@ import { useAuth } from '@/stores/auth';
 export default function SavedScreen() {
   const router = useRouter();
   const theme = useTheme();
-  const { user, ready } = useAuth();
+  const { user, ready, expire } = useAuth();
   const [videos, setVideos] = useState<VideoSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
@@ -25,11 +25,15 @@ export default function SavedScreen() {
       setVideos(result.videos);
     } catch (reason) {
       if (isAbortError(reason) || signal?.aborted) return;
+      if (reason instanceof SessionExpiredError) {
+        await expire();
+        return;
+      }
       setError(reason instanceof Error ? reason.message : '加载失败');
     } finally {
       if (!signal?.aborted) setLoading(false);
     }
-  }, [ready, user]);
+  }, [expire, ready, user]);
 
   useFocusEffect(useCallback(() => {
     const controller = new AbortController();
