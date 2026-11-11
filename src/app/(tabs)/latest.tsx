@@ -20,11 +20,10 @@ import {
   type VideoSort,
   type VideoSummary,
 } from '@/api/missav';
-import { AppNav } from '@/components/app-nav';
 import { SearchBox } from '@/components/search-box';
 import { ThemedText } from '@/components/themed-text';
 import { VideoCard } from '@/components/video-card';
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, TabBarInset } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 const filters: { label: string; value?: VideoFilter }[] = [
@@ -136,7 +135,6 @@ export default function LatestScreen() {
   const header = (
     <View style={styles.header}>
       <ThemedText type="subtitle">MissAV</ThemedText>
-      <AppNav current="latest" />
       <SearchBox value={input} onChangeText={setInput} onSearch={(nextKeyword) => {
         if (nextKeyword === keyword) {
           void refresh();
@@ -225,7 +223,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: Spacing.lg,
-    paddingBottom: Spacing.xxxl,
+    paddingBottom: Spacing.xxxl + TabBarInset,
     flexGrow: 1,
   },
   row: {

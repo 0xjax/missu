@@ -3,10 +3,9 @@ import { useCallback, useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AppNav } from '@/components/app-nav';
 import { ThemedText } from '@/components/themed-text';
 import { VideoCard } from '@/components/video-card';
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, TabBarInset } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { clearHistory, getHistory, type HistoryEntry } from '@/storage/history';
 
@@ -52,7 +51,6 @@ export default function HistoryScreen() {
         ListHeaderComponent={(
           <View style={styles.header}>
             <ThemedText type="subtitle">观看历史</ThemedText>
-            <AppNav current="history" />
             {videos.length > 0 && (
               <Pressable accessibilityRole="button" onPress={confirmClear} style={[styles.clear, { backgroundColor: theme.backgroundElement }]}>
                 <ThemedText type="smallBold">清空历史</ThemedText>
@@ -74,7 +72,7 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     padding: Spacing.lg,
-    paddingBottom: Spacing.xxxl,
+    paddingBottom: Spacing.xxxl + TabBarInset,
   },
   row: {
     width: '100%',

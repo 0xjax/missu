@@ -31,11 +31,7 @@ export default function RootLayout() {
               headerStyle: { backgroundColor: colors.background },
               headerTintColor: colors.text,
             }}>
-              <Stack.Screen name="index" options={{ headerShown: false }} />
-              <Stack.Screen name="latest" options={{ headerShown: false }} />
-              <Stack.Screen name="discover" options={{ headerShown: false }} />
-              <Stack.Screen name="history" options={{ headerShown: false }} />
-              <Stack.Screen name="account" options={{ headerShown: false }} />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="saved" options={{ title: '我的收藏' }} />
               <Stack.Screen name="video/[id]" options={{ title: '视频详情' }} />
             </Stack>

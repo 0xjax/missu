@@ -12,11 +12,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getHome, isAbortError, type HomeSection } from '@/api/missav';
-import { AppNav } from '@/components/app-nav';
 import { SearchBox } from '@/components/search-box';
 import { ThemedText } from '@/components/themed-text';
 import { VideoCard } from '@/components/video-card';
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, TabBarInset } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function HomeScreen() {
@@ -75,7 +74,6 @@ export default function HomeScreen() {
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
         <ThemedText type="subtitle">MissAV</ThemedText>
-        <AppNav current="home" />
         <SearchBox value={input} onChangeText={setInput} onSearch={submitSearch} />
         {loading && <ActivityIndicator color={theme.text} style={styles.state} />}
         {error && (
@@ -127,7 +125,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     gap: Spacing.lg,
     padding: Spacing.lg,
-    paddingBottom: Spacing.xxxl,
+    paddingBottom: Spacing.xxxl + TabBarInset,
   },
   state: {
     alignItems: 'center',
