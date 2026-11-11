@@ -141,6 +141,26 @@ export async function getDirectory(path: string, page = 1, signal?: AbortSignal)
   return parseDirectory(await fetchHtml(queryPath(path, { page }), undefined, signal), kind, page);
 }
 
+export type ActressQuery = {
+  page?: number;
+  sort?: 'videos' | 'debut';
+  filters?: Partial<Record<'height' | 'cup' | 'age' | 'debut', string>>;
+};
+
+/** 女优一览支持身高/罩杯/年龄/出道年份筛选与两种排序，参数与源站一致。 */
+export async function getActresses(query: ActressQuery = {}, signal?: AbortSignal): Promise<DirectoryList> {
+  const page = query.page ?? 1;
+  const params = new URLSearchParams();
+  if (query.sort) params.set('sort', query.sort);
+  for (const [key, value] of Object.entries(query.filters ?? {})) {
+    if (value) params.set(key, value);
+  }
+  if (page > 1) params.set('page', String(page));
+  const search = params.toString();
+  const html = await fetchHtml(search ? `/actresses?${search}` : '/actresses', undefined, signal);
+  return parseDirectory(html, 'actresses', page);
+}
+
 export async function getSavedVideos(options: VideoQuery = {}, signal?: AbortSignal): Promise<VideoList> {
   const page = options.page ?? 1;
   const html = await fetchHtml(queryPath('/saved', options), SOURCE_BASE_URL, signal);

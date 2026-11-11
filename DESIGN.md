@@ -58,7 +58,8 @@
 | 频道 / 周期 / 筛选 / 排序 | `ChoiceMenuBar` | 40dp TextButton + 系统 DropdownMenu（Compose） |
 | 一级分类（发现页） | `DiscoverTabs` | 单行原生 `ToggleButton`（热门/分类/女优/厂商/排行），选中仅填充色 |
 | 厂商频道组 | `CollapsibleGroup` + `SettingsRow` | 默认折叠三组（素人/无码影片/亚洲 AV），路径见 `src/constants/channel-groups.ts` |
-| 目录栅格 | `FlatList` + `DirectoryCard` | 女优 / 女优榜 3 列（低分辨率竖图），分类 / 厂商 2 列（文字块） |
+| 目录栅格 | `FlatList` + `DirectoryCard` | 女优 / 排行 3 列（低分辨率竖图），分类 / 厂商 2 列（文字块） |
+| 女优筛选 | `BottomSheet` + 4 × `Picker` | 2×2 排布、内容自适应高度；排序走 `ChoiceMenuBar` 菜单 |
 | 搜索 | `SearchBox` | Paper Searchbar，列表页与首页共用 |
 | 反馈 | Snackbar + haptics | 收藏、登录、播放手势 |
 

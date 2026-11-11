@@ -4,6 +4,7 @@ import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
+  getActresses,
   getDirectory,
   getVideos,
   isAbortError,
@@ -12,12 +13,19 @@ import {
   type VideoSort,
   type VideoSummary,
 } from '@/api/missav';
-import { ChoiceMenuBar } from '@/components/choice-menu-bar';
+import { ActressFilterSheet } from '@/components/actress-filter-sheet';
 import { ChannelGroups } from '@/components/channel-groups';
+import { ChoiceMenuBar } from '@/components/choice-menu-bar';
 import { DirectoryCard } from '@/components/directory-card';
 import { DiscoverTabs } from '@/components/discover-tabs';
 import { ThemedText } from '@/components/themed-text';
 import { VideoCard } from '@/components/video-card';
+import {
+  ACTRESS_SORT_OPTIONS,
+  type ActressFilterKey,
+  type ActressFilters,
+  type ActressSort,
+} from '@/constants/actress-filters';
 import { Radius, Spacing, TabBarInset } from '@/constants/theme';
 import {
   NO_FILTER,
@@ -63,6 +71,9 @@ export default function DiscoverScreen() {
   const [period, setPeriod] = useState<Period>(isHotShortcut ? params.period as Period : 'today');
   const [filter, setFilter] = useState<VideoFilter>();
   const [sort, setSort] = useState<VideoSort>();
+  const [actressSort, setActressSort] = useState<ActressSort>('videos');
+  const [actressFilters, setActressFilters] = useState<ActressFilters>({});
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [items, setItems] = useState<Entry[]>([]);
   const [nextPage, setNextPage] = useState<number | null>(null);
@@ -78,9 +89,13 @@ export default function DiscoverScreen() {
       const result = await getVideos(path, { page, filters: filter, sort }, signal);
       return { items: result.videos as Entry[], nextPage: result.nextPage };
     }
+    if (tab === 'actresses') {
+      const result = await getActresses({ filters: actressFilters, page, sort: actressSort }, signal);
+      return { items: result.items as Entry[], nextPage: result.nextPage };
+    }
     const result = await getDirectory(directoryPaths[tab], page, signal);
     return { items: result.items as Entry[], nextPage: result.nextPage };
-  }, [filter, period, sort, tab]);
+  }, [actressFilters, actressSort, filter, period, sort, tab]);
 
   const beginRequest = useCallback(() => {
     setLoading(true);
@@ -188,6 +203,9 @@ export default function DiscoverScreen() {
     },
   ];
 
+  const actressFilterCount = Object.values(actressFilters).filter(Boolean).length;
+  const actressSortLabel = ACTRESS_SORT_OPTIONS.find((item) => item.value === actressSort)?.label ?? '影片';
+
   return (
     <SafeAreaView edges={['bottom']} style={[styles.screen, { backgroundColor: theme.background }]}>
       <FlatList
@@ -223,6 +241,30 @@ export default function DiscoverScreen() {
               value={tab}
             />
             {tab === 'hot' && <ChoiceMenuBar choices={hotChoices} />}
+            {tab === 'actresses' && (
+              <ChoiceMenuBar
+                choices={[
+                  {
+                    key: 'actress-sort',
+                    text: `排序 · ${actressSortLabel}`,
+                    value: actressSort,
+                    options: ACTRESS_SORT_OPTIONS.map((item) => ({ label: item.label, value: item.value })),
+                    onChange: (value) => {
+                      beginRequest();
+                      setActressSort(value as ActressSort);
+                    },
+                  },
+                  {
+                    key: 'actress-filters',
+                    text: actressFilterCount ? `筛选 · ${actressFilterCount}` : '筛选',
+                    value: '',
+                    options: [],
+                    onChange: () => {},
+                    onPress: () => setFilterSheetOpen(true),
+                  },
+                ]}
+              />
+            )}
             {tab === 'makers' && <ChannelGroups />}
           </View>
         )}
@@ -234,6 +276,19 @@ export default function DiscoverScreen() {
         renderItem={({ item }) => 'pageUrl' in item
           ? <VideoCard video={item} />
           : <DirectoryCard columns={directoryColumns[tab] ?? 2} item={item} />}
+      />
+      <ActressFilterSheet
+        filters={actressFilters}
+        onChange={(key: ActressFilterKey, value?: string) => {
+          beginRequest();
+          setActressFilters((prev) => ({ ...prev, [key]: value }));
+        }}
+        onClose={() => setFilterSheetOpen(false)}
+        onReset={() => {
+          beginRequest();
+          setActressFilters({});
+        }}
+        open={filterSheetOpen}
       />
     </SafeAreaView>
   );
