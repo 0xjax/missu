@@ -78,3 +78,6 @@ export const Radius = {
   lg: 12,
   full: 9999,
 } as const;
+
+// NOTE: Android 原生底部 tab 栏会覆盖内容，滚动容器需额外留出高度。
+export const TabBarInset = Platform.select({ android: 80, default: 0 }) ?? 0;

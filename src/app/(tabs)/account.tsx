@@ -3,9 +3,8 @@ import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AppNav } from '@/components/app-nav';
 import { ThemedText } from '@/components/themed-text';
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, TabBarInset } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/stores/auth';
 
@@ -52,7 +51,6 @@ export default function AccountScreen() {
     <SafeAreaView edges={['top', 'bottom']} style={[styles.screen, { backgroundColor: theme.background }]}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <ThemedText type="subtitle">我的</ThemedText>
-        <AppNav current="account" />
         {!ready && <ActivityIndicator color={theme.text} style={styles.state} />}
         {ready && !user && (
           <View style={styles.form}>
@@ -126,6 +124,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     gap: Spacing.lg,
     padding: Spacing.lg,
+    paddingBottom: Spacing.xxxl + TabBarInset,
   },
   state: {
     paddingVertical: Spacing.huge,

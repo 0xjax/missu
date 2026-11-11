@@ -1,4 +1,4 @@
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, type Href } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
@@ -15,7 +15,8 @@ export default function NotFoundScreen() {
       <View style={[styles.screen, { backgroundColor: theme.background }]}>
         <ThemedText type="subtitle">页面不存在</ThemedText>
         <ThemedText themeColor="textSecondary">这个链接可能已经失效。</ThemedText>
-        <Pressable accessibilityRole="button" onPress={() => router.replace('/')} style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
+        {/* NOTE: typed routes 对 (tabs) 组内 index 的生成不稳定，运行时 '/' 始终指向首页。 */}
+        <Pressable accessibilityRole="button" onPress={() => router.replace('/' as Href)} style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
           <ThemedText type="smallBold">返回首页</ThemedText>
         </Pressable>
       </View>

@@ -10,11 +10,10 @@ import {
   type DirectoryItem,
   type VideoSummary,
 } from '@/api/missav';
-import { AppNav } from '@/components/app-nav';
 import { DirectoryCard } from '@/components/directory-card';
 import { ThemedText } from '@/components/themed-text';
 import { VideoCard } from '@/components/video-card';
-import { Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing, TabBarInset } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 type Tab = 'hot' | 'genres' | 'actresses' | 'makers' | 'ranking';
@@ -144,7 +143,6 @@ export default function DiscoverScreen() {
         ListHeaderComponent={(
           <View style={styles.header}>
             <ThemedText type="subtitle">发现</ThemedText>
-            <AppNav current="discover" />
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.choices}>
               {tabs.map((item) => (
                 <Chip key={item.id} compact selected={tab === item.id} onPress={() => {
@@ -187,7 +185,7 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     padding: Spacing.lg,
-    paddingBottom: Spacing.xxxl,
+    paddingBottom: Spacing.xxxl + TabBarInset,
   },
   row: {
     width: '100%',
