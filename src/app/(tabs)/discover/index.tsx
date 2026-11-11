@@ -184,7 +184,8 @@ export default function DiscoverScreen() {
     },
     {
       key: 'filter',
-      text: `筛选 · ${filterLabel}`,
+      // NOTE: 触发器只显示当前选项值，维度由按钮位置表达。
+      text: filterLabel,
       value: filter ?? NO_FILTER,
       options: VIDEO_FILTER_OPTIONS.map((item) => ({ label: item.label, value: item.value ?? NO_FILTER })),
       onChange: (value: string) => {
@@ -194,7 +195,7 @@ export default function DiscoverScreen() {
     },
     {
       key: 'sort',
-      text: `排序 · ${sortLabel}`,
+      text: sortLabel,
       value: sort ?? NO_SORT,
       options: VIDEO_SORT_OPTIONS.map((item) => ({ label: item.label, value: item.value ?? NO_SORT })),
       onChange: (value: string) => {
@@ -247,7 +248,7 @@ export default function DiscoverScreen() {
                 choices={[
                   {
                     key: 'actress-sort',
-                    text: `排序 · ${actressSortLabel}`,
+                    text: actressSortLabel,
                     value: actressSort,
                     options: ACTRESS_SORT_OPTIONS.map((item) => ({ label: item.label, value: item.value })),
                     onChange: (value) => {
