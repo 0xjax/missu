@@ -24,10 +24,6 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Icon sf="safari.fill" md="explore" />
         <NativeTabs.Trigger.Label>发现</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger labelVisibilityMode="labeled" name="history">
-        <NativeTabs.Trigger.Icon sf="clock.fill" md="history" />
-        <NativeTabs.Trigger.Label>历史</NativeTabs.Trigger.Label>
-      </NativeTabs.Trigger>
       <NativeTabs.Trigger labelVisibilityMode="labeled" name="account">
         <NativeTabs.Trigger.Icon sf="person.crop.circle.fill" md="person" />
         <NativeTabs.Trigger.Label>我的</NativeTabs.Trigger.Label>
