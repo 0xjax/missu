@@ -13,6 +13,7 @@ import {
   type VideoSummary,
 } from '@/api/missav';
 import { ChoiceMenuBar } from '@/components/choice-menu-bar';
+import { ChannelGroups } from '@/components/channel-groups';
 import { DirectoryCard } from '@/components/directory-card';
 import { DiscoverTabs } from '@/components/discover-tabs';
 import { ThemedText } from '@/components/themed-text';
@@ -216,6 +217,7 @@ export default function DiscoverScreen() {
               value={tab}
             />
             {tab === 'hot' && <ChoiceMenuBar choices={hotChoices} />}
+            {tab === 'makers' && <ChannelGroups />}
           </View>
         )}
         numColumns={2}
