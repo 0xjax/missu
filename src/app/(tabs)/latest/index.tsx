@@ -18,19 +18,25 @@ import {
   type VideoSort,
   type VideoSummary,
 } from '@/api/missav';
+import { ChoiceMenuBar } from '@/components/choice-menu-bar';
 import { SearchBox } from '@/components/search-box';
 import { ThemedText } from '@/components/themed-text';
 import { VideoCard } from '@/components/video-card';
-import { VideoFilterBar } from '@/components/video-filter-bar';
 import { Radius, Spacing, TabBarInset } from '@/constants/theme';
-import { SEARCH_FILTER_OPTIONS, VIDEO_FILTER_OPTIONS } from '@/constants/video-options';
+import {
+  NO_FILTER,
+  NO_SORT,
+  SEARCH_FILTER_OPTIONS,
+  VIDEO_FILTER_OPTIONS,
+  VIDEO_SORT_OPTIONS,
+} from '@/constants/video-options';
 import { useTheme } from '@/hooks/use-theme';
 
-const sourceTitles: Record<string, string> = {
-  '/new': '最近更新',
-  '/release': '新作上市',
-  '/fc2': '无码影片',
-};
+const sources = [
+  { label: '最近更新', path: '/new' },
+  { label: '新作上市', path: '/release' },
+  { label: '无码流出', path: '/uncensored-leak' },
+];
 
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : '加载失败，请稍后重试';
 
@@ -46,9 +52,9 @@ export default function LatestScreen() {
 function LatestView({ params }: { params: LatestParams }) {
   const theme = useTheme();
   const initialKeyword = params.query ?? '';
-  const source = params.source ?? '/new';
   const [input, setInput] = useState(initialKeyword);
   const [keyword, setKeyword] = useState(initialKeyword);
+  const [source, setSource] = useState(params.source ?? '/new');
   const [filter, setFilter] = useState<VideoFilter>();
   const [sort, setSort] = useState<VideoSort>();
   const [videos, setVideos] = useState<VideoSummary[]>([]);
@@ -57,6 +63,21 @@ function LatestView({ params }: { params: LatestParams }) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string>();
+
+  // NOTE: 首页“更多”还会带 /fc2 等频道，未在常用频道内时补一个当前项，避免没有任何选中态。
+  const sourceOptions = sources.some((item) => item.path === source)
+    ? sources
+    : [...sources, { label: params.title || source, path: source }];
+  const filterOptions = (keyword ? SEARCH_FILTER_OPTIONS : VIDEO_FILTER_OPTIONS).map((item) => ({
+    label: item.label,
+    value: item.value ?? NO_FILTER,
+  }));
+  const sortOptions = VIDEO_SORT_OPTIONS.map((item) => ({
+    label: item.label,
+    value: item.value ?? NO_SORT,
+  }));
+  const filterLabel = filter ? filterOptions.find((item) => item.value === filter)?.label : undefined;
+  const sortLabel = sort ? sortOptions.find((item) => item.value === sort)?.label : undefined;
 
   const beginRequest = useCallback(() => {
     setLoading(true);
@@ -124,6 +145,29 @@ function LatestView({ params }: { params: LatestParams }) {
     }
   };
 
+  const filterChoices = [
+    {
+      key: 'filter',
+      text: filterLabel ? `筛选 · ${filterLabel}` : '筛选',
+      value: filter ?? NO_FILTER,
+      options: filterOptions,
+      onChange: (value: string) => {
+        beginRequest();
+        setFilter(value === NO_FILTER ? undefined : value as VideoFilter);
+      },
+    },
+    {
+      key: 'sort',
+      text: sortLabel ? `排序 · ${sortLabel}` : '排序',
+      value: sort ?? NO_SORT,
+      options: sortOptions,
+      onChange: (value: string) => {
+        beginRequest();
+        setSort(value === NO_SORT ? undefined : value as VideoSort);
+      },
+    },
+  ];
+
   const header = (
     <View style={styles.header}>
       <SearchBox value={input} onChangeText={(nextInput) => {
@@ -142,22 +186,20 @@ function LatestView({ params }: { params: LatestParams }) {
         setFilter(undefined);
         setKeyword(nextKeyword);
       }} />
-      <ThemedText type="smallBold">
-        {keyword ? `搜索：${keyword}` : params.title || sourceTitles[source] || '视频列表'}
-      </ThemedText>
-      <VideoFilterBar
-        filter={filter}
-        filters={keyword ? SEARCH_FILTER_OPTIONS : VIDEO_FILTER_OPTIONS}
-        onFilterChange={(value) => {
-          beginRequest();
-          setFilter(value);
-        }}
-        onSortChange={(value) => {
-          beginRequest();
-          setSort(value);
-        }}
-        sort={sort}
-      />
+      {keyword && <ThemedText type="smallBold">搜索：{keyword}</ThemedText>}
+      <ChoiceMenuBar choices={keyword ? filterChoices : [
+        {
+          key: 'source',
+          text: sourceOptions.find((item) => item.path === source)?.label ?? source,
+          value: source,
+          options: sourceOptions.map((item) => ({ label: item.label, value: item.path })),
+          onChange: (value: string) => {
+            beginRequest();
+            setSource(value);
+          },
+        },
+        ...filterChoices,
+      ]} />
     </View>
   );
 

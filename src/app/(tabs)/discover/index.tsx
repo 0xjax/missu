@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Chip } from 'react-native-paper';
@@ -12,17 +13,23 @@ import {
   type VideoSort,
   type VideoSummary,
 } from '@/api/missav';
+import { ChoiceMenuBar } from '@/components/choice-menu-bar';
 import { DirectoryCard } from '@/components/directory-card';
 import { ThemedText } from '@/components/themed-text';
 import { VideoCard } from '@/components/video-card';
-import { VideoFilterBar } from '@/components/video-filter-bar';
 import { Radius, Spacing, TabBarInset } from '@/constants/theme';
-import { VIDEO_FILTER_OPTIONS } from '@/constants/video-options';
+import {
+  NO_FILTER,
+  NO_SORT,
+  VIDEO_FILTER_OPTIONS,
+  VIDEO_SORT_OPTIONS,
+} from '@/constants/video-options';
 import { useTheme } from '@/hooks/use-theme';
 
 type Tab = 'hot' | 'genres' | 'actresses' | 'makers' | 'ranking';
 type Period = 'today' | 'weekly' | 'monthly';
 type Entry = VideoSummary | DirectoryItem;
+type DiscoverParams = { tab?: Tab; period?: Period; at?: string };
 
 const tabs: { id: Tab; label: string }[] = [
   { id: 'hot', label: '热门' },
@@ -45,16 +52,20 @@ const directoryPaths: Record<Exclude<Tab, 'hot'>, string> = {
 
 export default function DiscoverScreen() {
   const theme = useTheme();
+  const params = useLocalSearchParams<DiscoverParams>();
+  const isHotShortcut = params.tab === 'hot' && periods.some((item) => item.id === params.period);
   const [tab, setTab] = useState<Tab>('hot');
-  const [period, setPeriod] = useState<Period>('today');
+  const [period, setPeriod] = useState<Period>(isHotShortcut ? params.period as Period : 'today');
   const [filter, setFilter] = useState<VideoFilter>();
   const [sort, setSort] = useState<VideoSort>();
+  const [reloadKey, setReloadKey] = useState(0);
   const [items, setItems] = useState<Entry[]>([]);
   const [nextPage, setNextPage] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string>();
+  const handledAt = useRef(params.at);
 
   const load = useCallback(async (page: number, signal?: AbortSignal) => {
     if (tab === 'hot') {
@@ -65,6 +76,24 @@ export default function DiscoverScreen() {
     const result = await getDirectory(directoryPaths[tab], page, signal);
     return { items: result.items as Entry[], nextPage: result.nextPage };
   }, [filter, period, sort, tab]);
+
+  const beginRequest = useCallback(() => {
+    setLoading(true);
+    setItems([]);
+    setNextPage(null);
+    setError(undefined);
+  }, []);
+
+  // NOTE: 首页“今日热门/更多”用 tab+period+at 跳转过来，at 变化时切回热门并重新加载。
+  useEffect(() => {
+    if (params.tab !== 'hot' || !periods.some((item) => item.id === params.period)) return;
+    if (handledAt.current === params.at) return;
+    handledAt.current = params.at;
+    beginRequest();
+    setTab('hot');
+    setPeriod(params.period as Period);
+    setReloadKey((value) => value + 1);
+  }, [beginRequest, params.at, params.period, params.tab]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -83,14 +112,7 @@ export default function DiscoverScreen() {
       active = false;
       controller.abort();
     };
-  }, [load]);
-
-  const beginRequest = () => {
-    setLoading(true);
-    setItems([]);
-    setNextPage(null);
-    setError(undefined);
-  };
+  }, [load, reloadKey]);
 
   const refresh = async () => {
     if (items.length === 0) setLoading(true);
@@ -124,6 +146,43 @@ export default function DiscoverScreen() {
     }
   };
 
+  const periodLabel = periods.find((item) => item.id === period)?.label ?? '今日';
+  const filterLabel = filter ? VIDEO_FILTER_OPTIONS.find((item) => item.value === filter)?.label : undefined;
+  const sortLabel = sort ? VIDEO_SORT_OPTIONS.find((item) => item.value === sort)?.label : undefined;
+
+  const hotChoices = [
+    {
+      key: 'period',
+      text: `${periodLabel}热门`,
+      value: period,
+      options: periods.map((item) => ({ label: `${item.label}热门`, value: item.id })),
+      onChange: (value: string) => {
+        beginRequest();
+        setPeriod(value as Period);
+      },
+    },
+    {
+      key: 'filter',
+      text: filterLabel ? `筛选 · ${filterLabel}` : '筛选',
+      value: filter ?? NO_FILTER,
+      options: VIDEO_FILTER_OPTIONS.map((item) => ({ label: item.label, value: item.value ?? NO_FILTER })),
+      onChange: (value: string) => {
+        beginRequest();
+        setFilter(value === NO_FILTER ? undefined : value as VideoFilter);
+      },
+    },
+    {
+      key: 'sort',
+      text: sortLabel ? `排序 · ${sortLabel}` : '排序',
+      value: sort ?? NO_SORT,
+      options: VIDEO_SORT_OPTIONS.map((item) => ({ label: item.label, value: item.value ?? NO_SORT })),
+      onChange: (value: string) => {
+        beginRequest();
+        setSort(value === NO_SORT ? undefined : value as VideoSort);
+      },
+    },
+  ];
+
   return (
     <SafeAreaView edges={['bottom']} style={[styles.screen, { backgroundColor: theme.background }]}>
       <FlatList
@@ -153,38 +212,12 @@ export default function DiscoverScreen() {
                 <Chip key={item.id} compact selected={tab === item.id} onPress={() => {
                   beginRequest();
                   setTab(item.id);
-                }} style={[styles.choice, { backgroundColor: tab === item.id ? theme.accent : theme.backgroundElement }]} textStyle={{ color: tab === item.id ? theme.onAccent : theme.text }}>
+                }} style={[styles.choice, { backgroundColor: tab === item.id ? theme.accent : theme.backgroundElement }]} textStyle={{ color: tab === item.id ? theme.onAccent : theme.text, fontSize: 13 }}>
                   {item.label}
                 </Chip>
               ))}
             </ScrollView>
-            {tab === 'hot' && (
-              <>
-                <View style={styles.periods}>
-                  {periods.map((item) => (
-                    <Chip key={item.id} compact selected={period === item.id} onPress={() => {
-                      beginRequest();
-                      setPeriod(item.id);
-                    }} style={[styles.period, { backgroundColor: period === item.id ? theme.backgroundSelected : theme.backgroundElement }]}>
-                      {item.label}热门
-                    </Chip>
-                  ))}
-                </View>
-                <VideoFilterBar
-                  filter={filter}
-                  filters={VIDEO_FILTER_OPTIONS}
-                  onFilterChange={(value) => {
-                    beginRequest();
-                    setFilter(value);
-                  }}
-                  onSortChange={(value) => {
-                    beginRequest();
-                    setSort(value);
-                  }}
-                  sort={sort}
-                />
-              </>
-            )}
+            {tab === 'hot' && <ChoiceMenuBar choices={hotChoices} />}
           </View>
         )}
         numColumns={2}
@@ -213,7 +246,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xl,
   },
   header: {
-    gap: Spacing.lg,
+    gap: Spacing.md,
     marginBottom: Spacing.xl,
   },
   choices: {
@@ -221,17 +254,8 @@ const styles = StyleSheet.create({
   },
   choice: {
     borderRadius: Radius.sm,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-  },
-  periods: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  period: {
-    borderRadius: Radius.sm,
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    paddingVertical: 2,
   },
   empty: {
     alignItems: 'center',

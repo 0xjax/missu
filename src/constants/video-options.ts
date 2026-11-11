@@ -3,6 +3,10 @@ import type { VideoFilter, VideoSort } from '@/api/missav';
 export type FilterOption = { label: string; value?: VideoFilter };
 export type SortOption = { label: string; value?: VideoSort };
 
+// NOTE: 原生 Picker 的 selectedValue 必须是已有选项，用哨兵值表示“不筛选/默认排序”。
+export const NO_FILTER = 'all';
+export const NO_SORT = 'default';
+
 export const VIDEO_FILTER_OPTIONS: FilterOption[] = [
   { label: '全部' },
   { label: '单人作品', value: 'individual' },
