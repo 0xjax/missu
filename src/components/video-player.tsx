@@ -1,5 +1,4 @@
 /* oxlint-disable react/refs, react/immutability -- Gesture 回调和 expo-video 命令式播放器属性需要可变引用。 */
-import * as Haptics from 'expo-haptics';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -9,6 +8,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 import { ThemedText } from '@/components/themed-text';
 import { formatTime } from '@/utils/format-time';
+import { impactHaptic, selectionHaptic } from '@/utils/haptics';
 
 export function VideoPlayer({ url }: { url: string }) {
   const player = useVideoPlayer({
@@ -47,7 +47,7 @@ export function VideoPlayer({ url }: { url: string }) {
   }, []);
 
   const seekBy = useCallback((seconds: number) => {
-    void Haptics.selectionAsync();
+    selectionHaptic();
     player.seekBy(seconds);
     showHint(seconds > 0 ? `+${seconds} 秒` : `${seconds} 秒`);
   }, [player, showHint]);
@@ -72,14 +72,14 @@ export function VideoPlayer({ url }: { url: string }) {
   }, []);
 
   const finishSeek = useCallback((target: number) => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    impactHaptic();
     player.seekBy(target - player.currentTime);
     if (wasPlaying.current) player.play();
     setHint(undefined);
   }, [player]);
 
   const startSpeed = useCallback(() => {
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    impactHaptic();
     previousRate.current = player.playbackRate || 1;
     player.playbackRate = previousRate.current * 2;
     showHint(`${player.playbackRate}x`, true);

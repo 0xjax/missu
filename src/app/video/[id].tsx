@@ -1,4 +1,3 @@
-import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -12,6 +11,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { addToHistory } from '@/storage/history';
 import { useAuth } from '@/stores/auth';
+import { errorHaptic, successHaptic } from '@/utils/haptics';
 
 export default function VideoDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -57,10 +57,10 @@ export default function VideoDetailScreen() {
         ? { ...current, detail: { ...current.detail, saved: nextSaved } }
         : current);
       setNotice(nextSaved ? '已加入云端收藏' : '已取消云端收藏');
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      successHaptic();
     } catch (reason) {
       setNotice(reason instanceof Error ? reason.message : '收藏操作失败');
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      errorHaptic();
     } finally {
       setSaving(false);
     }
