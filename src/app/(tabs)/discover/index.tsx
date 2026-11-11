@@ -50,6 +50,10 @@ const directoryPaths: Record<Exclude<Tab, 'hot'>, string> = {
   makers: '/makers',
   ranking: '/actresses/ranking',
 };
+const directoryColumns: Partial<Record<Tab, number>> = {
+  actresses: 3,
+  ranking: 3,
+};
 
 export default function DiscoverScreen() {
   const theme = useTheme();
@@ -187,9 +191,11 @@ export default function DiscoverScreen() {
   return (
     <SafeAreaView edges={['bottom']} style={[styles.screen, { backgroundColor: theme.background }]}>
       <FlatList
-        contentContainerStyle={styles.content}
         columnWrapperStyle={styles.row}
+        contentContainerStyle={styles.content}
         data={items}
+        // NOTE: numColumns 不能动态修改，切 tab 时用 key 重新挂载。
+        key={tab}
         keyExtractor={(item) => item.id}
         ListEmptyComponent={(
           <View style={styles.empty}>
@@ -220,12 +226,14 @@ export default function DiscoverScreen() {
             {tab === 'makers' && <ChannelGroups />}
           </View>
         )}
-        numColumns={2}
+        numColumns={directoryColumns[tab] ?? 2}
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
         onRefresh={refresh}
         refreshing={refreshing}
-        renderItem={({ item }) => 'pageUrl' in item ? <VideoCard video={item} /> : <DirectoryCard item={item} />}
+        renderItem={({ item }) => 'pageUrl' in item
+          ? <VideoCard video={item} />
+          : <DirectoryCard columns={directoryColumns[tab] ?? 2} item={item} />}
       />
     </SafeAreaView>
   );

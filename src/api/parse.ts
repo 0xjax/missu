@@ -128,24 +128,32 @@ export function parseHome(html: string): HomeSection[] {
 export function parseDirectory(html: string, kind: 'genres' | 'actresses' | 'makers', page = 1): DirectoryList {
   const root = parse(html);
   const marker = `/${kind}/`;
-  const seen = new Set<string>();
-  const items = root.querySelectorAll('a.text-nord13[href]').flatMap((anchor) => {
+  const byPath = new Map<string, DirectoryItem>();
+
+  for (const anchor of root.querySelectorAll('a.text-nord13[href]')) {
     const href = anchor.getAttribute('href');
-    if (!href) return [];
+    if (!href) continue;
     const path = new URL(href, SOURCE_BASE_URL).pathname;
-    if (!path.includes(marker) || path.endsWith('/ranking') || seen.has(path)) return [];
+    if (!path.includes(marker) || path.endsWith('/ranking')) continue;
     const raw = anchor.text.trim().replace(/\s+/g, ' ');
-    if (!raw) return [];
-    seen.add(path);
+    if (!raw) continue;
 
     const name = raw.split(/\s+(?:\d+\s+條影片|第\s+\d+\s+名)/)[0].trim();
+    if (!name) continue;
     const parentText = (anchor.parentNode as HTMLElement).text.trim().replace(/\s+/g, ' ');
     const subtitle = raw.slice(name.length).trim() || parentText.replace(raw, '').trim() || undefined;
     const card = anchor.parentNode?.parentNode as HTMLElement | undefined;
     const image = card?.querySelector('img');
     const imageUrl = absoluteUrl(image?.getAttribute('data-src') ?? image?.getAttribute('src'));
-    return [{ id: path, path, name, subtitle, imageUrl }];
-  });
+
+    // NOTE: 无头像的条目站点用“首字占位块”当头像，会先命中一个单字链接；同路径取名字最长的那条。
+    const existing = byPath.get(path);
+    if (!existing || name.length > existing.name.length) {
+      byPath.set(path, { id: path, path, name, subtitle, imageUrl });
+    }
+  }
+
+  const items = [...byPath.values()];
   const hasNextPage = root.querySelectorAll('a[href]').some((anchor) => {
     const href = anchor.getAttribute('href');
     return href ? new URL(href, SOURCE_BASE_URL).searchParams.get('page') === String(page + 1) : false;
