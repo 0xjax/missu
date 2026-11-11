@@ -8,12 +8,16 @@ import {
   getVideos,
   isAbortError,
   type DirectoryItem,
+  type VideoFilter,
+  type VideoSort,
   type VideoSummary,
 } from '@/api/missav';
 import { DirectoryCard } from '@/components/directory-card';
 import { ThemedText } from '@/components/themed-text';
 import { VideoCard } from '@/components/video-card';
+import { VideoFilterBar } from '@/components/video-filter-bar';
 import { Radius, Spacing, TabBarInset } from '@/constants/theme';
+import { VIDEO_FILTER_OPTIONS } from '@/constants/video-options';
 import { useTheme } from '@/hooks/use-theme';
 
 type Tab = 'hot' | 'genres' | 'actresses' | 'makers' | 'ranking';
@@ -43,6 +47,8 @@ export default function DiscoverScreen() {
   const theme = useTheme();
   const [tab, setTab] = useState<Tab>('hot');
   const [period, setPeriod] = useState<Period>('today');
+  const [filter, setFilter] = useState<VideoFilter>();
+  const [sort, setSort] = useState<VideoSort>();
   const [items, setItems] = useState<Entry[]>([]);
   const [nextPage, setNextPage] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,12 +59,12 @@ export default function DiscoverScreen() {
   const load = useCallback(async (page: number, signal?: AbortSignal) => {
     if (tab === 'hot') {
       const path = periods.find((item) => item.id === period)!.path;
-      const result = await getVideos(path, { page }, signal);
+      const result = await getVideos(path, { page, filters: filter, sort }, signal);
       return { items: result.videos as Entry[], nextPage: result.nextPage };
     }
     const result = await getDirectory(directoryPaths[tab], page, signal);
     return { items: result.items as Entry[], nextPage: result.nextPage };
-  }, [period, tab]);
+  }, [filter, period, sort, tab]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -153,16 +159,31 @@ export default function DiscoverScreen() {
               ))}
             </ScrollView>
             {tab === 'hot' && (
-              <View style={styles.periods}>
-                {periods.map((item) => (
-                  <Chip key={item.id} compact selected={period === item.id} onPress={() => {
+              <>
+                <View style={styles.periods}>
+                  {periods.map((item) => (
+                    <Chip key={item.id} compact selected={period === item.id} onPress={() => {
+                      beginRequest();
+                      setPeriod(item.id);
+                    }} style={[styles.period, { backgroundColor: period === item.id ? theme.backgroundSelected : theme.backgroundElement }]}>
+                      {item.label}热门
+                    </Chip>
+                  ))}
+                </View>
+                <VideoFilterBar
+                  filter={filter}
+                  filters={VIDEO_FILTER_OPTIONS}
+                  onFilterChange={(value) => {
                     beginRequest();
-                    setPeriod(item.id);
-                  }} style={[styles.period, { backgroundColor: period === item.id ? theme.backgroundSelected : theme.backgroundElement }]}>
-                    {item.label}热门
-                  </Chip>
-                ))}
-              </View>
+                    setFilter(value);
+                  }}
+                  onSortChange={(value) => {
+                    beginRequest();
+                    setSort(value);
+                  }}
+                  sort={sort}
+                />
+              </>
             )}
           </View>
         )}
