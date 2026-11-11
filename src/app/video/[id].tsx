@@ -14,7 +14,7 @@ import { useAuth } from '@/stores/auth';
 import { errorHaptic, successHaptic } from '@/utils/haptics';
 
 export default function VideoDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, badges: badgesParam } = useLocalSearchParams<{ id: string; badges?: string }>();
   const router = useRouter();
   const theme = useTheme();
   const { user } = useAuth();
@@ -31,7 +31,8 @@ export default function VideoDetailScreen() {
     getVideoDetail(id, controller.signal).then((nextDetail) => {
       if (!active) return;
       setResult({ id, detail: nextDetail });
-      void addToHistory(nextDetail);
+      // NOTE: 详情页没有当前影片的封面角标，角标由打开它的卡片带过来，用于历史列表继续显示。
+      void addToHistory({ ...nextDetail, badges: badgesParam ? badgesParam.split('|') : undefined });
     }).catch((reason: unknown) => {
       if (!active || isAbortError(reason)) return;
       setResult({ id, error: reason instanceof Error ? reason.message : '加载失败，请稍后重试' });
@@ -40,7 +41,7 @@ export default function VideoDetailScreen() {
       active = false;
       controller.abort();
     };
-  }, [attempt, id]);
+  }, [attempt, badgesParam, id]);
 
   const toggleSaved = async () => {
     if (!detail?.internalId) return;

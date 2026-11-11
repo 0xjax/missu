@@ -10,6 +10,7 @@ export type VideoSummary = {
   pageUrl: string;
   thumbnailUrl?: string;
   duration?: string;
+  badges?: string[];
 };
 
 export type VideoList = {
@@ -81,11 +82,20 @@ function parseVideoCards(root: HTMLElement): VideoSummary[] {
     const title = card.querySelector('a.text-secondary')?.text.trim() || id;
     const image = thumbnail.querySelector('img');
     const thumbnailUrl = absoluteUrl(image?.getAttribute('data-src') ?? image?.getAttribute('src'));
-    const duration = thumbnail.querySelectorAll('span')
-      .map((span) => span.text.trim())
-      .find((text) => /^\d+:\d{2}(?::\d{2})?$/.test(text));
+    const spans = thumbnail.querySelectorAll('span').map((span) => ({
+      className: span.getAttribute('class') ?? '',
+      text: span.text.trim(),
+    }));
+    const duration = spans.find((span) => /^\d+:\d{2}(?::\d{2})?$/.test(span.text))?.text;
+    // NOTE: 封面左下角是变体角标（中文字幕 / 無碼影片），右下角是时长；用位置类区分，同一棵子树内取，不额外请求。
+    const badges = spans
+      .filter((span) => span.className.includes('bottom-1')
+        && span.className.includes('left-1')
+        && !span.className.includes('right-1'))
+      .map((span) => span.text)
+      .filter(Boolean);
 
-    return [{ id, title, pageUrl, thumbnailUrl, duration }];
+    return [{ id, title, pageUrl, thumbnailUrl, duration, badges }];
   });
 }
 
