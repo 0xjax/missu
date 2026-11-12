@@ -1,7 +1,6 @@
 import { NativeModules } from 'react-native';
 
 import {
-  isLoginPage,
   parseDirectory,
   parseHome,
   parsePlaylistDetail,
@@ -96,8 +95,9 @@ export class ChallengeError extends Error {
 export type ChallengeSolution = { verified: boolean; html?: string };
 type ChallengeVerifier = (path: string) => Promise<ChallengeSolution>;
 let challengeVerifier: ChallengeVerifier | undefined;
-// NOTE: 部分页面（例如片单）原生请求只拿到空壳，需要 WebView 渲染后再取 HTML。
-type WebViewHtmlFetcher = (path: string) => Promise<string>;
+// NOTE: 部分页面（例如片单）原生请求只拿到空壳，需要 WebView 渲染后再取 HTML；url 是渲染后的最终地址。
+type WebViewResult = { html: string; url: string };
+type WebViewHtmlFetcher = (path: string) => Promise<WebViewResult>;
 let webViewHtmlFetcher: WebViewHtmlFetcher | undefined;
 // NOTE: cf_clearance 绑定 IP + User-Agent，验证成功后用 WebView 的 UA 发请求，否则验证无效。
 let browserUserAgent: string | undefined;
@@ -118,8 +118,8 @@ export function localizedUrl(path: string): string {
   return new URL(localizedPath(path), SOURCE_BASE_URL).toString();
 }
 
-/** 通过隐藏 WebView 取渲染后的整页 HTML；失败由调用方回退到原生 fetch。 */
-async function fetchHtmlViaWebView(path: string): Promise<string> {
+/** 通过隐藏 WebView 取渲染后的整页 HTML 与最终地址；失败由调用方回退到原生 fetch。 */
+async function fetchHtmlViaWebView(path: string): Promise<WebViewResult> {
   if (!webViewHtmlFetcher) throw new Error('WebView 未就绪');
   return webViewHtmlFetcher(path);
 }
@@ -150,7 +150,27 @@ function captureXsrfToken(response: Response): void {
   }
 }
 
+/** 首页路径（可带 /dmNNN 前缀和语言段）：`/`、`/cn`、`/dm31/cn`。 */
+function isHomePath(pathname: string): boolean {
+  const segments = pathname.split('/').filter(Boolean).filter((segment) => !/^dm\d+$/.test(segment));
+  return segments.length === 0 || (segments.length === 1 && (LANGUAGE_SEGMENTS as readonly string[]).includes(segments[0]));
+}
+
+/**
+ * 登录态失效只认一个信号：请求的受保护页面被站点 302 回了首页。
+ * NOTE: 不能用「页面里有没有 /logout」判断——挑战页、502 页、精简布局页都没有它，会误判成登录失效。
+ */
+function redirectedToHome(requestPath: string, finalUrl: string | undefined): boolean {
+  if (!finalUrl) return false;
+  try {
+    return !isHomePath(requestPath) && isHomePath(new URL(finalUrl).pathname);
+  } catch {
+    return false;
+  }
+}
+
 async function fetchHtml(path: string, baseUrl = SOURCE_BASE_URL, signal?: AbortSignal): Promise<string> {
+  const requestPath = new URL(localizedPath(path), baseUrl).pathname;
   const load = () => withTimeout(async (requestSignal) => {
     const response = await fetch(new URL(localizedPath(path), baseUrl), {
       headers: requestHeaders({ Accept: 'text/html,application/xhtml+xml' }),
@@ -159,6 +179,7 @@ async function fetchHtml(path: string, baseUrl = SOURCE_BASE_URL, signal?: Abort
     captureXsrfToken(response);
     if (isChallengeResponse(response)) throw new ChallengeError(path);
     if (!response.ok) throw new HttpError(response.status);
+    if (redirectedToHome(requestPath, response.url)) throw new SessionExpiredError();
     const html = await response.text();
     if (isChallengeResponse(response, html)) throw new ChallengeError(path);
     return html;
@@ -276,25 +297,23 @@ export async function getActresses(query: ActressQuery = {}, signal?: AbortSigna
 
 export async function getSavedVideos(options: VideoQuery = {}, signal?: AbortSignal): Promise<VideoList> {
   const page = options.page ?? 1;
-  const html = await fetchHtml(queryPath('/saved', options), SOURCE_BASE_URL, signal);
-  if (isLoginPage(html)) throw new SessionExpiredError();
-  return parseVideoList(html, page);
+  return parseVideoList(await fetchHtml(queryPath('/saved', options), SOURCE_BASE_URL, signal), page);
 }
 
 export async function getPlaylists(signal?: AbortSignal): Promise<PlaylistSummary[]> {
   // NOTE: 片单页原生请求只返回空壳，列表由页面渲染；优先用 WebView 取渲染后的 HTML。
-  const html = await fetchHtmlViaWebView('/playlists')
-    .catch(() => fetchHtml('/playlists', undefined, signal));
-  if (isLoginPage(html)) throw new SessionExpiredError();
-  return parsePlaylists(html);
+  const result = await fetchHtmlViaWebView('/playlists')
+    .catch(async () => ({ html: await fetchHtml('/playlists', undefined, signal), url: '' }));
+  if (redirectedToHome(new URL(localizedUrl('/playlists')).pathname, result.url)) throw new SessionExpiredError();
+  return parsePlaylists(result.html);
 }
 
 export async function getPlaylistDetail(id: string, signal?: AbortSignal): Promise<PlaylistDetail> {
   // NOTE: 与片单列表一样，原生 HTML 可能只有空壳；优先用 WebView 取渲染结果。
   const path = `/playlists/${encodeURIComponent(id)}`;
-  const html = await fetchHtmlViaWebView(path).catch(() => fetchHtml(path, undefined, signal));
-  if (isLoginPage(html)) throw new SessionExpiredError();
-  return parsePlaylistDetail(html);
+  const result = await fetchHtmlViaWebView(path).catch(async () => ({ html: await fetchHtml(path, undefined, signal), url: '' }));
+  if (redirectedToHome(new URL(localizedUrl(path)).pathname, result.url)) throw new SessionExpiredError();
+  return parsePlaylistDetail(result.html);
 }
 
 export async function searchVideos(keyword: string, options: VideoQuery = {}, signal?: AbortSignal): Promise<VideoList> {
@@ -354,7 +373,7 @@ async function fetchPlaylistForm<T>(path: string, parse: (html: string) => T | u
   } catch {
     // NOTE: 原生取数失败（含挑战校验失败）时回退到 WebView。
   }
-  const parsed = parse(await fetchHtmlViaWebView(path));
+  const parsed = parse((await fetchHtmlViaWebView(path)).html);
   if (!parsed) throw new Error('没有拿到片单表单，请重新登录后再试');
   return parsed;
 }
@@ -426,9 +445,11 @@ export async function login(email: string, password: string): Promise<AccountUse
 /** 启动时校验服务端会话是否还有效；网络/风控失败时按“仍然有效”处理，避免误登出。 */
 export async function checkSession(signal?: AbortSignal): Promise<boolean> {
   try {
-    const html = await fetchHtml('/playlists', undefined, signal);
-    return !isLoginPage(html);
-  } catch {
+    await fetchHtml('/playlists', undefined, signal);
+    return true;
+  } catch (error) {
+    // NOTE: 只有「被 302 回首页」才判失效；挑战/网络错误一律维持登录态。
+    if (error instanceof SessionExpiredError) return false;
     return true;
   }
 }
