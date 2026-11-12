@@ -1,34 +1,49 @@
 # Missu
 
-基于 Expo SDK 58、React Native、TypeScript 和 Expo Router 的 MissAV 移动客户端，应用名 Missu。
+Android client for missav.ai, built with Expo SDK 58, React Native, TypeScript and Expo Router.
 
-## 开发
+The source site serves server-rendered HTML instead of a JSON API, so the app fetches pages directly and parses them on device. Parsing contracts live in `docs/api/openapi.json`; `docs/api/README.md` records the source constraints and how to regenerate the spec from HAR captures.
+
+## Requirements
+
+- Bun, used for package management and scripts
+- Android device running Expo Go for daily development; iOS and web are out of scope
+
+## Development
 
 ```bash
 bun install
 bun run start
 ```
 
-使用 Expo Go 扫码运行；需要脱离 Metro 的独立安装包时，按 [Android 真机调试与自动化](docs/android-debugging.md) 中的「构建独立 APK」打包。Android 真机无线 ADB、自动化操作和截图方法也在该文档。其他命令：
+Scan the QR code with Expo Go. Code changes reach the device through Metro Fast Refresh — do not restart Metro, rescan or force-stop the app to apply them. For a standalone APK that runs without Metro, see "构建独立 APK" in `docs/android-debugging.md`, which also covers wireless ADB, screenshots and log capture.
+
+## Verification
 
 ```bash
-bun check
-bun run lint
-bunx expo export --platform android
+bun check                              # tsc --noEmit
+bun run lint                           # oxlint src scripts
+bunx expo export --platform android    # production JS bundle
 ```
 
-## 当前功能
+## Layout
 
-- 底部四栏：首页、列表、发现、我的
-- 首页：今日热门、站点分区、最近更新，支持下拉刷新与分页
-- 列表：最近更新 / 新作上市 / 无码流出，支持筛选与排序
-- 发现：热门（多周期）、分类、女优（身高/罩杯/年龄/出道年份筛选与排序）、厂商、排行
-- 搜索：关键词与女优搜索、类型筛选、排序、字幕/无码角标、本地搜索历史
-- 详情：番号、日期、女优、类型、系列、厂商、标签（链接可跳转）及相关推荐
-- 播放：HLS、双击快进退（同方向连击叠加）、长按倍速、进度条单击/拖动、横屏全屏
-- 收藏与片单：登录后云端读取、添加、取消，片单支持新建与删除
-- 观看历史与搜索历史存本机，可在设置中清空
-- 设置：自动播放、内容语言（影响请求 URL）、清空历史、版本与数据来源
-- 账号：登录/退出、Cloudflare 人机验证恢复、会话失效检测
+```
+src/api/         fetch + HTML parsing (missav.ts, parse.ts, with-timeout.ts)
+src/app/         Expo Router file routes
+src/components/  shared UI, including the video player and preview overlay
+src/constants/   theme tokens, channel groups, language list
+src/hooks/       theme and layout hooks
+src/storage/     key-value persistence (history, search history, session-adjacent state)
+src/stores/      React context stores (auth, language, preferences, preview, challenge)
+src/utils/       formatting and haptics helpers
+scripts/         har-to-openapi.js, used to regenerate the API draft
+docs/            API contracts, Android debugging notes, design context
+```
 
-数据层位于 `src/api/missav.ts`。源站提供 HTML 页面而非 JSON API，客户端直连并在本机解析；解析契约见 `docs/api/openapi.json`，HAR 草稿重新生成方式见 `docs/api/README.md`。
+## Implementation notes
+
+- Android only. Design and acceptance target a physical device.
+- Requests go through `fetch` against the source site; Cloudflare challenges are surfaced through a WebView handshake, and `cf_clearance` is shared with the native cookie jar so the original request can retry.
+- Media playback uses `expo-video` over HLS; cards carry a short preview clip whose URL is derived from the thumbnail, so previews add no requests.
+- State is persisted with `expo-sqlite/kv-store`; the AsyncStorage layout from earlier builds is migrated once on startup.
