@@ -382,14 +382,13 @@ export function parsePlaylistCreateForm(html: string): PlaylistCreateForm | unde
 }
 
 export type PlaylistDeleteRequest = {
-  action?: string;
-  fields?: Record<string, string>;
-  token?: string;
+  action: string;
+  fields: Record<string, string>;
 };
 
 /**
- * 删除片单没有 JSON 接口，是网页路由（`DELETE /cn/playlists/{id}`）。
- * 优先用页面里的 `_method=DELETE` 表单原样提交；没有表单时退回 meta 里的 csrf-token 直接发 DELETE。
+ * 删除片单没有 JSON 接口：删除按钮在「修改片单」页，是一个 `_method=delete` + `_token` 的隐藏表单，
+ * 原样提交即可。只认这个表单——页面上的 csrf meta 在首页也有，拿去发 DELETE 只会打错接口。
  */
 export function parsePlaylistDeleteRequest(html: string): PlaylistDeleteRequest | undefined {
   const root = parse(html);
@@ -408,8 +407,7 @@ export function parsePlaylistDeleteRequest(html: string): PlaylistDeleteRequest 
     return { action: form.getAttribute('action') ?? '', fields };
   }
 
-  const token = root.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-  return token ? { token } : undefined;
+  return undefined;
 }
 
 export function parsePlaylists(html: string): PlaylistSummary[] {

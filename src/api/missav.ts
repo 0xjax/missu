@@ -343,13 +343,26 @@ export function setPlaylistMembership(dvdId: string, key: string, added: boolean
   }, true);
 }
 
-/** 新建片单走站点的网页表单（不是 JSON 接口），字段与 CSRF token 都从渲染后的页面里读。 */
+/**
+ * 片单的表单页（新建 / 修改）是服务端直出的 Blade 表单，实测原生 fetch 就能取到；
+ * WebView 只作回退（片单列表/详情那种客户端渲染的页面才必须走 WebView）。
+ */
+async function fetchPlaylistForm<T>(path: string, parse: (html: string) => T | undefined): Promise<T> {
+  try {
+    const parsed = parse(await fetchHtml(path));
+    if (parsed) return parsed;
+  } catch {
+    // NOTE: 原生取数失败（含挑战校验失败）时回退到 WebView。
+  }
+  const parsed = parse(await fetchHtmlViaWebView(path));
+  if (!parsed) throw new Error('没有拿到片单表单，请重新登录后再试');
+  return parsed;
+}
+
+/** 新建片单走站点的网页表单（不是 JSON 接口），字段与 CSRF token 都从表单页里读。 */
 export async function createPlaylist(dvdId: string, name: string): Promise<void> {
   const path = `/playlists/create/${encodeURIComponent(dvdId)}`;
-  // NOTE: 这张表单页是精简布局，没有站点导航，因此不能用 /logout 判断登录态（会误判为登录失效）。
-  const html = await fetchHtmlViaWebView(path);
-  const form = parsePlaylistCreateForm(html);
-  if (!form) throw new Error('没有拿到新建片单表单，请重新登录后再试');
+  const form = await fetchPlaylistForm(path, parsePlaylistCreateForm);
 
   const body = new URLSearchParams(form.fields);
   body.set(form.nameField, name);
@@ -373,32 +386,19 @@ export async function createPlaylist(dvdId: string, name: string): Promise<void>
  */
 export async function deletePlaylist(id: string): Promise<void> {
   const path = `/playlists/${encodeURIComponent(id)}`;
-  const html = await fetchHtmlViaWebView(`${path}/edit`);
-  const request = parsePlaylistDeleteRequest(html);
-  if (!request) throw new Error('没有拿到删除片单表单，请重新登录后再试');
+  const form = await fetchPlaylistForm(`${path}/edit`, parsePlaylistDeleteRequest);
 
-  const action = request.action ? new URL(request.action, SOURCE_BASE_URL) : new URL(localizedPath(path), SOURCE_BASE_URL);
-  const response = request.fields
-    ? await fetch(action, {
-      method: 'POST',
-      headers: requestHeaders({
-        Accept: 'text/html,application/xhtml+xml',
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Origin: SOURCE_BASE_URL,
-        Referer: localizedUrl(`${path}/edit`),
-      }),
-      body: new URLSearchParams(request.fields).toString(),
-    })
-    : await fetch(action, {
-      method: 'DELETE',
-      headers: requestHeaders({
-        Accept: 'application/json',
-        Origin: SOURCE_BASE_URL,
-        Referer: localizedUrl(path),
-        'X-CSRF-TOKEN': request.token ?? '',
-        'X-Requested-With': 'XMLHttpRequest',
-      }),
-    });
+  const action = form.action ? new URL(form.action, SOURCE_BASE_URL) : new URL(localizedPath(path), SOURCE_BASE_URL);
+  const response = await fetch(action, {
+    method: 'POST',
+    headers: requestHeaders({
+      Accept: 'text/html,application/xhtml+xml',
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Origin: SOURCE_BASE_URL,
+      Referer: localizedUrl(`${path}/edit`),
+    }),
+    body: new URLSearchParams(form.fields).toString(),
+  });
   if (!response.ok) throw new Error(`删除片单失败（HTTP ${response.status}）`);
 }
 
