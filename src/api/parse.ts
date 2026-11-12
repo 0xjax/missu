@@ -67,6 +67,16 @@ function absoluteUrl(value: string | undefined): string | undefined {
   return new URL(value, SOURCE_BASE_URL).toString();
 }
 
+const CONTENT_LANGUAGE_SEGMENTS = new Set(['cn', 'en', 'ja', 'ko', 'ms', 'th']);
+
+/** 去掉站点的 /dmXXXX 前缀和语言段，得到稳定的内容路径（例如 /cn/playlists/1 → /playlists/1）。 */
+function contentPath(pathname: string): string {
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments[0] && /^dm\d+$/.test(segments[0])) segments.shift();
+  if (segments[0] && CONTENT_LANGUAGE_SEGMENTS.has(segments[0])) segments.shift();
+  return `/${segments.join('/')}`;
+}
+
 function videoId(value: string): string | undefined {
   return new URL(value, SOURCE_BASE_URL).pathname.split('/').filter(Boolean).at(-1);
 }
@@ -304,7 +314,8 @@ export function parsePlaylists(html: string): PlaylistSummary[] {
   return root.querySelectorAll('a[href*="/playlists/"]').flatMap((anchor) => {
     const href = anchor.getAttribute('href');
     if (!href) return [];
-    const path = new URL(href, SOURCE_BASE_URL).pathname;
+    // NOTE: 渲染后的链接带语言前缀（/cn/playlists/xxx），先归一化再匹配。
+    const path = contentPath(new URL(href, SOURCE_BASE_URL).pathname);
     if (!/^\/playlists\/[^/]+$/.test(path) || path === '/playlists/create') return [];
     if (seen.has(path)) return [];
     seen.add(path);

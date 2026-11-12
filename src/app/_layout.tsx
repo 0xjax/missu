@@ -12,6 +12,7 @@ import { Colors } from '@/constants/theme';
 import { AuthProvider } from '@/stores/auth';
 import { ChallengeProvider } from '@/stores/challenge';
 import { LanguageProvider } from '@/stores/language';
+import { WebViewFetchProvider } from '@/stores/webview-fetch';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -58,6 +59,7 @@ export default function RootLayout() {
                   <Stack.Screen name="video/[id]" options={{ title: '视频详情' }} />
                 </Stack>
                 <OfflineBanner />
+                <WebViewFetchProvider />
               </ChallengeProvider>
             </LanguageProvider>
           </AuthProvider>

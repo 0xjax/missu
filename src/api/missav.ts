@@ -90,14 +90,22 @@ export class ChallengeError extends Error {
   }
 }
 
-// NOTE: 验证器由 UI 层（ChallengeProvider）注册；验证期间请求原地等待，通过后自动重试一次。
-type ChallengeVerifier = (path: string) => Promise<boolean>;
+// NOTE: 验证器由 UI 层（ChallengeProvider）注册；验证通过后可带回 WebView 渲染后的 HTML。
+export type ChallengeSolution = { verified: boolean; html?: string };
+type ChallengeVerifier = (path: string) => Promise<ChallengeSolution>;
 let challengeVerifier: ChallengeVerifier | undefined;
+// NOTE: 部分页面（例如片单）原生请求只拿到空壳，需要 WebView 渲染后再取 HTML。
+type WebViewHtmlFetcher = (path: string) => Promise<string>;
+let webViewHtmlFetcher: WebViewHtmlFetcher | undefined;
 // NOTE: cf_clearance 绑定 IP + User-Agent，验证成功后用 WebView 的 UA 发请求，否则验证无效。
 let browserUserAgent: string | undefined;
 
 export function setChallengeVerifier(verifier: ChallengeVerifier | undefined): void {
   challengeVerifier = verifier;
+}
+
+export function setWebViewHtmlFetcher(fetcher: WebViewHtmlFetcher | undefined): void {
+  webViewHtmlFetcher = fetcher;
 }
 
 export function setBrowserUserAgent(userAgent: string): void {
@@ -106,6 +114,12 @@ export function setBrowserUserAgent(userAgent: string): void {
 
 export function localizedUrl(path: string): string {
   return new URL(localizedPath(path), SOURCE_BASE_URL).toString();
+}
+
+/** 通过隐藏 WebView 取渲染后的整页 HTML；失败由调用方回退到原生 fetch。 */
+async function fetchHtmlViaWebView(path: string): Promise<string> {
+  if (!webViewHtmlFetcher) throw new Error('WebView 未就绪');
+  return webViewHtmlFetcher(path);
 }
 
 function requestHeaders(extra: Record<string, string> = {}): Record<string, string> {
@@ -119,17 +133,6 @@ function isChallengeResponse(response: Response, body?: string): boolean {
   if (response.status === 403) return true;
   if (response.headers.get('cf-mitigated') === 'challenge') return true;
   return body ? /<title>\s*Just a moment\.\.\.\s*<\/title>/i.test(body) : false;
-}
-
-async function withChallengeRetry<T>(path: string, load: () => Promise<T>, signal?: AbortSignal | null): Promise<T> {
-  try {
-    return await load();
-  } catch (error) {
-    if (!(error instanceof ChallengeError) || !challengeVerifier || signal?.aborted) throw error;
-    const verified = await challengeVerifier(path);
-    if (!verified) throw error;
-    return load();
-  }
 }
 
 // NOTE: Android 上 RN 的响应头通常不暴露 Set-Cookie，XSRF 令牌多数时候捕获不到；
@@ -159,7 +162,16 @@ async function fetchHtml(path: string, baseUrl = SOURCE_BASE_URL, signal?: Abort
     return html;
   }, signal);
 
-  return withChallengeRetry(path, load, signal);
+  try {
+    return await load();
+  } catch (error) {
+    if (!(error instanceof ChallengeError) || !challengeVerifier || signal?.aborted) throw error;
+    const solution = await challengeVerifier(path);
+    if (!solution.verified) throw error;
+    // NOTE: 带挑战壳的页面拿不到正文，优先使用 WebView 验证后回传的渲染结果。
+    if (solution.html) return solution.html;
+    return load();
+  }
 }
 
 export function isAbortError(error: unknown): boolean {
@@ -205,7 +217,14 @@ async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
     return data as T;
   }, signal);
 
-  return withChallengeRetry(path, load, signal);
+  try {
+    return await load();
+  } catch (error) {
+    if (!(error instanceof ChallengeError) || !challengeVerifier || signal?.aborted) throw error;
+    const solution = await challengeVerifier(path);
+    if (!solution.verified) throw error;
+    return load();
+  }
 }
 
 function queryPath(path: string, { page = 1, filters, sort }: VideoQuery): string {
@@ -259,13 +278,17 @@ export async function getSavedVideos(options: VideoQuery = {}, signal?: AbortSig
 }
 
 export async function getPlaylists(signal?: AbortSignal): Promise<PlaylistSummary[]> {
-  const html = await fetchHtml('/playlists', undefined, signal);
+  // NOTE: 片单页原生请求只返回空壳，列表由页面渲染；优先用 WebView 取渲染后的 HTML。
+  const html = await fetchHtmlViaWebView('/playlists')
+    .catch(() => fetchHtml('/playlists', undefined, signal));
   if (isLoginPage(html)) throw new SessionExpiredError();
   return parsePlaylists(html);
 }
 
 export async function getPlaylistDetail(id: string, signal?: AbortSignal): Promise<PlaylistDetail> {
-  const html = await fetchHtml(`/playlists/${encodeURIComponent(id)}`, undefined, signal);
+  // NOTE: 与片单列表一样，原生 HTML 可能只有空壳；优先用 WebView 取渲染结果。
+  const path = `/playlists/${encodeURIComponent(id)}`;
+  const html = await fetchHtmlViaWebView(path).catch(() => fetchHtml(path, undefined, signal));
   if (isLoginPage(html)) throw new SessionExpiredError();
   return parsePlaylistDetail(html);
 }

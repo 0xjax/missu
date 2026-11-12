@@ -86,6 +86,7 @@ NEVER 把多个 Compose `TextField` 塞进同一个 `Host` 并排——它们都
 - 人机验证走 WebView + 共享 Cookie；若 Cloudflare 进一步按 TLS 指纹拒绝，验证后仍可能 403（备选是让 WebView 代取 HTML，未做）
 - 登录前必须清空 Cookie 罐：带旧会话/Cloudflare Cookie 时 `/api/login` 返回 401；清空后登录响应写入新会话
 - 站点所有页面都内嵌 `#login_email` 登录弹窗，会话是否有效只能用 `/logout` 链接判断
+- 片单列表/详情的原生 HTML 可能只有空壳；用隐藏 WebView 渲染后取 `documentElement.outerHTML`，链接带语言前缀需先归一化
 - `expo-router/unstable-native-tabs` 已废弃，待迁移到 `expo-router/native-tabs`
 
 ## Technical Stack
