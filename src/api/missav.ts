@@ -77,6 +77,59 @@ export class SessionExpiredError extends Error {
   }
 }
 
+/** 源站触发了 Cloudflare 人机验证，需要 WebView 处理。 */
+export class ChallengeError extends Error {
+  readonly path: string;
+
+  constructor(path: string) {
+    super('需要完成人机验证');
+    this.name = 'ChallengeError';
+    this.path = path;
+  }
+}
+
+// NOTE: 验证器由 UI 层（ChallengeProvider）注册；验证期间请求原地等待，通过后自动重试一次。
+type ChallengeVerifier = (path: string) => Promise<boolean>;
+let challengeVerifier: ChallengeVerifier | undefined;
+// NOTE: cf_clearance 绑定 IP + User-Agent，验证成功后用 WebView 的 UA 发请求，否则验证无效。
+let browserUserAgent: string | undefined;
+
+export function setChallengeVerifier(verifier: ChallengeVerifier | undefined): void {
+  challengeVerifier = verifier;
+}
+
+export function setBrowserUserAgent(userAgent: string): void {
+  browserUserAgent = userAgent;
+}
+
+export function localizedUrl(path: string): string {
+  return new URL(localizedPath(path), SOURCE_BASE_URL).toString();
+}
+
+function requestHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  return {
+    ...(browserUserAgent ? { 'User-Agent': browserUserAgent } : {}),
+    ...extra,
+  };
+}
+
+function isChallengeResponse(response: Response, body?: string): boolean {
+  if (response.status === 403) return true;
+  if (response.headers.get('cf-mitigated') === 'challenge') return true;
+  return body ? /<title>\s*Just a moment\.\.\.\s*<\/title>/i.test(body) : false;
+}
+
+async function withChallengeRetry<T>(path: string, load: () => Promise<T>, signal?: AbortSignal | null): Promise<T> {
+  try {
+    return await load();
+  } catch (error) {
+    if (!(error instanceof ChallengeError) || !challengeVerifier || signal?.aborted) throw error;
+    const verified = await challengeVerifier(path);
+    if (!verified) throw error;
+    return load();
+  }
+}
+
 function captureXsrfToken(response: Response): void {
   const cookie = response.headers.get('set-cookie');
   const value = cookie?.match(/(?:^|,\s*)XSRF-TOKEN=([^;]+)/i)?.[1];
@@ -89,21 +142,20 @@ function captureXsrfToken(response: Response): void {
 }
 
 async function fetchHtml(path: string, baseUrl = SOURCE_BASE_URL, signal?: AbortSignal): Promise<string> {
-  return withTimeout(async (requestSignal) => {
+  const load = () => withTimeout(async (requestSignal) => {
     const response = await fetch(new URL(localizedPath(path), baseUrl), {
-      headers: {
-        Accept: 'text/html,application/xhtml+xml',
-      },
+      headers: requestHeaders({ Accept: 'text/html,application/xhtml+xml' }),
       signal: requestSignal,
     });
     captureXsrfToken(response);
+    if (isChallengeResponse(response)) throw new ChallengeError(path);
     if (!response.ok) throw new HttpError(response.status);
     const html = await response.text();
-    if (/<title>\s*Just a moment\.\.\.\s*<\/title>/i.test(html)) {
-      throw new Error('源站暂时拦截了请求，请稍后重试');
-    }
+    if (isChallengeResponse(response, html)) throw new ChallengeError(path);
     return html;
   }, signal);
+
+  return withChallengeRetry(path, load, signal);
 }
 
 export function isAbortError(error: unknown): boolean {
@@ -112,22 +164,27 @@ export function isAbortError(error: unknown): boolean {
 
 async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   const { signal, ...requestInit } = init;
-  return withTimeout(async (requestSignal) => {
+  const load = () => withTimeout(async (requestSignal) => {
     const response = await fetch(new URL(path, SOURCE_BASE_URL), {
       ...requestInit,
-      headers: {
+      headers: requestHeaders({
         Accept: 'application/json',
         ...(requestInit.body ? { 'Content-Type': 'application/json' } : {}),
         ...(xsrfToken ? { 'X-XSRF-TOKEN': xsrfToken } : {}),
-        ...requestInit.headers,
-      },
+        ...(requestInit.headers as Record<string, string> | undefined),
+      }),
       signal: requestSignal,
     });
     captureXsrfToken(response);
-    const data = await response.json().catch(() => null) as {
-      message?: string;
-      errors?: Record<string, string[]>;
-    } | null;
+    if (isChallengeResponse(response)) throw new ChallengeError(path);
+    const text = await response.text();
+    if (isChallengeResponse(response, text)) throw new ChallengeError(path);
+    let data: { message?: string; errors?: Record<string, string[]> } | null = null;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = null;
+    }
     if (!response.ok) {
       const firstError = data?.errors ? Object.values(data.errors)[0]?.[0] : undefined;
       throw new Error(firstError ?? data?.message ?? `请求失败（HTTP ${response.status}）`);
@@ -138,6 +195,8 @@ async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
     }
     return data as T;
   }, signal);
+
+  return withChallengeRetry(path, load, signal);
 }
 
 function queryPath(path: string, { page = 1, filters, sort }: VideoQuery): string {
@@ -244,7 +303,7 @@ export async function checkSession(signal?: AbortSignal): Promise<boolean> {
 
 export async function logout(): Promise<void> {
   const response = await fetch(new URL('/logout', SOURCE_BASE_URL), {
-    headers: xsrfToken ? { 'X-XSRF-TOKEN': xsrfToken } : undefined,
+    headers: requestHeaders(xsrfToken ? { 'X-XSRF-TOKEN': xsrfToken } : {}),
   });
   captureXsrfToken(response);
   if (!response.ok) throw new HttpError(response.status);
