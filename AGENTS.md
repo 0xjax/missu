@@ -13,6 +13,11 @@ bun check
 bunx expo export --platform android
 ```
 
+## 开发服务
+
+- 改代码靠 Metro Fast Refresh 生效，NEVER 重启 Metro、重新扫码或 force-stop App 来「让改动生效」；只有改 `app.json` 等配置、新增原生依赖，或 Fast Refresh 已进入报错状态时才手动 reload。
+- 真机调试（ADB、截图、日志、手动 reload）见 `docs/android-debugging.md`。
+
 ## Anti-Over-Engineering
 
 - Only make changes directly requested or clearly necessary; no extra features, refactors, or adjacent improvements.
@@ -26,7 +31,7 @@ bunx expo export --platform android
 - 仅适配 Android（设计与验收均以 Android 真机为准）；iOS / Web 不为交付目标，不新增平台专属实现。
 - Comment tags: `CRITICAL` = errors/crashes/data-loss; `WARNING` = risks/edge cases/side effects; `TODO` = incomplete work/tech debt; `NOTE` = non-obvious design decisions.
 - Round to business precision before float compare/accumulate/chain; NEVER raw `===` or epsilon.
-- 代码注释与提交信息用中文；提交信息遵循 Conventional Commits。
+- 代码注释用中文；提交信息用英文并遵循 Conventional Commits。
 
 ## Git Workflow
 
