@@ -61,6 +61,28 @@ bun run start
 
 唤醒屏幕不会解除密码锁；存在锁屏密码时需由用户手动解锁。
 
+## 热重载与手动 reload
+
+Metro 保持运行后，`src/` 下的 JavaScript/TypeScript 改动由 Fast Refresh 自动推送到设备，通常不打断页面状态。不要为了「让改动生效」去重启 Metro、重新扫码或 force-stop 应用——这些操作会丢掉正在调试的状态（播放进度、滚动位置、导航栈），比等一秒钟的刷新代价大得多。
+
+以下情况才需要手动 reload：
+
+- 修改 `app.json`、`babel.config.js` 等配置文件
+- 新增或升级需要重新构建原生代码的依赖
+- Fast Refresh 进入报错状态，红屏已经提示需要 reload
+- 极少数模块级改动没有触发刷新
+
+手动 reload 有两种方式：
+
+```powershell
+# 在手机上打开 Expo Go 的开发菜单，再点 Reload
+.\adb -t 2 shell input keyevent 82
+```
+
+也可以在 Metro 终端按 `r`，或在手机上摇一摇唤起开发菜单。
+
+当前项目没有任何 CSS 文件（`src/` 下的样式都在 `StyleSheet.create` 里）。若日后引入 CSS 方案（如 NativeWind），纯 CSS 文件的改动不会触发 Fast Refresh，需要在 Expo Go 中手动 reload。
+
 ## 常用自动化命令
 
 ```powershell
