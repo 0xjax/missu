@@ -98,8 +98,7 @@ NEVER 把多个 Compose `TextField` 塞进同一个 `Host` 并排——它们都
 - 首页顶部「推荐给你」与详情页「相关推荐」同源：站点用 Recombee 个性化接口（原生 HTML 只有占位骨架和 `x-for` 模板），未实现，首页用「今日热门」替代
 - 从详情页跳列表必须用 `router.dismissTo`（弹出详情页）而不是 `push`/`replace`：详情页留在根栈里不卸载，播放器与 ExoPlayer 实例会一直挂着；播放器另有失焦暂停兜底
 - 片单接口挂在根路径（`/api/playlists/...`），没有语言前缀；其它接口是 `/cn/api/...`。`fetchJson` 因此带 `rawPath` 开关，写错前缀会 404「route cn/api/playlists/... could not be found」
-- 新建片单没有 JSON 接口，是网页表单：用隐藏 WebView 取 `/playlists/create/{dvdId}` 渲染结果，解析字段名与 `_token` 后按 `application/x-www-form-urlencoded` 提交。该页是精简布局、没有 `/logout` 链接，不能拿 `isLoginPage` 判断登录态（会误判成登录失效）
-- 删除片单的表单不在片单详情页，而在「修改片单」页 `/playlists/{id}/edit`：一个 `_method=delete` + `_token` 的隐藏表单，POST 到片单自身 URL；详情页只有「修改片单」入口，没有删除按钮
+- 新建/删除片单没有 JSON 接口，是服务端直出的网页表单（新建页 `/playlists/create/{dvdId}`，删除表单在「修改片单」页 `/playlists/{id}/edit`，`_method=delete` + `_token`，POST 到片单自身 URL）。原生 `fetchHtml` 实测就能取到表单，WebView 只作回退；只有片单列表/详情这类客户端渲染的页面必须走 WebView。这两张表单页是精简布局、没有 `/logout` 链接，不能拿 `isLoginPage` 判断登录态（会误判成登录失效）
 - 片单面板里行点击和 `Checkbox` 的 `onValueChange` 是同一次点击的两条路径，用同步 ref 去重，否则一次点击会切两次
 - Snackbar 会被 Compose 浮层遮住：片单操作成功不提示（勾选框即反馈），失败文案直接显示在面板内
 - 播放/暂停、全屏按钮必须用 RNGH `Gesture.Tap`，不能用 RN `Pressable`：双击后第一次点击会被手势竞技场吞掉
