@@ -381,6 +381,37 @@ export function parsePlaylistCreateForm(html: string): PlaylistCreateForm | unde
   return { action: form.getAttribute('action') ?? '', fields, nameField };
 }
 
+export type PlaylistDeleteRequest = {
+  action?: string;
+  fields?: Record<string, string>;
+  token?: string;
+};
+
+/**
+ * 删除片单没有 JSON 接口，是网页路由（`DELETE /cn/playlists/{id}`）。
+ * 优先用页面里的 `_method=DELETE` 表单原样提交；没有表单时退回 meta 里的 csrf-token 直接发 DELETE。
+ */
+export function parsePlaylistDeleteRequest(html: string): PlaylistDeleteRequest | undefined {
+  const root = parse(html);
+
+  for (const form of root.querySelectorAll('form')) {
+    const method = form.querySelector('input[name="_method"]')?.getAttribute('value')?.toUpperCase();
+    if (method !== 'DELETE') continue;
+    const fields: Record<string, string> = {};
+    for (const input of form.querySelectorAll('input')) {
+      const name = input.getAttribute('name');
+      if (!name) continue;
+      const type = input.getAttribute('type') ?? 'text';
+      if (type === 'submit' || type === 'button' || type === 'file') continue;
+      fields[name] = input.getAttribute('value') ?? '';
+    }
+    return { action: form.getAttribute('action') ?? '', fields };
+  }
+
+  const token = root.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+  return token ? { token } : undefined;
+}
+
 export function parsePlaylists(html: string): PlaylistSummary[] {
   const root = parse(html);
   const seen = new Set<string>();
