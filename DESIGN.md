@@ -60,6 +60,7 @@
 | 厂商频道组 | `CollapsibleGroup` + `SettingsRow` | 默认折叠三组（素人/无码影片/亚洲 AV），路径见 `src/constants/channel-groups.ts` |
 | 目录栅格 | `FlatList` + `DirectoryCard` | 女优 / 排行 3 列（低分辨率竖图），分类 / 厂商 2 列（文字块） |
 | 视频卡封面角标 | `VideoCard` | 左下变体标签（中文字幕 / 无码影片），右下时长；标签取自卡片 HTML，不新增请求 |
+| 详情信息块 | 详情页内联行 | 8 行（发行日期/番号/标题/女优/类型/系列/发行商/标籤），文案随内容语言变化不硬编码；标签 `textSecondary` 与值同行，可点击值用 accent 色跳 `/latest?source=path`。不用下划线：Android 嵌套 `Text` 的下划线会错位成漂浮短线 |
 | 女优筛选 | `BottomSheet` + 4 × `Picker` | 2×2 排布、内容自适应高度；排序走 `ChoiceMenuBar` 菜单 |
 | 搜索 | `SearchBox` | Paper Searchbar，列表页与首页共用 |
 | 内容语言 | 设置行 → `/language` 子页 | 7 种语言，当前项 accent 色；路径前缀由 api 层统一拼接，切换后列表换 key 重拉 |
@@ -90,6 +91,7 @@ NEVER 把多个 Compose `TextField` 塞进同一个 `Host` 并排——它们都
 - 登录前必须清空 Cookie 罐：带旧会话/Cloudflare Cookie 时 `/api/login` 返回 401；清空后登录响应写入新会话
 - 站点所有页面都内嵌 `#login_email` 登录弹窗，会话是否有效只能用 `/logout` 链接判断
 - 片单列表/详情的原生 HTML 可能只有空壳；用隐藏 WebView 渲染后取 `documentElement.outerHTML`，链接带语言前缀需先归一化
+- 详情页「相关推荐」不在 HTML 里：由页面内 Vue 组件向 Recombee（`client-rapi-missav.recombee.com`，带 `frontend_sign`）请求后渲染，原生 HTML 只有空壳，因此未实现；要做就是新增第三方请求与签名逻辑，不是解析问题。信息块本身是服务端直出，可直接解析
 - 播放/暂停、全屏按钮必须用 RNGH `Gesture.Tap`，不能用 RN `Pressable`：双击后第一次点击会被手势竞技场吞掉
 - 长按手势的 `onFinalize` 在普通点击失败时也会触发，只有真正激活过才能结束倍速/清提示
 - 全屏 Modal 内要嵌套 `GestureHandlerRootView`；内联播放器保持挂载、Modal 共享同一 player；退出时重挂内联 `VideoView` 刷新 SurfaceView 并 seek 回原时间点，期间用 seeking 保护屏蔽暂停图标
