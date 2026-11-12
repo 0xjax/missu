@@ -65,6 +65,7 @@
 | 内容语言 | 设置行 → `/language` 子页 | 7 种语言，当前项 accent 色；路径前缀由 api 层统一拼接，切换后列表换 key 重拉 |
 | 自动播放 | 设置行 + 原生 `Switch` | 默认开；关闭后打开视频保持暂停，不影响当前播放中的视频 |
 | 视频快进退 | 播放器下方 6 个按钮 | 10 秒 / 1 分钟 / 10 分钟双向，36dp 高，点击调用 `seekBy` 并显示提示 |
+| 播放器控件 | 自建覆盖层 + 全屏 `Modal` | 播放/暂停、进度条单击/拖动、连击快进退（同方向，N 击 = N-1 次，提示分左右）；单击只显隐控件；控件 150ms 淡入淡出，seek 期间不切换播放图标；全屏锁横屏并隐藏状态栏 |
 | 人机验证 | 全局 Modal + `WebView` | Cloudflare 挑战时显式验证；cf_clearance 与 RN fetch 共享，验证后自动重试原请求 |
 | 反馈 | Snackbar + haptics | 收藏、登录、播放手势 |
 
@@ -89,6 +90,11 @@ NEVER 把多个 Compose `TextField` 塞进同一个 `Host` 并排——它们都
 - 登录前必须清空 Cookie 罐：带旧会话/Cloudflare Cookie 时 `/api/login` 返回 401；清空后登录响应写入新会话
 - 站点所有页面都内嵌 `#login_email` 登录弹窗，会话是否有效只能用 `/logout` 链接判断
 - 片单列表/详情的原生 HTML 可能只有空壳；用隐藏 WebView 渲染后取 `documentElement.outerHTML`，链接带语言前缀需先归一化
+- 播放/暂停、全屏按钮必须用 RNGH `Gesture.Tap`，不能用 RN `Pressable`：双击后第一次点击会被手势竞技场吞掉
+- 长按手势的 `onFinalize` 在普通点击失败时也会触发，只有真正激活过才能结束倍速/清提示
+- 全屏 Modal 内要嵌套 `GestureHandlerRootView`；内联播放器保持挂载、Modal 共享同一 player；退出时重挂内联 `VideoView` 刷新 SurfaceView 并 seek 回原时间点，期间用 seeking 保护屏蔽暂停图标
+- 退出全屏重挂 surface 会有约 300–400ms 画面停顿，是双视图 Modal 方案的已知取舍；根治需改为单常驻 `VideoView`，当前不做
+- seek 期间 `playingChange` 的短暂 paused 要屏蔽，避免暂停图标闪烁；快进后主动显示控件
 - `expo-router/unstable-native-tabs` 已废弃，待迁移到 `expo-router/native-tabs`
 
 ## Technical Stack
