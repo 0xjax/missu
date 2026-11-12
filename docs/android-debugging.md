@@ -144,6 +144,18 @@ New-Item -ItemType Directory -Force D:\missav-mobile\.local
 
 在输出中筛 `text="..."` 即可拿到按钮、输入框和错误提示文字；`bounds="[x1,y1][x2,y2]"` 可直接用于计算点击坐标。比反复截图更可靠。
 
+## 测试登录（Debug）
+
+登录页在 Debug 构建里多一个「测试登录（Debug）」按钮：点一下就用手头 `.env` 里的测试账号登录，不必手输，也不用把密码写进任何命令。
+
+```powershell
+# 终端 A：读 .env 并起本地服务，同时把设备 8787 端口反向映射到电脑
+$env:ADB = 'D:\platform-tools\adb.exe'
+bun scripts/dev-test-login.js
+```
+
+脚本只在 127.0.0.1 上监听 `8787`，凭据不出现在命令行参数、日志或提交里；Ctrl+C 结束，`adb reverse --remove tcp:8787` 可手动撤销映射。服务没起时点按钮会提示先运行脚本。
+
 ## 结束调试
 
 ```powershell

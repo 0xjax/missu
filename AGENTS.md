@@ -17,6 +17,7 @@ bunx expo export --platform android
 
 - 改代码靠 Metro Fast Refresh 生效，NEVER 重启 Metro、重新扫码或 force-stop App 来「让改动生效」；只有改 `app.json` 等配置、新增原生依赖，或 Fast Refresh 已进入报错状态时才手动 reload。
 - 真机调试（ADB、截图、日志、手动 reload）见 `docs/android-debugging.md`。
+- Debug 构建的「测试登录」按钮靠 `bun scripts/dev-test-login.js` 供凭据（读 `.env`，经 `adb reverse`，不进命令行参数），见 `docs/android-debugging.md` 的「测试登录（Debug）」。
 - 应用名 `Missu`，包名 `app.missu`；独立 APK 的构建与安装见 `docs/android-debugging.md` 的「构建独立 APK」，日常开发仍用 Expo Go。
 
 ## Anti-Over-Engineering
