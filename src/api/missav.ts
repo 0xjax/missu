@@ -5,6 +5,7 @@ import {
   parseDirectory,
   parseHome,
   parsePlaylistDetail,
+  parsePlaylistCreateForm,
   parsePlaylists,
   parseVideoDetail,
   parseVideoList,
@@ -339,6 +340,30 @@ export function setPlaylistMembership(dvdId: string, key: string, added: boolean
     method: 'POST',
     body: JSON.stringify({ dvdId, key }),
   }, true);
+}
+
+/** 新建片单走站点的网页表单（不是 JSON 接口），字段与 CSRF token 都从渲染后的页面里读。 */
+export async function createPlaylist(dvdId: string, name: string): Promise<void> {
+  const path = `/playlists/create/${encodeURIComponent(dvdId)}`;
+  // NOTE: 这张表单页是精简布局，没有站点导航，因此不能用 /logout 判断登录态（会误判为登录失效）。
+  const html = await fetchHtmlViaWebView(path);
+  const form = parsePlaylistCreateForm(html);
+  if (!form) throw new Error('没有拿到新建片单表单，请重新登录后再试');
+
+  const body = new URLSearchParams(form.fields);
+  body.set(form.nameField, name);
+  const action = form.action ? new URL(form.action, SOURCE_BASE_URL) : new URL(localizedPath(path), SOURCE_BASE_URL);
+  const response = await fetch(action, {
+    method: 'POST',
+    headers: requestHeaders({
+      Accept: 'text/html,application/xhtml+xml',
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Origin: SOURCE_BASE_URL,
+      Referer: localizedUrl(path),
+    }),
+    body: body.toString(),
+  });
+  if (!response.ok) throw new Error(`新建片单失败（HTTP ${response.status}）`);
 }
 
 function clearCookies(): Promise<boolean> {
