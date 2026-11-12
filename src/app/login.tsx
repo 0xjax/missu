@@ -10,6 +10,9 @@ import { errorHaptic, successHaptic } from '@/utils/haptics';
 
 type LoginParams = { next?: string };
 
+// NOTE: 由 scripts/dev-test-login.js 通过 adb reverse 暴露到设备本地回环，仅 Debug 构建使用。
+const DEV_TEST_LOGIN_URL = 'http://127.0.0.1:8787/test-login';
+
 export default function LoginScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<LoginParams>();
@@ -25,10 +28,14 @@ export default function LoginScreen() {
       setError('请输入邮箱和密码');
       return;
     }
+    await signIn(email.trim(), password);
+  };
+
+  const signIn = async (emailValue: string, passwordValue: string) => {
     setSubmitting(true);
     setError(undefined);
     try {
-      await login(email.trim(), password);
+      await login(emailValue, passwordValue);
       setPassword('');
       successHaptic();
       if (params.next) {
@@ -38,6 +45,24 @@ export default function LoginScreen() {
       }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : '登录失败');
+      errorHaptic();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // NOTE: 仅 Debug 构建可见。凭据由本地脚本 `bun scripts/dev-test-login.js` 经 adb reverse 提供，
+  // 命令行参数与日志里都不出现账号密码。
+  const signInWithTestAccount = async () => {
+    setSubmitting(true);
+    setError(undefined);
+    try {
+      const response = await fetch(DEV_TEST_LOGIN_URL);
+      if (!response.ok) throw new Error(`测试登录服务返回 ${response.status}，先运行 bun scripts/dev-test-login.js`);
+      const account = await response.json() as { email: string; password: string };
+      await signIn(account.email, account.password);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : '测试登录失败');
       errorHaptic();
     } finally {
       setSubmitting(false);
@@ -89,6 +114,16 @@ export default function LoginScreen() {
               <ThemedText type="smallBold" style={{ color: theme.onAccent }}>登录</ThemedText>
             )}
           </Pressable>
+          {__DEV__ && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ busy: submitting, disabled: submitting }}
+              disabled={submitting}
+              onPress={signInWithTestAccount}
+              style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
+              <ThemedText type="smallBold">测试登录（Debug）</ThemedText>
+            </Pressable>
+          )}
           {error && <ThemedText selectable type="small" style={{ color: theme.danger }}>{error}</ThemedText>}
           <ThemedText type="small" themeColor="textSecondary">密码仅用于本次登录，不保存到本地。</ThemedText>
         </View>
