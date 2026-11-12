@@ -94,7 +94,7 @@ NEVER 把多个 Compose `TextField` 塞进同一个 `Host` 并排——它们都
 - 登录前必须清空 Cookie 罐：带旧会话/Cloudflare Cookie 时 `/api/login` 返回 401；清空后登录响应写入新会话
 - 登录态失效只认「受保护页面被 302 回首页」：原生 `fetch` 看 `response.url`，WebView 看回传的最终地址。不能用「页面里有没有 `/logout`」判断——挑战页、502 页、精简布局的表单页都没有它，会把有效会话误判成失效并主动登出
 - 站点所有页面都内嵌 `#login_email` 登录弹窗，因此也不能靠「有没有登录表单」判断登录态
-- 片单列表/详情的原生 HTML 可能只有空壳；用隐藏 WebView 渲染后取 `documentElement.outerHTML`，链接带语言前缀需先归一化
+- 片单列表/详情都是服务端直出的 HTML，原生 `fetchHtml` 即可（实测 ~0.8s，7 条影片）；WebView 只在原生取数失败时兜底。早前“原生只有空壳、必须 WebView”的结论不成立，已实测推翻
 - 详情页「相关推荐」不在 HTML 里：由页面内 Vue 组件向 Recombee（`client-rapi-missav.recombee.com`，带 `frontend_sign`）请求后渲染，原生 HTML 只有空壳，因此未实现；要做就是新增第三方请求与签名逻辑，不是解析问题。信息块本身是服务端直出，可直接解析
 - 首页顶部「推荐给你」与详情页「相关推荐」同源：站点用 Recombee 个性化接口（原生 HTML 只有占位骨架和 `x-for` 模板），未实现，首页用「今日热门」替代
 - 从详情页跳列表必须用 `router.dismissTo`（弹出详情页）而不是 `push`/`replace`：详情页留在根栈里不卸载，播放器与 ExoPlayer 实例会一直挂着；播放器另有失焦暂停兜底
