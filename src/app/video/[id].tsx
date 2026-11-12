@@ -67,6 +67,11 @@ export default function VideoDetailScreen() {
     }
   };
 
+  // NOTE: 信息块里的链接（女优/类型/系列/发行商/标签）都指向影片列表页，复用 DirectoryCard 的既有跳转。
+  const openInfoPath = (path: string, title: string) => {
+    router.push({ pathname: '/latest', params: { source: path, title, query: '' } } as unknown as Href);
+  };
+
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} style={{ backgroundColor: theme.background }}>
@@ -95,9 +100,6 @@ export default function VideoDetailScreen() {
             )}
             <View style={styles.metadata}>
               <ThemedText selectable type="smallBold" style={styles.title}>{detail.title}</ThemedText>
-              <ThemedText selectable type="small" themeColor="textSecondary">
-                {[detail.releaseDate, detail.duration, detail.actors.join('、')].filter(Boolean).join(' · ')}
-              </ThemedText>
               {detail.internalId && (
                 <Pressable
                   accessibilityRole="button"
@@ -109,6 +111,29 @@ export default function VideoDetailScreen() {
                     {saving ? '提交中…' : detail.saved ? '已收藏' : user ? '收藏' : '登录后收藏'}
                   </ThemedText>
                 </Pressable>
+              )}
+              {detail.info.length > 0 && (
+                <View style={styles.info}>
+                  {detail.info.map((row) => (
+                    <ThemedText key={row.label} selectable type="small">
+                      <ThemedText themeColor="textSecondary" type="small">{row.label} </ThemedText>
+                      {row.values.map((value, index) => {
+                        const { path, text } = value;
+                        return (
+                          <ThemedText key={`${text}-${index}`} type="small">
+                            <ThemedText
+                              onPress={path ? () => openInfoPath(path, text) : undefined}
+                              themeColor={path ? 'accent' : undefined}
+                              type="small">
+                              {text}
+                            </ThemedText>
+                            {index < row.values.length - 1 ? ', ' : ''}
+                          </ThemedText>
+                        );
+                      })}
+                    </ThemedText>
+                  ))}
+                </View>
               )}
               {detail.description && <ThemedText selectable type="small">{detail.description}</ThemedText>}
             </View>
@@ -178,5 +203,8 @@ const styles = StyleSheet.create({
     minHeight: 44,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.sm,
+  },
+  info: {
+    gap: Spacing.sm,
   },
 });

@@ -53,6 +53,16 @@ export type VideoQuery = {
   sort?: VideoSort;
 };
 
+export type DetailInfoValue = {
+  text: string;
+  path?: string;
+};
+
+export type DetailInfoRow = {
+  label: string;
+  values: DetailInfoValue[];
+};
+
 export type VideoDetail = VideoSummary & {
   description?: string;
   releaseDate?: string;
@@ -60,6 +70,7 @@ export type VideoDetail = VideoSummary & {
   playbackUrl?: string;
   internalId?: string;
   saved: boolean;
+  info: DetailInfoRow[];
 };
 
 function absoluteUrl(value: string | undefined): string | undefined {
@@ -267,6 +278,28 @@ function formatDuration(seconds: number): string | undefined {
   return formatTime(seconds);
 }
 
+/**
+ * 详情页信息块：每行首个 span 是标签，其余子元素是值（time / span / a）。
+ * 标签文案随内容语言变化，不硬编码；链接带 /dmNNN 与语言前缀，用 contentPath 归一化后可直接交给 /latest。
+ */
+function parseDetailInfo(root: HTMLElement): DetailInfoRow[] {
+  return root.querySelectorAll('div.text-secondary').flatMap((row) => {
+    const [labelNode, ...valueNodes] = row.children;
+    const label = labelNode?.tagName === 'SPAN' ? labelNode.text.trim() : undefined;
+    if (!label) return [];
+
+    const values = valueNodes.flatMap((node): DetailInfoValue[] => {
+      const text = node.text.trim();
+      if (!text) return [];
+      const href = node.getAttribute('href');
+      if (!href || !/^(https?:\/\/|\/)/i.test(href)) return [{ text }];
+      return [{ text, path: contentPath(new URL(href, SOURCE_BASE_URL).pathname) }];
+    });
+
+    return values.length > 0 ? [{ label, values }] : [];
+  });
+}
+
 export function parseVideoDetail(html: string, id: string): VideoDetail {
   const root = parse(html);
   const title = meta(root, 'og:title') ?? root.querySelector('h1')?.text.trim() ?? id;
@@ -285,6 +318,7 @@ export function parseVideoDetail(html: string, id: string): VideoDetail {
     playbackUrl: extractPlaybackUrl(html),
     internalId: html.match(/\/api\/items\/([a-z0-9]+)\/view/i)?.[1],
     saved: false,
+    info: parseDetailInfo(root),
   };
 }
 
