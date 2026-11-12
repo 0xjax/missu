@@ -19,8 +19,6 @@ import { Radius, Spacing, TabBarInset } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useLanguage } from '@/stores/language';
 
-const HOT_PREVIEW_LIMIT = 8;
-
 export default function HomeScreen() {
   const { language } = useLanguage();
   // NOTE: 语言切换会改变请求 URL，换 key 重建列表状态并重新拉取。
@@ -38,11 +36,12 @@ function HomeView() {
   const [attempt, setAttempt] = useState(0);
 
   // NOTE: “今日热门”不在首页 HTML 里，单独取一次；失败时只是不显示该板块，不影响首页其他内容。
+  // NOTE: 与首页其他板块保持一致，不在前端裁数量，站点返回多少就展示多少。
   const loadHome = useCallback(async (signal?: AbortSignal) => {
     const [homeResult, hotResult] = await Promise.all([
       getHome(signal),
       getVideos('/today-hot', {}, signal)
-        .then((result) => result.videos.slice(0, HOT_PREVIEW_LIMIT))
+        .then((result) => result.videos)
         .catch(() => [] as VideoSummary[]),
     ]);
     return hotResult.length > 0
