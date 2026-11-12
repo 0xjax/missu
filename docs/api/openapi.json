@@ -321,6 +321,95 @@
           }
         }
       }
+    },
+    "/api/playlists/{dvdId}": {
+      "get": {
+        "operationId": "getVideoPlaylists",
+        "summary": "读取当前影片可加入的片单",
+        "description": "详情页「加入片单」面板的数据源。注意：片单接口挂在根路径，不带语言前缀（不是 /cn/api/...），写错前缀会 404。",
+        "parameters": [
+          {
+            "name": "dvdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "返回该影片可见的片单；is_added 表示影片是否已在此片单中。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["data"],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PlaylistOption"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "未登录。"
+          }
+        }
+      }
+    },
+    "/api/playlists/add": {
+      "post": {
+        "operationId": "addVideoToPlaylist",
+        "summary": "把影片加入片单",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaylistMembership"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "加入成功。"
+          },
+          "401": {
+            "description": "未登录。"
+          }
+        }
+      }
+    },
+    "/api/playlists/remove": {
+      "post": {
+        "operationId": "removeVideoFromPlaylist",
+        "summary": "把影片移出片单",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaylistMembership"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "移出成功。"
+          },
+          "401": {
+            "description": "未登录。"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -389,6 +478,35 @@
           "duration": {
             "type": "string",
             "description": "源站显示的时长文本，例如 1:03:10。"
+          }
+        }
+      },
+      "PlaylistOption": {
+        "type": "object",
+        "required": ["key", "name", "is_added"],
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "片单标识，加入/移出时原样回传。"
+          },
+          "name": {
+            "type": "string"
+          },
+          "is_added": {
+            "type": "boolean",
+            "description": "当前影片是否已在该片单中。"
+          }
+        }
+      },
+      "PlaylistMembership": {
+        "type": "object",
+        "required": ["dvdId", "key"],
+        "properties": {
+          "dvdId": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
           }
         }
       },
