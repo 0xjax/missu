@@ -7,6 +7,7 @@ import { useSharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { ThemedText } from '@/components/themed-text';
+import { usePreferences } from '@/stores/preferences';
 import { formatTime } from '@/utils/format-time';
 import { impactHaptic, selectionHaptic } from '@/utils/haptics';
 
@@ -15,6 +16,7 @@ export function VideoPlayer({ url }: { url: string }) {
     uri: url,
     headers: { Referer: 'https://missav.ai/' },
   });
+  const { autoplay } = usePreferences();
   const videoRef = useRef<VideoView | null>(null);
   const windowWidth = useWindowDimensions().width;
   const [failed, setFailed] = useState(false);
@@ -35,6 +37,18 @@ export function VideoPlayer({ url }: { url: string }) {
     });
     return () => subscription.remove();
   }, [player]);
+
+  useEffect(() => {
+    if (!autoplay) return;
+    if (player.status === 'readyToPlay') {
+      player.play();
+      return;
+    }
+    const subscription = player.addListener('statusChange', ({ status }) => {
+      if (status === 'readyToPlay') player.play();
+    });
+    return () => subscription.remove();
+  }, [autoplay, player]);
 
   useEffect(() => () => {
     if (hintTimer.current) clearTimeout(hintTimer.current);
