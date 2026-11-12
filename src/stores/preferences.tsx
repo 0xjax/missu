@@ -6,25 +6,20 @@ const PREFERENCES_KEY = 'missav:preferences:v1';
 
 type Preferences = {
   autoplay: boolean;
-  /** 常规播放倍速，长按结束后回到这个值。 */
+  /** 常规播放倍速。 */
   playbackRate: number;
-  /** 长按期间的倍速，直接切换而不是在播放倍速上累乘，避免松手未触发时逐次翻倍。 */
-  holdRate: number;
 };
 
 export const PLAYBACK_RATES = [0.75, 1, 1.25, 1.5, 2] as const;
-export const HOLD_RATES = [1.5, 2, 3] as const;
 
 const DEFAULT_PREFERENCES: Preferences = {
   autoplay: true,
   playbackRate: 1,
-  holdRate: 2,
 };
 
 type PreferencesContextValue = Preferences & {
   setAutoplay: (value: boolean) => void;
   setPlaybackRate: (value: number) => void;
-  setHoldRate: (value: number) => void;
 };
 
 const PreferencesContext = createContext<PreferencesContextValue | undefined>(undefined);
@@ -40,7 +35,6 @@ function parsePreferences(value: string | null): Preferences {
     return {
       autoplay: typeof stored.autoplay === 'boolean' ? stored.autoplay : DEFAULT_PREFERENCES.autoplay,
       playbackRate: pickRate(stored.playbackRate, PLAYBACK_RATES, DEFAULT_PREFERENCES.playbackRate),
-      holdRate: pickRate(stored.holdRate, HOLD_RATES, DEFAULT_PREFERENCES.holdRate),
     };
   } catch {
     return DEFAULT_PREFERENCES;
@@ -67,12 +61,11 @@ export function PreferencesProvider({ children }: PropsWithChildren) {
 
   const setAutoplay = (value: boolean) => update({ autoplay: value });
   const setPlaybackRate = (value: number) => update({ playbackRate: value });
-  const setHoldRate = (value: number) => update({ holdRate: value });
 
   if (!preferences) return null;
 
   return (
-    <PreferencesContext.Provider value={{ ...preferences, setAutoplay, setPlaybackRate, setHoldRate }}>
+    <PreferencesContext.Provider value={{ ...preferences, setAutoplay, setPlaybackRate }}>
       {children}
     </PreferencesContext.Provider>
   );

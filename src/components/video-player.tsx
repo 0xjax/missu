@@ -15,7 +15,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/stores/preferences';
 import { formatTime } from '@/utils/format-time';
-import { impactHaptic, selectionHaptic } from '@/utils/haptics';
+import { selectionHaptic } from '@/utils/haptics';
 
 // NOTE: 与网页播放器下方的快进退档位一致：10 秒 / 1 分钟 / 10 分钟，双向。
 const SEEK_BACKWARD = [
@@ -39,7 +39,7 @@ export function VideoPlayer({ url }: { url: string }) {
     uri: url,
     headers: { Referer: 'https://missav.ai/' },
   });
-  const { autoplay, playbackRate, holdRate, setPlaybackRate, setHoldRate } = usePreferences();
+  const { autoplay, playbackRate, setPlaybackRate } = usePreferences();
   const theme = useTheme();
   const windowWidth = useWindowDimensions().width;
 
@@ -64,7 +64,6 @@ export function VideoPlayer({ url }: { url: string }) {
   const lastTap = useRef(0);
   const lastTapDirection = useRef(0);
   const wasPlaying = useRef(false);
-  const holdingRef = useRef(false);
   const durationRef = useRef(0);
   const currentRef = useRef(0);
 
@@ -74,10 +73,10 @@ export function VideoPlayer({ url }: { url: string }) {
   const scrubbing = useSharedValue(false);
   const controlsOpacity = useSharedValue(1);
 
-  const showHint = useCallback((value: string, persistent = false) => {
+  const showHint = useCallback((value: string) => {
     if (hintTimer.current) clearTimeout(hintTimer.current);
     setHint(value);
-    if (!persistent) hintTimer.current = setTimeout(() => setHint(undefined), HINT_VISIBLE);
+    hintTimer.current = setTimeout(() => setHint(undefined), HINT_VISIBLE);
   }, []);
 
   const revealControls = useCallback((autoHide = true) => {
@@ -238,18 +237,13 @@ export function VideoPlayer({ url }: { url: string }) {
     return () => subscription.remove();
   }, [player]);
 
-  // NOTE: 详情页跳走（点信息块链接、切 tab）时页面不会卸载，播放器会继续出声；失焦即暂停并复位倍速。
+  // NOTE: 详情页跳走（点信息块链接、切 tab）时页面不会卸载，播放器会继续出声；失焦即暂停。
   useFocusEffect(useCallback(() => () => {
     player.pause();
-    // NOTE: 兜底复位：长按期间失焦时 onFinalize 可能拿不到，倍速会卡在长按档。
-    holdingRef.current = false;
-    player.playbackRate = playbackRate;
-    setHint(undefined);
-  }, [playbackRate, player]));
+  }, [player]));
 
-  // NOTE: 设置里的播放倍速变化即时生效；长按期间不覆盖长按档。
+  // NOTE: 设置里的播放倍速变化即时生效。
   useEffect(() => {
-    if (holdingRef.current) return;
     player.playbackRate = playbackRate;
   }, [playbackRate, player]);
 
@@ -317,20 +311,6 @@ export function VideoPlayer({ url }: { url: string }) {
     StatusBar.setHidden(false, 'fade');
   }, []);
 
-  const startSpeed = useCallback(() => {
-    impactHaptic();
-    holdingRef.current = true;
-    // NOTE: 直接切到设定的长按倍速，不在当前倍速上累乘；这样即使松手事件漏掉也不会越按越快。
-    player.playbackRate = holdRate;
-    showHint(`${holdRate}x`, true);
-  }, [holdRate, player, showHint]);
-
-  const finishSpeed = useCallback(() => {
-    holdingRef.current = false;
-    player.playbackRate = playbackRate;
-    setHint(undefined);
-  }, [playbackRate, player]);
-
   const openSpeedSheet = useCallback(() => {
     // NOTE: 弹层打开期间别让底部条自己隐藏，否则关掉弹层后控件已经不可见。
     clearHideTimer();
@@ -342,20 +322,9 @@ export function VideoPlayer({ url }: { url: string }) {
     revealControls();
   }, [revealControls]);
 
-  const buildGesture = () => {
-    const tap = Gesture.Tap().maxDuration(250).onEnd((event) => {
-      scheduleOnRN(handleTap, event.x);
-    });
-    let speedActive = false;
-    const longPress = Gesture.LongPress().minDuration(300).onStart(() => {
-      speedActive = true;
-      scheduleOnRN(startSpeed);
-    }).onFinalize(() => {
-      // NOTE: onFinalize 在普通点击的长按失败时也会触发；未激活时不能清掉快进提示。
-      if (speedActive) scheduleOnRN(finishSpeed);
-    });
-    return Gesture.Simultaneous(tap, longPress);
-  };
+  const buildGesture = () => Gesture.Tap().maxDuration(250).onEnd((event) => {
+    scheduleOnRN(handleTap, event.x);
+  });
 
   const buildProgressGesture = () => Gesture.Pan()
     .minDistance(0)
@@ -457,8 +426,6 @@ export function VideoPlayer({ url }: { url: string }) {
         )}
       </View>
       <PlayerSpeedSheet
-        holdRate={holdRate}
-        onChangeHoldRate={setHoldRate}
         onChangePlaybackRate={setPlaybackRate}
         onClose={closeSpeedSheet}
         playbackRate={playbackRate}

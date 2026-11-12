@@ -3,24 +3,20 @@ import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { HOLD_RATES, PLAYBACK_RATES } from '@/stores/preferences';
+import { PLAYBACK_RATES } from '@/stores/preferences';
 
 type Props = {
   visible: boolean;
   playbackRate: number;
-  holdRate: number;
   onChangePlaybackRate: (value: number) => void;
-  onChangeHoldRate: (value: number) => void;
   onClose: () => void;
 };
 
-/** 播放器倍速设置：常规倍速 + 长按倍速，两项都落到偏好里持久化。 */
+/** 播放器倍速设置：目前只有常规播放倍速，落进偏好持久化。 */
 export function PlayerSpeedSheet({
   visible,
   playbackRate,
-  holdRate,
   onChangePlaybackRate,
-  onChangeHoldRate,
   onClose,
 }: Props) {
   const theme = useTheme();
@@ -43,20 +39,7 @@ export function PlayerSpeedSheet({
               </Pressable>
             ))}
           </View>
-          <ThemedText type="smallBold">长按倍速</ThemedText>
-          <View style={styles.row}>
-            {HOLD_RATES.map((rate) => (
-              <Pressable
-                accessibilityRole="button"
-                accessibilityState={{ selected: rate === holdRate }}
-                key={rate}
-                onPress={() => onChangeHoldRate(rate)}
-                style={[styles.pill, { backgroundColor: rate === holdRate ? theme.accent : theme.backgroundSelected }]}>
-                <ThemedText style={[styles.pillText, rate === holdRate && { color: theme.onAccent }]}>{rate}x</ThemedText>
-              </Pressable>
-            ))}
-          </View>
-          <ThemedText type="small" themeColor="textSecondary">长按视频期间用长按倍速，松手立即回到播放倍速。</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">播放倍速对所有视频生效，长按视频不再临时加速。</ThemedText>
         </Pressable>
       </Pressable>
     </Modal>
