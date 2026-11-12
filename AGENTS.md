@@ -43,10 +43,10 @@ bunx expo export --platform android
 
 ## Secrets
 
-- MUST NOT read `.env`, `.env.*`, or any secrets file；例外：`MISSAV_TEST_EMAIL` / `MISSAV_TEST_PASSWORD`（仓库所有者标注为开发测试账号、无敏感信息），可在开发测试时直接取用，但 NEVER 回显其值。
+- MUST NOT read `.env`, `.env.*`, or any secrets file.
 - MUST NOT expose secrets in logs, comments, commits, or tool output.
 - MUST NOT put secrets in command arguments.
-- When other env var values are needed, ask the user to provide them directly.
+- When env var values are needed, ask the user to provide them directly.
 
 ## Tool Selection
 
