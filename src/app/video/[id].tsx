@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Snackbar } from 'react-native-paper';
 
-import { getVideoDetail, isAbortError, setVideoSaved, type VideoDetail } from '@/api/missav';
+import { getVideoDetail, isAbortError, setVideoSaved, SessionExpiredError, type VideoDetail } from '@/api/missav';
 import { PlaylistSheet } from '@/components/playlist-sheet';
 import { ThemedText } from '@/components/themed-text';
 import { VideoPlayer } from '@/components/video-player';
@@ -18,7 +18,7 @@ export default function VideoDetailScreen() {
   const { id, badges: badgesParam } = useLocalSearchParams<{ id: string; badges?: string }>();
   const router = useRouter();
   const theme = useTheme();
-  const { user } = useAuth();
+  const { user, expire } = useAuth();
   const [result, setResult] = useState<{ id: string; detail?: VideoDetail; error?: string }>();
   const [attempt, setAttempt] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -62,6 +62,12 @@ export default function VideoDetailScreen() {
       setNotice(nextSaved ? '已加入云端收藏' : '已取消云端收藏');
       successHaptic();
     } catch (reason) {
+      // NOTE: 本地仍认为已登录、但源站会话已失效时，清掉登录态并直接引导重新登录，而不是抛出 401 原文。
+      if (reason instanceof SessionExpiredError) {
+        await expire();
+        router.push({ pathname: '/login', params: { next: `/video/${encodeURIComponent(id)}` } } as unknown as Href);
+        return;
+      }
       setNotice(reason instanceof Error ? reason.message : '收藏操作失败');
       errorHaptic();
     } finally {
