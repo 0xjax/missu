@@ -341,6 +341,46 @@ export function isLoginPage(html: string): boolean {
   return !/href="[^"]*\/logout"/i.test(html);
 }
 
+export type PlaylistCreateForm = {
+  action: string;
+  fields: Record<string, string>;
+  nameField: string;
+};
+
+/**
+ * 新建片单是网页表单（`POST /cn/playlists/create/{dvdId}`），不是 JSON 接口。
+ * 字段名和 CSRF `_token` 都从表单里读，站点改字段时不用跟着改代码。
+ */
+export function parsePlaylistCreateForm(html: string): PlaylistCreateForm | undefined {
+  const root = parse(html);
+  const form = root.querySelectorAll('form').find((element) => element.querySelector('input[name]'));
+  if (!form) return undefined;
+
+  const inputs = form.querySelectorAll('input');
+  const nameField = inputs
+    .find((input) => {
+      const type = input.getAttribute('type') ?? 'text';
+      return (type === 'text' || type === 'search') && Boolean(input.getAttribute('name'));
+    })
+    ?.getAttribute('name');
+  if (!nameField) return undefined;
+
+  const fields: Record<string, string> = {};
+  for (const input of inputs) {
+    const name = input.getAttribute('name');
+    if (!name) continue;
+    const type = input.getAttribute('type') ?? 'text';
+    if (type === 'submit' || type === 'button' || type === 'file') continue;
+    if (type === 'checkbox' || type === 'radio') {
+      if (input.getAttribute('checked') !== undefined) fields[name] = input.getAttribute('value') ?? 'on';
+      continue;
+    }
+    fields[name] = input.getAttribute('value') ?? '';
+  }
+
+  return { action: form.getAttribute('action') ?? '', fields, nameField };
+}
+
 export function parsePlaylists(html: string): PlaylistSummary[] {
   const root = parse(html);
   const seen = new Set<string>();

@@ -62,7 +62,7 @@
 | 目录栅格 | `FlatList` + `DirectoryCard` | 女优 / 排行 3 列（低分辨率竖图），分类 / 厂商 2 列（文字块） |
 | 视频卡封面角标 | `VideoCard` | 左下变体标签（中文字幕 / 无码影片），右下时长；标签取自卡片 HTML，不新增请求 |
 | 详情信息块 | 详情页内联行 | 8 行（发行日期/番号/标题/女优/类型/系列/发行商/标籤），文案随内容语言变化不硬编码；标签 `textSecondary` 与值同行，可点击值用 accent 色跳 `/latest?source=path`。不用下划线：Android 嵌套 `Text` 的下划线会错位成漂浮短线 |
-| 详情页片单 | 收藏旁「片单」按钮 + 原生 `ModalBottomSheet` | 打开时 `GET /api/playlists/{dvdId}`；点行或勾选框乐观切换再 `POST /api/playlists/add\|remove`；勾选框是 Compose 组件，配色由 `Host seedColor` 跟随 accent；超过 6 行放进 Compose `ScrollView`；未登录先跳登录 |
+| 详情页片单 | 收藏旁「片单」按钮 + 原生 `ModalBottomSheet` | 打开时 `GET /api/playlists/{dvdId}`；点行或勾选框乐观切换再 `POST /api/playlists/add\|remove`；勾选框是 Compose 组件，配色由 `Host seedColor` 跟随 accent；超过 6 行放进 Compose `ScrollView`；「新建片单」就地展开单行输入框，提交后重新拉列表；未登录先跳登录 |
 | 女优筛选 | `BottomSheet` + 4 × `Picker` | 2×2 排布、内容自适应高度；排序走 `ChoiceMenuBar` 菜单 |
 | 搜索 | `SearchBox` | Paper Searchbar，列表页与首页共用 |
 | 内容语言 | 设置行 → `/language` 子页 | 7 种语言，当前项 accent 色；路径前缀由 api 层统一拼接，切换后列表换 key 重拉 |
@@ -97,7 +97,7 @@ NEVER 把多个 Compose `TextField` 塞进同一个 `Host` 并排——它们都
 - 首页顶部「推荐给你」与详情页「相关推荐」同源：站点用 Recombee 个性化接口（原生 HTML 只有占位骨架和 `x-for` 模板），未实现，首页用「今日热门」替代
 - 从详情页跳列表必须用 `router.dismissTo`（弹出详情页）而不是 `push`/`replace`：详情页留在根栈里不卸载，播放器与 ExoPlayer 实例会一直挂着；播放器另有失焦暂停兜底
 - 片单接口挂在根路径（`/api/playlists/...`），没有语言前缀；其它接口是 `/cn/api/...`。`fetchJson` 因此带 `rawPath` 开关，写错前缀会 404「route cn/api/playlists/... could not be found」
-- 详情页片单只支持加入/移出既有片单；新建片单在站点是独立表单页 `/playlists/create/{dvdId}`，未实现
+- 新建片单没有 JSON 接口，是网页表单：用隐藏 WebView 取 `/playlists/create/{dvdId}` 渲染结果，解析字段名与 `_token` 后按 `application/x-www-form-urlencoded` 提交。该页是精简布局、没有 `/logout` 链接，不能拿 `isLoginPage` 判断登录态（会误判成登录失效）
 - 片单面板里行点击和 `Checkbox` 的 `onValueChange` 是同一次点击的两条路径，用同步 ref 去重，否则一次点击会切两次
 - Snackbar 会被 Compose 浮层遮住：片单操作成功不提示（勾选框即反馈），失败文案直接显示在面板内
 - 播放/暂停、全屏按钮必须用 RNGH `Gesture.Tap`，不能用 RN `Pressable`：双击后第一次点击会被手势竞技场吞掉
