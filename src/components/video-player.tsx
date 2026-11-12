@@ -9,6 +9,7 @@ import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-g
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import { PlayerSpeedSheet } from '@/components/player-speed-sheet';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -38,12 +39,13 @@ export function VideoPlayer({ url }: { url: string }) {
     uri: url,
     headers: { Referer: 'https://missav.ai/' },
   });
-  const { autoplay } = usePreferences();
+  const { autoplay, playbackRate, holdRate, setPlaybackRate, setHoldRate } = usePreferences();
   const theme = useTheme();
   const windowWidth = useWindowDimensions().width;
 
   const [failed, setFailed] = useState(false);
   const [hint, setHint] = useState<string>();
+  const [speedSheetOpen, setSpeedSheetOpen] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [inlineSurfaceKey, setInlineSurfaceKey] = useState(0);
   const [controlsVisible, setControlsVisible] = useState(true);
@@ -62,7 +64,7 @@ export function VideoPlayer({ url }: { url: string }) {
   const lastTap = useRef(0);
   const lastTapDirection = useRef(0);
   const wasPlaying = useRef(false);
-  const previousRate = useRef(1);
+  const holdingRef = useRef(false);
   const durationRef = useRef(0);
   const currentRef = useRef(0);
 
@@ -236,10 +238,20 @@ export function VideoPlayer({ url }: { url: string }) {
     return () => subscription.remove();
   }, [player]);
 
-  // NOTE: 详情页跳走（点信息块链接、切 tab）时页面不会卸载，播放器会继续出声；失焦即暂停。
+  // NOTE: 详情页跳走（点信息块链接、切 tab）时页面不会卸载，播放器会继续出声；失焦即暂停并复位倍速。
   useFocusEffect(useCallback(() => () => {
     player.pause();
-  }, [player]));
+    // NOTE: 兜底复位：长按期间失焦时 onFinalize 可能拿不到，倍速会卡在长按档。
+    holdingRef.current = false;
+    player.playbackRate = playbackRate;
+    setHint(undefined);
+  }, [playbackRate, player]));
+
+  // NOTE: 设置里的播放倍速变化即时生效；长按期间不覆盖长按档。
+  useEffect(() => {
+    if (holdingRef.current) return;
+    player.playbackRate = playbackRate;
+  }, [playbackRate, player]);
 
   useEffect(() => {
     if (!autoplay) return;
@@ -307,15 +319,28 @@ export function VideoPlayer({ url }: { url: string }) {
 
   const startSpeed = useCallback(() => {
     impactHaptic();
-    previousRate.current = player.playbackRate || 1;
-    player.playbackRate = previousRate.current * 2;
-    showHint(`${player.playbackRate}x`, true);
-  }, [player, showHint]);
+    holdingRef.current = true;
+    // NOTE: 直接切到设定的长按倍速，不在当前倍速上累乘；这样即使松手事件漏掉也不会越按越快。
+    player.playbackRate = holdRate;
+    showHint(`${holdRate}x`, true);
+  }, [holdRate, player, showHint]);
 
   const finishSpeed = useCallback(() => {
-    player.playbackRate = previousRate.current;
+    holdingRef.current = false;
+    player.playbackRate = playbackRate;
     setHint(undefined);
-  }, [player]);
+  }, [playbackRate, player]);
+
+  const openSpeedSheet = useCallback(() => {
+    // NOTE: 弹层打开期间别让底部条自己隐藏，否则关掉弹层后控件已经不可见。
+    clearHideTimer();
+    setSpeedSheetOpen(true);
+  }, [clearHideTimer]);
+
+  const closeSpeedSheet = useCallback(() => {
+    setSpeedSheetOpen(false);
+    revealControls();
+  }, [revealControls]);
 
   const buildGesture = () => {
     const tap = Gesture.Tap().maxDuration(250).onEnd((event) => {
@@ -406,6 +431,11 @@ export function VideoPlayer({ url }: { url: string }) {
             </GestureDetector>
             <ThemedText style={styles.timeText}>{formatTime(duration)}</ThemedText>
             {/* NOTE: 同上，按钮走 RNGH Tap，避免第一次点击丢失。 */}
+            <GestureDetector gesture={Gesture.Tap().onEnd(() => scheduleOnRN(openSpeedSheet))}>
+              <View accessibilityLabel="倍速设置" accessibilityRole="button" style={styles.fullscreenButton}>
+                <Ionicons color="#ffffff" name="options" size={22} />
+              </View>
+            </GestureDetector>
             <GestureDetector
               gesture={Gesture.Tap().onEnd(() => scheduleOnRN(isFull ? exitFullscreen : enterFullscreen))}>
               <View accessibilityLabel={isFull ? '退出全屏' : '全屏播放'} accessibilityRole="button" style={styles.fullscreenButton}>
@@ -426,6 +456,14 @@ export function VideoPlayer({ url }: { url: string }) {
           </View>
         )}
       </View>
+      <PlayerSpeedSheet
+        holdRate={holdRate}
+        onChangeHoldRate={setHoldRate}
+        onChangePlaybackRate={setPlaybackRate}
+        onClose={closeSpeedSheet}
+        playbackRate={playbackRate}
+        visible={speedSheetOpen}
+      />
     </View>
   );
 
