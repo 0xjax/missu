@@ -30,7 +30,7 @@ const SEEK_FORWARD = [
 
 const CONTROLS_TIMEOUT = 3000;
 const SEEK_ACCUMULATE_WINDOW = 900;
-const HINT_VISIBLE = 1000;
+const HINT_VISIBLE = 700;
 const TAP_CHAIN_WINDOW = 350; // 连击窗口：只有同方向点击才叠加
 
 export function VideoPlayer({ url }: { url: string }) {
@@ -43,7 +43,7 @@ export function VideoPlayer({ url }: { url: string }) {
   const windowWidth = useWindowDimensions().width;
 
   const [failed, setFailed] = useState(false);
-  const [hint, setHint] = useState<{ text: string; side: 'back' | 'forward' | 'center' }>();
+  const [hint, setHint] = useState<string>();
   const [fullscreen, setFullscreen] = useState(false);
   const [inlineSurfaceKey, setInlineSurfaceKey] = useState(0);
   const [controlsVisible, setControlsVisible] = useState(true);
@@ -72,13 +72,9 @@ export function VideoPlayer({ url }: { url: string }) {
   const scrubbing = useSharedValue(false);
   const controlsOpacity = useSharedValue(1);
 
-  const showHint = useCallback((
-    value: string,
-    side: 'back' | 'forward' | 'center' = 'center',
-    persistent = false,
-  ) => {
+  const showHint = useCallback((value: string, persistent = false) => {
     if (hintTimer.current) clearTimeout(hintTimer.current);
-    setHint({ text: value, side });
+    setHint(value);
     if (!persistent) hintTimer.current = setTimeout(() => setHint(undefined), HINT_VISIBLE);
   }, []);
 
@@ -117,7 +113,7 @@ export function VideoPlayer({ url }: { url: string }) {
     selectionHaptic();
     markSeeking();
     player.seekBy(direction * 10);
-    showHint(`${direction > 0 ? '+' : '-'}${state.total} 秒`, direction < 0 ? 'back' : 'forward');
+    showHint(`${direction > 0 ? '+' : '-'}${state.total} 秒`);
     // NOTE: 快进后让控件保持可见一段时间，播放/暂停键可以直接点，不用先点一次唤出控件。
     revealControls();
     if (seekTimer.current) clearTimeout(seekTimer.current);
@@ -131,7 +127,7 @@ export function VideoPlayer({ url }: { url: string }) {
     selectionHaptic();
     markSeeking();
     player.seekBy(seconds);
-    showHint(text, seconds < 0 ? 'back' : 'forward');
+    showHint(text);
     revealControls();
   }, [markSeeking, player, revealControls, showHint]);
 
@@ -313,7 +309,7 @@ export function VideoPlayer({ url }: { url: string }) {
     impactHaptic();
     previousRate.current = player.playbackRate || 1;
     player.playbackRate = previousRate.current * 2;
-    showHint(`${player.playbackRate}x`, 'center', true);
+    showHint(`${player.playbackRate}x`, true);
   }, [player, showHint]);
 
   const finishSpeed = useCallback(() => {
@@ -419,19 +415,9 @@ export function VideoPlayer({ url }: { url: string }) {
           </View>
         </Animated.View>
         {hint && (
-          <View
-            pointerEvents="none"
-            style={[
-              styles.hint,
-              hint.side === 'back' ? styles.hintBack : hint.side === 'forward' ? styles.hintForward : styles.hintCenter,
-              // NOTE: 全屏更宽，提示往中间收一点，避免被手指挡住。
-              isFull && hint.side === 'back' ? styles.hintBackFull : undefined,
-              isFull && hint.side === 'forward' ? styles.hintForwardFull : undefined,
-            ]}>
-            {hint.side !== 'center' && (
-              <Ionicons color="#ffffff" name={hint.side === 'back' ? 'play-back' : 'play-forward'} size={28} />
-            )}
-            <ThemedText type="smallBold" style={styles.hintText}>{hint.text}</ThemedText>
+          // NOTE: 快进/倍速共用同一个居中提示；方向靠文字里的正负号表达，不再分左右两个气泡。
+          <View pointerEvents="none" style={styles.hint}>
+            <ThemedText type="smallBold" style={styles.hintText}>{hint}</ThemedText>
           </View>
         )}
         {failed && (
@@ -573,46 +559,19 @@ const styles = StyleSheet.create({
     width: 12,
   },
   hint: {
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.38)',
-    borderColor: 'rgba(255, 255, 255, 0.28)',
-    borderRadius: Radius.full,
-    borderWidth: StyleSheet.hairlineWidth,
-    justifyContent: 'center',
-    position: 'absolute',
-  },
-  hintCenter: {
     alignSelf: 'center',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    top: '36%',
-  },
-  hintBack: {
-    height: 88,
-    left: 24,
-    marginTop: -44,
-    top: '50%',
-    width: 88,
-  },
-  hintForward: {
-    height: 88,
-    marginTop: -44,
-    right: 24,
-    top: '50%',
-    width: 88,
-  },
-  hintBackFull: {
-    left: 96,
-  },
-  hintForwardFull: {
-    right: 96,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    borderRadius: Radius.sm,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    position: 'absolute',
+    top: '38%',
   },
   hintText: {
     color: '#ffffff',
     fontSize: 12,
     lineHeight: 16,
-    marginTop: 2,
   },
   error: {
     alignItems: 'center',
