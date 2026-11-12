@@ -23,7 +23,8 @@ bun scripts/har-to-openapi.js \
 
 - 首页、列表、搜索、详情和收藏页返回 HTML；登录、查看状态、收藏写操作、片单加入/移出使用 `/api/` JSON 接口；片单的**新建和删除是网页表单**（见下）。
 - **API 路径一般带语言前缀**：站点自己的登录是 `POST /cn/api/login`（不是 `/api/login`）。客户端应复用内容语言拼接，参考 `localizedPath`。
-- **片单接口是例外，挂在根路径**：`GET /api/playlists/{dvdId}`、`POST /api/playlists/add|remove` 都没有语言前缀，写成 `/cn/api/playlists/...` 会 404（`The route cn/api/playlists/... could not be found`）。
+- **片单与收藏接口是例外，挂在根路径**：`GET /api/items/{internalId}/view`、`POST|DELETE /api/items/{internalId}/save`、`GET /api/playlists/{dvdId}`、`POST /api/playlists/add|remove` 都没有语言前缀，写成 `/cn/api/items/...` 会 404（`The route cn/api/items/... could not be found`）。
+- **收藏/片单写接口在会话失效时返回 401**（`{"message":"Unauthenticated."}`）：客户端把它当作「会话失效」处理，清本地登录态并引导重新登录，不展示原文；登录接口的 401 相反，表示账号或密码不对。
 - **登录必须从无 Cookie 状态发起**：带旧会话或 Cloudflare Cookie 时 `/api/login` 会返回 `401 {"message":"Unauthenticated."}`；清空 Cookie 罐（`NativeModules.Networking.clearCookies`）后同一请求返回 200 并下发新的会话 Cookie。
 - **会话是否失效只认「受保护页面被 302 回首页」**：原生 fetch 比对 `response.url` 的最终路径，WebView 比对回传的 `location.href`。不能用 `/logout` 链接判断——挑战页、502 页、精简布局的表单页都没有它，会把有效会话误判成失效并主动登出；也不能用 `id="login_email"` 判断，站点所有页面都内嵌登录弹窗。
 - 登录和收藏请求携带 Android CookieManager 的原生会话；`Set-Cookie` 在 RN 响应头里通常不可见，XSRF 令牌只在能捕获时附带，不阻塞请求。不保存密码或 Cookie 到项目文件。

@@ -203,7 +203,7 @@ export function isAbortError(error: unknown): boolean {
 
 async function fetchJson<T>(path: string, init: RequestInit = {}, rawPath = false): Promise<T> {
   const { signal, ...requestInit } = init;
-  // NOTE: 多数接口有条带语言前缀的路由（/cn/api/...），片单接口只挂在根路径（/api/playlists/...），用 rawPath 跳过前缀。
+  // NOTE: 多数接口有条带语言前缀的路由（/cn/api/...），但 items（收藏状态/收藏写）与片单接口只挂在根路径，用 rawPath 跳过前缀。
   const url = new URL(rawPath ? path : localizedPath(path), SOURCE_BASE_URL);
   const load = () => withTimeout(async (requestSignal) => {
     const requestHeadersValue = requestHeaders({
@@ -231,11 +231,17 @@ async function fetchJson<T>(path: string, init: RequestInit = {}, rawPath = fals
     } catch {
       data = null;
     }
+    if (response.status === 401) {
+      // NOTE: /api/ 写接口用 401 表示会话失效，交给调用方清本地登录态并引导重新登录。
+      throw new SessionExpiredError();
+    }
     if (!response.ok) {
       const firstError = data?.errors ? Object.values(data.errors)[0]?.[0] : undefined;
       throw new Error(firstError ?? data?.message ?? `请求失败（HTTP ${response.status}）`);
     }
     if (data === null) {
+      // NOTE: 写接口成功时返回 204 No Content（空响应体），解析不出 JSON 属于正常形态，不能当失败。
+      if (response.status === 204 || text.length === 0) return undefined as T;
       const contentType = response.headers.get('content-type') ?? '';
       throw new Error(contentType.includes('text/html') ? '源站暂时拦截了请求，请稍后再试' : '请求返回异常，请稍后重试');
     }
@@ -332,7 +338,7 @@ export async function getVideoDetail(id: string, signal?: AbortSignal): Promise<
   const detail = parseVideoDetail(await fetchHtml(`/${encodeURIComponent(id)}`, undefined, signal), id);
   if (!detail.internalId) return detail;
   try {
-    const state = await fetchJson<{ saved: boolean }>(`/api/items/${detail.internalId}/view`, { signal });
+    const state = await fetchJson<{ saved: boolean }>(`/api/items/${detail.internalId}/view`, { signal }, true);
     return { ...detail, saved: state.saved };
   } catch (error) {
     if (isAbortError(error)) throw error;
@@ -341,7 +347,7 @@ export async function getVideoDetail(id: string, signal?: AbortSignal): Promise<
 }
 
 export function setVideoSaved(internalId: string, saved: boolean): Promise<unknown> {
-  return fetchJson(`/api/items/${internalId}/save`, { method: saved ? 'POST' : 'DELETE' });
+  return fetchJson(`/api/items/${internalId}/save`, { method: saved ? 'POST' : 'DELETE' }, true);
 }
 
 export type VideoPlaylist = {
@@ -441,10 +447,17 @@ function clearCookies(): Promise<boolean> {
 export async function login(email: string, password: string): Promise<AccountUser> {
   // NOTE: 站点会拒绝带旧会话/Cloudflare Cookie 的登录请求（401）；先清空 Cookie 罐，登录响应再写入新会话。
   await clearCookies();
-  const result = await fetchJson<{ user?: { name?: string } }>('/api/login', {
-    method: 'POST',
-    body: JSON.stringify({ email, password, remember: true }),
-  });
+  let result: { user?: { name?: string } };
+  try {
+    result = await fetchJson<{ user?: { name?: string } }>('/api/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password, remember: true }),
+    });
+  } catch (error) {
+    // NOTE: Cookie 已清空后仍 401 说明是账号或密码不对，不能按「会话失效」提示。
+    if (error instanceof SessionExpiredError) throw new Error('邮箱或密码错误');
+    throw error;
+  }
   // NOTE: 源站只返回 name，客户端用本次登录邮箱补全 AccountUser。
   return { email, username: result?.user?.name };
 }

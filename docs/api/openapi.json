@@ -249,6 +249,7 @@
       "get": {
         "operationId": "getVideoViewState",
         "summary": "记录查看并读取收藏状态",
+        "description": "挂在根路径，不带语言前缀（不是 /cn/api/items/...），写错前缀会 404。",
         "parameters": [
           {
             "name": "internalId",
@@ -286,6 +287,7 @@
       "post": {
         "operationId": "saveVideo",
         "summary": "添加云端收藏",
+        "description": "挂在根路径，不带语言前缀（不是 /cn/api/items/...），写错前缀会 404。",
         "parameters": [
           {
             "name": "internalId",
