@@ -7,9 +7,23 @@ import { useSharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { ThemedText } from '@/components/themed-text';
+import { Radius, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { usePreferences } from '@/stores/preferences';
 import { formatTime } from '@/utils/format-time';
 import { impactHaptic, selectionHaptic } from '@/utils/haptics';
+
+// NOTE: 与网页播放器下方的快进退档位一致：10 秒 / 1 分钟 / 10 分钟，双向。
+const SEEK_BACKWARD = [
+  { label: '« 10m', seconds: -600, hint: '-10 分钟' },
+  { label: '‹ 1m', seconds: -60, hint: '-1 分钟' },
+  { label: '‹ 10s', seconds: -10, hint: '-10 秒' },
+] as const;
+const SEEK_FORWARD = [
+  { label: '10s ›', seconds: 10, hint: '+10 秒' },
+  { label: '1m ›', seconds: 60, hint: '+1 分钟' },
+  { label: '10m »', seconds: 600, hint: '+10 分钟' },
+] as const;
 
 export function VideoPlayer({ url }: { url: string }) {
   const player = useVideoPlayer({
@@ -17,6 +31,7 @@ export function VideoPlayer({ url }: { url: string }) {
     headers: { Referer: 'https://missav.ai/' },
   });
   const { autoplay } = usePreferences();
+  const theme = useTheme();
   const videoRef = useRef<VideoView | null>(null);
   const windowWidth = useWindowDimensions().width;
   const [failed, setFailed] = useState(false);
@@ -64,6 +79,12 @@ export function VideoPlayer({ url }: { url: string }) {
     selectionHaptic();
     player.seekBy(seconds);
     showHint(seconds > 0 ? `+${seconds} 秒` : `${seconds} 秒`);
+  }, [player, showHint]);
+
+  const jumpBy = useCallback((seconds: number, text: string) => {
+    selectionHaptic();
+    player.seekBy(seconds);
+    showHint(text);
   }, [player, showHint]);
 
   const beginSeek = useCallback(() => {
@@ -133,32 +154,54 @@ export function VideoPlayer({ url }: { url: string }) {
   });
 
   return (
-    <View style={styles.player}>
-      <GestureDetector gesture={Gesture.Exclusive(doubleTap, longPress, pan)}>
-        <View style={styles.video}>
-          <VideoView
-            contentFit="contain"
-            fullscreenOptions={{ enable: true, orientation: 'landscape' }}
-            nativeControls
-            player={player}
-            ref={videoRef}
-            style={styles.video}
-          />
-          {hint && (
-            <View pointerEvents="none" style={styles.hint}>
-              <ThemedText type="smallBold" style={styles.controlText}>{hint}</ThemedText>
-            </View>
-          )}
-          {failed && (
-            <View style={styles.error}>
-              <ThemedText type="small">播放失败，请稍后重试</ThemedText>
-            </View>
-          )}
-        </View>
-      </GestureDetector>
-      <Pressable accessibilityLabel="全屏播放" accessibilityRole="button" onPress={() => void videoRef.current?.enterFullscreen()} style={styles.fullscreen}>
-        <ThemedText type="smallBold" style={styles.controlText}>全屏</ThemedText>
-      </Pressable>
+    <View>
+      <View style={styles.player}>
+        <GestureDetector gesture={Gesture.Exclusive(doubleTap, longPress, pan)}>
+          <View style={styles.video}>
+            <VideoView
+              contentFit="contain"
+              fullscreenOptions={{ enable: true, orientation: 'landscape' }}
+              nativeControls
+              player={player}
+              ref={videoRef}
+              style={styles.video}
+            />
+            {hint && (
+              <View pointerEvents="none" style={styles.hint}>
+                <ThemedText type="smallBold" style={styles.controlText}>{hint}</ThemedText>
+              </View>
+            )}
+            {failed && (
+              <View style={styles.error}>
+                <ThemedText type="small">播放失败，请稍后重试</ThemedText>
+              </View>
+            )}
+          </View>
+        </GestureDetector>
+        <Pressable accessibilityLabel="全屏播放" accessibilityRole="button" onPress={() => void videoRef.current?.enterFullscreen()} style={styles.fullscreen}>
+          <ThemedText type="smallBold" style={styles.controlText}>全屏</ThemedText>
+        </Pressable>
+      </View>
+      <View style={[styles.seekRow, { backgroundColor: theme.background }]}>
+        {[SEEK_BACKWARD, SEEK_FORWARD].map((group, index) => (
+          <View key={index} style={styles.seekGroup}>
+            {group.map((item) => (
+              <Pressable
+                accessibilityLabel={item.hint}
+                accessibilityRole="button"
+                key={item.seconds}
+                onPress={() => jumpBy(item.seconds, item.hint)}
+                style={({ pressed }) => [
+                  styles.seekButton,
+                  { backgroundColor: theme.backgroundElement },
+                  pressed && styles.seekPressed,
+                ]}>
+                <ThemedText style={styles.seekText}>{item.label}</ThemedText>
+              </Pressable>
+            ))}
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
@@ -173,6 +216,33 @@ const styles = StyleSheet.create({
   video: {
     width: '100%',
     height: '100%',
+  },
+  seekRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  seekGroup: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  seekButton: {
+    alignItems: 'center',
+    borderRadius: Radius.sm,
+    height: 36,
+    justifyContent: 'center',
+    minWidth: 48,
+    paddingHorizontal: Spacing.sm,
+  },
+  seekPressed: {
+    opacity: 0.6,
+  },
+  seekText: {
+    fontSize: 12,
+    lineHeight: 16,
   },
   fullscreen: {
     position: 'absolute',
