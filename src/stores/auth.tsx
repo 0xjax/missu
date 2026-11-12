@@ -30,7 +30,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       await migrateLegacyStorage();
       const value = await Storage.getItem(PROFILE_KEY);
       if (!value) return;
-      // NOTE: 会话 cookie 只活在当前进程，重启后本地资料可能已失效；先向源站确认，避免“假装已登录”。
+      // NOTE: Cookie 由 Android CookieManager 持久化，重启后通常仍有效；仍先向源站确认，避免本地资料与会话不一致。
       if (!await checkSession()) {
         await Storage.removeItem(PROFILE_KEY);
         return;

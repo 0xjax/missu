@@ -1,3 +1,5 @@
+import { NativeModules } from 'react-native';
+
 import {
   isLoginPage,
   parseDirectory,
@@ -130,6 +132,8 @@ async function withChallengeRetry<T>(path: string, load: () => Promise<T>, signa
   }
 }
 
+// NOTE: Android 上 RN 的响应头通常不暴露 Set-Cookie，XSRF 令牌多数时候捕获不到；
+// 会话实际由 CookieManager 维护，拿不到令牌不影响请求。
 function captureXsrfToken(response: Response): void {
   const cookie = response.headers.get('set-cookie');
   const value = cookie?.match(/(?:^|,\s*)XSRF-TOKEN=([^;]+)/i)?.[1];
@@ -165,14 +169,19 @@ export function isAbortError(error: unknown): boolean {
 async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
   const { signal, ...requestInit } = init;
   const load = () => withTimeout(async (requestSignal) => {
-    const response = await fetch(new URL(path, SOURCE_BASE_URL), {
+    const requestHeadersValue = requestHeaders({
+      Accept: 'application/json',
+      // NOTE: 源站的写接口按浏览器态（Origin/Referer/XHR）校验；Android 原生 fetch 默认不带这些头。
+      Origin: SOURCE_BASE_URL,
+      Referer: `${SOURCE_BASE_URL}${contentLanguage === 'tw' ? '/' : `/${contentLanguage}/`}`,
+      'X-Requested-With': 'XMLHttpRequest',
+      ...(requestInit.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(xsrfToken ? { 'X-XSRF-TOKEN': xsrfToken } : {}),
+      ...(requestInit.headers as Record<string, string> | undefined),
+    });
+    const response = await fetch(new URL(localizedPath(path), SOURCE_BASE_URL), {
       ...requestInit,
-      headers: requestHeaders({
-        Accept: 'application/json',
-        ...(requestInit.body ? { 'Content-Type': 'application/json' } : {}),
-        ...(xsrfToken ? { 'X-XSRF-TOKEN': xsrfToken } : {}),
-        ...(requestInit.headers as Record<string, string> | undefined),
-      }),
+      headers: requestHeadersValue,
       signal: requestSignal,
     });
     captureXsrfToken(response);
@@ -282,7 +291,19 @@ export function setVideoSaved(internalId: string, saved: boolean): Promise<unkno
   return fetchJson(`/api/items/${internalId}/save`, { method: saved ? 'POST' : 'DELETE' });
 }
 
+function clearCookies(): Promise<boolean> {
+  const networking = NativeModules.Networking as {
+    clearCookies?: (callback: (result: boolean) => void) => void;
+  } | undefined;
+  if (!networking?.clearCookies) return Promise.resolve(false);
+  return new Promise((resolve) => {
+    networking.clearCookies!((result: boolean) => resolve(result));
+  });
+}
+
 export async function login(email: string, password: string): Promise<AccountUser> {
+  // NOTE: 站点会拒绝带旧会话/Cloudflare Cookie 的登录请求（401）；先清空 Cookie 罐，登录响应再写入新会话。
+  await clearCookies();
   const result = await fetchJson<{ user?: { name?: string } }>('/api/login', {
     method: 'POST',
     body: JSON.stringify({ email, password, remember: true }),

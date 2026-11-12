@@ -292,9 +292,9 @@ export type PlaylistDetail = {
   videos: VideoSummary[];
 };
 
-/** 源站未登录时会直接渲染登录表单，用这个判断会话是否还有效。 */
+/** 源站所有页面都内嵌登录弹窗（`id="login_email"`），不能据此判断；已登录页面才渲染 `/logout` 链接。 */
 export function isLoginPage(html: string): boolean {
-  return html.includes('id="login_email"');
+  return !/href="[^"]*\/logout"/i.test(html);
 }
 
 export function parsePlaylists(html: string): PlaylistSummary[] {
