@@ -11,7 +11,10 @@ const PROBE = `
     || !!document.querySelector('#challenge-form, #challenge-stage, #challenge-running, .cf-challenge');
   if (!blocked && document.readyState === 'complete' && document.body) {
     setTimeout(() => {
-      window.ReactNativeWebView.postMessage(JSON.stringify({ html: document.documentElement.outerHTML }));
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        html: document.documentElement.outerHTML,
+        url: location.href,
+      }));
     }, 1200);
     return;
   }
@@ -20,9 +23,11 @@ const PROBE = `
 true;
 `;
 
+type WebViewResult = { html: string; url: string };
+
 type Pending = {
   path: string;
-  resolve: (html: string) => void;
+  resolve: (result: WebViewResult) => void;
   reject: (error: Error) => void;
 };
 
@@ -36,7 +41,7 @@ export function WebViewFetchProvider() {
   const [nonce, setNonce] = useState(0);
 
   useEffect(() => {
-    setWebViewHtmlFetcher((path) => new Promise<string>((resolve, reject) => {
+    setWebViewHtmlFetcher((path) => new Promise<WebViewResult>((resolve, reject) => {
       pendingRef.current = { path, resolve, reject };
       setPending(pendingRef.current);
       setNonce((value) => value + 1);
@@ -44,12 +49,12 @@ export function WebViewFetchProvider() {
     return () => setWebViewHtmlFetcher(undefined);
   }, []);
 
-  const finish = useCallback((html?: string, error?: Error) => {
+  const finish = useCallback((result?: WebViewResult, error?: Error) => {
     const current = pendingRef.current;
     pendingRef.current = undefined;
     setPending(undefined);
-    if (html) {
-      current?.resolve(html);
+    if (result) {
+      current?.resolve(result);
     } else {
       current?.reject(error ?? new Error('页面加载失败'));
     }
@@ -70,8 +75,8 @@ export function WebViewFetchProvider() {
       onError={() => finish(undefined, new Error('页面加载失败'))}
       onMessage={(event) => {
         try {
-          const data = JSON.parse(event.nativeEvent.data) as { html?: string };
-          if (data.html) finish(data.html);
+          const data = JSON.parse(event.nativeEvent.data) as { html?: string; url?: string };
+          if (data.html) finish({ html: data.html, url: data.url ?? '' });
         } catch {
           // NOTE: 页面其它 postMessage 与本层无关。
         }
