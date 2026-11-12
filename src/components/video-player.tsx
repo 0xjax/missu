@@ -385,14 +385,14 @@ export function VideoPlayer({ url }: { url: string }) {
       <View pointerEvents="box-none" style={styles.overlay}>
         <Animated.View
           pointerEvents={controlsVisible ? 'box-none' : 'none'}
-          style={[styles.fill, styles.controlsLayer, controlsStyle]}>
-          {/* NOTE: 用 RNGH Tap 而不是 Pressable；双击后第一次点击否则会被手势竞技场吞掉。 */}
-          <GestureDetector gesture={Gesture.Tap().onEnd(() => scheduleOnRN(togglePlay))}>
-            <View accessibilityLabel={playing ? '暂停' : '播放'} accessibilityRole="button" style={styles.playButton}>
-              <Ionicons color="#ffffff" name={playing ? 'pause' : 'play'} size={40} />
-            </View>
-          </GestureDetector>
+          style={[styles.fill, controlsStyle]}>
           <View style={[styles.bottomBar, isFull && styles.bottomBarFullscreen]}>
+            {/* NOTE: 播放键放底部条左侧而不是画面正中：快进快捷键会唤出控件，居中大按钮会盖住画面。 */}
+            <GestureDetector gesture={Gesture.Tap().onEnd(() => scheduleOnRN(togglePlay))}>
+              <View accessibilityLabel={playing ? '暂停' : '播放'} accessibilityRole="button" style={styles.playButton}>
+                <Ionicons color="#ffffff" name={playing ? 'pause' : 'play'} size={22} />
+              </View>
+            </GestureDetector>
             <ThemedText style={styles.timeText}>{formatTime(displayedTime)}</ThemedText>
             <GestureDetector gesture={buildProgressGesture()}>
               <View
@@ -458,10 +458,12 @@ export function VideoPlayer({ url }: { url: string }) {
                   onPress={() => jumpBy(item.seconds, item.hint)}
                   style={({ pressed }) => [
                     styles.seekButton,
-                    { backgroundColor: theme.backgroundElement },
-                    pressed && styles.seekPressed,
+                    // NOTE: 按下用 accent 填充，比单纯降透明度更容易看清。
+                    { backgroundColor: pressed ? theme.accent : theme.backgroundElement },
                   ]}>
-                  <ThemedText style={styles.seekText}>{item.label}</ThemedText>
+                  {({ pressed }) => (
+                    <ThemedText style={[styles.seekText, pressed && { color: theme.onAccent }]}>{item.label}</ThemedText>
+                  )}
                 </Pressable>
               ))}
             </View>
@@ -503,17 +505,11 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
   },
-  controlsLayer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   playButton: {
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
-    borderRadius: Radius.full,
-    height: 64,
+    height: 32,
     justifyContent: 'center',
-    width: 64,
+    width: 32,
   },
   fullscreenButton: {
     padding: 4,
@@ -647,9 +643,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     minWidth: 48,
     paddingHorizontal: Spacing.sm,
-  },
-  seekPressed: {
-    opacity: 0.6,
   },
   seekText: {
     fontSize: 12,
