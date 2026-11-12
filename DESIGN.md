@@ -62,7 +62,7 @@
 | 目录栅格 | `FlatList` + `DirectoryCard` | 女优 / 排行 3 列（低分辨率竖图），分类 / 厂商 2 列（文字块） |
 | 视频卡封面角标 | `VideoCard` | 左下变体标签（中文字幕 / 无码影片），右下时长；标签取自卡片 HTML，不新增请求 |
 | 详情信息块 | 详情页内联行 | 8 行（发行日期/番号/标题/女优/类型/系列/发行商/标籤），文案随内容语言变化不硬编码；标签 `textSecondary` 与值同行，可点击值用 accent 色跳 `/latest?source=path`。不用下划线：Android 嵌套 `Text` 的下划线会错位成漂浮短线 |
-| 详情页片单 | 收藏旁「片单」按钮 + 底部 Sheet | 打开时 `GET /api/playlists/{dvdId}`；点行乐观切换再 `POST /api/playlists/add\|remove`，失败回滚并提示；选中只改 accent 文字，不加勾选符号；未登录先跳登录 |
+| 详情页片单 | 收藏旁「片单」按钮 + 底部 Sheet | 打开时 `GET /api/playlists/{dvdId}`；点行乐观切换再 `POST /api/playlists/add\|remove`，失败回滚并提示；选中用常驻圆点 + accent 文字（不加勾选符号，避免撑动行宽）；未登录先跳登录 |
 | 女优筛选 | `BottomSheet` + 4 × `Picker` | 2×2 排布、内容自适应高度；排序走 `ChoiceMenuBar` 菜单 |
 | 搜索 | `SearchBox` | Paper Searchbar，列表页与首页共用 |
 | 内容语言 | 设置行 → `/language` 子页 | 7 种语言，当前项 accent 色；路径前缀由 api 层统一拼接，切换后列表换 key 重拉 |
@@ -98,6 +98,7 @@ NEVER 把多个 Compose `TextField` 塞进同一个 `Host` 并排——它们都
 - 从详情页跳列表必须用 `router.dismissTo`（弹出详情页）而不是 `push`/`replace`：详情页留在根栈里不卸载，播放器与 ExoPlayer 实例会一直挂着；播放器另有失焦暂停兜底
 - 片单接口挂在根路径（`/api/playlists/...`），没有语言前缀；其它接口是 `/cn/api/...`。`fetchJson` 因此带 `rawPath` 开关，写错前缀会 404「route cn/api/playlists/... could not be found」
 - 详情页片单只支持加入/移出既有片单；新建片单在站点是独立表单页 `/playlists/create/{dvdId}`，未实现
+- 自绘底部 Sheet 要开 RN `Modal` 的 `statusBarTranslucent` / `navigationBarTranslucent`，否则窗口被系统导航栏裁掉，底部露出未遮罩的页面；开了之后内边距补 `insets.bottom`
 - 播放/暂停、全屏按钮必须用 RNGH `Gesture.Tap`，不能用 RN `Pressable`：双击后第一次点击会被手势竞技场吞掉
 - 长按手势的 `onFinalize` 在普通点击失败时也会触发，只有真正激活过才能结束倍速/清提示
 - 全屏 Modal 内要嵌套 `GestureHandlerRootView`；内联播放器保持挂载、Modal 共享同一 player；退出时重挂内联 `VideoView` 刷新 SurfaceView 并 seek 回原时间点，期间用 seeking 保护屏蔽暂停图标

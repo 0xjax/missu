@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getVideoPlaylists, isAbortError, setPlaylistMembership, type VideoPlaylist } from '@/api/missav';
 import { ThemedText } from '@/components/themed-text';
@@ -16,10 +17,11 @@ type Props = {
 
 /**
  * 详情页片单面板：列出当前影片可加入的片单，点行即加入/移出。
- * NOTE: 选中态只用 accent 文字表达，不加勾选符号——勾选会撑动行宽（见 DESIGN.md）。
+ * NOTE: 选中态用「常驻圆点 + accent 文字」表达，不加勾选符号——勾选会撑动行宽（见 DESIGN.md）。
  */
 export function PlaylistSheet({ dvdId, open, onClose, onOpenPlaylists, onNotice }: Props) {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const [playlists, setPlaylists] = useState<VideoPlaylist[]>();
   const [failure, setFailure] = useState<string>();
   const [attempt, setAttempt] = useState(0);
@@ -71,11 +73,19 @@ export function PlaylistSheet({ dvdId, open, onClose, onOpenPlaylists, onNotice 
     }
   };
 
+  // NOTE: 默认 Modal 窗口会被系统导航栏裁掉一截，底部露出未遮罩的页面；两个 translucent 让遮罩铺满，再由 insets 补内边距。
   return (
-    <Modal animationType="fade" onRequestClose={close} transparent visible={open}>
+    <Modal
+      animationType="fade"
+      navigationBarTranslucent
+      onRequestClose={close}
+      statusBarTranslucent
+      transparent
+      visible={open}>
       <View style={styles.container}>
         <Pressable accessibilityLabel="关闭" accessibilityRole="button" onPress={close} style={styles.backdrop} />
-        <View style={[styles.panel, { backgroundColor: theme.background }]}>
+        <View style={[styles.panel, { backgroundColor: theme.backgroundElement, paddingBottom: Spacing.xl + insets.bottom }]}>
+          <View style={[styles.handle, { backgroundColor: theme.backgroundSelected }]} />
           <ThemedText type="headline">加入片单</ThemedText>
           {failure && (
             <View style={styles.state}>
@@ -101,6 +111,12 @@ export function PlaylistSheet({ dvdId, open, onClose, onOpenPlaylists, onNotice 
                   key={playlist.key}
                   onPress={() => toggle(playlist)}
                   style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+                  <View
+                    style={[
+                      styles.marker,
+                      { backgroundColor: playlist.added ? theme.accent : 'transparent' },
+                    ]}
+                  />
                   <ThemedText themeColor={playlist.added ? 'accent' : 'text'} type="small">
                     {playlist.name}
                   </ThemedText>
@@ -108,7 +124,7 @@ export function PlaylistSheet({ dvdId, open, onClose, onOpenPlaylists, onNotice 
               ))}
             </ScrollView>
           )}
-          <Pressable accessibilityRole="button" hitSlop={8} onPress={onOpenPlaylists} style={styles.footer}>
+          <Pressable accessibilityRole="button" onPress={onOpenPlaylists} style={styles.footer}>
             <ThemedText themeColor="textSecondary" type="small">查看我的片单</ThemedText>
           </Pressable>
         </View>
@@ -136,7 +152,12 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     maxHeight: '70%',
     padding: Spacing.lg,
-    paddingBottom: Spacing.xl,
+  },
+  handle: {
+    alignSelf: 'center',
+    borderRadius: Radius.full,
+    height: 4,
+    width: 32,
   },
   state: {
     alignItems: 'center',
@@ -145,18 +166,24 @@ const styles = StyleSheet.create({
     minHeight: 96,
   },
   list: {
-    flexGrow: 0,
+    flexShrink: 1,
   },
   row: {
-    justifyContent: 'center',
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: Spacing.md,
     minHeight: 44,
+  },
+  marker: {
+    borderRadius: Radius.full,
+    height: 6,
+    width: 6,
   },
   pressed: {
     opacity: 0.6,
   },
   footer: {
-    alignSelf: 'flex-start',
     justifyContent: 'center',
-    minHeight: 32,
+    minHeight: 44,
   },
 });
