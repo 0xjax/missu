@@ -28,6 +28,7 @@ bun scripts/har-to-openapi.js \
 - 登录和收藏请求携带 Android CookieManager 的原生会话；`Set-Cookie` 在 RN 响应头里通常不可见，XSRF 令牌只在能捕获时附带，不阻塞请求。不保存密码或 Cookie 到项目文件。
 - Cookie 由 CookieManager 持久化到磁盘，重启 App 后会话通常仍然有效；启动时仍用 `/playlists` 做一次校验。
 - 登录和收藏请求补发浏览器态的 `Origin`、`Referer`、`X-Requested-With`，与站点 Axios 行为一致。
+- 片单列表/详情的原生 HTML 可能只有空壳（无列表标记），需在 WebView 中渲染后取 `document.documentElement.outerHTML`；渲染出的链接带语言前缀，解析前先归一化路径。
 - `/` 和 `/new` 会重定向到带动态 `dm` 前缀的页面；客户端应使用稳定入口并跟随重定向。
 - 列表和搜索使用从 1 开始的 `page` 查询参数。
 - 详情页通过内联打包脚本初始化 HLS 播放器，播放地址来自外部媒体主机；不得把临时 URL 写成固定接口。

@@ -3,13 +3,13 @@ import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 
-import { localizedUrl, setBrowserUserAgent, setChallengeVerifier } from '@/api/missav';
+import { localizedUrl, setBrowserUserAgent, setChallengeVerifier, type ChallengeSolution } from '@/api/missav';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-// NOTE: Cloudflare 的挑战页标题是 “Just a moment...”，通过后会重定向回真实页面。
-// 这里同时检查标题和挑战节点，避免加载中标题为空时误判为已通过。
+// NOTE: 挑战页会返回 200 + 挑战脚本的空壳；这里看标题和挑战节点，
+// 确认离开挑战状态并等页面内容渲染完，再把整页 HTML 回传给 api 层。
 const PROBE = `
 (function probe() {
   if (!window.__uaSent) {
@@ -18,10 +18,16 @@ const PROBE = `
   }
   const blocked = /Just a moment|Checking your browser|請稍候|请稍候|Attention Required/i.test(document.title || '')
     || !!document.querySelector('#challenge-form, #challenge-stage, #challenge-running, .cf-challenge, [data-translate="checking_browser"]');
-  const ready = document.readyState === 'complete'
-    && !!document.querySelector('.thumbnail.group, main');
+  const ready = document.readyState === 'complete' && !!document.body;
   if (!blocked && ready) {
-    window.ReactNativeWebView.postMessage(JSON.stringify({ done: true, userAgent: navigator.userAgent }));
+    setTimeout(() => {
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        done: true,
+        userAgent: navigator.userAgent,
+        html: document.documentElement.outerHTML,
+        url: location.href,
+      }));
+    }, 1500);
     return;
   }
   setTimeout(probe, 800);
@@ -30,15 +36,16 @@ true;
 `;
 
 type ActiveVerification = {
-  promise: Promise<boolean>;
-  resolve: (verified: boolean) => void;
+  promise: Promise<ChallengeSolution>;
+  resolve: (solution: ChallengeSolution) => void;
 };
 
 type MessageEvent = { nativeEvent: { data: string } };
 
 /**
  * 全局 Cloudflare 人机验证层：api 层遇到挑战时注册的验证器会打开这个全屏 WebView。
- * 用户在原生 WebView 里完成后，CookieManager 与 RN fetch 共享 cf_clearance，原请求自动重试。
+ * 用户在原生 WebView 里完成后，CookieManager 与 RN fetch 共享 cf_clearance；
+ * 对 HTML 页面还会把渲染后的整页回传，避免只拿到挑战空壳。
  */
 export function ChallengeProvider({ children }: PropsWithChildren) {
   const theme = useTheme();
@@ -46,29 +53,27 @@ export function ChallengeProvider({ children }: PropsWithChildren) {
   const activeRef = useRef<ActiveVerification | undefined>(undefined);
   const userAgentRef = useRef<string | undefined>(undefined);
 
-  const finish = useCallback((verified: boolean) => {
+  const finish = useCallback((verified: boolean, html?: string) => {
     const active = activeRef.current;
     activeRef.current = undefined;
     setUrl(undefined);
-    if (verified) {
+    if (verified && userAgentRef.current) {
       // cf_clearance 绑定 UA，验证通过后统一用 WebView 的 UA 发请求。
-      if (userAgentRef.current) setBrowserUserAgent(userAgentRef.current);
-      active?.resolve(true);
-    } else {
-      active?.resolve(false);
+      setBrowserUserAgent(userAgentRef.current);
     }
+    active?.resolve({ verified, html });
   }, []);
 
   useEffect(() => {
-    setChallengeVerifier(() => {
+    setChallengeVerifier((path) => {
       if (activeRef.current) return activeRef.current.promise;
-      let resolve!: (verified: boolean) => void;
-      const promise = new Promise<boolean>((next) => {
+      let resolve!: (solution: ChallengeSolution) => void;
+      const promise = new Promise<ChallengeSolution>((next) => {
         resolve = next;
       });
       activeRef.current = { promise, resolve };
-      // NOTE: 验证加载站点首页而不是失败路径：cf_clearance 是域级 Cookie，首页可避免打开详情页自动播放。
-      setUrl(localizedUrl('/'));
+      // NOTE: API 请求加载首页做验证；HTML 页面加载失败路径，验证后可直接拿渲染结果。
+      setUrl(localizedUrl(path.includes('/api/') ? '/' : path));
       return promise;
     });
     return () => setChallengeVerifier(undefined);
@@ -76,9 +81,13 @@ export function ChallengeProvider({ children }: PropsWithChildren) {
 
   const handleMessage = useCallback((event: MessageEvent) => {
     try {
-      const data = JSON.parse(event.nativeEvent.data) as { done?: boolean; userAgent?: string };
+      const data = JSON.parse(event.nativeEvent.data) as {
+        done?: boolean;
+        userAgent?: string;
+        html?: string;
+      };
       if (data.userAgent) userAgentRef.current = data.userAgent;
-      if (data.done) finish(true);
+      if (data.done) finish(true, data.html);
     } catch {
       // NOTE: 页面里的其它 postMessage 与验证无关，忽略。
     }
