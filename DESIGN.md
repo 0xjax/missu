@@ -64,6 +64,7 @@
 | 搜索 | `SearchBox` | Paper Searchbar，列表页与首页共用 |
 | 内容语言 | 设置行 → `/language` 子页 | 7 种语言，当前项 accent 色；路径前缀由 api 层统一拼接，切换后列表换 key 重拉 |
 | 自动播放 | 设置行 + 原生 `Switch` | 默认开；关闭后打开视频保持暂停，不影响当前播放中的视频 |
+| 视频快进退 | 播放器下方 6 个按钮 | 10 秒 / 1 分钟 / 10 分钟双向，36dp 高，点击调用 `seekBy` 并显示提示 |
 | 人机验证 | 全局 Modal + `WebView` | Cloudflare 挑战时显式验证；cf_clearance 与 RN fetch 共享，验证后自动重试原请求 |
 | 反馈 | Snackbar + haptics | 收藏、登录、播放手势 |
 
