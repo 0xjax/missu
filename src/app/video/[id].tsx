@@ -162,7 +162,6 @@ export default function VideoDetailScreen() {
       <PlaylistSheet
         dvdId={detail?.id}
         onClose={() => setPlaylistsOpen(false)}
-        onNotice={setNotice}
         onOpenPlaylists={() => {
           setPlaylistsOpen(false);
           router.push('/playlists');

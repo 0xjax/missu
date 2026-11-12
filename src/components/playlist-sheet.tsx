@@ -1,10 +1,7 @@
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BottomSheet, Button, Checkbox, Column, Host, Row, ScrollView, Text } from '@expo/ui';
+import { useEffect, useRef, useState } from 'react';
 
 import { getVideoPlaylists, isAbortError, setPlaylistMembership, type VideoPlaylist } from '@/api/missav';
-import { ThemedText } from '@/components/themed-text';
-import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 type Props = {
@@ -12,27 +9,34 @@ type Props = {
   open: boolean;
   onClose: () => void;
   onOpenPlaylists: () => void;
-  onNotice: (message: string) => void;
 };
 
+// NOTE: Compose 的 Checkbox 自带 48dp 触控尺寸，行高按此估算；超过 6 行改由 ScrollView 滚动。
+const ROW_HEIGHT = 48;
+const MAX_LIST_HEIGHT = ROW_HEIGHT * 6;
+
 /**
- * 详情页片单面板：列出当前影片可加入的片单，点行即加入/移出。
- * NOTE: 选中态用「常驻圆点 + accent 文字」表达，不加勾选符号——勾选会撑动行宽（见 DESIGN.md）。
+ * 详情页片单面板：列出当前影片可加入的片单，点行或勾选框即加入/移出。
+ * NOTE: 走 @expo/ui 的原生 ModalBottomSheet，与女优筛选用同一套浮层；seedColor 让 Compose 控件跟随主题 accent。
  */
-export function PlaylistSheet({ dvdId, open, onClose, onOpenPlaylists, onNotice }: Props) {
+export function PlaylistSheet({ dvdId, open, onClose, onOpenPlaylists }: Props) {
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
   const [playlists, setPlaylists] = useState<VideoPlaylist[]>();
   const [failure, setFailure] = useState<string>();
+  const [actionError, setActionError] = useState<string>();
   const [attempt, setAttempt] = useState(0);
-  const [pendingKey, setPendingKey] = useState<string>();
+  // NOTE: 行点击与勾选框回调是同一次点击上的两条路径，用同步 ref 去重，避免一次点击切两次。
+  const busy = useRef(false);
 
   useEffect(() => {
     if (!open || !dvdId) return;
     const controller = new AbortController();
     let active = true;
     getVideoPlaylists(dvdId, controller.signal).then((result) => {
-      if (active) setPlaylists(result);
+      if (!active) return;
+      // NOTE: 成功后要清掉上一次失败的文案，否则失败提示会和列表同时出现。
+      setFailure(undefined);
+      setPlaylists(result);
     }).catch((reason: unknown) => {
       if (!active || isAbortError(reason)) return;
       setFailure(reason instanceof Error ? reason.message : '片单加载失败');
@@ -47,143 +51,70 @@ export function PlaylistSheet({ dvdId, open, onClose, onOpenPlaylists, onNotice 
   const close = () => {
     setPlaylists(undefined);
     setFailure(undefined);
-    setPendingKey(undefined);
+    setActionError(undefined);
     onClose();
   };
 
   const retry = () => {
     setPlaylists(undefined);
     setFailure(undefined);
+    setActionError(undefined);
     setAttempt((value) => value + 1);
   };
 
+  // NOTE: 成功不弹提示——勾选框本身就是结果；失败在面板内提示（Snackbar 会被浮层遮住）。
   const toggle = async (playlist: VideoPlaylist) => {
-    if (!dvdId || pendingKey) return;
+    if (!dvdId || busy.current) return;
+    busy.current = true;
     const nextAdded = !playlist.added;
-    setPendingKey(playlist.key);
+    setActionError(undefined);
     setPlaylists((current) => current?.map((item) => item.key === playlist.key ? { ...item, added: nextAdded } : item));
     try {
       await setPlaylistMembership(dvdId, playlist.key, nextAdded);
-      onNotice(nextAdded ? `已加入「${playlist.name}」` : `已从「${playlist.name}」移除`);
     } catch (reason) {
       setPlaylists((current) => current?.map((item) => item.key === playlist.key ? { ...item, added: playlist.added } : item));
-      onNotice(reason instanceof Error ? reason.message : '片单操作失败');
+      setActionError(reason instanceof Error ? reason.message : '片单操作失败');
     } finally {
-      setPendingKey(undefined);
+      busy.current = false;
     }
   };
 
-  // NOTE: 默认 Modal 窗口会被系统导航栏裁掉一截，底部露出未遮罩的页面；两个 translucent 让遮罩铺满，再由 insets 补内边距。
   return (
-    <Modal
-      animationType="fade"
-      navigationBarTranslucent
-      onRequestClose={close}
-      statusBarTranslucent
-      transparent
-      visible={open}>
-      <View style={styles.container}>
-        <Pressable accessibilityLabel="关闭" accessibilityRole="button" onPress={close} style={styles.backdrop} />
-        <View style={[styles.panel, { backgroundColor: theme.backgroundElement, paddingBottom: Spacing.xl + insets.bottom }]}>
-          <View style={[styles.handle, { backgroundColor: theme.backgroundSelected }]} />
-          <ThemedText type="headline">加入片单</ThemedText>
-          {failure && (
-            <View style={styles.state}>
-              <ThemedText selectable themeColor="textSecondary" type="small">{failure}</ThemedText>
-              <Pressable accessibilityRole="button" onPress={retry}>
-                <ThemedText type="smallBold">重试</ThemedText>
-              </Pressable>
-            </View>
+    <Host colorScheme="dark" seedColor={theme.accent}>
+      <BottomSheet
+        containerColor={theme.backgroundElement}
+        contentColor={theme.text}
+        contentPadding={0}
+        isPresented={open}
+        onDismiss={close}>
+        <Column spacing={12} style={{ padding: 16 }}>
+          <Text textStyle={{ fontSize: 18, fontWeight: '600' }}>加入片单</Text>
+          {failure && <Text textStyle={{ color: theme.textSecondary, fontSize: 14 }}>{failure}</Text>}
+          {failure && <Button label="重试" onPress={retry} variant="text" />}
+          {actionError && <Text textStyle={{ color: theme.danger, fontSize: 14 }}>{actionError}</Text>}
+          {!playlists && !failure && (
+            <Text textStyle={{ color: theme.textSecondary, fontSize: 14 }}>加载中…</Text>
           )}
-          {!playlists && !failure && <ActivityIndicator color={theme.text} style={styles.state} />}
-          {playlists?.length === 0 && (
-            <View style={styles.state}>
-              <ThemedText themeColor="textSecondary" type="small">还没有片单，先去「我的片单」创建</ThemedText>
-            </View>
+          {playlists && playlists.length === 0 && (
+            <Text textStyle={{ color: theme.textSecondary, fontSize: 14 }}>还没有片单，先去「我的片单」创建</Text>
           )}
           {playlists && playlists.length > 0 && (
-            <ScrollView style={styles.list}>
-              {playlists.map((playlist) => (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: playlist.added, busy: pendingKey === playlist.key }}
-                  disabled={Boolean(pendingKey)}
-                  key={playlist.key}
-                  onPress={() => toggle(playlist)}
-                  style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
-                  <View
-                    style={[
-                      styles.marker,
-                      { backgroundColor: playlist.added ? theme.accent : 'transparent' },
-                    ]}
-                  />
-                  <ThemedText themeColor={playlist.added ? 'accent' : 'text'} type="small">
-                    {playlist.name}
-                  </ThemedText>
-                </Pressable>
-              ))}
+            <ScrollView style={{ height: Math.min(playlists.length * ROW_HEIGHT, MAX_LIST_HEIGHT) }}>
+              <Column>
+                {playlists.map((playlist) => (
+                  <Row alignment="center" key={playlist.key} onPress={() => toggle(playlist)} spacing={8}>
+                    <Checkbox onValueChange={() => toggle(playlist)} value={playlist.added} />
+                    <Text textStyle={{ color: playlist.added ? theme.accent : theme.text, fontSize: 14 }}>
+                      {playlist.name}
+                    </Text>
+                  </Row>
+                ))}
+              </Column>
             </ScrollView>
           )}
-          <Pressable accessibilityRole="button" onPress={onOpenPlaylists} style={styles.footer}>
-            <ThemedText themeColor="textSecondary" type="small">查看我的片单</ThemedText>
-          </Pressable>
-        </View>
-      </View>
-    </Modal>
+          <Button label="查看我的片单" onPress={onOpenPlaylists} variant="text" />
+        </Column>
+      </BottomSheet>
+    </Host>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  backdrop: {
-    backgroundColor: 'rgba(0, 0, 0, 0.55)',
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-    right: 0,
-    top: 0,
-  },
-  panel: {
-    borderTopLeftRadius: Radius.lg,
-    borderTopRightRadius: Radius.lg,
-    gap: Spacing.md,
-    maxHeight: '70%',
-    padding: Spacing.lg,
-  },
-  handle: {
-    alignSelf: 'center',
-    borderRadius: Radius.full,
-    height: 4,
-    width: 32,
-  },
-  state: {
-    alignItems: 'center',
-    gap: Spacing.sm,
-    justifyContent: 'center',
-    minHeight: 96,
-  },
-  list: {
-    flexShrink: 1,
-  },
-  row: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: Spacing.md,
-    minHeight: 44,
-  },
-  marker: {
-    borderRadius: Radius.full,
-    height: 6,
-    width: 6,
-  },
-  pressed: {
-    opacity: 0.6,
-  },
-  footer: {
-    justifyContent: 'center',
-    minHeight: 44,
-  },
-});
