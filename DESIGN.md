@@ -54,13 +54,14 @@
 |---|---|---|
 | 底部导航 | `NativeTabs` | 原生 tab 栏，4 项固定（首页/列表/发现/我的） |
 | 页头 | 各 tab 独立 Stack header | 大标题 + 右侧图标 |
-| 首页板块 | 首页 HTML 板块 + 顶部「今日热门」 | 板块来自首页 HTML；「今日热门」额外请求 `/today-hot` 列表页取前 N 条置顶，失败时整块不显示，不影响其他板块 |
+| 首页板块 | 首页 HTML 板块 + 顶部「今日热门」 | 板块来自首页 HTML；「今日热门」额外请求 `/today-hot` 列表页置顶，条数与其他板块一致不裁剪，失败时整块不显示，不影响其他板块 |
 | 个人中心 | `SettingsRow` | 56dp 行、透明容器、右侧 chevron；二级页走根 Stack |
 | 频道 / 周期 / 筛选 / 排序 | `ChoiceMenuBar` | 40dp TextButton + 系统 DropdownMenu（Compose） |
 | 一级分类（发现页） | `DiscoverTabs` | 单行原生 `ToggleButton`（热门/分类/女优/厂商/排行），选中仅填充色 |
 | 厂商频道组 | `CollapsibleGroup` + `SettingsRow` | 默认折叠三组（素人/无码影片/亚洲 AV），路径见 `src/constants/channel-groups.ts` |
 | 目录栅格 | `FlatList` + `DirectoryCard` | 女优 / 排行 3 列（低分辨率竖图），分类 / 厂商 2 列（文字块） |
 | 视频卡封面角标 | `VideoCard` | 左下变体标签（中文字幕 / 无码影片），右下时长；标签取自卡片 HTML，不新增请求 |
+| 长按预览 | `VideoCard` 长按 + 全屏 `Modal` | 350ms 长按（带 haptic）弹静音循环预览；预览片由封面地址推导为同目录 `preview.mp4`（原站卡片自带，零额外请求），加载失败保留封面；松手停留，点空白/返回键关闭，短按仍进详情 |
 | 详情信息块 | 详情页内联行 | 8 行（发行日期/番号/标题/女优/类型/系列/发行商/标籤），文案随内容语言变化不硬编码；标签 `textSecondary` 与值同行，可点击值用 accent 色跳 `/latest?source=path`。不用下划线：Android 嵌套 `Text` 的下划线会错位成漂浮短线 |
 | 详情页片单 | 收藏旁「片单」按钮 + 原生 `ModalBottomSheet` | 打开时 `GET /api/playlists/{dvdId}`；点行或勾选框乐观切换再 `POST /api/playlists/add\|remove`；勾选框是 Compose 组件，配色由 `Host seedColor` 跟随 accent；超过 6 行放进 Compose `ScrollView`；「新建片单」就地展开单行输入框，提交后重新拉列表；未登录先跳登录 |
 | 删除片单 | 片单详情页页头「删除」 | 原生 `Alert` 二次确认（destructive）；确认后提交站点「修改片单」页里的删除表单，成功后返回列表；列表页不放破坏性入口 |

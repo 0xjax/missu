@@ -36,5 +36,6 @@ bun scripts/har-to-openapi.js \
 - `/` 和 `/new` 会重定向到带动态 `dm` 前缀的页面；客户端应使用稳定入口并跟随重定向。
 - 列表和搜索使用从 1 开始的 `page` 查询参数。
 - 详情页通过内联打包脚本初始化 HLS 播放器，播放地址来自外部媒体主机；不得把临时 URL 写成固定接口。
+- 首页、列表、搜索的卡片自带静音预览片 `https://fourhoi.com/{dvd_id}/preview.mp4`（`muted`/`loop`，随 hover 或点击显示），与封面 `cover-t.jpg` 同目录；长按预览由封面地址替换文件名推导即可，不产生额外请求，缺片时回退封面。
 - Cloudflare 挑战会对任意路径出现（含登录）。客户端通过 WebView 让用户显式完成验证，`cf_clearance` 与 RN fetch 共享 CookieManager；验证后自动重试原请求。
 - `components.schemas` 是客户端解析目标；源站实际 HTTP 响应类型以各操作的 `content` 为准。

@@ -6,6 +6,8 @@ import type { VideoSummary } from '@/api/missav';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useVideoPreview } from '@/stores/preview';
+import { impactHaptic } from '@/utils/haptics';
 
 // NOTE: 角标文案来自卡片 HTML，且随内容语言变化（中文字幕 / Uncensored）；颜色只按语义分档，不做标签白名单。
 const badgeBackground = (label: string) => {
@@ -17,6 +19,7 @@ const badgeBackground = (label: string) => {
 export function VideoCard({ video, width }: { video: VideoSummary; width?: number }) {
   const theme = useTheme();
   const router = useRouter();
+  const preview = useVideoPreview();
   const windowWidth = useWindowDimensions().width;
   const cardWidth = width ?? (windowWidth - 44) / 2;
 
@@ -24,6 +27,11 @@ export function VideoCard({ video, width }: { video: VideoSummary; width?: numbe
     <Pressable
       accessibilityLabel={video.title}
       accessibilityRole="button"
+      delayLongPress={350}
+      onLongPress={() => {
+        impactHaptic();
+        preview.openPreview(video);
+      }}
       onPress={() => router.push({
         pathname: '/video/[id]',
         params: video.badges?.length
