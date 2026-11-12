@@ -91,6 +91,17 @@ New-Item -ItemType Directory -Force D:\missav-mobile\.local
 .\adb -t 2 logcat ReactNativeJS:V "*:S"
 ```
 
+## 截图黑屏时读取界面文本
+
+部分 React Native 页面/报错状态截图为全黑（安全窗口或渲染层在截屏时不可见），但视图层级仍然可读。用 `uiautomator` 导出后按 `text` 字段查看当前页面内容，例如登录错误：
+
+```powershell
+.\adb -t 2 shell uiautomator dump /sdcard/ui.xml
+.\adb -t 2 shell cat /sdcard/ui.xml
+```
+
+在输出中筛 `text="..."` 即可拿到按钮、输入框和错误提示文字；`bounds="[x1,y1][x2,y2]"` 可直接用于计算点击坐标。比反复截图更可靠。
+
 ## 结束调试
 
 ```powershell

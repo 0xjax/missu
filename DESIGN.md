@@ -84,6 +84,8 @@ NEVER 把多个 Compose `TextField` 塞进同一个 `Host` 并排——它们都
 - 内容语言只切换站点数据（路径前缀 `/cn`、`/en` …），App 界面文案仍为中文；「随机」板块在非中文语言下没有「更多」链接，可能不显示
 - `ko / ms / th` 语言只在站点菜单中确认存在，Cloudflare 拦截导致尚未拿到 200 实测
 - 人机验证走 WebView + 共享 Cookie；若 Cloudflare 进一步按 TLS 指纹拒绝，验证后仍可能 403（备选是让 WebView 代取 HTML，未做）
+- 登录前必须清空 Cookie 罐：带旧会话/Cloudflare Cookie 时 `/api/login` 返回 401；清空后登录响应写入新会话
+- 站点所有页面都内嵌 `#login_email` 登录弹窗，会话是否有效只能用 `/logout` 链接判断
 - `expo-router/unstable-native-tabs` 已废弃，待迁移到 `expo-router/native-tabs`
 
 ## Technical Stack

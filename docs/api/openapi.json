@@ -195,6 +195,7 @@
       "post": {
         "operationId": "login",
         "summary": "登录账号",
+        "description": "站点实际调用为 /{lang}/api/login（例如 /cn/api/login）。必须从无 Cookie 状态发起：携带旧会话或 Cloudflare Cookie 会返回 401。",
         "requestBody": {
           "required": true,
           "content": {
@@ -223,6 +224,9 @@
         "responses": {
           "200": {
             "description": "登录成功，返回基本账号资料并设置会话 Cookie。"
+          },
+          "401": {
+            "description": "请求携带旧会话或 Cloudflare Cookie，返回 {\"message\":\"Unauthenticated.\"}；客户端应先清空 Cookie 罐。"
           },
           "422": {
             "description": "表单校验失败。"
