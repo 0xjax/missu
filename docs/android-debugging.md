@@ -49,7 +49,7 @@ PowerShell 默认不从当前目录加载命令，因此在当前目录也必须
 先在项目目录保持开发服务运行：
 
 ```powershell
-cd D:\missav-mobile
+cd D:\missu
 bun run start
 ```
 
@@ -88,20 +88,28 @@ Metro 保持运行后，`src/` 下的 JavaScript/TypeScript 改动由 Fast Refre
 需要脱离 Metro 验证图标、启动图或网络行为时使用。首次构建或修改 `app.json` 后先执行 `bunx expo prebuild --platform android` 生成 `android/`。本机工具链不在系统 PATH，位于 `.local/toolchain`（JDK 17、Android SDK、Gradle、Node），并已 gitignore。
 
 ```bash
-cd D:/missav-mobile/android
-export JAVA_HOME=/d/missav-mobile/.local/toolchain/jdk-tmp/jdk-17.0.2
-export ANDROID_HOME=/d/missav-mobile/.local/toolchain/sdk
+cd D:/missu/android
+export JAVA_HOME=/d/missu/.local/toolchain/jdk-tmp/jdk-17.0.2
+export ANDROID_HOME=/d/missu/.local/toolchain/sdk
 export ANDROID_SDK_ROOT=$ANDROID_HOME
-export PATH="/d/missav-mobile/.local/toolchain/node-v22.20.0-win-x64:$JAVA_HOME/bin:$PATH"
-export GRADLE_USER_HOME=/d/missav-mobile/.local/gradle-home
-/d/missav-mobile/.local/toolchain/gradle-9.4.1/bin/gradle assembleRelease --no-daemon \
+export PATH="/d/missu/.local/toolchain/node-v22.20.0-win-x64:$JAVA_HOME/bin:$PATH"
+export GRADLE_USER_HOME=/d/missu/.local/gradle-home
+/d/missu/.local/toolchain/gradle-9.4.1/bin/gradle assembleRelease --no-daemon \
   -PreactNativeArchitectures=arm64-v8a
 ```
 
 - `android/` 是 `expo prebuild` 生成目录，已 gitignore。重新 prebuild 后必须在 `android/gradle.properties` 补回 `expo.android.cmakeObjectPathMax=240`，否则 Windows 260 字符限制会让 ninja 在 gesture-handler 的 codegen 阶段报 `Filename longer than 260 characters`。
 - 产物：`android/app/build/outputs/apk/release/app-release.apk`。
+- 留档与上传：按版本复制到 `.local/`（已 gitignore），版本号直接从 `app.json` 读，不要写死——写死的版本迟早过时：
+
+  ```powershell
+  $version = (Get-Content app.json -Raw | ConvertFrom-Json).expo.version
+  Copy-Item android\app\build\outputs\apk\release\app-release.apk ".local\Missu-$version-arm64-v8a.apk"
+  ```
+
+  GitHub Release 的附件用同一个文件名（`Missu-<版本>-arm64-v8a.apk`），用户下载后能直接看出是哪个版本。
 - release 变体沿用模板的 debug 证书，仅适合自用侧载；换成正式 keystore 后，已安装的旧包必须先卸载才能覆盖安装。
-- 安装：`.\adb -t 2 install -r D:\missav-mobile\.local\Missu-1.0.0-arm64-v8a.apk`。
+- 安装：`.\adb -t 2 install -r ".local\Missu-$version-arm64-v8a.apk"`。
 
 ## 常用自动化命令
 
@@ -122,9 +130,9 @@ export GRADLE_USER_HOME=/d/missav-mobile/.local/gradle-home
 PowerShell 5.1 的原生输出重定向可能破坏 PNG 二进制内容，截图使用设备端生成再拉取，不使用 `>`：
 
 ```powershell
-New-Item -ItemType Directory -Force D:\missav-mobile\.local
+New-Item -ItemType Directory -Force D:\missu\.local
 .\adb -t 2 shell screencap -p /sdcard/missav-debug.png
-.\adb -t 2 pull /sdcard/missav-debug.png D:\missav-mobile\.local\missav-debug.png
+.\adb -t 2 pull /sdcard/missav-debug.png D:\missu\.local\missav-debug.png
 ```
 
 查看 React Native JavaScript 日志：
