@@ -1,6 +1,6 @@
 # Android 真机调试与自动化
 
-使用 Android Platform-Tools 的 ADB 控制手机，无需安装完整 Android Studio。ADB 只负责设备控制；当前项目仍需 Expo Go 运行应用，并保持电脑上的 Metro 开发服务运行。
+使用 Android Platform-Tools 的 ADB 控制手机，无需安装完整 Android Studio。日常开发用 Expo Go + Metro；独立安装包（应用名 `Missu`，包名 `app.missu`）用于脱离 Metro 验证，构建见下文「构建独立 APK」。
 
 ## 安装 Platform-Tools
 
@@ -82,6 +82,26 @@ Metro 保持运行后，`src/` 下的 JavaScript/TypeScript 改动由 Fast Refre
 也可以在 Metro 终端按 `r`，或在手机上摇一摇唤起开发菜单。
 
 当前项目没有任何 CSS 文件（`src/` 下的样式都在 `StyleSheet.create` 里）。若日后引入 CSS 方案（如 NativeWind），纯 CSS 文件的改动不会触发 Fast Refresh，需要在 Expo Go 中手动 reload。
+
+## 构建独立 APK
+
+需要脱离 Metro 验证图标、启动图或网络行为时使用。首次构建或修改 `app.json` 后先执行 `bunx expo prebuild --platform android` 生成 `android/`。本机工具链不在系统 PATH，位于 `.local/toolchain`（JDK 17、Android SDK、Gradle、Node），并已 gitignore。
+
+```bash
+cd D:/missav-mobile/android
+export JAVA_HOME=/d/missav-mobile/.local/toolchain/jdk-tmp/jdk-17.0.2
+export ANDROID_HOME=/d/missav-mobile/.local/toolchain/sdk
+export ANDROID_SDK_ROOT=$ANDROID_HOME
+export PATH="/d/missav-mobile/.local/toolchain/node-v22.20.0-win-x64:$JAVA_HOME/bin:$PATH"
+export GRADLE_USER_HOME=/d/missav-mobile/.local/gradle-home
+/d/missav-mobile/.local/toolchain/gradle-9.4.1/bin/gradle assembleRelease --no-daemon \
+  -PreactNativeArchitectures=arm64-v8a
+```
+
+- `android/` 是 `expo prebuild` 生成目录，已 gitignore。重新 prebuild 后必须在 `android/gradle.properties` 补回 `expo.android.cmakeObjectPathMax=240`，否则 Windows 260 字符限制会让 ninja 在 gesture-handler 的 codegen 阶段报 `Filename longer than 260 characters`。
+- 产物：`android/app/build/outputs/apk/release/app-release.apk`。
+- release 变体沿用模板的 debug 证书，仅适合自用侧载；换成正式 keystore 后，已安装的旧包必须先卸载才能覆盖安装。
+- 安装：`.\adb -t 2 install -r D:\missav-mobile\.local\Missu-1.0.0-arm64-v8a.apk`。
 
 ## 常用自动化命令
 
