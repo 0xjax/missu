@@ -178,8 +178,10 @@ export function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError';
 }
 
-async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function fetchJson<T>(path: string, init: RequestInit = {}, rawPath = false): Promise<T> {
   const { signal, ...requestInit } = init;
+  // NOTE: 多数接口有条带语言前缀的路由（/cn/api/...），片单接口只挂在根路径（/api/playlists/...），用 rawPath 跳过前缀。
+  const url = new URL(rawPath ? path : localizedPath(path), SOURCE_BASE_URL);
   const load = () => withTimeout(async (requestSignal) => {
     const requestHeadersValue = requestHeaders({
       Accept: 'application/json',
@@ -191,7 +193,7 @@ async function fetchJson<T>(path: string, init: RequestInit = {}): Promise<T> {
       ...(xsrfToken ? { 'X-XSRF-TOKEN': xsrfToken } : {}),
       ...(requestInit.headers as Record<string, string> | undefined),
     });
-    const response = await fetch(new URL(localizedPath(path), SOURCE_BASE_URL), {
+    const response = await fetch(url, {
       ...requestInit,
       headers: requestHeadersValue,
       signal: requestSignal,
@@ -312,6 +314,31 @@ export async function getVideoDetail(id: string, signal?: AbortSignal): Promise<
 
 export function setVideoSaved(internalId: string, saved: boolean): Promise<unknown> {
   return fetchJson(`/api/items/${internalId}/save`, { method: saved ? 'POST' : 'DELETE' });
+}
+
+export type VideoPlaylist = {
+  key: string;
+  name: string;
+  added: boolean;
+};
+
+/** 详情页片单面板：返回当前影片可加入的片单及是否已在其中。 */
+export async function getVideoPlaylists(dvdId: string, signal?: AbortSignal): Promise<VideoPlaylist[]> {
+  const result = await fetchJson<{ data?: { key?: string; name?: string; is_added?: boolean }[] }>(
+    `/api/playlists/${encodeURIComponent(dvdId)}`,
+    { signal },
+    true,
+  );
+  return (result.data ?? []).flatMap((item) => (item.key
+    ? [{ key: item.key, name: item.name || item.key, added: Boolean(item.is_added) }]
+    : []));
+}
+
+export function setPlaylistMembership(dvdId: string, key: string, added: boolean): Promise<unknown> {
+  return fetchJson(`/api/playlists/${added ? 'add' : 'remove'}`, {
+    method: 'POST',
+    body: JSON.stringify({ dvdId, key }),
+  }, true);
 }
 
 function clearCookies(): Promise<boolean> {

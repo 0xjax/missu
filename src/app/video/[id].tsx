@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 import { Snackbar } from 'react-native-paper';
 
 import { getVideoDetail, isAbortError, setVideoSaved, type VideoDetail } from '@/api/missav';
+import { PlaylistSheet } from '@/components/playlist-sheet';
 import { ThemedText } from '@/components/themed-text';
 import { VideoPlayer } from '@/components/video-player';
 import { Radius, Spacing } from '@/constants/theme';
@@ -22,6 +23,7 @@ export default function VideoDetailScreen() {
   const [attempt, setAttempt] = useState(0);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string>();
+  const [playlistsOpen, setPlaylistsOpen] = useState(false);
   const detail = result?.id === id ? result.detail : undefined;
   const error = result?.id === id ? result.error : undefined;
 
@@ -67,6 +69,14 @@ export default function VideoDetailScreen() {
     }
   };
 
+  const openPlaylists = () => {
+    if (!user) {
+      router.push({ pathname: '/login', params: { next: `/video/${encodeURIComponent(id)}` } } as unknown as Href);
+      return;
+    }
+    setPlaylistsOpen(true);
+  };
+
   // NOTE: 信息块里的链接（女优/类型/系列/发行商/标签）都指向影片列表页；用 dismissTo 弹出详情页，
   // 用 push 会把详情页留在根栈里不卸载，播放器组件一直挂在后台。
   const openInfoPath = (path: string, title: string) => {
@@ -102,16 +112,24 @@ export default function VideoDetailScreen() {
             <View style={styles.metadata}>
               <ThemedText selectable type="smallBold" style={styles.title}>{detail.title}</ThemedText>
               {detail.internalId && (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityState={{ busy: saving, disabled: saving }}
-                  disabled={saving}
-                  onPress={toggleSaved}
-                  style={[styles.saveButton, { backgroundColor: detail.saved ? theme.accent : theme.backgroundElement }]}>
-                  <ThemedText type="smallBold" style={detail.saved ? { color: theme.onAccent } : undefined}>
-                    {saving ? '提交中…' : detail.saved ? '已收藏' : user ? '收藏' : '登录后收藏'}
-                  </ThemedText>
-                </Pressable>
+                <View style={styles.actions}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{ busy: saving, disabled: saving }}
+                    disabled={saving}
+                    onPress={toggleSaved}
+                    style={[styles.actionButton, { backgroundColor: detail.saved ? theme.accent : theme.backgroundElement }]}>
+                    <ThemedText type="smallBold" style={detail.saved ? { color: theme.onAccent } : undefined}>
+                      {saving ? '提交中…' : detail.saved ? '已收藏' : user ? '收藏' : '登录后收藏'}
+                    </ThemedText>
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={openPlaylists}
+                    style={[styles.actionButton, { backgroundColor: theme.backgroundElement }]}>
+                    <ThemedText type="smallBold">片单</ThemedText>
+                  </Pressable>
+                </View>
               )}
               {detail.info.length > 0 && (
                 <View style={styles.info}>
@@ -141,6 +159,16 @@ export default function VideoDetailScreen() {
           </>
         )}
       </ScrollView>
+      <PlaylistSheet
+        dvdId={detail?.id}
+        onClose={() => setPlaylistsOpen(false)}
+        onNotice={setNotice}
+        onOpenPlaylists={() => {
+          setPlaylistsOpen(false);
+          router.push('/playlists');
+        }}
+        open={playlistsOpen}
+      />
       <Snackbar
         action={{ label: '关闭', onPress: () => setNotice(undefined) }}
         duration={2500}
@@ -196,9 +224,12 @@ const styles = StyleSheet.create({
   title: {
     lineHeight: 22,
   },
-  saveButton: {
+  actions: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  actionButton: {
     alignItems: 'center',
-    alignSelf: 'flex-start',
     borderRadius: Radius.sm,
     justifyContent: 'center',
     minHeight: 44,
