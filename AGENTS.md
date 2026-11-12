@@ -36,15 +36,14 @@ bunx expo export --platform android
 
 ## Git Workflow
 
-- NEVER commit directly to `main`; prefer branching in the current checkout over creating a worktree.
-- git/PR writes → 逐命令确认，批准不跨命令继承；历史改写（rebase/reset/amend 非 HEAD）→ 每次单独确认精确命令+范围。
+- 直接在当前分支提交；不建 PR、不建 worktree。
+- git writes → 逐命令确认，批准不跨命令继承；历史改写（rebase/reset/amend 非 HEAD）→ 每次单独确认精确命令+范围。
 - NEVER 把一个文件的改动拆进两个提交。
-- `gh pr create`: single-quote body; `gh pr merge`: requires `--squash`, then delete the branch.
 
 ## Secrets
 
 - MUST NOT read `.env`, `.env.*`, or any secrets file.
-- MUST NOT expose secrets in logs, comments, commits, PR 描述, or tool output.
+- MUST NOT expose secrets in logs, comments, commits, or tool output.
 - MUST NOT put secrets in command arguments.
 - When env var values are needed, ask the user to provide them directly.
 
