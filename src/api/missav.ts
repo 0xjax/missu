@@ -6,6 +6,7 @@ import {
   parseHome,
   parsePlaylistDetail,
   parsePlaylistCreateForm,
+  parsePlaylistDeleteRequest,
   parsePlaylists,
   parseVideoDetail,
   parseVideoList,
@@ -364,6 +365,41 @@ export async function createPlaylist(dvdId: string, name: string): Promise<void>
     body: body.toString(),
   });
   if (!response.ok) throw new Error(`新建片单失败（HTTP ${response.status}）`);
+}
+
+/**
+ * 删除片单同样是网页表单：站点的删除按钮在「修改片单」页（`/playlists/{id}/edit`），
+ * 是一个 `_method=delete` + `_token` 的隐藏表单，提交到片单自身的 URL。
+ */
+export async function deletePlaylist(id: string): Promise<void> {
+  const path = `/playlists/${encodeURIComponent(id)}`;
+  const html = await fetchHtmlViaWebView(`${path}/edit`);
+  const request = parsePlaylistDeleteRequest(html);
+  if (!request) throw new Error('没有拿到删除片单表单，请重新登录后再试');
+
+  const action = request.action ? new URL(request.action, SOURCE_BASE_URL) : new URL(localizedPath(path), SOURCE_BASE_URL);
+  const response = request.fields
+    ? await fetch(action, {
+      method: 'POST',
+      headers: requestHeaders({
+        Accept: 'text/html,application/xhtml+xml',
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Origin: SOURCE_BASE_URL,
+        Referer: localizedUrl(`${path}/edit`),
+      }),
+      body: new URLSearchParams(request.fields).toString(),
+    })
+    : await fetch(action, {
+      method: 'DELETE',
+      headers: requestHeaders({
+        Accept: 'application/json',
+        Origin: SOURCE_BASE_URL,
+        Referer: localizedUrl(path),
+        'X-CSRF-TOKEN': request.token ?? '',
+        'X-Requested-With': 'XMLHttpRequest',
+      }),
+    });
+  if (!response.ok) throw new Error(`删除片单失败（HTTP ${response.status}）`);
 }
 
 function clearCookies(): Promise<boolean> {

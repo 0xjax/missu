@@ -1,8 +1,9 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { Snackbar } from 'react-native-paper';
 
-import { getPlaylistDetail, isAbortError, SessionExpiredError, type PlaylistDetail } from '@/api/missav';
+import { deletePlaylist, getPlaylistDetail, isAbortError, SessionExpiredError, type PlaylistDetail } from '@/api/missav';
 import { ThemedText } from '@/components/themed-text';
 import { VideoCard } from '@/components/video-card';
 import { Radius, Spacing } from '@/constants/theme';
@@ -13,12 +14,15 @@ const errorMessage = (error: unknown) => error instanceof Error ? error.message 
 
 export default function PlaylistDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const theme = useTheme();
   const { expire } = useAuth();
   const [detail, setDetail] = useState<PlaylistDetail>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [attempt, setAttempt] = useState(0);
+  const [deleting, setDeleting] = useState(false);
+  const [notice, setNotice] = useState<string>();
 
   useEffect(() => {
     if (typeof id !== 'string') return;
@@ -49,9 +53,46 @@ export default function PlaylistDetailScreen() {
     setAttempt((value) => value + 1);
   };
 
+  const remove = async () => {
+    if (typeof id !== 'string' || deleting) return;
+    setDeleting(true);
+    setNotice(undefined);
+    try {
+      await deletePlaylist(id);
+      router.back();
+    } catch (reason) {
+      setNotice(reason instanceof Error ? reason.message : '删除片单失败');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // NOTE: 删除片单是不可撤销的破坏性操作，入口只放在片单详情页页头，且必须二次确认。
+  const confirmRemove = () => {
+    Alert.alert(
+      '删除片单',
+      `「${detail?.name ?? '这个片单'}」会从我的片单里移除，此操作无法撤销。`,
+      [
+        { text: '取消', style: 'cancel' },
+        { text: '删除', style: 'destructive', onPress: () => void remove() },
+      ],
+    );
+  };
+
   return (
-    <>
-      <Stack.Screen options={{ title: detail?.name || '片单' }} />
+    <View style={styles.screen}>
+      <Stack.Screen
+        options={{
+          headerRight: detail
+            ? () => (
+              <Pressable accessibilityRole="button" disabled={deleting} hitSlop={8} onPress={confirmRemove}>
+                <ThemedText themeColor="danger" type="small">{deleting ? '删除中…' : '删除'}</ThemedText>
+              </Pressable>
+            )
+            : undefined,
+          title: detail?.name || '片单',
+        }}
+      />
       <FlatList
         columnWrapperStyle={styles.row}
         contentContainerStyle={styles.content}
@@ -75,11 +116,21 @@ export default function PlaylistDetailScreen() {
         renderItem={({ item }) => <VideoCard video={item} />}
         style={{ backgroundColor: theme.background }}
       />
-    </>
+      <Snackbar
+        action={{ label: '关闭', onPress: () => setNotice(undefined) }}
+        duration={3000}
+        onDismiss={() => setNotice(undefined)}
+        visible={Boolean(notice)}>
+        {notice}
+      </Snackbar>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+  },
   content: {
     flexGrow: 1,
     padding: Spacing.lg,
