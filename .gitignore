@@ -17,6 +17,8 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
+# 构建产物：APK 走 GitHub Release 附件，不进仓库
+*.apk
 
 # Metro
 .metro-health-check*
