@@ -29,7 +29,7 @@ bun scripts/har-to-openapi.js \
 - 登录和收藏请求携带 Android CookieManager 的原生会话；`Set-Cookie` 在 RN 响应头里通常不可见，XSRF 令牌只在能捕获时附带，不阻塞请求。不保存密码或 Cookie 到项目文件。
 - Cookie 由 CookieManager 持久化到磁盘，重启 App 后会话通常仍然有效；启动时仍用 `/playlists` 做一次校验。
 - 登录和收藏请求补发浏览器态的 `Origin`、`Referer`、`X-Requested-With`，与站点 Axios 行为一致。
-- 片单列表/详情的原生 HTML 可能只有空壳（无列表标记），需在 WebView 中渲染后取 `document.documentElement.outerHTML`；渲染出的链接带语言前缀，解析前先归一化路径。
+- 片单列表/详情是服务端直出的 HTML，原生 `fetchHtml` 即可取到（实测 ~0.8s）；WebView 只在原生取数失败时兜底。渲染出的链接可能带语言前缀，解析前先归一化路径。
 - 片单的新建/删除是服务端直出的**网页表单**，不是 JSON 接口，原生 fetch 就能拿到，无需 WebView：
   - 新建页 `GET /{lang}/playlists/create/{dvdId}`，表单字段名与 `_token` 从 HTML 读取后按 `application/x-www-form-urlencoded` POST 到表单 `action`；
   - 删除表单在「修改片单」页 `GET /{lang}/playlists/{id}/edit` 里，形如 `<form action="/cn/playlists/{id}" method="post"><input name="_method" value="delete"><input name="_token">`，原样提交；片单详情页本身没有删除入口。

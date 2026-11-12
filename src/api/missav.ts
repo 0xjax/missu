@@ -300,20 +300,27 @@ export async function getSavedVideos(options: VideoQuery = {}, signal?: AbortSig
   return parseVideoList(await fetchHtml(queryPath('/saved', options), SOURCE_BASE_URL, signal), page);
 }
 
+/**
+ * 片单列表/详情是服务端直出的 HTML，原生 fetch 即可（实测 ~0.8s）。
+ * NOTE: WebView 只在原生取数失败时兜底；空结果按“真的没有”处理，不再为它启动 WebView。
+ */
+async function fetchPlaylistPage(path: string, signal?: AbortSignal): Promise<string> {
+  try {
+    return await fetchHtml(path, undefined, signal);
+  } catch (error) {
+    if (error instanceof SessionExpiredError || isAbortError(error)) throw error;
+    const result = await fetchHtmlViaWebView(path);
+    if (redirectedToHome(new URL(localizedUrl(path)).pathname, result.url)) throw new SessionExpiredError();
+    return result.html;
+  }
+}
+
 export async function getPlaylists(signal?: AbortSignal): Promise<PlaylistSummary[]> {
-  // NOTE: 片单页原生请求只返回空壳，列表由页面渲染；优先用 WebView 取渲染后的 HTML。
-  const result = await fetchHtmlViaWebView('/playlists')
-    .catch(async () => ({ html: await fetchHtml('/playlists', undefined, signal), url: '' }));
-  if (redirectedToHome(new URL(localizedUrl('/playlists')).pathname, result.url)) throw new SessionExpiredError();
-  return parsePlaylists(result.html);
+  return parsePlaylists(await fetchPlaylistPage('/playlists', signal));
 }
 
 export async function getPlaylistDetail(id: string, signal?: AbortSignal): Promise<PlaylistDetail> {
-  // NOTE: 与片单列表一样，原生 HTML 可能只有空壳；优先用 WebView 取渲染结果。
-  const path = `/playlists/${encodeURIComponent(id)}`;
-  const result = await fetchHtmlViaWebView(path).catch(async () => ({ html: await fetchHtml(path, undefined, signal), url: '' }));
-  if (redirectedToHome(new URL(localizedUrl(path)).pathname, result.url)) throw new SessionExpiredError();
-  return parsePlaylistDetail(result.html);
+  return parsePlaylistDetail(await fetchPlaylistPage(`/playlists/${encodeURIComponent(id)}`, signal));
 }
 
 export async function searchVideos(keyword: string, options: VideoQuery = {}, signal?: AbortSignal): Promise<VideoList> {
