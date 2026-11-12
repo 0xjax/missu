@@ -67,9 +67,10 @@ export default function VideoDetailScreen() {
     }
   };
 
-  // NOTE: 信息块里的链接（女优/类型/系列/发行商/标签）都指向影片列表页，复用 DirectoryCard 的既有跳转。
+  // NOTE: 信息块里的链接（女优/类型/系列/发行商/标签）都指向影片列表页；用 dismissTo 弹出详情页，
+  // 用 push 会把详情页留在根栈里不卸载，播放器组件一直挂在后台。
   const openInfoPath = (path: string, title: string) => {
-    router.push({ pathname: '/latest', params: { source: path, title, query: '' } } as unknown as Href);
+    router.dismissTo({ pathname: '/latest', params: { source: path, title, query: '' } } as unknown as Href);
   };
 
   return (

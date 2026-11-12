@@ -1,5 +1,6 @@
 /* oxlint-disable react/refs, react/immutability -- Gesture 回调和 expo-video 命令式播放器属性需要可变引用。 */
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from 'expo-router';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -238,6 +239,11 @@ export function VideoPlayer({ url }: { url: string }) {
     });
     return () => subscription.remove();
   }, [player]);
+
+  // NOTE: 详情页跳走（点信息块链接、切 tab）时页面不会卸载，播放器会继续出声；失焦即暂停。
+  useFocusEffect(useCallback(() => () => {
+    player.pause();
+  }, [player]));
 
   useEffect(() => {
     if (!autoplay) return;

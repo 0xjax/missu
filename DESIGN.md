@@ -92,6 +92,7 @@ NEVER 把多个 Compose `TextField` 塞进同一个 `Host` 并排——它们都
 - 站点所有页面都内嵌 `#login_email` 登录弹窗，会话是否有效只能用 `/logout` 链接判断
 - 片单列表/详情的原生 HTML 可能只有空壳；用隐藏 WebView 渲染后取 `documentElement.outerHTML`，链接带语言前缀需先归一化
 - 详情页「相关推荐」不在 HTML 里：由页面内 Vue 组件向 Recombee（`client-rapi-missav.recombee.com`，带 `frontend_sign`）请求后渲染，原生 HTML 只有空壳，因此未实现；要做就是新增第三方请求与签名逻辑，不是解析问题。信息块本身是服务端直出，可直接解析
+- 从详情页跳列表必须用 `router.dismissTo`（弹出详情页）而不是 `push`/`replace`：详情页留在根栈里不卸载，播放器与 ExoPlayer 实例会一直挂着；播放器另有失焦暂停兜底
 - 播放/暂停、全屏按钮必须用 RNGH `Gesture.Tap`，不能用 RN `Pressable`：双击后第一次点击会被手势竞技场吞掉
 - 长按手势的 `onFinalize` 在普通点击失败时也会触发，只有真正激活过才能结束倍速/清提示
 - 全屏 Modal 内要嵌套 `GestureHandlerRootView`；内联播放器保持挂载、Modal 共享同一 player；退出时重挂内联 `VideoView` 刷新 SurfaceView 并 seek 回原时间点，期间用 seeking 保护屏蔽暂停图标
