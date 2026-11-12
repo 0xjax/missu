@@ -10,6 +10,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { clearHistory } from '@/storage/history';
 import { clearSearchHistory } from '@/storage/search-history';
 import { useLanguage } from '@/stores/language';
+import { usePreferences } from '@/stores/preferences';
 
 const CANCEL = { text: '取消', style: 'cancel' } as const;
 
@@ -17,6 +18,7 @@ export default function SettingsScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { language } = useLanguage();
+  const { autoplay, setAutoplay } = usePreferences();
   const version = Constants.expoConfig?.version ?? '—';
 
   const confirmClearSearch = () => {
@@ -48,6 +50,11 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView edges={['bottom']} style={[styles.screen, { backgroundColor: theme.background }]}>
       <ScrollView contentContainerStyle={styles.content}>
+        <SettingsRow
+          label="打开视频时自动播放"
+          onSwitchChange={setAutoplay}
+          switchValue={autoplay}
+        />
         <SettingsRow detail={languageLabel(language)} label="内容语言" onPress={() => router.push('/language')} />
         <SettingsRow detail="本机搜索记录" label="清空搜索历史" onPress={confirmClearSearch} />
         <SettingsRow detail="本机观看记录" label="清空观看历史" onPress={confirmClearHistory} />

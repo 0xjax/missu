@@ -63,6 +63,7 @@
 | 女优筛选 | `BottomSheet` + 4 × `Picker` | 2×2 排布、内容自适应高度；排序走 `ChoiceMenuBar` 菜单 |
 | 搜索 | `SearchBox` | Paper Searchbar，列表页与首页共用 |
 | 内容语言 | 设置行 → `/language` 子页 | 7 种语言，当前项 accent 色；路径前缀由 api 层统一拼接，切换后列表换 key 重拉 |
+| 自动播放 | 设置行 + 原生 `Switch` | 默认开；关闭后打开视频保持暂停，不影响当前播放中的视频 |
 | 人机验证 | 全局 Modal + `WebView` | Cloudflare 挑战时显式验证；cf_clearance 与 RN fetch 共享，验证后自动重试原请求 |
 | 反馈 | Snackbar + haptics | 收藏、登录、播放手势 |
 
