@@ -6,8 +6,10 @@ import kotlinx.coroutines.withContext
 import okhttp3.Cookie
 import okhttp3.CookieJar
 import okhttp3.HttpUrl
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.TimeUnit
 
 /**
@@ -16,7 +18,7 @@ import java.util.concurrent.TimeUnit
  * TODO: 接 WebView 人机验证时，必须让系统 `CookieManager` 与本罐双向同步，
  * 否则验证过了请求仍然 403（legacy 已踩过这个坑）。
  */
-class MemoryCookieJar : CookieJar {
+class MemoryCookieJar : ClearableCookieJar {
     private val store = ConcurrentHashMap<String, MutableMap<String, Cookie>>()
 
     override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
@@ -27,7 +29,7 @@ class MemoryCookieJar : CookieJar {
     override fun loadForRequest(url: HttpUrl): List<Cookie> =
         store[url.host]?.values?.filter { it.matches(url) } ?: emptyList()
 
-    fun clear() = store.clear()
+    override fun clear() = store.clear()
 }
 
 /** 站点 HTTP 客户端：UA、超时、Cookie，外加把人机验证响应翻译成 [ChallengeException]。 */
@@ -70,8 +72,46 @@ class MissavClient(
         }
     }
 
+    /**
+     * JSON POST。站点的写接口按浏览器态校验（Origin / Referer / XHR / Content-Type），
+     * 少任何一个都可能被拒。
+     * NOTE: 401 在这里统一表示会话失效；**登录接口的 401 语义不同**（账号密码错），由调用方转换。
+     */
+    suspend fun postJson(path: String, body: String): String = withContext(Dispatchers.IO) {
+        val referer = SourceConfig.BASE_URL +
+            if (SourceConfig.contentLanguage == "tw") "/" else "/${SourceConfig.contentLanguage}/"
+        val request = Request.Builder()
+            .url(SourceConfig.localizedUrl(path))
+            .header("User-Agent", userAgent)
+            .header("Accept", "application/json")
+            .header("Origin", SourceConfig.BASE_URL)
+            .header("Referer", referer)
+            .header("X-Requested-With", "XMLHttpRequest")
+            .post(body.toRequestBody(JSON_MEDIA_TYPE))
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            val text = response.body.string()
+            if (response.code == 403 ||
+                response.header("cf-mitigated") == "challenge" ||
+                CHALLENGE_TITLE.containsMatchIn(text)
+            ) {
+                throw ChallengeException()
+            }
+            if (response.code == 401) throw SessionExpiredException()
+            if (!response.isSuccessful) throw HttpStatusException(response.code)
+            text
+        }
+    }
+
+    /** 清空 Cookie 罐（登录前必须调用，见 [ClearableCookieJar]）。 */
+    fun clearCookies() {
+        (cookieJar as? ClearableCookieJar)?.clear()
+    }
+
     private companion object {
         val CHALLENGE_TITLE = Regex("<title>\\s*Just a moment\\.\\.\\.\\s*</title>", RegexOption.IGNORE_CASE)
         const val HOME_PATH = "/"
+        val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
     }
 }

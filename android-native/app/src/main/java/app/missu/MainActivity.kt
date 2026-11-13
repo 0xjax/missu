@@ -26,6 +26,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import app.missu.data.api.MissavApi
 import app.missu.data.api.createMissavApi
+import app.missu.data.store.CredentialStore
+import app.missu.data.store.ProfileStore
+import app.missu.ui.account.AccountScreen
+import app.missu.ui.account.AuthViewModel
+import app.missu.ui.account.LoginScreen
 import app.missu.ui.detail.DetailScreen
 import app.missu.ui.detail.DetailViewModel
 import app.missu.ui.home.HomeScreen
@@ -59,6 +64,11 @@ private fun rememberApi(): MissavApi {
 private fun MissuApp() {
     val navController = rememberNavController()
     val api = rememberApi()
+    val context = LocalContext.current
+    // NOTE: 账户状态整个 App 共用一份：'我的' 与 '登录' 两个页面必须看到同一份状态。
+    val auth: AuthViewModel = viewModel(factory = factory { AuthViewModel(api, ProfileStore(context.applicationContext), CredentialStore(context.applicationContext)) })
+    val authState by auth.state.collectAsState()
+    val loginState by auth.loginState.collectAsState()
 
     // NOTE: 系统栏、刘海、输入法的内边距只在这里处理一次，各页面只负责内容布局。
     // 需要贴边显示的页面（将来的全屏播放）自己在 destination 里 opt-out，不要在页面里重复加 padding。
@@ -78,6 +88,7 @@ private fun MissuApp() {
                     onRetry = viewModel::load,
                     onOpen = { id -> navController.navigate("detail/$id") },
                     onSearch = { navController.navigate("search") },
+                    onAccount = { navController.navigate("account") },
                 )
             }
 
@@ -94,6 +105,28 @@ private fun MissuApp() {
                 )
             }
 
+            composable("account") {
+                AccountScreen(
+                    state = authState,
+                    onLogin = { navController.navigate("login") },
+                    onLogout = auth::logout,
+                    onBack = { navController.popBackStack() },
+                )
+            }
+
+            composable("login") {
+                LoginScreen(
+                    state = loginState,
+                    onSubmit = { email, password ->
+                        auth.login(email, password) { navController.popBackStack() }
+                    },
+                    onBack = {
+                        auth.clearLoginError()
+                        navController.popBackStack()
+                    },
+
+                )
+            }
             composable("detail/{id}") { entry ->
                 val id = entry.arguments?.getString("id").orEmpty()
                 // NOTE: key 用 id —— 换一集详情时复用同一个 ViewModel 会显示上一条数据。

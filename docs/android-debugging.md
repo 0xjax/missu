@@ -170,4 +170,4 @@ Expo 版已停止构建与运行（`node_modules` 已删）。以下结论仍然
 - **Expo Go 的自动检测靠 mDNS 组播**：WLAN 为「公用网络」或有 VPN 虚拟网卡时可能发现不到，但 TCP 8081 仍通——「自动检测不到」不等于「连不上」，直接开 `exp://<电脑局域网IP>:8081`。
 - **电脑 IP 是 DHCP**：地址一变，URL 与「最近项目」同时失效；根治靠路由器 MAC 绑定固定 IP，或 `adb reverse`。
 - **底部导航栏错位**：从二级页快速连按两次返回（间隔 ≤600ms）回到 tab 页时，底栏会落到屏幕中间、约 2 秒自愈。成因是 `useFocusEffect` 在原生栈转场中重渲染导致重新测量；修法是把焦点刷新延后到转场结束（400ms）。Kotlin 版没有这条链路，但**同类教训适用**：不要在导航转场进行中触发整树重新测量。
-- **测试登录（Debug）**：Expo 版靠 `bun scripts/dev-test-login.js` 读 `.env`、经 `adb reverse tcp:8787` 提供凭据；Kotlin 版尚未实现，凭据方案待定，MUST NOT 把密码写进命令行或提交。
+- **测试登录（已废弃）**：Expo 版靠 `bun scripts/dev-test-login.js` 读 `.env`、经 `adb reverse tcp:8787` 把凭据送进 Debug 构建——那套链路已删除。Kotlin 版改用「记住账号」：第一次手动输入后凭据用 Android Keystore 加密存在设备上，会话失效时自动重登（见 `android-native/README.md`）。凭据仍然 MUST NOT 进命令行、日志或仓库。
