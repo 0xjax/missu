@@ -12,6 +12,8 @@ val SurfaceVariant = Color(0xFF212225)
 
 private val MissuDarkColors = darkColorScheme(
     primary = Accent,
+    // NOTE: 不显式给 onPrimary 时 Material 会从粉色推导出深色文字，压在 accent 上对比不足；按钮统一白字。
+    onPrimary = Color.White,
     background = Background,
     surface = Background,
     surfaceVariant = SurfaceVariant,

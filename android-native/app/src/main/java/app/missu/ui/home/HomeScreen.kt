@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -80,7 +78,7 @@ private fun Centered(modifier: Modifier, content: @Composable () -> Unit) {
 private fun HomeGrid(sections: List<HomeSection>, onOpen: (String) -> Unit, modifier: Modifier) {
     LazyVerticalGrid(
         // NOTE: 现在没有 Scaffold 提供 inset，状态栏/导航栏要自己避开，否则标题会压在状态栏下面。
-        modifier = modifier.statusBarsPadding().navigationBarsPadding(),
+        modifier = modifier,
         columns = GridCells.Fixed(2),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 32.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
