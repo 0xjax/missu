@@ -15,6 +15,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -28,6 +30,8 @@ import app.missu.data.api.MissavApi
 import app.missu.data.api.createMissavApi
 import app.missu.data.store.CredentialStore
 import app.missu.data.store.ProfileStore
+import app.missu.data.store.SettingsStore
+import app.missu.ui.settings.SettingsScreen
 import app.missu.ui.account.AccountScreen
 import app.missu.ui.account.AuthViewModel
 import app.missu.ui.account.LoginScreen
@@ -69,6 +73,10 @@ private fun MissuApp() {
     val context = LocalContext.current
     // NOTE: 账户状态整个 App 共用一份：'我的' 与 '登录' 两个页面必须看到同一份状态。
     val auth: AuthViewModel = viewModel(factory = factory { AuthViewModel(api, ProfileStore(context.applicationContext), CredentialStore(context.applicationContext)) })
+
+    // NOTE: 语言必须在第一次请求之前装进 SourceConfig，否则首屏会按默认语言拉一轮再换。
+    val settings = remember { SettingsStore(context.applicationContext).also { it.applyStoredLanguage() } }
+    var language by remember { mutableStateOf(settings.language()) }
     val authState by auth.state.collectAsState()
     val loginState by auth.loginState.collectAsState()
 
@@ -84,6 +92,9 @@ private fun MissuApp() {
                 val viewModel: HomeViewModel = viewModel(factory = factory { HomeViewModel(api) })
                 val state by viewModel.state.collectAsState()
                 LaunchedEffect(Unit) { viewModel.load() }
+
+                // 语言变了就重新拉首页（请求 URL 跟着语言变），其余页面下次进入时自然用新语言。
+                LaunchedEffect(language) { viewModel.load() }
 
                 HomeScreen(
                     state = state,
@@ -112,6 +123,7 @@ private fun MissuApp() {
                     state = authState,
                     onLogin = { navController.navigate("login") },
                     onSaved = { navController.navigate("saved") },
+                    onSettings = { navController.navigate("settings") },
                     onLogout = auth::logout,
                     onBack = { navController.popBackStack() },
                 )
@@ -128,6 +140,16 @@ private fun MissuApp() {
                         navController.popBackStack()
                     },
 
+                )
+            }
+            composable("settings") {
+                SettingsScreen(
+                    language = language,
+                    onLanguageChange = { value ->
+                        settings.setLanguage(value)
+                        language = value
+                    },
+                    onBack = { navController.popBackStack() },
                 )
             }
             composable("saved") {
