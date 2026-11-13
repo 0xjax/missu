@@ -62,3 +62,12 @@ example
 # generated native folders
 /ios
 /android
+
+# Kotlin native project (android-native/)
+android-native/build/
+android-native/app/build/
+android-native/.gradle/
+android-native/.kotlin/
+android-native/local.properties
+android-native/.idea/
+*.iml
