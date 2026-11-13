@@ -119,6 +119,37 @@ class MissavClient(
     /** 兼容旧调用点：登录用的 JSON POST（走语言前缀）。 */
     suspend fun postJson(path: String, body: String): String = requestJson("POST", path, body)
 
+    /**
+     * 表单 POST（`application/x-www-form-urlencoded`）。
+     * NOTE: 站点的 Blade 表单（新建片单）不接受 JSON，必须按表单编码提交，并带上 Origin/Referer。
+     */
+    suspend fun postForm(path: String, fields: Map<String, String>): String = withContext(Dispatchers.IO) {
+        val referer = SourceConfig.BASE_URL +
+            if (SourceConfig.contentLanguage == "tw") "/" else "/${SourceConfig.contentLanguage}/"
+        val body = fields.entries.joinToString("&") { (key, value) ->
+            "${java.net.URLEncoder.encode(key, "UTF-8")}=${java.net.URLEncoder.encode(value, "UTF-8")}"
+        }
+        val request = Request.Builder()
+            .url(SourceConfig.localizedUrl(path))
+            .header("User-Agent", userAgent)
+            .header("Accept", "text/html,application/xhtml+xml")
+            .header("Origin", SourceConfig.BASE_URL)
+            .header("Referer", referer)
+            .post(body.toRequestBody(FORM_MEDIA_TYPE))
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            val text = response.body.string()
+            if (response.code == 403 || response.header("cf-mitigated") == "challenge" ||
+                CHALLENGE_TITLE.containsMatchIn(text)
+            ) {
+                throw ChallengeException()
+            }
+            if (response.code == 401) throw SessionExpiredException()
+            if (!response.isSuccessful) throw HttpStatusException(response.code)
+            text
+        }
+    }
     /** 清空 Cookie 罐（登录前必须调用，见 [ClearableCookieJar]）。 */
     fun clearCookies() {
         (cookieJar as? ClearableCookieJar)?.clear()
@@ -128,5 +159,6 @@ class MissavClient(
         val CHALLENGE_TITLE = Regex("<title>\\s*Just a moment\\.\\.\\.\\s*</title>", RegexOption.IGNORE_CASE)
         const val HOME_PATH = "/"
         val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
+        val FORM_MEDIA_TYPE = "application/x-www-form-urlencoded; charset=utf-8".toMediaType()
     }
 }

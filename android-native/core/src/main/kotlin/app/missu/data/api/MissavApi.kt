@@ -11,6 +11,7 @@ import app.missu.data.model.VideoPlaylist
 import app.missu.data.parse.ApiJson
 import app.missu.data.parse.DetailParser
 import app.missu.data.parse.DirectoryParser
+import app.missu.data.parse.PlaylistCreateParser
 import app.missu.data.parse.PlaylistParser
 import app.missu.data.parse.HomeParser
 import kotlinx.serialization.json.Json
@@ -175,6 +176,33 @@ class MissavApi(
     }
 
     /**
+     * 新建片单。
+     *
+     * WARNING: 站点只有表单（`POST /playlists/create`），没有 JSON 接口。流程：
+     * GET 表单页 → 读 `_token` 与字段名 → urlencoded POST。
+     * NOTE: `_token` 只用于本次提交，绝不写日志。
+     */
+    suspend fun createPlaylist(name: String, isPublic: Boolean = false, description: String? = null) {
+        val form = withAuthRetry {
+            withChallengeRetry {
+                val html = client.fetchHtml(CREATE_PLAYLIST_PATH)
+                PlaylistCreateParser.parse(html) ?: throw IllegalStateException("新建片单页没有找到表单")
+            }
+        }
+
+        val fields = form.fields.toMutableMap()
+        fields[form.nameField] = name
+        fields["is_public"] = if (isPublic) "1" else "0"
+        if (description != null) fields["description"] = description
+
+        withAuthRetry {
+            withChallengeRetry {
+                val path = form.action.takeIf { it.isNotBlank() } ?: CREATE_PLAYLIST_PATH
+                client.postForm(path, fields)
+            }
+        }
+    }
+    /**
      * 我的片单列表（`/playlists`）。
      * WARNING: 站点没有片单列表的 JSON 接口，只能解析 HTML（见 [PlaylistParser]）。
      * WARNING: 该页对游客返回 200 + 空列表，调用方要用 `reloginWithRemembered()` 确认会话。
@@ -271,6 +299,10 @@ class MissavApi(
             }
             block()
         }
+
+    private companion object {
+        const val CREATE_PLAYLIST_PATH = "/playlists/create"
+    }
 
     private suspend fun <T> withChallengeRetry(block: suspend () -> T): T =
         try {

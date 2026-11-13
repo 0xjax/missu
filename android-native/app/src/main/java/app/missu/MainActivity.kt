@@ -109,6 +109,26 @@ private fun MissuApp() {
     var language by remember { mutableStateOf(settings.language()) }
     val authState by auth.state.collectAsState()
     val loginState by auth.loginState.collectAsState()
+    // TEMP-DEBUG: 抓「新建片单」页面（不绑定影片的 /playlists/create），本地再分析表单。
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val dir = java.io.File(context.filesDir, "site").apply { mkdirs() }
+            try {
+                val jar = app.missu.data.api.AndroidCookieJar()
+                val http = okhttp3.OkHttpClient.Builder().cookieJar(jar).build()
+                val response = http.newCall(
+                    okhttp3.Request.Builder().url("https://missav.ai/cn/playlists/create")
+                        .header("User-Agent", app.missu.data.api.SourceConfig.DEFAULT_USER_AGENT)
+                        .build(),
+                ).execute()
+                val html = response.body.string()
+                java.io.File(dir, "playlist-create.html").writeText(html)
+                java.io.File(dir, "create-page.txt").writeText("code=${response.code} length=${html.length}")
+            } catch (error: Exception) {
+                java.io.File(dir, "create-page.txt").writeText("ERR ${error::class.simpleName}: ${error.message}")
+            }
+        }
+    }
     // 底部导航只在四个一级页面显示；详情/列表/收藏等二级页面全屏展示。
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -278,6 +298,7 @@ private fun MissuApp() {
             composable("playlists") {
                 val viewModel: PlaylistsViewModel = viewModel(factory = factory { PlaylistsViewModel(api) })
                 val state by viewModel.state.collectAsState()
+                val createMessage by viewModel.createMessage.collectAsState()
                 LaunchedEffect(Unit) { viewModel.load() }
 
                 PlaylistsScreen(
@@ -287,6 +308,8 @@ private fun MissuApp() {
                         navController.navigate("playlist/${playlist.id}?n=${Uri.encode(playlist.name)}")
                     },
                     onBack = { navController.popBackStack() },
+                    createMessage = createMessage,
+                    onCreate = viewModel::create,
                 )
             }
 
