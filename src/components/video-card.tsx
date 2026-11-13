@@ -54,7 +54,7 @@ export function VideoCard({ video, width }: { video: VideoSummary; width?: numbe
         )}
         {video.duration && (
           <View style={styles.durationBadge}>
-            <ThemedText style={styles.coverText}>{video.duration}</ThemedText>
+            <ThemedText style={[styles.coverText, styles.durationText]}>{video.duration}</ThemedText>
           </View>
         )}
       </View>
@@ -109,6 +109,10 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 11,
     lineHeight: 16,
+  },
+  durationText: {
+    // NOTE: 时长是数字串，等宽数字让两列卡片的角标宽度不随 1/4/7 跳动。
+    fontVariant: ['tabular-nums'],
   },
   title: {
     marginTop: Spacing.sm,
