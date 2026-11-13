@@ -24,6 +24,7 @@ fun AccountScreen(
     state: AuthUiState,
     onLogin: () -> Unit,
     onLogout: () -> Unit,
+    onSaved: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -61,6 +62,8 @@ fun AccountScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.height(20.dp))
+                    Button(onClick = onSaved) { Text("我的收藏") }
+                    Spacer(Modifier.height(12.dp))
                     TextButton(onClick = onLogout) { Text("退出登录") }
                 }
             }
