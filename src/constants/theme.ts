@@ -50,5 +50,5 @@ export const Radius = {
   full: 9999,
 } as const;
 
-// NOTE: 原生底部 tab 栏会覆盖内容，滚动容器和悬浮提示需额外留出高度。
+// NOTE: 底部栏占据布局空间（JS Tabs），滚动容器无需额外留白；只有悬浮提示要避开它。
 export const TabBarInset = Platform.select({ ios: 50, android: 80, default: 0 }) ?? 0;

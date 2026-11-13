@@ -22,7 +22,7 @@ import { ChoiceMenuBar } from '@/components/choice-menu-bar';
 import { SearchBox } from '@/components/search-box';
 import { ThemedText } from '@/components/themed-text';
 import { VideoCard } from '@/components/video-card';
-import { Radius, Spacing, TabBarInset } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import {
   NO_FILTER,
   NO_SORT,
@@ -30,6 +30,7 @@ import {
   VIDEO_FILTER_OPTIONS,
   VIDEO_SORT_OPTIONS,
 } from '@/constants/video-options';
+import { TabHeader } from '@/components/tab-header';
 import { useTheme } from '@/hooks/use-theme';
 import { useLanguage } from '@/stores/language';
 
@@ -222,6 +223,7 @@ function LatestView({ params }: { params: LatestParams }) {
 
   return (
     <SafeAreaView edges={['bottom']} style={[styles.screen, { backgroundColor: theme.background }]}>
+      <TabHeader title="列表" />
       <FlatList
         contentContainerStyle={styles.content}
         columnWrapperStyle={styles.row}
@@ -257,7 +259,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: Spacing.lg,
-    paddingBottom: Spacing.xxxl + TabBarInset,
+    paddingBottom: Spacing.xxxl,
     flexGrow: 1,
   },
   row: {

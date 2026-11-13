@@ -26,13 +26,14 @@ import {
   type ActressFilters,
   type ActressSort,
 } from '@/constants/actress-filters';
-import { Radius, Spacing, TabBarInset } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import {
   NO_FILTER,
   NO_SORT,
   VIDEO_FILTER_OPTIONS,
   VIDEO_SORT_OPTIONS,
 } from '@/constants/video-options';
+import { TabHeader } from '@/components/tab-header';
 import { useTheme } from '@/hooks/use-theme';
 import { useLanguage } from '@/stores/language';
 
@@ -217,6 +218,7 @@ function DiscoverView() {
 
   return (
     <SafeAreaView edges={['bottom']} style={[styles.screen, { backgroundColor: theme.background }]}>
+      <TabHeader title="发现" />
       <FlatList
         columnWrapperStyle={styles.row}
         contentContainerStyle={styles.content}
@@ -310,7 +312,7 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     padding: Spacing.lg,
-    paddingBottom: Spacing.xxxl + TabBarInset,
+    paddingBottom: Spacing.xxxl,
   },
   row: {
     width: '100%',

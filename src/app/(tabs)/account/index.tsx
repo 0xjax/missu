@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, ScrollView, StyleSheet, View } from 'react-na
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SettingsRow } from '@/components/settings-row';
+import { TabHeader } from '@/components/tab-header';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/stores/auth';
@@ -40,6 +41,7 @@ export default function AccountScreen() {
 
   return (
     <SafeAreaView edges={['bottom']} style={[styles.screen, { backgroundColor: theme.background }]}>
+      <TabHeader title="我的" />
       <ScrollView contentContainerStyle={styles.content}>
         {user ? (
           <SettingsRow detail={displayName === user.email ? undefined : user.email} label={displayName ?? user.email} />
