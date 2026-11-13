@@ -163,14 +163,21 @@ private fun MissuApp() {
             composable("discover") {
                 val viewModel: DiscoverViewModel = viewModel(factory = factory { DiscoverViewModel(api) })
                 val states by viewModel.states.collectAsState()
+                val sort by viewModel.sort.collectAsState()
+                val filters by viewModel.filters.collectAsState()
 
                 DiscoverScreen(
                     states = states,
+                    sort = sort,
+                    filters = filters,
                     onLoad = viewModel::load,
                     onLoadMore = viewModel::loadMore,
                     onOpen = { path, title ->
                         navController.navigate("list?p=${Uri.encode(path)}&t=${Uri.encode(title)}")
                     },
+                    onSortChange = viewModel::setSort,
+                    onFilterChange = viewModel::setFilter,
+                    onResetFilters = viewModel::resetFilters,
                 )
             }
             composable("search") {

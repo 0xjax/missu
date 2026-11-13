@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -19,11 +21,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -35,18 +42,26 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.missu.data.api.ActressFilterOptions
 import app.missu.data.model.DirectoryItem
 import coil3.compose.AsyncImage
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiscoverScreen(
     states: Map<String, DirectoryUiState>,
+    sort: String,
+    filters: Map<String, String>,
     onLoad: (String) -> Unit,
     onLoadMore: (String) -> Unit,
     onOpen: (path: String, title: String) -> Unit,
+    onSortChange: (String) -> Unit,
+    onFilterChange: (key: String, value: String?) -> Unit,
+    onResetFilters: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var tabIndex by rememberSaveable { mutableStateOf(0) }
+    var filterSheetOpen by rememberSaveable { mutableStateOf(false) }
     val tabs = DiscoverTab.entries
     val tab = tabs[tabIndex]
 
@@ -62,8 +77,36 @@ fun DiscoverScreen(
         }
 
         // 切到某个目录时才去拉它，省一次请求。
-        androidx.compose.runtime.LaunchedEffect(tab.kind) {
+        LaunchedEffect(tab.kind) {
             if (states[tab.kind] == null) onLoad(tab.kind)
+        }
+
+        // 排序与筛选只有女优目录有（站点对类型目录不提供 sort / 筛选参数）。
+        if (tab == DiscoverTab.ACTRESSES) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                ActressFilterOptions.sorts.forEach { option ->
+                    FilterChip(
+                        selected = sort == option.value,
+                        onClick = { onSortChange(option.value) },
+                        label = { Text(option.label) },
+                    )
+                }
+
+                Spacer(Modifier.weight(1f))
+
+                if (filters.isNotEmpty()) {
+                    TextButton(onClick = onResetFilters) { Text("清除") }
+                }
+                FilterChip(
+                    selected = filters.isNotEmpty(),
+                    onClick = { filterSheetOpen = true },
+                    label = { Text(if (filters.isEmpty()) "筛选" else "筛选 (${filters.size})") },
+                )
+            }
         }
 
         when (val state = states[tab.kind]) {
@@ -94,6 +137,67 @@ fun DiscoverScreen(
                             } else {
                                 Button(onClick = { onLoadMore(tab.kind) }) { Text("加载更多") }
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (filterSheetOpen) {
+        ModalBottomSheet(onDismissRequest = { filterSheetOpen = false }) {
+            FilterSheet(
+                filters = filters,
+                onFilterChange = onFilterChange,
+                onDismiss = { filterSheetOpen = false },
+            )
+        }
+    }
+}
+
+/** 四组筛选：身高 / 罩杯 / 年龄 / 出道年份。选项来自 [ActressFilterOptions]（对照 legacy 常量表）。 */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun FilterSheet(
+    filters: Map<String, String>,
+    onFilterChange: (key: String, value: String?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("筛选女优", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.weight(1f))
+            TextButton(onClick = onDismiss) { Text("完成") }
+        }
+
+        LazyColumn(modifier = Modifier.fillMaxWidth().height(520.dp)) {
+            ActressFilterOptions.sections.forEach { section ->
+                item(key = "title-${section.key}") {
+                    Text(
+                        text = section.title,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 24.dp, top = 16.dp, bottom = 8.dp),
+                    )
+                }
+                item(key = "options-${section.key}") {
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        section.options.forEach { option ->
+                            FilterChip(
+                                selected = filters[section.key] == option.value,
+                                // 再点一次同一项 = 取消这一组筛选。
+                                onClick = {
+                                    val next = if (filters[section.key] == option.value) null else option.value
+                                    onFilterChange(section.key, next)
+                                },
+                                label = { Text(option.label) },
+                            )
                         }
                     }
                 }
