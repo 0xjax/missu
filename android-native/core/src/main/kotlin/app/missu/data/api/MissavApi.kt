@@ -3,12 +3,15 @@ package app.missu.data.api
 import app.missu.data.model.AccountUser
 import app.missu.data.model.DirectoryList
 import app.missu.data.model.HomeSection
+import app.missu.data.model.PlaylistDetail
+import app.missu.data.model.PlaylistSummary
 import app.missu.data.model.VideoDetail
 import app.missu.data.model.VideoList
 import app.missu.data.model.VideoPlaylist
 import app.missu.data.parse.ApiJson
 import app.missu.data.parse.DetailParser
 import app.missu.data.parse.DirectoryParser
+import app.missu.data.parse.PlaylistParser
 import app.missu.data.parse.HomeParser
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
@@ -171,6 +174,23 @@ class MissavApi(
         }
     }
 
+    /**
+     * 我的片单列表（`/playlists`）。
+     * WARNING: 站点没有片单列表的 JSON 接口，只能解析 HTML（见 [PlaylistParser]）。
+     * WARNING: 该页对游客返回 200 + 空列表，调用方要用 `reloginWithRemembered()` 确认会话。
+     */
+    suspend fun getPlaylists(): List<PlaylistSummary> = withAuthRetry {
+        withChallengeRetry {
+            PlaylistParser.parsePlaylists(client.fetchHtml("/playlists"))
+        }
+    }
+
+    /** 片单详情（`/playlists/{id}`）：标题 + 影片列表。同样只能解析 HTML。 */
+    suspend fun getPlaylistDetail(id: String): PlaylistDetail = withAuthRetry {
+        withChallengeRetry {
+            PlaylistParser.parsePlaylistDetail(client.fetchHtml("/playlists/$id"))
+        }
+    }
     /**
      * 目录页（`/actresses`、`/genres`、`/makers`），分页 `?page=N`，可选排序 `?sort=`。
      * NOTE: `kind` 必须与路径段一致，解析时用它筛链接。
