@@ -46,7 +46,6 @@ cd D:\missu\android-native
 |---|---|---|
 | `JAVA_HOME` | `C:\Program Files\Android\Android Studio\jbr` | 自带 JBR 21；另一个 JDK 17 被安全软件按程序拦截 |
 | `ANDROID_HOME` | `D:\Android\Sdk` | 与 `local.properties` 一致 |
-| `GRADLE_USER_HOME` | `D:\gradle-home` | 用户目录的 `~/.gradle` 里 `native-platform.dll` 加载失败（已加杀软排除） |
 | `ANDROID_USER_HOME` | `.local/android-home` | `~/.android` 被拒写 |
 | `TMP` / `TEMP` | `.tmp-gradle` | `%TEMP%` 拒写，`generateDebugGlobalSynthetics` 会 `AccessDeniedException` |
 
@@ -56,8 +55,7 @@ cd D:\missu\android-native
 2. Settings → Languages & Frameworks → **Android SDK** → Android SDK Location = `D:\Android\Sdk`
    - 只应有：Android API 37.0、Build-Tools 37、Platform-Tools
    - 不要装 NDK、CMake、system-image、Emulator、旧 API（本工程无原生代码，只跑真机）
-3. Settings → Build, Execution, Deployment → Build Tools → Gradle → **Gradle user home** = `D:\gradle-home`
-   （不改就踩 `native-platform.dll` 那个坑；这个目录已加入杀软排除）
+3. Gradle 相关不用改：缓存走标准位置 `%USERPROFILE%\.gradle`，JDK 用 AS 自带的 JBR（构建脚本里也是它）
 
 ## 目录规划
 
@@ -100,7 +98,8 @@ app/src/main/java/app/missu/
 - **JVM 写某个目录被拒，但 PowerShell 能写** → 这是安全软件按**可执行文件**拦截，不是文件权限。
   实测：AS 自带 JBR 21 能写 `D:\gradle-home`，`D:\Android\jdk-17` 的 java 被拒，同一文件、同一用户。
   所以构建 JDK 固定用 JBR；`D:\Android\jdk-17` 已闲置。
-- **`native-platform.dll` 加载失败** → `GRADLE_USER_HOME` 指到 `D:\gradle-home`（全局位置，已排除杀软）。
+- **`native-platform.dll` 加载失败**（历史问题）→ 当时把 `GRADLE_USER_HOME` 挪出了用户目录；现在标准位置
+  `%USERPROFILE%\.gradle` 实测可用（缓存已迁回，约 4.6 GB），不要再自定义 Gradle 主目录。
 - **`AccessDeniedException: %TEMP%\global_synthetics_*`** → `TMP`/`TEMP` 指到 `.tmp-gradle`。
 - **`FAIL_ON_PROJECT_REPOS` 冲突** → 本机 `GRADLE_USER_HOME/init.d/mirrors.gradle` 会注入阿里云镜像，`settings.gradle.kts` 不能设那个模式（镜像已同时写进工程，换机器也能用）。
 - **AGP 9 内置 Kotlin** → 再加 `org.jetbrains.kotlin.android` 会直接报错。

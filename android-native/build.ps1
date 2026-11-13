@@ -1,8 +1,8 @@
-﻿# 构建 missu 原生工程：一次把 5 个环境变量都配好，避免每次重新推导。
+﻿# 构建 missu 原生工程：把需要的环境变量一次配好，避免每次重新推导。
 # 用法：  .\build.ps1            （只构建 debug APK）
 #         .\build.ps1 install    （构建 + 装到已连接的设备）
 #         .\build.ps1 release    （构建 release APK，沿用 debug 签名）
-# 环境：  MISSU_NO_DAEMON=1       （不保留 Gradle daemon；CI/自动化采集输出时必须开，
+# 环境：  MISSU_NO_DAEMON=1       （不保留 Gradle daemon；自动化采集输出时必须开，
 #                                  否则 daemon 会一直占着 stdout，管道等不到 EOF）
 # NOTE: 本文件必须保存为 UTF-8 **带 BOM**——Windows PowerShell 5.1 对无 BOM 的 UTF-8 按 ANSI 解码，
 #       中文全角字符会吞掉行尾换行，把下一行代码并进注释里（曾导致 JAVA_HOME 从未被设置）。
@@ -11,14 +11,14 @@ param([string]$Task = "assembleDebug")
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-# JDK / SDK：全局安装位置（不在项目里），与 AS 的 Android SDK Location 一致。
+# JDK：用 Android Studio 自带的 JBR（21）。构建路径里的另一个 JDK 17 被安全软件按程序拦截，不可用。
+# SDK：全局安装位置，与 AS 的 Android SDK Location 及 local.properties 的 sdk.dir 一致。
 $env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
 $env:ANDROID_HOME = 'D:\Android\Sdk'
 $env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
 
-# NOTE: 用户目录下的 ~/.gradle 与 %TEMP% 会被安全软件拦（native-platform.dll 加载失败、
-# AccessDeniedException），所以 Gradle 主目录、Android 缓存、临时目录全部落进工作区（已在杀软排除列表）。
-$env:GRADLE_USER_HOME = 'D:\gradle-home'
+# NOTE: GRADLE_USER_HOME 不设，走标准位置 %USERPROFILE%\.gradle（实测可用，5 GB 缓存已迁到那里）。
+# NOTE: %TEMP% 会被安全软件拦（native-platform.dll / AccessDeniedException），所以临时目录落进工作区。
 $env:ANDROID_USER_HOME = 'D:\missu\.local\android-home'
 $env:TMP = 'D:\missu\.tmp-gradle'
 $env:TEMP = $env:TMP
