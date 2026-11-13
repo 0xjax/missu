@@ -28,12 +28,12 @@
   },
   "devDependencies": {
     "@types/react": "~19.3.0",
-    "oxlint": "1.92.0",
-    "typescript": "~6.0.3"
+    "oxlint": "1.92.0"
   },
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
+    "start": "EXPO_NO_TYPESCRIPT_SETUP=1 expo start",
+    "android": "EXPO_NO_TYPESCRIPT_SETUP=1 expo start --android",
+    "prebuild": "EXPO_NO_TYPESCRIPT_SETUP=1 expo prebuild",
     "lint": "oxlint src scripts",
     "acl:fix": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/fix-workspace-acl.ps1"
   }
