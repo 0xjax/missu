@@ -43,13 +43,15 @@ fun SearchScreen(
     onLoadMore: () -> Unit,
     onOpen: (String) -> Unit,
     onBack: () -> Unit,
+    recent: List<String> = emptyList(),
+    onClearHistory: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    var keyword by rememberSaveable { mutableStateOf("") }
+    var keywordValue by rememberSaveable { mutableStateOf("") }
     val keyboard = LocalSoftwareKeyboardController.current
     val submit = {
         keyboard?.hide()
-        onSearch(keyword)
+        onSearch(keywordValue)
     }
 
     Column(modifier.fillMaxSize()) {
@@ -59,8 +61,8 @@ fun SearchScreen(
         ) {
             TextButton(onClick = onBack) { Text("←") }
             OutlinedTextField(
-                value = keyword,
-                onValueChange = { keyword = it },
+                value = keywordValue,
+                onValueChange = { keywordValue = it },
                 modifier = Modifier.weight(1f),
                 placeholder = { Text("搜索番号、女优、关键词") },
                 singleLine = true,
@@ -73,7 +75,15 @@ fun SearchScreen(
         }
 
         when (val current = state) {
-            SearchUiState.Idle -> Hint("输入关键词后点搜索")
+            SearchUiState.Idle -> RecentSearches(
+                keywords = recent,
+                onPick = { keyword ->
+                    keywordValue = keyword
+                    onSearch(keyword)
+                },
+                onClear = onClearHistory,
+                onSearch = submit,
+            )
             SearchUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
@@ -84,6 +94,46 @@ fun SearchScreen(
                 onLoadMore = onLoadMore,
                 onOpen = onOpen,
             )
+        }
+    }
+}
+
+/** 最近搜索：点一下直接搜。 */
+@Composable
+private fun RecentSearches(
+    keywords: List<String>,
+    onPick: (String) -> Unit,
+    onClear: () -> Unit,
+    onSearch: () -> Unit,
+) {
+    if (keywords.isEmpty()) {
+        Hint("输入关键词后点搜索")
+        return
+    }
+
+    Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "最近搜索",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.weight(1f))
+            TextButton(onClick = onClear) { Text("清空") }
+        }
+
+        androidx.compose.foundation.layout.FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            keywords.forEach { keyword ->
+                androidx.compose.material3.SuggestionChip(
+                    onClick = { onPick(keyword) },
+                    label = { Text(keyword) },
+                )
+            }
         }
     }
 }

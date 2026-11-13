@@ -48,6 +48,7 @@ import app.missu.data.api.createMissavApi
 import app.missu.data.store.CredentialStore
 import app.missu.data.store.ProfileStore
 import app.missu.data.store.HistoryStore
+import app.missu.data.store.SearchHistoryStore
 import app.missu.data.store.SettingsStore
 import app.missu.ui.history.HistoryScreen
 import android.net.Uri
@@ -100,6 +101,7 @@ private fun MissuApp() {
     // NOTE: 语言必须在第一次请求之前装进 SourceConfig，否则首屏会按默认语言拉一轮再换。
     val settings = remember { SettingsStore(context.applicationContext).also { it.applyStoredLanguage() } }
     val historyStore = remember { HistoryStore(context.applicationContext) }
+    val searchHistory = remember { SearchHistoryStore(context.applicationContext) }
     var language by remember { mutableStateOf(settings.language()) }
     val authState by auth.state.collectAsState()
     val loginState by auth.loginState.collectAsState()
@@ -181,8 +183,9 @@ private fun MissuApp() {
                 )
             }
             composable("search") {
-                val viewModel: SearchViewModel = viewModel(factory = factory { SearchViewModel(api) })
+                val viewModel: SearchViewModel = viewModel(factory = factory { SearchViewModel(api, searchHistory) })
                 val state by viewModel.state.collectAsState()
+                val recent by viewModel.recent.collectAsState()
 
                 SearchScreen(
                     state = state,
@@ -190,6 +193,8 @@ private fun MissuApp() {
                     onLoadMore = viewModel::loadMore,
                     onOpen = { id -> navController.navigate("detail/$id") },
                     onBack = { navController.popBackStack() },
+                    recent = recent,
+                    onClearHistory = viewModel::clearHistory,
                 )
             }
 
