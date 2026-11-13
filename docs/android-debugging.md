@@ -224,6 +224,13 @@ bun scripts/dev-test-login.js
 - `fetch failed: java.net.ConnectException: Failed to connect to /127.0.0.1:8787` —— 脚本没在跑，或 reverse 映射掉了（adb server 重启、换设备、手机断连都会让映射失效）。重新跑一次脚本即可，它会重建映射。
 - 服务不跨会话：DSH 重启会收掉后台任务，需要重新运行；有多台设备/多个传输条目时用 `ADB_SERIAL=<adb devices 里的 serial>` 指定目标。
 
+## 已知坑：快速连按返回后底部导航栏错位
+
+- **现象**：从二级页面连按两次返回（间隔 ≤600ms）回到 tab 页时，底部导航栏落到内容末尾（屏幕中间），约 2 秒后自愈。
+- **成因**：tab 页的 `useFocusEffect` 在焦点到达时就 `setState` 重新拉数据；这次重渲染发生在原生 Stack 转场进行中，`(tabs)` 屏被重新测量一次，底部栏跟着内容高度走。没有焦点刷新行为的页面（例如 设置 → 内容语言）不会出现。
+- **修法**：焦点刷新延后到转场结束（400ms）再执行，见 `src/app/playlists/index.tsx`、`src/app/history.tsx`、`src/app/saved.tsx`；以后新增「焦点时拉数据」的页面也照这个模式写。
+- **验收**：连按两次返回（50ms 间隔最容易触发），在 400ms 内截图看底部栏位置；修复后应与静止状态像素一致。
+- **教训**：复现和验收必须用报告里的原始路径。用「相似路径」验证会得出错误结论——设置/语言页不触发，片单/详情页触发。
 ## 结束调试
 
 ```powershell
