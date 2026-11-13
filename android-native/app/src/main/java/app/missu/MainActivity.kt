@@ -64,6 +64,8 @@ import app.missu.ui.detail.DetailViewModel
 import app.missu.ui.home.HomeScreen
 import app.missu.ui.home.HomeViewModel
 import app.missu.ui.playlists.PlaylistDetailScreen
+import app.missu.ui.playlists.PlaylistEditScreen
+import app.missu.ui.playlists.PlaylistEditViewModel
 import app.missu.ui.playlists.PlaylistDetailViewModel
 import app.missu.ui.playlists.PlaylistsScreen
 import app.missu.ui.playlists.PlaylistsViewModel
@@ -127,6 +129,40 @@ private fun MissuApp() {
             } catch (error: Exception) {
                 java.io.File(dir, "create-page.txt").writeText("ERR ${error::class.simpleName}: ${error.message}")
             }
+        }
+    }
+    // TEMP-DEBUG: 抓「修改片单」页，确认更新表单与删除表单的真实字段。
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val dir = java.io.File(context.filesDir, "site").apply { mkdirs() }
+            val log = StringBuilder()
+            try {
+                val jar = app.missu.data.api.AndroidCookieJar()
+                val http = okhttp3.OkHttpClient.Builder().cookieJar(jar).build()
+                fun get(url: String): Pair<Int, String> = http.newCall(
+                    okhttp3.Request.Builder().url(url)
+                        .header("User-Agent", app.missu.data.api.SourceConfig.DEFAULT_USER_AGENT)
+                        .build(),
+                ).execute().use { it.code to it.body.string() }
+
+                val list = get("https://missav.ai/cn/playlists")
+                java.io.File(dir, "playlists2.html").writeText(list.second)
+                log.appendLine("list code=${list.first} length=${list.second.length}")
+
+                // 找 /playlists/{id} 链接（排除 create），拿第一个 id 去看它的编辑页。
+                val ids = Regex("/cn/playlists/([A-Za-z0-9]+)\"")
+                    .findAll(list.second).map { it.groupValues[1] }.distinct().take(5).toList()
+                log.appendLine("ids=$ids")
+
+                ids.forEach { id ->
+                    val edit = get("https://missav.ai/cn/playlists/$id/edit")
+                    java.io.File(dir, "playlist-edit-$id.html").writeText(edit.second)
+                    log.appendLine("edit[$id] code=${edit.first} length=${edit.second.length}")
+                }
+            } catch (error: Exception) {
+                log.appendLine("FATAL ${error::class.simpleName}: ${error.message}")
+            }
+            java.io.File(dir, "edit-probe.txt").writeText(log.toString())
         }
     }
     // 底部导航只在四个一级页面显示；详情/列表/收藏等二级页面全屏展示。
@@ -334,6 +370,34 @@ private fun MissuApp() {
                     state = state,
                     onRetry = viewModel::load,
                     onOpen = { videoId -> navController.navigate("detail/$videoId") },
+                    onBack = { navController.popBackStack() },
+                    onEdit = { navController.navigate("playlist/$id/edit") },
+                )
+            }
+
+            composable("playlist/{id}/edit") { entry ->
+                val id = entry.arguments?.getString("id").orEmpty()
+                val viewModel: PlaylistEditViewModel = viewModel(
+                    key = "playlist-edit-$id",
+                    factory = factory { PlaylistEditViewModel(api, id) },
+                )
+                val state by viewModel.state.collectAsState()
+                val message by viewModel.message.collectAsState()
+                val busy by viewModel.busy.collectAsState()
+                LaunchedEffect(id) { viewModel.load() }
+
+                // 保存或删除成功后回到列表：列表会重新加载，详情页的旧名字也不会残留。
+                fun backToList() { navController.popBackStack("playlists", inclusive = false) }
+
+                PlaylistEditScreen(
+                    state = state,
+                    message = message,
+                    busy = busy,
+                    onSave = { name, description, isPublic ->
+                        viewModel.save(name, description, isPublic) { backToList() }
+                    },
+                    onDelete = { viewModel.delete { backToList() } },
+                    onRetry = viewModel::load,
                     onBack = { navController.popBackStack() },
                 )
             }

@@ -130,7 +130,9 @@ class MissavClient(
             "${java.net.URLEncoder.encode(key, "UTF-8")}=${java.net.URLEncoder.encode(value, "UTF-8")}"
         }
         val request = Request.Builder()
-            .url(SourceConfig.localizedUrl(path))
+            // NOTE: 片单删除表单的 action 是绝对 URL（含语言前缀），不能再走 localizedUrl，
+            // 否则会拼成 /cn/https://… 直接 404（实测踩过）。只有相对路径才加语言前缀。
+            .url(if (path.startsWith("http://") || path.startsWith("https://")) path else SourceConfig.localizedUrl(path))
             .header("User-Agent", userAgent)
             .header("Accept", "text/html,application/xhtml+xml")
             .header("Origin", SourceConfig.BASE_URL)
