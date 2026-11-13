@@ -172,12 +172,38 @@ class MissavApi(
     }
 
     /**
-     * 目录页（`/actresses`、`/genres`、`/makers`），分页 `?page=N`。
+     * 目录页（`/actresses`、`/genres`、`/makers`），分页 `?page=N`，可选排序 `?sort=`。
      * NOTE: `kind` 必须与路径段一致，解析时用它筛链接。
+     * NOTE: 站点当前**只提供** `sort=videos`（作品数）与 `sort=debut`（出道年）；
+     * legacy 里那个 height/cup/age/debut 筛选表单在现行页面已不存在（实测页面只有这两种排序链接），
+     * 所以这里不做筛选参数，避免拼出站点不认识的 query。
      */
-    suspend fun getDirectory(kind: String, page: Int = 1): DirectoryList = withChallengeRetry {
-        val path = if (page > 1) "/$kind?page=$page" else "/$kind"
+    suspend fun getDirectory(kind: String, page: Int = 1, sort: String? = null): DirectoryList = withChallengeRetry {
+        val params = buildList {
+            if (sort != null) add("sort=$sort")
+            if (page > 1) add("page=$page")
+        }
+        val path = if (params.isEmpty()) "/$kind" else "/$kind?" + params.joinToString("&")
         DirectoryParser.parse(client.fetchHtml(path), kind, page)
+    }
+
+    /**
+     * 女优目录（带筛选与排序）。参数名与 legacy `getActresses` 的请求构造一致：
+     * `?sort=videos|debut&height=&cup=&age=&debut=&page=N`。
+     * NOTE: 空值不发；但 `0-20` 这类要原样发，不能当假值丢掉。
+     */
+    suspend fun getActresses(
+        page: Int = 1,
+        sort: String? = null,
+        filters: Map<String, String> = emptyMap(),
+    ): DirectoryList = withChallengeRetry {
+        val params = buildList {
+            if (sort != null) add("sort=$sort")
+            filters.forEach { (key, value) -> if (value.isNotEmpty()) add("$key=$value") }
+            if (page > 1) add("page=$page")
+        }
+        val path = if (params.isEmpty()) "/actresses" else "/actresses?" + params.joinToString("&")
+        DirectoryParser.parse(client.fetchHtml(path), "actresses", page)
     }
     /**
      * 通用视频列表页（`/latest`、`/actresses/{名}`、`/genres/{名}`…），分页用 `?page=N`。
