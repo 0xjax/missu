@@ -38,11 +38,54 @@ PowerShell 默认不从当前目录加载命令，因此在当前目录也必须
 
 **配对端口与连接端口通常不同。** 配对端口来自配对弹窗，一般每次配对都会变化；连接端口来自无线调试主页，重启手机或重新开启无线调试后也可能变化。不要复用上一次记录的端口。
 
-`devices -l` 可能同时显示 IP 地址和 mDNS 名称两个条目，它们可以属于同一台手机。使用输出中的 `transport_id` 指定设备，以下示例使用 `2`，实际操作时替换为当前值：
+`devices -l` 可能同时显示 IP 地址和 mDNS 名称两个条目，它们可能属于同一台手机，见下节「设备身份」。按输出中的 `transport_id` 指定设备，以下示例使用 `2`，实际替换为当前值：
 
 ```powershell
 .\adb -t 2 shell input keyevent KEYCODE_WAKEUP
 ```
+
+## 设备身份：一台手机可能有两个 serial
+
+adb 按 serial（传输）记账，不按硬件去重。无线调试下同一台手机常常同时出现两条：
+
+| serial | 来源 |
+| --- | --- |
+| `adb-<设备ID>-<随机后缀>._adb-tls-connect._tcp` | adb server 收到手机广播的 mDNS 服务后自动连上，无需手动操作 |
+| `<IP>:<端口>` | 手动 `adb connect IP:端口` 建立 |
+
+两条底层连的是同一个 adbd，所以 `devices -l` 里型号完全一样；任何按 `adb devices` 列设备的工具都会显示成两台。
+
+**二选一，不要混用：**
+
+- 只用自动发现：不要手敲 `adb connect`，日常用的就是 mDNS 那条 serial。
+- 只用手动：设 `ADB_MDNS_AUTO_CONNECT=0`，adb 不再自动连 mDNS，只保留 `adb connect` 建的那条（IP 固定、mDNS 偶发掉线时更稳）。
+
+出现重复时，删掉**你不用的那条**：
+
+- 默认用自动发现：删手动那条 —— `.\adb disconnect <IP>:<端口>`
+- 手动模式（已设 `ADB_MDNS_AUTO_CONNECT=0`）：删 mDNS 那条 —— `.\adb disconnect adb-<设备ID>-<随机后缀>._adb-tls-connect._tcp`
+
+默认推荐保留自动发现：零配置，adb server 重启后自己会回来；手动那条只在 mDNS 被 VPN/防火墙挡住、或连远程设备时才用。反过来，如果刻意用手动模式，就别再 `adb connect` 之后又留 mDNS 那条。
+
+## DSH 的 Android 插件
+
+装的是 `@zseven-w/dsh-android`（第三方 bundle），提供 20 个 `android_*` 工具：`android_devices`、`android_boot`、`android_screenshot`、`android_ui_tree`、`android_tap_element`、`android_interact`、`android_logs`、`android_build_run` 等；安装后还会注册 `android-ui-automation` skill（工具用法说明，按需加载）。
+
+它通过环境变量 `ADB` 找 adb：
+
+```powershell
+[Environment]::SetEnvironmentVariable('ADB', 'D:\platform-tools\adb.exe', 'User')
+```
+
+该变量只在 DSH 进程启动时读一次，改完必须重启 DSH；否则工具报 `adb is unavailable`。
+
+## 安全软件会拦 DSH 的子进程
+
+卡巴斯基的「系统监控（PDM）」会把 DSH 启动 `powershell.exe`、批量改文件权限这类行为判成 `PDM:Exploit.Win32.Generic` 并直接拦截，表现为工具报 `spawn EPERM`。处理方式：
+
+- 受信任应用程序里加 `C:\Users\user\AppData\Local\Programs\DeepSeek Harness\DeepSeek Harness.exe`，勾「不监控应用程序活动」「不监控子应用程序活动」（递归）；
+- 排除项目录加 `D:\missu`、`C:\Users\user\.dsh`；
+- 配好后把「系统监控」重新打开（不必长期关闭）。
 
 ## 启动应用
 
@@ -65,7 +108,7 @@ bun run start
 .\adb shell am start -a android.intent.action.VIEW -d "exp://<电脑局域网IP>:8081" host.exp.exponent
 ```
 
-局域网地址比 `adb reverse` + `127.0.0.1:8081` 稳：自动化环境里 adb 服务会在每条命令结束后被收掉，reverse 隧道随之断开，App 会卡在 Bundling；局域网地址不依赖 adb 隧道。
+局域网地址比 `adb reverse` + `127.0.0.1:8081` 省事：`reverse` 映射随 adb 服务重启失效（重启后 App 会卡在 Bundling），局域网地址不依赖这条隧道。
 
 唤醒屏幕不会解除密码锁；存在锁屏密码时需由用户手动解锁。
 
@@ -121,6 +164,8 @@ export GRADLE_USER_HOME=/d/missu/.local/gradle-home
 
 ## 常用自动化命令
 
+> Agent 侧优先用 DSH 的 `android_*` 工具（`android_screenshot` / `android_ui_tree` / `android_tap_element` / `android_logs`），一次调用完成定位、点击并返回截图；下面这些 adb 命令是人工兜底。
+
 ```powershell
 # 返回
 .\adb -t 2 shell input keyevent KEYCODE_BACK
@@ -150,6 +195,8 @@ New-Item -ItemType Directory -Force D:\missu\.local
 ```
 
 ## 截图黑屏时读取界面文本
+
+> Agent 侧优先 `android_ui_tree`（结构化节点）；`uiautomator dump` 是人工兜底。
 
 部分 React Native 页面/报错状态截图为全黑（安全窗口或渲染层在截屏时不可见），但视图层级仍然可读。用 `uiautomator` 导出后按 `text` 字段查看当前页面内容，例如登录错误：
 
