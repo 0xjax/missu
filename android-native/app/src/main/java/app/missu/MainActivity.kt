@@ -135,12 +135,15 @@ private fun MissuApp() {
                     factory = factory { DetailViewModel(api, id) },
                 )
                 val state by viewModel.state.collectAsState()
+                val message by viewModel.message.collectAsState()
                 LaunchedEffect(id) { viewModel.load() }
 
                 DetailScreen(
                     state = state,
                     onRetry = viewModel::load,
                     onBack = { navController.popBackStack() },
+                    message = message,
+                    onToggleSaved = viewModel::toggleSaved,
                 )
             }
         }

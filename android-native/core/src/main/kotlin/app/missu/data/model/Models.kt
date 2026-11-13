@@ -48,5 +48,7 @@ data class VideoDetail(
     val actors: List<String> = emptyList(),
     val playbackUrl: String? = null,
     val internalId: String? = null,
+    /** 收藏状态；只在拿到 [internalId] 并成功查询时才有意义。 */
+    val saved: Boolean = false,
     val info: List<DetailInfoRow> = emptyList(),
 )
