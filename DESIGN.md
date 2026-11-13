@@ -4,7 +4,7 @@
 
 **Who**: 中文用户，Android 手机竖屏，单手操作，多在夜间或弱光环境使用。
 
-**Platform**: 仅 Android。iOS 与 Web 不是交付目标，现存回退实现只为编译通过，不为它们做适配或验收。
+**Platform**: 仅 Android。App 只交付 Android 一个平台，因此不存在平台回退实现（`*.ios.* / *.web.*` 已删除，`*.android.*` 也已并入普通文件）。
 
 **Context**: 目标明确——找到片子、确认信息、直接播放。单次会话短，进出频繁；不是生产力工具，没有长表单、没有多任务并行。
 
@@ -16,17 +16,17 @@
 
 ## Brand Personality
 
-**3 words**: 直接 · 克制 · 原生
+**3 words**: 直接 · 克制 · 顺手
 
 - **直接**: 一屏说清楚这是什么、点下去会发生什么。不做悬念式布局，不藏主要操作。
 - **克制**: 界面让位于封面内容。控件数量与视觉重量都要压到最低，凑合能用的一律不加。
-- **原生**: 用系统控件、系统手势、系统尺寸。不自绘“看起来像原生”的替代品。
+- **顺手**: 用系统手势、系统尺寸、系统字体缩放。控件是我们画的，但手感按 Material 的规范来。
 
-**Emotional goals**: 用户不应该注意到界面——注意力在封面和播放器上，操作一次到位，没有“这个控件怎么这么大”的瞬间。
+**Emotional goals**: 用户不应该注意到界面——注意力在封面和播放器上，操作一次到位，没有「这个控件怎么这么大」的瞬间。
 
 ## Aesthetic Direction
 
-**Style**: 内容优先的原生 Material 3。黑底、两列封面、极简工具栏；控件只在需要时展开。
+**Style**: 内容优先的 Material 3 密度。黑底、两列封面、极简工具栏；控件只在需要时展开。
 
 **Theme**: 跟随系统。深色是事实上的主体验（夜间使用为主），浅色可用但未逐屏校验。
 
@@ -42,53 +42,68 @@
 
 ## Design Principles
 
-1. **原生优先** — 能用 `@expo/ui`（真 Compose）就不用 JS 自绘；Paper 仅保留 Searchbar、Snackbar、搜索历史标签。
+1. **自绘优先** — 界面 UI 全部用 RN 视图 + Reanimated 画（`src/components/ui/`），实测参数、可改可关。原生只留给系统能力：Stack 转场与返回手势、播放管线（`expo-video`）、WebView、通知、权限、键盘、`Switch`/`Alert` 这类系统对话框。
+   - 反面案例：`@expo/ui` 的 Compose 控件（旧版曾用 DropdownMenu / BottomSheet / Picker / ToggleButton / Checkbox），托盘、波纹、选中图标、弹层高度都在 Material 内部，Expo Go 与 npm 版本还不一致，曾两次把 dev 环境搞崩。已全部移除。
+   - 反面案例：`react-native-paper` 整个 Material 库只为 5 个控件存在（Snackbar / Chip / Searchbar / Menu），主题还得再对一遍。已全部移除。
 2. **同维度单一控件** — 一个维度只允许一种控件形态；频道、周期、筛选、排序各自最多占一个按钮。
 3. **尺寸守规范** — 控件高 40dp（分段/菜单）、页面左右留白 16dp；验收时用 `uiautomator dump` 量真实 bounds，不靠肉眼。
 4. **选中态轻量表达** — 触发器只显示当前选项值（如 `全部`、`发行日期`），维度由按钮位置表达，不加「筛选 / 排序」前缀；菜单里的选中项只改文字颜色，不插入 `✓` 之类的字符前缀（会撑动布局、行宽跳动）。
 5. **状态一致** — 加载、空、错误、重试在首页/列表/发现/详情用同一套表达，错误必须可重试。
 
+## 组件框架（`src/components/ui/`）
+
+界面只允许用这些原语拼，新控件先加到这里，不要在页面里就地发明：
+
+| 原语 | 文件 | 用途 | 取代 |
+|---|---|---|---|
+| `Sheet` | `ui/sheet.tsx` | 底部弹层：遮罩淡入 + 卡片上滑，`onRequestClose` 接返回键 | Compose `BottomSheet`、Paper `Modal` |
+| `Menu` | `ui/menu.tsx` | 工具栏下拉：触发器 + 现测坐标的浮层，下方放不开自动翻到上方 | Paper `Menu`、Compose `DropdownMenu` |
+| `Pill` | `ui/pill.tsx` | 胶囊按钮（选中只填充色） | Paper `Chip`、Compose `ToggleButton` |
+| `UiButton` | `ui/button.tsx` | 40dp 按钮，`text` 次要 / `filled` 主操作 | Paper `Button`、Compose `Button`/`TextButton` |
+| `Checkbox` | `ui/checkbox.tsx` | 22dp 勾选框 | Compose `Checkbox` |
+| `SearchField` | `ui/search-field.tsx` | 搜索输入框（放大镜 + 清空） | Paper `Searchbar` |
+| `Toast` | `ui/toast.tsx` | 底部悬浮提示，自动消失 | Paper `Snackbar` |
+
 ## Control Map
 
 | 场景 | 控件 | 规格 |
 |---|---|---|
-| 底部导航 | `NativeTabs` | 原生 tab 栏，4 项固定（首页/列表/发现/我的） |
-| 页头 | 各 tab 独立 Stack header | 大标题 + 右侧图标 |
+| 底部导航 | `expo-router/js-tabs` 的 `Tabs` | 纯 RN 栏，4 项固定（首页/列表/发现/我的），配色只来自 theme |
+| 页头 | `TabHeader`（自绘） | 每个 tab 页自己画大标题，不用原生 Stack header |
 | 首页板块 | 首页 HTML 板块 + 顶部「今日热门」 | 板块来自首页 HTML；「今日热门」额外请求 `/today-hot` 列表页置顶，条数与其他板块一致不裁剪，失败时整块不显示，不影响其他板块 |
 | 个人中心 | `SettingsRow` | 56dp 行、透明容器、右侧 chevron；二级页走根 Stack |
-| 频道 / 周期 / 筛选 / 排序 | `ChoiceMenuBar` | 40dp TextButton + 系统 DropdownMenu（Compose） |
-| 一级分类（发现页） | `DiscoverTabs` | 单行原生 `ToggleButton`（热门/分类/女优/厂商/排行），选中仅填充色 |
+| 频道 / 周期 / 筛选 / 排序 | `ChoiceMenuBar` + `Menu` | 40dp 触发器 + 自绘浮层，选中项只改文字颜色 |
+| 一级分类（发现页） | `DiscoverTabs` + `Pill` | 单行等宽胶囊（热门/分类/女优/厂商/排行），选中只填充 accent |
 | 厂商频道组 | `CollapsibleGroup` + `SettingsRow` | 默认折叠三组（素人/无码影片/亚洲 AV），路径见 `src/constants/channel-groups.ts` |
 | 目录栅格 | `FlatList` + `DirectoryCard` | 女优 / 排行 3 列（低分辨率竖图），分类 / 厂商 2 列（文字块） |
 | 视频卡封面角标 | `VideoCard` | 左下变体标签（中文字幕 / 无码影片），右下时长；标签取自卡片 HTML，不新增请求 |
 | 长按预览 | `VideoCard` 长按 + 全屏 `Modal` | 350ms 长按（带 haptic）弹静音循环预览；预览片由封面地址推导为同目录 `preview.mp4`（原站卡片自带，零额外请求），加载失败保留封面；松手停留，点空白/返回键关闭，短按仍进详情 |
 | 详情信息块 | 详情页内联行 | 8 行（发行日期/番号/标题/女优/类型/系列/发行商/标籤），文案随内容语言变化不硬编码；标签 `textSecondary` 与值同行，可点击值用 accent 色跳 `/latest?source=path`。不用下划线：Android 嵌套 `Text` 的下划线会错位成漂浮短线 |
-| 详情页片单 | 收藏旁「片单」按钮 + 原生 `ModalBottomSheet` | 打开时 `GET /api/playlists/{dvdId}`；点行或勾选框乐观切换再 `POST /api/playlists/add\|remove`；勾选框是 Compose 组件，配色由 `Host seedColor` 跟随 accent；超过 6 行放进 Compose `ScrollView`；「新建片单」就地展开单行输入框，提交后重新拉列表；未登录先跳登录 |
-| 删除片单 | 片单详情页页头「删除」 | 原生 `Alert` 二次确认（destructive）；确认后提交站点「修改片单」页里的删除表单，成功后返回列表；列表页不放破坏性入口 |
-| 女优筛选 | `BottomSheet` + 4 × `Picker` | 2×2 排布、内容自适应高度；排序走 `ChoiceMenuBar` 菜单 |
-| 搜索 | `SearchBox` | Paper Searchbar，列表页与首页共用 |
+| 详情页片单 | 收藏旁「片单」按钮 + `Sheet` | 打开时 `GET /api/playlists/{dvdId}`；点行或勾选框乐观切换再 `POST /api/playlists/add\|remove`；超过 6 行面板内滚动；「新建片单」就地展开单行输入框，提交后重新拉列表；未登录先跳登录 |
+| 删除片单 | 片单详情页页头「删除」 | 系统 `Alert` 二次确认（destructive）；确认后提交站点「修改片单」页里的删除表单，成功后返回列表；列表页不放破坏性入口 |
+| 女优筛选 | `Sheet` + 手风琴 + `Pill` | 4 个维度各占一行，行内显示当前值，点行展开该维度的胶囊网格；选中即生效并收起。出道年份有 26 个选项，四列同时铺开会撑爆面板 |
+| 搜索 | `SearchBox` + `SearchField` | 列表页与首页共用；聚焦时展示搜索历史胶囊 |
 | 内容语言 | 设置行 → `/language` 子页 | 7 种语言，当前项 accent 色；路径前缀由 api 层统一拼接，切换后列表换 key 重拉 |
-| 自动播放 | 设置行 + 原生 `Switch` | 默认开；关闭后打开视频保持暂停，不影响当前播放中的视频 |
+| 自动播放 | 设置行 + 系统 `Switch` | 默认开；关闭后打开视频保持暂停，不影响当前播放中的视频 |
 | 视频快进退 | 播放器下方 6 个按钮 | 10 秒 / 1 分钟 / 10 分钟双向，36dp 高，点击调用 `seekBy` 并显示提示；按下态用 accent 填充 + 白字，比降透明度更明显 |
-| 倍速设置 | 底部条「倍速」按钮 + 底部弹层 | 播放倍速 0.75–2x，选中的存进偏好并对所有视频生效；长按不再临时加速，定位靠 6 个 seek 按钮与双击连击 |
+| 倍速设置 | 底部条「倍速」按钮 + `Sheet` | 播放倍速 0.75–2x，选中的存进偏好并对所有视频生效；长按不再临时加速，定位靠 6 个 seek 按钮与双击连击 |
 | 播放器控件 | 自建覆盖层 + 全屏 `Modal` | 播放/暂停常驻底部条左侧（快进快捷键会唤出控件，居中大按钮会遮挡画面）；进度条单击/拖动、连击快进退（同方向，N 击 = N-1 次）；单击只显隐控件；快进退用居中圆角提示，700ms 后消失；控件 150ms 淡入淡出，seek 期间不切换播放图标；全屏锁横屏并隐藏状态栏 |
 | 人机验证 | 全局 Modal + `WebView` | Cloudflare 挑战时显式验证；cf_clearance 与 RN fetch 共享，验证后自动重试原请求 |
-| 反馈 | Snackbar + haptics | 收藏、登录、播放手势 |
-
-NEVER 把多个 Compose `TextField` 塞进同一个 `Host` 并排——它们都是 `fillMaxWidth`，会互相挤扁。需要多控件时每个控件独立 `Host` 定宽。
+| 反馈 | `Toast` + haptics | 收藏、登录、播放手势 |
 
 ## Design Tokens
 
 - **Spacing**: 2 / 4 / 8 / 12 / 16 / 20 / 24 / 32 / 48 / 64，只用 `Spacing.*`
 - **Radius**: 8（控件）/ 10 / 12（卡片）/ 9999（胶囊），只用 `Radius.*`
 - **Color**: 深色底 `#000000`，卡片面 `#212225`，accent `#d85a76` 仅用于选中与强调
-- **TabBarInset**: Android 80，滚动容器底部必须避开原生 tab 栏
+- **TabBarInset**: 底部栏占据布局空间，滚动容器不用额外留白；只有悬浮提示（`OfflineBanner`）要按这个值抬高
 
 ## Known Limits
 
-- Expo Go 内置的 ExpoUI 版本落后 npm 包：`SelectableDropdownMenuItem` 会白屏，菜单选中态用 `✓` 文案代替
-- 同上原因，`ListItem` 的 `colors` 会抛 `Cannot set prop 'modifiers'` 红条，个人中心/设置改用 `SettingsRow` 自建行
-- 不做 iOS / Web 适配：非 Android 平台走通用回退实现，不接受为其新增平台代码
+- `Sheet` / `Menu` 都是 RN `Modal`：遮罩会盖住底部 tab 栏，这是 Modal 的正常行为，弹层内不要再依赖 tab 栏可见
+- `Menu` 的浮层坐标是按下那一刻 `measureInWindow` 测的：浮层打开后不会跟随列表滚动（Modal 已经挡住滚动），因此不要在会自己动的容器里当锚点
+- 女优筛选从「4 个原生 Picker」改成「手风琴 + 胶囊」：滚轮/下拉在 26 个年份选项上比胶囊网格慢，改动是取舍不是退步
+- 不做 iOS / Web 适配：这两个平台的依赖（`react-native-web`、`react-dom`）与回退实现已删除，恢复需要重新引入并重测
 - 频道分组是静态清单（`src/constants/channel-groups.ts`），站点改版需手工同步
 - 内容语言只切换站点数据（路径前缀 `/cn`、`/en` …），App 界面文案仍为中文；「随机」板块在非中文语言下没有「更多」链接，可能不显示
 - `ko / ms / th` 语言只在站点菜单中确认存在，Cloudflare 拦截导致尚未拿到 200 实测
@@ -103,18 +118,20 @@ NEVER 把多个 Compose `TextField` 塞进同一个 `Host` 并排——它们都
 - 片单接口挂在根路径（`/api/playlists/...`），没有语言前缀；其它接口是 `/cn/api/...`。`fetchJson` 因此带 `rawPath` 开关，写错前缀会 404「route cn/api/playlists/... could not be found」
 - 新建/删除片单没有 JSON 接口，是服务端直出的网页表单（新建页 `/playlists/create/{dvdId}`，删除表单在「修改片单」页 `/playlists/{id}/edit`，`_method=delete` + `_token`，POST 到片单自身 URL）。原生 `fetchHtml` 实测就能取到表单，WebView 只作回退；只有片单列表/详情这类客户端渲染的页面必须走 WebView
 - 片单面板里行点击和 `Checkbox` 的 `onValueChange` 是同一次点击的两条路径，用同步 ref 去重，否则一次点击会切两次
-- Snackbar 会被 Compose 浮层遮住：片单操作成功不提示（勾选框即反馈），失败文案直接显示在面板内
+- `Toast` 渲染在 `Sheet` 之外时会被 Modal 遮罩盖住：片单面板的操作失败文案直接写在面板里，不用 Toast
 - 播放/暂停、全屏、倍速按钮必须用 RNGH `Gesture.Tap`，不能用 RN `Pressable`：双击后第一次点击会被手势竞技场吞掉
 - 视频画面只挂一个 `Tap` 手势：长按加速曾与它组成 `Simultaneous` 组合，`onFinalize` 受渲染期闭包影响会漏掉、倍速卡住，已整体移除
 - 全屏 Modal 内要嵌套 `GestureHandlerRootView`；内联播放器保持挂载、Modal 共享同一 player；退出时重挂内联 `VideoView` 刷新 SurfaceView 并 seek 回原时间点，期间用 seeking 保护屏蔽暂停图标
 - 退出全屏重挂 surface 会有约 300–400ms 画面停顿，是双视图 Modal 方案的已知取舍；根治需改为单常驻 `VideoView`，当前不做
 - seek 期间 `playingChange` 的短暂 paused 要屏蔽，避免暂停图标闪烁；快进后主动显示控件
-- `expo-router/unstable-native-tabs` 已废弃，待迁移到 `expo-router/native-tabs`
 
 ## Technical Stack
 
-- Expo SDK 58 + React Native 0.88 + TypeScript
-- Expo Router（NativeTabs + 每 tab 独立 Stack）
-- `@expo/ui`（Compose 路径为主）；`react-native-paper` 仅 Searchbar、Snackbar、搜索历史标签
-- `expo-video`、`expo-image`、Reanimated、Gesture Handler
-- 深色优先，中文界面，仅 Android 交付
+- Expo SDK 58 + React Native 0.88 + TypeScript，包管理 bun
+- 路由：`expo-router`（文件路由）+ 根原生 `Stack`（转场、返回手势）；tab 栏用 `expo-router/js-tabs` 的 `Tabs`，tab 页头自绘 `TabHeader`
+- UI：`src/components/ui/` 七个自绘原语 + Reanimated + Gesture Handler；没有 UI 组件库
+- 数据：`src/api/*` 里的原生 `fetch`（带超时、AbortController、登录态判定）+ `node-html-parser` 解析；没有查询缓存库
+- 状态：React context（`src/stores/`），没有全局状态库
+- 存储：`expo-sqlite/kv-store`（`src/storage/kv.ts` 统一出口）；`@react-native-async-storage/async-storage` 只为一次性的旧数据迁移保留
+- 媒体与系统：`expo-video`、`expo-image`、`react-native-webview`、`@react-native-community/netinfo`、`expo-haptics`、`expo-screen-orientation`、`expo-splash-screen`、`expo-system-ui`、`expo-constants`
+- 图标：`@expo/vector-icons` 的 Ionicons；字体与图标不手绘
