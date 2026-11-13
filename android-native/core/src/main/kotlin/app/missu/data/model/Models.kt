@@ -18,6 +18,12 @@ data class HomeSection(
     val morePath: String? = null,
 )
 
+/** 一页视频列表；`nextPage` 为空表示没有下一页。 */
+data class VideoList(
+    val videos: List<VideoSummary>,
+    val nextPage: Int? = null,
+)
+
 /** 详情页信息行的一个值；`path` 非空表示可点击跳列表。 */
 data class DetailInfoValue(val text: String, val path: String? = null)
 

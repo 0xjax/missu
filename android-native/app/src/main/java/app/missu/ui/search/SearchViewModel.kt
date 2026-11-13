@@ -1,0 +1,80 @@
+package app.missu.ui.search
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import app.missu.data.api.ChallengeException
+import app.missu.data.api.HttpStatusException
+import app.missu.data.api.MissavApi
+import app.missu.data.model.VideoSummary
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+sealed interface SearchUiState {
+    data object Idle : SearchUiState
+    data object Loading : SearchUiState
+    data object Empty : SearchUiState
+    data class Error(val message: String) : SearchUiState
+    data class Content(
+        val keyword: String,
+        val videos: List<VideoSummary>,
+        val nextPage: Int?,
+        val loadingMore: Boolean = false,
+    ) : SearchUiState
+}
+
+class SearchViewModel(private val api: MissavApi) : ViewModel() {
+    private val _state = MutableStateFlow<SearchUiState>(SearchUiState.Idle)
+    val state: StateFlow<SearchUiState> = _state.asStateFlow()
+
+    fun search(keyword: String) {
+        val normalized = keyword.trim()
+        if (normalized.isEmpty()) {
+            _state.value = SearchUiState.Idle
+            return
+        }
+        viewModelScope.launch {
+            _state.value = SearchUiState.Loading
+            _state.value = try {
+                val page = api.searchVideos(normalized)
+                if (page.videos.isEmpty()) {
+                    SearchUiState.Empty
+                } else {
+                    SearchUiState.Content(normalized, page.videos, page.nextPage)
+                }
+            } catch (error: Exception) {
+                SearchUiState.Error(describe(error))
+            }
+        }
+    }
+
+    /** 追加下一页；失败只把 loadingMore 复位并保留已加载结果，不整页报错。 */
+    fun loadMore() {
+        val current = _state.value as? SearchUiState.Content ?: return
+        val next = current.nextPage ?: return
+        if (current.loadingMore) return
+
+        _state.value = current.copy(loadingMore = true)
+        viewModelScope.launch {
+            _state.value = try {
+                val page = api.searchVideos(current.keyword, next)
+                current.copy(
+                    videos = current.videos + page.videos,
+                    nextPage = page.nextPage,
+                    loadingMore = false,
+                )
+            } catch (error: Exception) {
+                current.copy(loadingMore = false)
+            }
+        }
+    }
+
+    private fun describe(error: Exception): String = when (error) {
+        is ChallengeException -> "站点要求人机验证，请重试"
+        is HttpStatusException -> "请求失败（HTTP ${error.status}）"
+        // NOTE: OkHttp 的连接类异常 message 是英文（"connection closed" 之类），不直接甩给用户。
+        is java.io.IOException -> "网络连接中断，请重试"
+        else -> error.message ?: error::class.simpleName ?: "未知错误"
+    }
+}

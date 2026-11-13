@@ -2,6 +2,7 @@ package app.missu.data.api
 
 import app.missu.data.model.HomeSection
 import app.missu.data.model.VideoDetail
+import app.missu.data.model.VideoList
 import app.missu.data.parse.DetailParser
 import app.missu.data.parse.HomeParser
 
@@ -27,6 +28,16 @@ class MissavApi(
     }
 
     suspend fun html(path: String): String = withChallengeRetry { client.fetchHtml(path) }
+
+    /**
+     * 搜索：路径 `/search/{keyword}`，分页用 `?page=N`（从 1 开始，第 1 页不带参数）。
+     * NOTE: 关键词按 legacy 用 `encodeURIComponent` 语义（空格编码成 %20 而不是 +）。
+     */
+    suspend fun searchVideos(keyword: String, page: Int = 1): VideoList = withChallengeRetry {
+        val encoded = java.net.URLEncoder.encode(keyword, "UTF-8").replace("+", "%20")
+        val path = if (page > 1) "/search/$encoded?page=$page" else "/search/$encoded"
+        HomeParser.parseVideoList(client.fetchHtml(path), page)
+    }
 
     private suspend fun <T> withChallengeRetry(block: suspend () -> T): T =
         try {
