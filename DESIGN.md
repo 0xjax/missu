@@ -104,6 +104,7 @@
 - `Menu` 的浮层坐标是按下那一刻 `measureInWindow` 测的：浮层打开后不会跟随列表滚动（Modal 已经挡住滚动），因此不要在会自己动的容器里当锚点
 - 女优筛选从「4 个原生 Picker」改成「手风琴 + 胶囊」：滚轮/下拉在 26 个年份选项上比胶囊网格慢，改动是取舍不是退步
 - 不做 iOS / Web 适配：这两个平台的依赖（`react-native-web`、`react-dom`）与回退实现已删除，恢复需要重新引入并重测
+- 存储只有一套（`expo-sqlite/kv-store`）：早前写在 AsyncStorage 里的历史 / 搜索记录 / 登录资料不再迁移，从那些版本升上来会丢这批本地数据；要恢复只能重新引入 AsyncStorage 与迁移代码
 - 频道分组是静态清单（`src/constants/channel-groups.ts`），站点改版需手工同步
 - 内容语言只切换站点数据（路径前缀 `/cn`、`/en` …），App 界面文案仍为中文；「随机」板块在非中文语言下没有「更多」链接，可能不显示
 - `ko / ms / th` 语言只在站点菜单中确认存在，Cloudflare 拦截导致尚未拿到 200 实测
@@ -132,6 +133,6 @@
 - UI：`src/components/ui/` 七个自绘原语 + Reanimated + Gesture Handler；没有 UI 组件库
 - 数据：`src/api/*` 里的原生 `fetch`（带超时、AbortController、登录态判定）+ `node-html-parser` 解析；没有查询缓存库
 - 状态：React context（`src/stores/`），没有全局状态库
-- 存储：`expo-sqlite/kv-store`（`src/storage/kv.ts` 统一出口）；`@react-native-async-storage/async-storage` 只为一次性的旧数据迁移保留
+- 存储：只有一套 —— `expo-sqlite/kv-store`，全 App 经 `src/storage/kv.ts` 取用
 - 媒体与系统：`expo-video`、`expo-image`、`react-native-webview`、`@react-native-community/netinfo`、`expo-haptics`、`expo-screen-orientation`、`expo-splash-screen`、`expo-system-ui`、`expo-constants`
 - 图标：`@expo/vector-icons` 的 Ionicons；字体与图标不手绘

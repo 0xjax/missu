@@ -26,7 +26,7 @@ bunx expo export --platform android
 - 不用「行为/动画封在内部、只能靠猜默认值调参」的组件。典型反面案例：`expo-router` 的 `NativeTabs` —— 底层是 RNS `TabsContainer` → Material `BottomNavigationView`，托盘（active indicator）、按压波纹、图标交叉淡入全在 Material 内部，既没有过渡参数，也关不掉「旧图标先消失、新图标再淡入」的空档。
 - 界面 UI **自己用 RN 视图 + Reanimated 画**，原语只在 `src/components/ui/` 增加（`Sheet` / `Menu` / `Pill` / `UiButton` / `Checkbox` / `SearchField` / `Toast`，职责见 DESIGN.md 的「组件框架」）；页面里 NEVER 就地发明控件。原生只留给系统级能力：Stack 转场与返回手势、播放管线、WebView、通知、权限、键盘、`Switch`/`Alert`。
 - 引入任何依赖前先确认：它的可配置面能否覆盖设计需求？如果不能，就自绘或换库，不要在别人的默认值上反复试参数。
-- 已被移除、`oxlint` 会拦住重新引入：`@expo/ui`（Compose 控件）、`react-native-paper`、`expo-symbols`、`expo-linking`、`react-native-web`、`react-dom`。前两个的动画与选中态封在 Material / Compose 内部，且曾两次把 dev 环境搞崩（白屏、`Cannot set prop 'modifiers'` 红条）；后四个与 Android 交付无关。
+- 已被移除、`oxlint` 会拦住重新引入：`@expo/ui`（Compose 控件）、`react-native-paper`、`expo-symbols`、`expo-linking`、`react-native-web`、`react-dom`、`@react-native-async-storage/async-storage`。前两个的动画与选中态封在 Material / Compose 内部，且曾两次把 dev 环境搞崩（白屏、`Cannot set prop 'modifiers'` 红条）；中间四个与 Android 交付无关；最后一个是被 `expo-sqlite/kv-store` 取代的第二套存储。
 - 「社区推荐」不是引入理由：状态管理（Zustand / Legend State）、查询缓存（TanStack Query）、存储（MMKV）、绘图（Skia）、样式引擎（NativeWind）当前都**没有**实测需求，因此都没有引入。要用它们，先给出本仓库里的具体问题与实测数据。
 - 加原生模块（Expo Go 内置不到的）等于放弃 Expo Go 直接调试：必须同时更新 `docs/android-debugging.md` 的调试流程，并明确告知用户。
 

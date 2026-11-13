@@ -1,10 +1,9 @@
-import Storage, { migrateLegacyStorage } from '@/storage/kv';
+import Storage from '@/storage/kv';
 
 const STORAGE_KEY = 'missav:search-history:v1';
 const SEARCH_HISTORY_LIMIT = 20;
 
 export async function getSearchHistory(): Promise<string[]> {
-  await migrateLegacyStorage();
   const value = await Storage.getItem(STORAGE_KEY);
   if (!value) return [];
   try {
