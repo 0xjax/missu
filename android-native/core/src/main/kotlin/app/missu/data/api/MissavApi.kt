@@ -122,6 +122,31 @@ class MissavApi(
     }
 
     /**
+     * 用记住的凭据主动重登一次。返回是否成功。
+     *
+     * NOTE: 给「游客也会拿到 200 空页」的接口用——`/saved` 实测对游客返回空列表而不是 302/401，
+     * 单靠 withAuthRetry 抓不到失效，只能主动确认会话。
+     */
+    suspend fun reloginWithRemembered(): Boolean {
+        val remembered = credentials?.load() ?: return false
+        return try {
+            login(remembered.first, remembered.second)
+            true
+        } catch (error: Exception) {
+            if (error is InvalidCredentialsException) credentials.clear()
+            false
+        }
+    }
+
+    /** 收藏列表：`/saved`，分页 `?page=N`。未登录会 302 回首页，交给 [withAuthRetry] 自动重登。 */
+    suspend fun getSaved(page: Int = 1): VideoList = withAuthRetry {
+        withChallengeRetry {
+            val path = if (page > 1) "/saved?page=$page" else "/saved"
+            HomeParser.parseVideoList(client.fetchHtml(path), page)
+        }
+    }
+
+    /**
      * 搜索：路径 `/search/{keyword}`，分页用 `?page=N`（从 1 开始，第 1 页不带参数）。
      * NOTE: 关键词按 legacy 用 `encodeURIComponent` 语义（空格编码成 %20 而不是 +）。
      */

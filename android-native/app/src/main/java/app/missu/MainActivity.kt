@@ -35,6 +35,8 @@ import app.missu.ui.detail.DetailScreen
 import app.missu.ui.detail.DetailViewModel
 import app.missu.ui.home.HomeScreen
 import app.missu.ui.home.HomeViewModel
+import app.missu.ui.saved.SavedScreen
+import app.missu.ui.saved.SavedViewModel
 import app.missu.ui.search.SearchScreen
 import app.missu.ui.search.SearchViewModel
 import app.missu.ui.theme.MissuTheme
@@ -109,6 +111,7 @@ private fun MissuApp() {
                 AccountScreen(
                     state = authState,
                     onLogin = { navController.navigate("login") },
+                    onSaved = { navController.navigate("saved") },
                     onLogout = auth::logout,
                     onBack = { navController.popBackStack() },
                 )
@@ -125,6 +128,19 @@ private fun MissuApp() {
                         navController.popBackStack()
                     },
 
+                )
+            }
+            composable("saved") {
+                val viewModel: SavedViewModel = viewModel(factory = factory { SavedViewModel(api) })
+                val state by viewModel.state.collectAsState()
+                LaunchedEffect(Unit) { viewModel.load() }
+
+                SavedScreen(
+                    state = state,
+                    onRetry = viewModel::load,
+                    onLoadMore = viewModel::loadMore,
+                    onOpen = { id -> navController.navigate("detail/$id") },
+                    onBack = { navController.popBackStack() },
                 )
             }
             composable("detail/{id}") { entry ->
