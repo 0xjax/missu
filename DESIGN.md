@@ -43,7 +43,7 @@
 ## Design Principles
 
 1. **自绘优先** — 界面 UI 全部用 RN 视图 + Reanimated 画（`src/components/ui/`），实测参数、可改可关。原生只留给系统能力：Stack 转场与返回手势、播放管线（`expo-video`）、WebView、通知、权限、键盘、`Switch`/`Alert` 这类系统对话框。
-   - 反面案例：`@expo/ui` 的 Compose 控件（旧版曾用 DropdownMenu / BottomSheet / Picker / ToggleButton / Checkbox），托盘、波纹、选中图标、弹层高度都在 Material 内部，Expo Go 与 npm 版本还不一致，曾两次把 dev 环境搞崩。已全部移除。
+   - 反面案例：`@expo/ui` 的 Compose 控件（旧版曾用 DropdownMenu / BottomSheet / Picker / ToggleButton / Checkbox），托盘、波纹、选中图标、弹层高度都在 Material 内部，`seedColor` 只能近似配色。SDK 58 早期 Expo Go 内置版本落后于 npm，曾两次把 dev 环境搞崩（白屏、`Cannot set prop 'modifiers'` 红条）；**当前 `bundledNativeModules.json` 与 npm 都是 `~58.0.28`，版本错配风险已消除**——不用它的理由仍是观感与可配置性，不是稳定性。已全部移除。
    - 反面案例：`react-native-paper` 整个 Material 库只为 5 个控件存在（Snackbar / Chip / Searchbar / Menu），主题还得再对一遍。已全部移除。
 2. **同维度单一控件** — 一个维度只允许一种控件形态；频道、周期、筛选、排序各自最多占一个按钮。
 3. **尺寸守规范** — 控件高 40dp（分段/菜单）、页面左右留白 16dp；验收时用 `uiautomator dump` 量真实 bounds，不靠肉眼。
