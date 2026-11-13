@@ -62,6 +62,9 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer:1.11.1")
     implementation("androidx.media3:media3-exoplayer-hls:1.11.1")
     implementation("androidx.media3:media3-ui:1.11.1")
+    // 播放器控件用官方 Material3 组件（PlayerDefaults.CenterControls/BottomControls），
+    // 自带 MD3 的按钮尺寸、进度条、渐变底与无障碍语义，比手搓文字字形可控也更一致。
+    implementation("androidx.media3:media3-ui-compose-material3:1.11.1")
     // NOTE: 让 ExoPlayer 走 OkHttp 而不是默认的 HttpURLConnection——媒体主机对后者的 TLS 指纹返回 403（实测）。
     implementation("androidx.media3:media3-datasource-okhttp:1.11.1")
 
