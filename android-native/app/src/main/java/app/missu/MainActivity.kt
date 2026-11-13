@@ -63,6 +63,10 @@ import app.missu.ui.detail.DetailScreen
 import app.missu.ui.detail.DetailViewModel
 import app.missu.ui.home.HomeScreen
 import app.missu.ui.home.HomeViewModel
+import app.missu.ui.playlists.PlaylistDetailScreen
+import app.missu.ui.playlists.PlaylistDetailViewModel
+import app.missu.ui.playlists.PlaylistsScreen
+import app.missu.ui.playlists.PlaylistsViewModel
 import app.missu.ui.saved.SavedScreen
 import app.missu.ui.saved.SavedViewModel
 import app.missu.ui.search.SearchScreen
@@ -105,7 +109,6 @@ private fun MissuApp() {
     var language by remember { mutableStateOf(settings.language()) }
     val authState by auth.state.collectAsState()
     val loginState by auth.loginState.collectAsState()
-
     // 底部导航只在四个一级页面显示；详情/列表/收藏等二级页面全屏展示。
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -204,6 +207,7 @@ private fun MissuApp() {
                     onLogin = { navController.navigate("login") },
                     onSaved = { navController.navigate("saved") },
                     onHistory = { navController.navigate("history") },
+                    onPlaylists = { navController.navigate("playlists") },
                     onSettings = { navController.navigate("settings") },
                     onLogout = auth::logout,
                 )
@@ -268,6 +272,45 @@ private fun MissuApp() {
                     entries = entries,
                     onOpen = { id -> navController.navigate("detail/$id") },
                     onClear = viewModel::clear,
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable("playlists") {
+                val viewModel: PlaylistsViewModel = viewModel(factory = factory { PlaylistsViewModel(api) })
+                val state by viewModel.state.collectAsState()
+                LaunchedEffect(Unit) { viewModel.load() }
+
+                PlaylistsScreen(
+                    state = state,
+                    onRetry = viewModel::load,
+                    onOpen = { playlist ->
+                        navController.navigate("playlist/${playlist.id}?n=${Uri.encode(playlist.name)}")
+                    },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+
+            composable(
+                route = "playlist/{id}?n={n}",
+                arguments = listOf(
+                    navArgument("id") { type = NavType.StringType },
+                    navArgument("n") { defaultValue = "" },
+                ),
+            ) { entry ->
+                val id = entry.arguments?.getString("id").orEmpty()
+                val fallbackTitle = Uri.decode(entry.arguments?.getString("n").orEmpty())
+                val viewModel: PlaylistDetailViewModel = viewModel(
+                    key = "playlist-$id",
+                    factory = factory { PlaylistDetailViewModel(api, id) },
+                )
+                val state by viewModel.state.collectAsState()
+                LaunchedEffect(id) { viewModel.load() }
+
+                PlaylistDetailScreen(
+                    fallbackTitle = fallbackTitle,
+                    state = state,
+                    onRetry = viewModel::load,
+                    onOpen = { videoId -> navController.navigate("detail/$videoId") },
                     onBack = { navController.popBackStack() },
                 )
             }

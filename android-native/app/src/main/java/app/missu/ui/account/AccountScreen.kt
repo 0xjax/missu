@@ -27,6 +27,7 @@ fun AccountScreen(
     onSaved: () -> Unit,
     onSettings: () -> Unit,
     onHistory: () -> Unit,
+    onPlaylists: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxSize()) {
@@ -59,6 +60,8 @@ fun AccountScreen(
                     Spacer(Modifier.height(20.dp))
                     Button(onClick = onSaved) { Text("我的收藏") }
                     Spacer(Modifier.height(12.dp))
+                    TextButton(onClick = onPlaylists) { Text("我的片单") }
+                    Spacer(Modifier.height(4.dp))
                     TextButton(onClick = onHistory) { Text("观看历史") }
                     Spacer(Modifier.height(4.dp))
                     TextButton(onClick = onSettings) { Text("设置") }
