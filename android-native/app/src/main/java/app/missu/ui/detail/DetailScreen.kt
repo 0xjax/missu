@@ -42,6 +42,8 @@ fun DetailScreen(
     modifier: Modifier = Modifier,
     message: String? = null,
     onToggleSaved: () -> Unit = {},
+    startPositionMs: Long = 0L,
+    onPositionReport: (Long) -> Unit = {},
 ) {
     var fullscreen by rememberSaveable { mutableStateOf(false) }
     FullscreenEffect(fullscreen)
@@ -77,6 +79,8 @@ fun DetailScreen(
                 detail = state.detail,
                 message = message,
                 onToggleSaved = onToggleSaved,
+                startPositionMs = startPositionMs,
+                onPositionReport = onPositionReport,
                 fullscreen = fullscreen,
                 onToggleFullscreen = { fullscreen = !fullscreen },
             )
@@ -93,6 +97,8 @@ private fun ColumnScope.DetailContent(
     detail: VideoDetail,
     message: String?,
     onToggleSaved: () -> Unit,
+    startPositionMs: Long,
+    onPositionReport: (Long) -> Unit,
     fullscreen: Boolean,
     onToggleFullscreen: () -> Unit,
 ) {
@@ -107,6 +113,8 @@ private fun ColumnScope.DetailContent(
             },
             isFullscreen = fullscreen,
             onToggleFullscreen = onToggleFullscreen,
+            initialPositionMs = startPositionMs,
+            onPositionReport = onPositionReport,
         )
     } else if (!fullscreen) {
         Box(

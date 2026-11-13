@@ -30,7 +30,10 @@ import app.missu.data.api.MissavApi
 import app.missu.data.api.createMissavApi
 import app.missu.data.store.CredentialStore
 import app.missu.data.store.ProfileStore
+import app.missu.data.store.HistoryStore
 import app.missu.data.store.SettingsStore
+import app.missu.ui.history.HistoryScreen
+import app.missu.ui.history.HistoryViewModel
 import app.missu.ui.settings.SettingsScreen
 import app.missu.ui.account.AccountScreen
 import app.missu.ui.account.AuthViewModel
@@ -76,6 +79,7 @@ private fun MissuApp() {
 
     // NOTE: 语言必须在第一次请求之前装进 SourceConfig，否则首屏会按默认语言拉一轮再换。
     val settings = remember { SettingsStore(context.applicationContext).also { it.applyStoredLanguage() } }
+    val historyStore = remember { HistoryStore(context.applicationContext) }
     var language by remember { mutableStateOf(settings.language()) }
     val authState by auth.state.collectAsState()
     val loginState by auth.loginState.collectAsState()
@@ -123,6 +127,7 @@ private fun MissuApp() {
                     state = authState,
                     onLogin = { navController.navigate("login") },
                     onSaved = { navController.navigate("saved") },
+                    onHistory = { navController.navigate("history") },
                     onSettings = { navController.navigate("settings") },
                     onLogout = auth::logout,
                     onBack = { navController.popBackStack() },
@@ -152,6 +157,20 @@ private fun MissuApp() {
                     onBack = { navController.popBackStack() },
                 )
             }
+            composable("history") {
+                val viewModel: HistoryViewModel = viewModel(
+                    factory = factory { HistoryViewModel(historyStore) },
+                )
+                val entries by viewModel.entries.collectAsState()
+                LaunchedEffect(Unit) { viewModel.load() }
+
+                HistoryScreen(
+                    entries = entries,
+                    onOpen = { id -> navController.navigate("detail/$id") },
+                    onClear = viewModel::clear,
+                    onBack = { navController.popBackStack() },
+                )
+            }
             composable("saved") {
                 val viewModel: SavedViewModel = viewModel(factory = factory { SavedViewModel(api) })
                 val state by viewModel.state.collectAsState()
@@ -170,7 +189,7 @@ private fun MissuApp() {
                 // NOTE: key 用 id —— 换一集详情时复用同一个 ViewModel 会显示上一条数据。
                 val viewModel: DetailViewModel = viewModel(
                     key = "detail-$id",
-                    factory = factory { DetailViewModel(api, id) },
+                    factory = factory { DetailViewModel(api, id, historyStore) },
                 )
                 val state by viewModel.state.collectAsState()
                 val message by viewModel.message.collectAsState()
@@ -182,6 +201,8 @@ private fun MissuApp() {
                     onBack = { navController.popBackStack() },
                     message = message,
                     onToggleSaved = viewModel::toggleSaved,
+                    startPositionMs = viewModel.startPositionMs,
+                    onPositionReport = viewModel::reportProgress,
                 )
             }
         }
