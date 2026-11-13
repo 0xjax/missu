@@ -16,7 +16,6 @@ import { SearchBox } from '@/components/search-box';
 import { ThemedText } from '@/components/themed-text';
 import { VideoCard } from '@/components/video-card';
 import { Radius, Spacing, TabBarInset } from '@/constants/theme';
-import { TabHeader } from '@/components/tab-header';
 import { useTheme } from '@/hooks/use-theme';
 import { useLanguage } from '@/stores/language';
 
@@ -101,7 +100,6 @@ function HomeView() {
 
   return (
     <SafeAreaView edges={['bottom']} style={[styles.screen, { backgroundColor: theme.background }]}>
-      <TabHeader title="Missu" />
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"

@@ -1,6 +1,5 @@
-import { Slot } from 'expo-router';
+import { TabStack } from '@/components/tab-stack';
 
-// NOTE: tab 内不嵌原生 Stack，标题栏由页面渲染（见 components/tab-header.tsx）。
 export default function DiscoverTabLayout() {
-  return <Slot />;
+  return <TabStack title="发现" />;
 }

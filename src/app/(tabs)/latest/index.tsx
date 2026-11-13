@@ -30,7 +30,6 @@ import {
   VIDEO_FILTER_OPTIONS,
   VIDEO_SORT_OPTIONS,
 } from '@/constants/video-options';
-import { TabHeader } from '@/components/tab-header';
 import { useTheme } from '@/hooks/use-theme';
 import { useLanguage } from '@/stores/language';
 
@@ -223,7 +222,6 @@ function LatestView({ params }: { params: LatestParams }) {
 
   return (
     <SafeAreaView edges={['bottom']} style={[styles.screen, { backgroundColor: theme.background }]}>
-      <TabHeader title="列表" />
       <FlatList
         contentContainerStyle={styles.content}
         columnWrapperStyle={styles.row}
