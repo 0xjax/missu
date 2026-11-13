@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-// oxlint-disable-next-line no-restricted-imports -- 实验分支唯一豁免点：验证 Compose 底栏可行性，合并前必须回滚
 import {
   Host,
   NavigationBar,

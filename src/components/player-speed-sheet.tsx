@@ -1,9 +1,6 @@
-import { StyleSheet, View } from 'react-native';
+import { BottomSheet, Button, Column, Host, Row, Text } from '@expo/ui';
 
-import { ThemedText } from '@/components/themed-text';
-import { Pill } from '@/components/ui/pill';
-import { Sheet } from '@/components/ui/sheet';
-import { Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { PLAYBACK_RATES } from '@/stores/preferences';
 
 type Props = {
@@ -13,6 +10,9 @@ type Props = {
   onClose: () => void;
 };
 
+// NOTE: Material 按钮有最小宽度，5 个并排会超出窄屏，因此拆成 3 + 2 两行。
+const ROWS = [PLAYBACK_RATES.slice(0, 3), PLAYBACK_RATES.slice(3)];
+
 /** 播放器倍速设置：目前只有常规播放倍速，落进偏好持久化。 */
 export function PlayerSpeedSheet({
   visible,
@@ -20,31 +20,35 @@ export function PlayerSpeedSheet({
   onChangePlaybackRate,
   onClose,
 }: Props) {
+  const theme = useTheme();
+
   return (
-    <Sheet onClose={onClose} title="播放倍速" visible={visible}>
-      <View style={styles.row}>
-        {PLAYBACK_RATES.map((rate) => (
-          <Pill
-            key={rate}
-            label={`${rate}x`}
-            onPress={() => onChangePlaybackRate(rate)}
-            selected={rate === playbackRate}
-            style={styles.pill}
-          />
-        ))}
-      </View>
-      <ThemedText type="small" themeColor="textSecondary">播放倍速对所有视频生效，长按视频不再临时加速。</ThemedText>
-    </Sheet>
+    <Host colorScheme="dark" seedColor={theme.accent}>
+      <BottomSheet
+        containerColor={theme.backgroundElement}
+        contentColor={theme.text}
+        contentPadding={0}
+        isPresented={visible}
+        onDismiss={onClose}>
+        <Column spacing={12} style={{ padding: 16 }}>
+          <Text textStyle={{ fontSize: 18, fontWeight: '600' }}>播放倍速</Text>
+          {ROWS.map((row, index) => (
+            <Row key={index} spacing={8}>
+              {row.map((rate) => (
+                <Button
+                  key={rate}
+                  label={`${rate}x`}
+                  onPress={() => onChangePlaybackRate(rate)}
+                  variant={rate === playbackRate ? 'filled' : 'text'}
+                />
+              ))}
+            </Row>
+          ))}
+          <Text textStyle={{ color: theme.textSecondary, fontSize: 13 }}>
+            播放倍速对所有视频生效，长按视频不再临时加速。
+          </Text>
+        </Column>
+      </BottomSheet>
+    </Host>
   );
 }
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-  },
-  pill: {
-    minWidth: 56,
-  },
-});

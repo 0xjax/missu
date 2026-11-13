@@ -1,36 +1,36 @@
-import { StyleSheet, View } from 'react-native';
+import { Host } from '@expo/ui';
+import { Row, Text, ToggleButton } from '@expo/ui/jetpack-compose';
+import { defaultMinSize } from '@expo/ui/jetpack-compose/modifiers';
 
-import { Pill } from '@/components/ui/pill';
-import { Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import type { DiscoverTabsProps } from './discover-tabs.types';
 
 /**
- * 一级分类切换：等宽胶囊行，选中态只用填充色。
- * NOTE: 等宽而不是按文字宽度排——分类名长短不一，按内容排会让整行左右跳动。
+ * 一级分类切换：原生 ToggleButton 行，选中态只用容器色。
+ * NOTE: 不用 SingleChoiceSegmentedButtonRow——它的选中态自带 ✓ 图标，Expo UI 没暴露关闭方式。
  */
 export function DiscoverTabs<T extends string>({ items, value, onChange }: DiscoverTabsProps<T>) {
+  const theme = useTheme();
+
   return (
-    <View style={styles.row}>
-      {items.map((item) => (
-        <Pill
-          key={item.id}
-          label={item.label}
-          onPress={() => onChange(item.id)}
-          selected={item.id === value}
-          style={styles.item}
-        />
-      ))}
-    </View>
+    <Host matchContents={{ vertical: true }} style={{ alignSelf: 'stretch' }}>
+      <Row horizontalArrangement={{ spacedBy: 6 }} verticalAlignment="center">
+        {items.map((item) => (
+          <ToggleButton
+            checked={item.id === value}
+            colors={{
+              containerColor: theme.backgroundElement,
+              contentColor: theme.text,
+              checkedContainerColor: theme.accent,
+              checkedContentColor: theme.onAccent,
+            }}
+            key={item.id}
+            modifiers={[defaultMinSize({ minWidth: 0 })]}
+            onCheckedChange={() => onChange(item.id)}>
+            <Text>{item.label}</Text>
+          </ToggleButton>
+        ))}
+      </Row>
+    </Host>
   );
 }
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  item: {
-    flex: 1,
-    paddingHorizontal: Spacing.xs,
-  },
-});
