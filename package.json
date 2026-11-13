@@ -43,6 +43,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "oxlint src scripts"
+    "lint": "oxlint src scripts",
+    "acl:fix": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/fix-workspace-acl.ps1"
   }
 }

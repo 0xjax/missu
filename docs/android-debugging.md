@@ -59,6 +59,14 @@ bun run start
 .\adb -t 2 shell monkey -p host.exp.exponent -c android.intent.category.LAUNCHER 1
 ```
 
+想跳过扫码，直接用 Metro 打印的局域网地址打开本项目——把 `http://<电脑局域网IP>:8081` 换成 `exp://` 前缀：
+
+```powershell
+.\adb shell am start -a android.intent.action.VIEW -d "exp://<电脑局域网IP>:8081" host.exp.exponent
+```
+
+局域网地址比 `adb reverse` + `127.0.0.1:8081` 稳：自动化环境里 adb 服务会在每条命令结束后被收掉，reverse 隧道随之断开，App 会卡在 Bundling；局域网地址不依赖 adb 隧道。
+
 唤醒屏幕不会解除密码锁；存在锁屏密码时需由用户手动解锁。
 
 ## 热重载与手动 reload
