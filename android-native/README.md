@@ -11,7 +11,9 @@
 - ✅ 数据层首块：`data/api` + `data/parse`，`getHome` 已用**真实抓取的首页**验证（4 个板块 / 56 条视频）
 - ✅ **真机端到端**：vivo V2507A 上点按钮 → `getHome` 直接拿到 HTML 并解析出同样 4 板块 / 56 条（未触发人机验证）
 - ✅ **首页 UI**：Compose 两列网格（板块标题 + 封面 + 时长角标 + 两行标题），Coil 3 加载封面，加载/空/错误/内容四态齐全
-- ⬜ 详情 / 播放 / 搜索 / 登录
+- ✅ **详情 + 播放**：点卡片进详情（标题/时长/8 行信息/简介），ExoPlayer 播 HLS；已验证真机出画面
+- ⬜ 播放器控件（全屏、倍速、快进退、锁横屏）——目前用 Media3 自带控件
+- ⬜ 搜索 / 登录 / 发现 / 片单 / 收藏 / 历史 / 设置
 - ⬜ 详情 / 播放 / 搜索 / 登录
 - ⬜ 发现 / 片单 / 收藏 / 历史 / 设置
 
@@ -125,3 +127,8 @@ app/           Android 应用（UI + 平台适配）
 - **Cloudflare**：PC 上的 JVM 请求实测被 403 挑战（`cf-mitigated: challenge`），而**真机上的 OkHttp 本轮直接放行**。因此 `ChallengeActivity` 目前只是兜底：仅在收到 `ChallengeException` 时弹出，尚未被真实触发验证过。若哪天手机端也开始被挑战，这条链路就是唯一出路——`cf_clearance` 必须让 OkHttp 与 WebView 用同一份 Cookie（已用系统 `CookieManager` 打通）。
 - **语言前缀**：站点接口是 `/cn/api/...`，但片单接口挂在根路径 `/api/playlists/...`。
 - **播放器生命周期**：详情页留在回退栈里时 ExoPlayer 实例会一直挂着，离开必须 `release()`。
+- **Media3 1.x 不含 HLS**：只加 `media3-exoplayer` 会在 `setMediaItem` 时抛
+  `ClassNotFoundException: HlsMediaSource$Factory`，必须同时加 `media3-exoplayer-hls`。
+- **ExoPlayer 默认数据源会被媒体主机 403**：`HttpURLConnection`（JDK TLS 指纹）被 `surrit.com` 拒绝；
+  换成 `media3-datasource-okhttp`（`OkHttpDataSource.Factory`）就能正常取流。这是本项目第二次踩到
+  「同一个人在浏览器里能过，换 HTTP 栈就 403」。

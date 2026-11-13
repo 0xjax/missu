@@ -56,6 +56,15 @@ dependencies {
     implementation("io.coil-kt.coil3:coil-compose:3.6.3")
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.6.3")
 
+    // 播放：Media3（ExoPlayer）。最小集先给 PlayerView 自带控件。
+    // NOTE: Media3 1.x 把 HLS 拆成独立模块——只加 media3-exoplayer 会在 setMediaItem 时
+    // 抛 ClassNotFoundException: HlsMediaSource$Factory（已实测踩过一次）。
+    implementation("androidx.media3:media3-exoplayer:1.11.1")
+    implementation("androidx.media3:media3-exoplayer-hls:1.11.1")
+    implementation("androidx.media3:media3-ui:1.11.1")
+    // NOTE: 让 ExoPlayer 走 OkHttp 而不是默认的 HttpURLConnection——媒体主机对后者的 TLS 指纹返回 403（实测）。
+    implementation("androidx.media3:media3-datasource-okhttp:1.11.1")
+
     testImplementation("junit:junit:4.13.2")
 
     debugImplementation("androidx.compose.ui:ui-tooling")

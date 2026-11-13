@@ -1,6 +1,8 @@
 package app.missu.data.api
 
 import app.missu.data.model.HomeSection
+import app.missu.data.model.VideoDetail
+import app.missu.data.parse.DetailParser
 import app.missu.data.parse.HomeParser
 
 /**
@@ -18,6 +20,11 @@ class MissavApi(
 
     /** 首页板块。站点直出 HTML，直接 Jsoup 解析，不需要 WebView。 */
     suspend fun getHome(): List<HomeSection> = withChallengeRetry { HomeParser.parseHome(client.fetchHtml("/")) }
+
+    /** 详情页。播放地址从内联打包脚本里解出来，见 [app.missu.data.parse.DetailParser.extractPlaybackUrl]。 */
+    suspend fun getVideoDetail(id: String): VideoDetail = withChallengeRetry {
+        DetailParser.parse(client.fetchHtml("/$id"), id)
+    }
 
     suspend fun html(path: String): String = withChallengeRetry { client.fetchHtml(path) }
 
