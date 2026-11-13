@@ -12,13 +12,13 @@ $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 # JDK / SDK：全局安装位置（不在项目里），与 AS 的 Android SDK Location 一致。
-$env:JAVA_HOME = 'D:\Android\jdk-17'
+$env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
 $env:ANDROID_HOME = 'D:\Android\Sdk'
 $env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
 
 # NOTE: 用户目录下的 ~/.gradle 与 %TEMP% 会被安全软件拦（native-platform.dll 加载失败、
 # AccessDeniedException），所以 Gradle 主目录、Android 缓存、临时目录全部落进工作区（已在杀软排除列表）。
-$env:GRADLE_USER_HOME = 'D:\missu\.local\gradle-home'
+$env:GRADLE_USER_HOME = 'D:\gradle-home'
 $env:ANDROID_USER_HOME = 'D:\missu\.local\android-home'
 $env:TMP = 'D:\missu\.tmp-gradle'
 $env:TEMP = $env:TMP

@@ -24,7 +24,7 @@
 | activity / navigation / lifecycle-vm | 1.13.0 / 2.10.2 / 2.11.0 (compose 版) | |
 | compileSdk | **37**（+ `compileSdkMinor = 0`） | 新 AndroidX 要求 ≥ 37 |
 | targetSdk / minSdk | 36 / 26 | 编译用新 API、运行时行为按 36 走 |
-| JDK | 17 | `D:\Android\jdk-17` |
+| JDK | **Android Studio 自带 JBR 21** | `C:\Program Files\Android\Android Studio\jbr`（`D:\Android\jdk-17` 被卡巴斯基按程序拦截，见已知坑） |
 | Android SDK | API 37.0 + Build-Tools 37 + Platform-Tools | `D:\Android\Sdk` |
 
 **SDK 与 JDK 是全局安装物**，不在项目里；项目只通过 `local.properties`（`sdk.dir=D:/Android/Sdk`，已 gitignore）和 `build.ps1` 引用它们。
@@ -44,9 +44,9 @@ cd D:\missu\android-native
 
 | 变量 | 值 | 为什么 |
 |---|---|---|
-| `JAVA_HOME` | `D:\Android\jdk-17` | 不在 PATH |
+| `JAVA_HOME` | `C:\Program Files\Android\Android Studio\jbr` | 自带 JBR 21；另一个 JDK 17 被安全软件按程序拦截 |
 | `ANDROID_HOME` | `D:\Android\Sdk` | 与 `local.properties` 一致 |
-| `GRADLE_USER_HOME` | `.local/gradle-home` | 用户目录的 `~/.gradle` 里 `native-platform.dll` 加载失败 |
+| `GRADLE_USER_HOME` | `D:\gradle-home` | 用户目录的 `~/.gradle` 里 `native-platform.dll` 加载失败（已加杀软排除） |
 | `ANDROID_USER_HOME` | `.local/android-home` | `~/.android` 被拒写 |
 | `TMP` / `TEMP` | `.tmp-gradle` | `%TEMP%` 拒写，`generateDebugGlobalSynthetics` 会 `AccessDeniedException` |
 
@@ -56,8 +56,8 @@ cd D:\missu\android-native
 2. Settings → Languages & Frameworks → **Android SDK** → Android SDK Location = `D:\Android\Sdk`
    - 只应有：Android API 37.0、Build-Tools 37、Platform-Tools
    - 不要装 NDK、CMake、system-image、Emulator、旧 API（本工程无原生代码，只跑真机）
-3. Settings → Build, Execution, Deployment → Build Tools → Gradle → **Gradle user home** = `D:\missu\.local\gradle-home`
-   （不改就踩 `native-platform.dll` 那个坑）
+3. Settings → Build, Execution, Deployment → Build Tools → Gradle → **Gradle user home** = `D:\gradle-home`
+   （不改就踩 `native-platform.dll` 那个坑；这个目录已加入杀软排除）
 
 ## 目录规划
 
@@ -97,7 +97,10 @@ app/src/main/java/app/missu/
 
 **构建环境**
 
-- **`native-platform.dll` 加载失败** → `GRADLE_USER_HOME` 指到 `.local/gradle-home`。
+- **JVM 写某个目录被拒，但 PowerShell 能写** → 这是安全软件按**可执行文件**拦截，不是文件权限。
+  实测：AS 自带 JBR 21 能写 `D:\gradle-home`，`D:\Android\jdk-17` 的 java 被拒，同一文件、同一用户。
+  所以构建 JDK 固定用 JBR；`D:\Android\jdk-17` 已闲置。
+- **`native-platform.dll` 加载失败** → `GRADLE_USER_HOME` 指到 `D:\gradle-home`（全局位置，已排除杀软）。
 - **`AccessDeniedException: %TEMP%\global_synthetics_*`** → `TMP`/`TEMP` 指到 `.tmp-gradle`。
 - **`FAIL_ON_PROJECT_REPOS` 冲突** → 本机 `GRADLE_USER_HOME/init.d/mirrors.gradle` 会注入阿里云镜像，`settings.gradle.kts` 不能设那个模式（镜像已同时写进工程，换机器也能用）。
 - **AGP 9 内置 Kotlin** → 再加 `org.jetbrains.kotlin.android` 会直接报错。
