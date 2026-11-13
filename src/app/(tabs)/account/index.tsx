@@ -3,7 +3,6 @@ import { ActivityIndicator, Alert, ScrollView, StyleSheet, View } from 'react-na
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SettingsRow } from '@/components/settings-row';
-import { TabHeader } from '@/components/tab-header';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/stores/auth';
@@ -40,31 +39,28 @@ export default function AccountScreen() {
   }
 
   return (
-    <View style={[styles.screen, { backgroundColor: theme.background }]}>
-      <TabHeader title="我的" />
-      <SafeAreaView edges={['bottom']} style={styles.screen}>
-        <ScrollView contentContainerStyle={styles.content}>
-          {user ? (
-            <SettingsRow detail={displayName === user.email ? undefined : user.email} label={displayName ?? user.email} />
-          ) : (
-            <SettingsRow label="登录 MissAV 账号" onPress={() => router.push('/login' as Href)} />
-          )}
-          <SettingsRow
-            detail={user ? undefined : '登录后可用'}
-            label="我的收藏"
-            onPress={() => openProtected('/saved')}
-          />
-          <SettingsRow label="观看历史" onPress={() => router.push('/history' as Href)} />
-          <SettingsRow
-            detail={user ? undefined : '登录后可用'}
-            label="我的片单"
-            onPress={() => openProtected('/playlists')}
-          />
-          <SettingsRow label="设置" onPress={() => router.push('/settings' as Href)} />
-          {user && <SettingsRow danger label="退出登录" onPress={() => void signOut()} />}
-        </ScrollView>
-      </SafeAreaView>
-    </View>
+    <SafeAreaView edges={['bottom']} style={[styles.screen, { backgroundColor: theme.background }]}>
+      <ScrollView contentContainerStyle={styles.content}>
+        {user ? (
+          <SettingsRow detail={displayName === user.email ? undefined : user.email} label={displayName ?? user.email} />
+        ) : (
+          <SettingsRow label="登录 MissAV 账号" onPress={() => router.push('/login' as Href)} />
+        )}
+        <SettingsRow
+          detail={user ? undefined : '登录后可用'}
+          label="我的收藏"
+          onPress={() => openProtected('/saved')}
+        />
+        <SettingsRow label="观看历史" onPress={() => router.push('/history' as Href)} />
+        <SettingsRow
+          detail={user ? undefined : '登录后可用'}
+          label="我的片单"
+          onPress={() => openProtected('/playlists')}
+        />
+        <SettingsRow label="设置" onPress={() => router.push('/settings' as Href)} />
+        {user && <SettingsRow danger label="退出登录" onPress={() => void signOut()} />}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
