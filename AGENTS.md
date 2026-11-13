@@ -68,7 +68,8 @@ bunx expo export --platform android
 
 ## Verification
 
-- 类型检查：`bun check`（= `tsc --noEmit`）；Lint：`bun run lint`。
+- 类型检查：`bun check`（bun 1.4+ 的原生检查器，报错与 `tsc` 逐条一致，已用「已知错误探针」对比验证）；Lint：`bun run lint`。不要用 `bunx tsc`，也不要给 `check` 加 npm script——同名 script 会盖掉原生命令。
+- `typescript` 仍留在 devDependencies，但**不用于检查**：`expo start` / `expo prebuild` 的 TypeScript 前置检查在缺包时直接 `CommandError: ... Install typescript@~6.0.3`（实测），只有设 `EXPO_NO_TYPESCRIPT_SETUP=1` 才能绕开。
 - Android 生产 JS 打包：`bunx expo export --platform android`；除非明确要求原生构建，NEVER 使用 Gradle。
 - 依赖禁令由 `.oxlintrc.json` 的 `no-restricted-imports` 强制：移除一个依赖要同时收掉引用和豁免，`bun run lint` 通过才算收干净。
 - `expo export` 在 Hermes 字节码阶段可能报 `Failed to open file …\Temp\….hbc…: permission denied`（Windows 上 Temp 写权限或安全软件拦截）：把 `TMP`/`TEMP` 指到工作区（如 `$env:TMP="<repo>\.tmp"`）再跑，这不是代码错误。
