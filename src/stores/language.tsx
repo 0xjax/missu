@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, type PropsWithChildren 
 
 import { setContentLanguage, type ContentLanguage } from '@/api/missav';
 import { CONTENT_LANGUAGES } from '@/constants/languages';
-import Storage, { migrateLegacyStorage } from '@/storage/kv';
+import Storage from '@/storage/kv';
 
 const LANGUAGE_KEY = 'missav:language:v1';
 const DEFAULT_LANGUAGE: ContentLanguage = 'cn';
@@ -24,7 +24,6 @@ export function LanguageProvider({ children }: PropsWithChildren) {
   // NOTE: 请求 URL 依赖语言，必须先读完偏好再挂载子组件，避免首屏按默认语言发一轮请求。
   useEffect(() => {
     (async () => {
-      await migrateLegacyStorage();
       const stored = await Storage.getItem(LANGUAGE_KEY);
       const next = stored && isLanguage(stored) ? stored : DEFAULT_LANGUAGE;
       setContentLanguage(next);

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type PropsWithChildren } from 'react';
 
-import Storage, { migrateLegacyStorage } from '@/storage/kv';
+import Storage from '@/storage/kv';
 
 const PREFERENCES_KEY = 'missav:preferences:v1';
 
@@ -46,7 +46,6 @@ export function PreferencesProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     (async () => {
-      await migrateLegacyStorage();
       setPreferences(parsePreferences(await Storage.getItem(PREFERENCES_KEY)));
     })().catch(() => setPreferences(DEFAULT_PREFERENCES));
   }, []);

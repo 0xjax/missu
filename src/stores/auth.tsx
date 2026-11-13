@@ -6,7 +6,7 @@ import {
   logout as logoutRequest,
   type AccountUser,
 } from '@/api/missav';
-import Storage, { migrateLegacyStorage } from '@/storage/kv';
+import Storage from '@/storage/kv';
 
 const PROFILE_KEY = 'missav:profile:v1';
 
@@ -27,7 +27,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     (async () => {
-      await migrateLegacyStorage();
       const value = await Storage.getItem(PROFILE_KEY);
       if (!value) return;
       // NOTE: Cookie 由 Android CookieManager 持久化，重启后通常仍有效；仍先向源站确认，避免本地资料与会话不一致。

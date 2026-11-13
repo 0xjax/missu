@@ -36,6 +36,10 @@
           {
             "name": "react-dom",
             "message": "已移除：Web 不是交付目标。"
+          },
+          {
+            "name": "@react-native-async-storage/async-storage",
+            "message": "已移除：存储只有 expo-sqlite/kv-store 一套，见 src/storage/kv.ts。"
           }
         ],
         "patterns": [

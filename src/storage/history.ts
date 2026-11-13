@@ -1,5 +1,5 @@
 import type { VideoSummary } from '@/api/missav';
-import Storage, { migrateLegacyStorage } from '@/storage/kv';
+import Storage from '@/storage/kv';
 
 // NOTE: 这里是本地观看历史（客户端快照），与源站的云端历史是两套功能：
 // 云端历史页由站点直出、卡片自带角标；本地条目只存打开时的字段，角标需由打开它的卡片经路由参数带入。
@@ -11,7 +11,6 @@ export type HistoryEntry = VideoSummary & {
 };
 
 export async function getHistory(): Promise<HistoryEntry[]> {
-  await migrateLegacyStorage();
   const value = await Storage.getItem(STORAGE_KEY);
   if (!value) return [];
   try {
