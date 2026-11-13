@@ -15,8 +15,8 @@
 - ✅ **搜索**：关键词搜索 + 分页（「加载更多」实测 12 → 24 条），结果网格与首页共用 `VideoGridCard`
 - ✅ **收藏**：详情页收藏/取消收藏，状态来自 `/api/items/{id}/view`；**实测**删掉会话后点收藏会先自动重登再重试（`/api/items/{id}/save` 401 → `withAuthRetry`）
 - ✅ **收藏列表**：`/saved` 分页网格；**实测**游客态会被误报成「空收藏」，现用 `reloginWithRemembered()` 确认会话后重取
-- ⬜ 播放器控件（全屏、倍速、快进退、锁横屏）——目前用 Media3 自带控件
-- ⬜ 片单 / 历史 / 设置
+- ✅ **播放器控件**：官方 Material3 组件（`media3-ui-compose-material3` 的 `PlayerDefaults`）——圆形快退/播放/快进、进度条、倍速菜单、全屏；点画面切换显隐，播放中 3 秒自动隐藏
+- ⬜ 片单 / 历史 / 设置 / 发现
 - ⬜ 详情 / 播放 / 搜索 / 登录
 - ⬜ 发现 / 片单 / 收藏 / 历史 / 设置
 
@@ -154,3 +154,9 @@ app/           Android 应用（UI + 平台适配）
 - **ExoPlayer 默认数据源会被媒体主机 403**：`HttpURLConnection`（JDK TLS 指纹）被 `surrit.com` 拒绝；
   换成 `media3-datasource-okhttp`（`OkHttpDataSource.Factory`）就能正常取流。这是本项目第二次踩到
   「同一个人在浏览器里能过，换 HTTP 栈就 403」。
+- **画面输出不能用 SurfaceView**：`PlayerView` 默认的 SurfaceView 直接画在窗口最上层，
+  Compose 自绘控件会被它整个盖住（实测：控件完全不显示）。用 `TextureView` + `player.setVideoTextureView`。
+- **interop View 会吃掉触摸**：画面上的「点一下切换控件」不能靠 Compose 层的 `clickable`——事件到不了，
+  必须挂在 `TextureView.setOnTouchListener` 上。
+- **弹层不能放在会被自动隐藏的控件树里**：倍速菜单挂在控件层内时，3 秒自动隐藏会把整棵树销毁，
+  菜单一闪就关。菜单本体要由播放器持有，并在菜单展开期间暂停自动隐藏。
