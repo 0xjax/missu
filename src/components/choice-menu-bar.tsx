@@ -1,47 +1,28 @@
-import { useState } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
-import { Button, Menu } from 'react-native-paper';
 
-import { useTheme } from '@/hooks/use-theme';
+import { UiButton } from '@/components/ui/button';
+import { Menu } from '@/components/ui/menu';
+import { Spacing } from '@/constants/theme';
 import type { Choice } from './choice-menu-bar.types';
 
 /**
- * Web 回退实现（Android 由同名平台文件接管）。
- * 选中态靠背景色区分，不插入 ✓ 前缀。
+ * 列表页工具栏：每个维度一个 40dp 触发器，有下拉选项的展开菜单。
+ * NOTE: 触发器的文案就是当前选项值（或「筛选」等入口名），不加「排序：」之类前缀，维度由位置表达。
  */
 export function ChoiceMenuBar({ choices }: { choices: Choice[] }) {
-  const theme = useTheme();
-  const [openKey, setOpenKey] = useState<string>();
-
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bar}>
       {choices.map((choice) => (
         choice.onPress ? (
-          <Button compact key={choice.key} mode="text" onPress={choice.onPress}>
-            {choice.text}
-          </Button>
+          <UiButton key={choice.key} compact label={choice.text} onPress={choice.onPress} variant="text" />
         ) : (
           <Menu
-            anchor={(
-              <Button compact mode="text" onPress={() => setOpenKey(choice.key)}>
-                {`${choice.text} ▾`}
-              </Button>
-            )}
+            items={choice.options}
             key={choice.key}
-            onDismiss={() => setOpenKey(undefined)}
-            visible={openKey === choice.key}>
-            {choice.options.map((option) => (
-              <Menu.Item
-                key={option.value}
-                onPress={() => {
-                  setOpenKey(undefined);
-                  choice.onChange(option.value);
-                }}
-                style={option.value === choice.value ? { backgroundColor: theme.backgroundSelected } : undefined}
-                title={option.label}
-              />
-            ))}
-          </Menu>
+            label={choice.text}
+            onSelect={choice.onChange}
+            value={choice.value}
+          />
         )
       ))}
     </ScrollView>
@@ -50,6 +31,7 @@ export function ChoiceMenuBar({ choices }: { choices: Choice[] }) {
 
 const styles = StyleSheet.create({
   bar: {
-    gap: 4,
+    alignItems: 'center',
+    gap: Spacing.xs,
   },
 });

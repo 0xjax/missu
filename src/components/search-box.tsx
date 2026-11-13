@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Keyboard, Pressable, StyleSheet, View } from 'react-native';
-import { Chip, Searchbar } from 'react-native-paper';
 
 import { ThemedText } from '@/components/themed-text';
+import { Pill } from '@/components/ui/pill';
+import { SearchField } from '@/components/ui/search-field';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import {
@@ -33,23 +34,16 @@ export function SearchBox({ value, onChangeText, onSearch }: Props) {
 
   return (
     <View>
-      <Searchbar
+      <SearchField
         accessibilityLabel="搜索视频"
-        autoCapitalize="none"
-        autoCorrect={false}
         onBlur={() => setFocused(false)}
         onChangeText={onChangeText}
         onFocus={() => {
           setFocused(true);
           void getSearchHistory().then(setHistory);
         }}
-        onIconPress={() => submit(value)}
-        onSubmitEditing={() => submit(value)}
+        onSubmit={submit}
         placeholder="搜索视频"
-        placeholderTextColor={theme.textSecondary}
-        returnKeyType="search"
-        style={[styles.input, { backgroundColor: theme.backgroundElement }]}
-        inputStyle={styles.inputText}
         value={value}
       />
       {focused && history.length > 0 && (
@@ -64,12 +58,14 @@ export function SearchBox({ value, onChangeText, onSearch }: Props) {
           </View>
           <View style={styles.historyItems}>
             {history.map((keyword) => (
-              <Chip key={keyword} compact onPress={() => {
-                onChangeText(keyword);
-                submit(keyword);
-              }} style={{ backgroundColor: theme.backgroundSelected }}>
-                {keyword}
-              </Chip>
+              <Pill
+                key={keyword}
+                label={keyword}
+                onPress={() => {
+                  onChangeText(keyword);
+                  submit(keyword);
+                }}
+              />
             ))}
           </View>
         </View>
@@ -79,12 +75,6 @@ export function SearchBox({ value, onChangeText, onSearch }: Props) {
 }
 
 const styles = StyleSheet.create({
-  input: {
-    borderRadius: Radius.md,
-  },
-  inputText: {
-    fontSize: 16,
-  },
   history: {
     borderRadius: Radius.md,
     gap: Spacing.md,

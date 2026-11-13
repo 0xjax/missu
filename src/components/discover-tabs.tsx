@@ -1,41 +1,36 @@
-import { ScrollView, StyleSheet } from 'react-native';
-import { Chip } from 'react-native-paper';
+import { StyleSheet, View } from 'react-native';
 
-import { Radius, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { Pill } from '@/components/ui/pill';
+import { Spacing } from '@/constants/theme';
 import type { DiscoverTabsProps } from './discover-tabs.types';
 
 /**
- * iOS / Web 回退：Android 由 discover-tabs.android.tsx 提供原生分段按钮。
+ * 一级分类切换：等宽胶囊行，选中态只用填充色。
+ * NOTE: 等宽而不是按文字宽度排——分类名长短不一，按内容排会让整行左右跳动。
  */
 export function DiscoverTabs<T extends string>({ items, value, onChange }: DiscoverTabsProps<T>) {
-  const theme = useTheme();
-
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.choices}>
+    <View style={styles.row}>
       {items.map((item) => (
-        <Chip
-          compact
+        <Pill
           key={item.id}
+          label={item.label}
           onPress={() => onChange(item.id)}
           selected={item.id === value}
-          showSelectedCheck={false}
-          style={[styles.choice, { backgroundColor: item.id === value ? theme.accent : theme.backgroundElement }]}
-          textStyle={{ color: item.id === value ? theme.onAccent : theme.text, fontSize: 13 }}>
-          {item.label}
-        </Chip>
+          style={styles.item}
+        />
       ))}
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  choices: {
+  row: {
+    flexDirection: 'row',
     gap: Spacing.sm,
   },
-  choice: {
-    borderRadius: Radius.sm,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: 2,
+  item: {
+    flex: 1,
+    paddingHorizontal: Spacing.xs,
   },
 });

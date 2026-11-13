@@ -1,9 +1,7 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://unistyl.es/), etc.
+ * 设计令牌：颜色、间距、圆角、底部栏高度。界面只允许用这里的值，
+ * 不在组件里写裸数字/裸色值（参见 DESIGN.md 的「Design Tokens」）。
  */
-
-import { Platform } from 'react-native';
 
 export const Colors = {
   light: {
@@ -50,5 +48,6 @@ export const Radius = {
   full: 9999,
 } as const;
 
-// NOTE: 底部栏占据布局空间（JS Tabs），滚动容器无需额外留白；只有悬浮提示要避开它。
-export const TabBarInset = Platform.select({ ios: 50, android: 80, default: 0 }) ?? 0;
+// NOTE: 底部栏（JS Tabs）占据布局空间，滚动容器无需额外留白；只有悬浮提示要按这个高度抬高。
+// 这个值等于栏体高度 + 底部安全区，改 tab 栏尺寸时要同步改。
+export const TabBarInset = 80;
