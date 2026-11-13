@@ -2,6 +2,7 @@ package app.missu.data.parse
 
 import app.missu.data.api.SourceConfig
 import app.missu.data.model.HomeSection
+import app.missu.data.model.VideoList
 import app.missu.data.model.VideoSummary
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
@@ -49,6 +50,25 @@ object HomeParser {
 
             HomeSection(id = sectionId, title = title, videos = videos, morePath = link?.second)
         }
+    }
+
+    /**
+     * 列表/搜索页：卡片规则与首页相同，另加一次「有没有下一页」的判断。
+     * NOTE: 下一页信号是页面里任意链接带 `?page=N+1`；legacy 用 searchParams 比较，这里等价实现。
+     */
+    fun parseVideoList(html: String, page: Int = 1): VideoList {
+        val doc = Jsoup.parse(html, SourceConfig.BASE_URL)
+        val next = page + 1
+        val hasNext = doc.select("a[href]").any { anchor ->
+            val href = anchor.absUrl("href").ifEmpty { anchor.attr("href") }
+            pageParam(href) == next.toString()
+        }
+        return VideoList(videos = parseVideoCards(doc), nextPage = if (hasNext) next else null)
+    }
+
+    private fun pageParam(href: String): String? {
+        val query = runCatching { java.net.URI(resolve(href)).rawQuery }.getOrNull() ?: return null
+        return query.split('&').firstOrNull { it.startsWith("page=") }?.substringAfter("page=")
     }
 
     fun parseVideoCards(root: Element): List<VideoSummary> =

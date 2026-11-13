@@ -30,6 +30,8 @@ import app.missu.ui.detail.DetailScreen
 import app.missu.ui.detail.DetailViewModel
 import app.missu.ui.home.HomeScreen
 import app.missu.ui.home.HomeViewModel
+import app.missu.ui.search.SearchScreen
+import app.missu.ui.search.SearchViewModel
 import app.missu.ui.theme.MissuTheme
 
 class MainActivity : ComponentActivity() {
@@ -75,6 +77,20 @@ private fun MissuApp() {
                     state = state,
                     onRetry = viewModel::load,
                     onOpen = { id -> navController.navigate("detail/$id") },
+                    onSearch = { navController.navigate("search") },
+                )
+            }
+
+            composable("search") {
+                val viewModel: SearchViewModel = viewModel(factory = factory { SearchViewModel(api) })
+                val state by viewModel.state.collectAsState()
+
+                SearchScreen(
+                    state = state,
+                    onSearch = viewModel::search,
+                    onLoadMore = viewModel::loadMore,
+                    onOpen = { id -> navController.navigate("detail/$id") },
+                    onBack = { navController.popBackStack() },
                 )
             }
 

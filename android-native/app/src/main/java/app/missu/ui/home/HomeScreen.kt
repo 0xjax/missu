@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -24,26 +23,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import app.missu.data.model.HomeSection
-import app.missu.data.model.VideoSummary
-import coil3.compose.AsyncImage
-
-private val CardSurface = Color(0xFF212225)
-private val SubtitleBadge = Color(0xD9991B1B)
-private val UncensoredBadge = Color(0xD91E40AF)
-private val OtherBadge = Color(0xD91F2937)
+import app.missu.ui.components.VideoGridCard
 
 @Composable
 fun HomeScreen(
     state: HomeUiState,
     onRetry: () -> Unit,
     onOpen: (String) -> Unit,
+    onSearch: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when (state) {
@@ -65,7 +55,7 @@ fun HomeScreen(
             }
         }
 
-        is HomeUiState.Content -> HomeGrid(state.sections, onOpen, modifier)
+        is HomeUiState.Content -> HomeGrid(state.sections, onOpen, onSearch, modifier)
     }
 }
 
@@ -75,15 +65,36 @@ private fun Centered(modifier: Modifier, content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun HomeGrid(sections: List<HomeSection>, onOpen: (String) -> Unit, modifier: Modifier) {
+private fun HomeGrid(
+    sections: List<HomeSection>,
+    onOpen: (String) -> Unit,
+    onSearch: () -> Unit,
+    modifier: Modifier,
+) {
     LazyVerticalGrid(
-        // NOTE: 现在没有 Scaffold 提供 inset，状态栏/导航栏要自己避开，否则标题会压在状态栏下面。
         modifier = modifier,
         columns = GridCells.Fixed(2),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 32.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 32.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
+        item(key = "search-entry", span = { GridItemSpan(maxLineSpan) }) {
+            // NOTE: 搜索入口先做成一个只读的"输入框"，点开进独立搜索页；真正输入在那边。
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF212225), RoundedCornerShape(10.dp))
+                    .clickable(onClick = onSearch)
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+            ) {
+                Text(
+                    text = "搜索番号、女优、关键词",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
         sections.forEach { section ->
             item(key = "header-${section.id}", span = { GridItemSpan(maxLineSpan) }) {
                 Text(
@@ -96,70 +107,8 @@ private fun HomeGrid(sections: List<HomeSection>, onOpen: (String) -> Unit, modi
                 items = section.videos,
                 key = { video -> "${section.id}-${video.id}" },
             ) { video ->
-                VideoCard(video = video, onClick = { onOpen(video.id) })
+                VideoGridCard(video = video, onClick = { onOpen(video.id) })
             }
         }
     }
-}
-
-@Composable
-private fun VideoCard(video: VideoSummary, onClick: () -> Unit) {
-    Column(modifier = Modifier.clickable(onClick = onClick)) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(16f / 9f)
-                .clip(RoundedCornerShape(10.dp))
-                .background(CardSurface),
-        ) {
-            AsyncImage(
-                model = video.thumbnailUrl,
-                contentDescription = video.title,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-
-            // NOTE: 角标来自卡片 HTML（中文字幕 / 無碼影片…），按语义分色，不做标签白名单。
-            video.badges.firstOrNull()?.let { badge ->
-                Text(
-                    text = badge,
-                    color = Color.White,
-                    fontSize = 11.sp,
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(6.dp)
-                        .background(badgeColor(badge), RoundedCornerShape(5.dp))
-                        .padding(horizontal = 6.dp, vertical = 2.dp),
-                )
-            }
-
-            video.duration?.let { duration ->
-                Text(
-                    text = duration,
-                    color = Color.White,
-                    fontSize = 11.sp,
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(6.dp)
-                        .background(Color(0xCC000000), RoundedCornerShape(5.dp))
-                        .padding(horizontal = 6.dp, vertical = 2.dp),
-                )
-            }
-        }
-
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = video.title,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onBackground,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
-private fun badgeColor(label: String): Color = when {
-    Regex("字幕|subtitle", RegexOption.IGNORE_CASE).containsMatchIn(label) -> SubtitleBadge
-    Regex("碼|码|uncensored", RegexOption.IGNORE_CASE).containsMatchIn(label) -> UncensoredBadge
-    else -> OtherBadge
 }
