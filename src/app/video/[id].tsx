@@ -2,11 +2,11 @@ import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Snackbar } from 'react-native-paper';
 
 import { getVideoDetail, isAbortError, setVideoSaved, SessionExpiredError, type VideoDetail } from '@/api/missav';
 import { PlaylistSheet } from '@/components/playlist-sheet';
 import { ThemedText } from '@/components/themed-text';
+import { Toast } from '@/components/ui/toast';
 import { VideoPlayer } from '@/components/video-player';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -174,13 +174,14 @@ export default function VideoDetailScreen() {
         }}
         open={playlistsOpen}
       />
-      <Snackbar
-        action={{ label: '关闭', onPress: () => setNotice(undefined) }}
+      <Toast
+        actionLabel="关闭"
         duration={2500}
+        message={notice}
+        onAction={() => setNotice(undefined)}
         onDismiss={() => setNotice(undefined)}
-        visible={Boolean(notice)}>
-        {notice}
-      </Snackbar>
+        visible={Boolean(notice)}
+      />
     </View>
   );
 }

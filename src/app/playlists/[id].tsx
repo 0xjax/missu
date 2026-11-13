@@ -1,10 +1,10 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, View } from 'react-native';
-import { Snackbar } from 'react-native-paper';
 
 import { deletePlaylist, getPlaylistDetail, isAbortError, SessionExpiredError, type PlaylistDetail } from '@/api/missav';
 import { ThemedText } from '@/components/themed-text';
+import { Toast } from '@/components/ui/toast';
 import { VideoCard } from '@/components/video-card';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -116,13 +116,14 @@ export default function PlaylistDetailScreen() {
         renderItem={({ item }) => <VideoCard video={item} />}
         style={{ backgroundColor: theme.background }}
       />
-      <Snackbar
-        action={{ label: '关闭', onPress: () => setNotice(undefined) }}
+      <Toast
+        actionLabel="关闭"
         duration={3000}
+        message={notice}
+        onAction={() => setNotice(undefined)}
         onDismiss={() => setNotice(undefined)}
-        visible={Boolean(notice)}>
-        {notice}
-      </Snackbar>
+        visible={Boolean(notice)}
+      />
     </View>
   );
 }

@@ -17,8 +17,8 @@ type Props = {
 
 /**
  * 个人中心/设置页的列表行：56dp 高、透明容器、右侧 chevron 或 Switch。
- * NOTE: 不用 @expo/ui 的 List/ListItem——Expo Go 内置的 ExpoUI 版本对 ListItem 的 colors 属性
- * 会抛 "Cannot set prop 'modifiers'"，导致 dev 下红条报错，因此这里用 RN 行保持同样的视觉。
+ * NOTE: 行是自己画的 RN 行，不用原生列表项：行高、分隔线、按压涟漪都在原生内部，
+ * 而且旧版 @expo/ui 的 ListItem 还会因 "Cannot set prop 'modifiers'" 直接红条报错。
  */
 export function SettingsRow({ label, detail, danger, selected, switchValue, onSwitchChange, onPress }: Props) {
   const theme = useTheme();

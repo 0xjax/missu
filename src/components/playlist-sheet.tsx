@@ -1,5 +1,5 @@
-import { BottomSheet, Button, Checkbox, Column, Host, Row, ScrollView, Text, TextInput, useNativeState } from '@expo/ui';
 import { useEffect, useRef, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import {
   createPlaylist,
@@ -8,6 +8,11 @@ import {
   setPlaylistMembership,
   type VideoPlaylist,
 } from '@/api/missav';
+import { ThemedText } from '@/components/themed-text';
+import { UiButton } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Sheet } from '@/components/ui/sheet';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 type Props = {
@@ -17,18 +22,15 @@ type Props = {
   onOpenPlaylists: () => void;
 };
 
-// NOTE: Compose 的 Checkbox 自带 48dp 触控尺寸，行高按此估算；超过 6 行改由 ScrollView 滚动。
 const ROW_HEIGHT = 48;
 const MAX_LIST_HEIGHT = ROW_HEIGHT * 6;
 
 /**
  * 详情页片单面板：列出当前影片可加入的片单，点行或勾选框即加入/移出，也可以就地新建一个片单。
- * NOTE: 走 @expo/ui 的原生 ModalBottomSheet，与女优筛选用同一套浮层；seedColor 让 Compose 控件跟随主题 accent。
+ * NOTE: 行内容超过 6 条改由内部滚动，面板本身高度不跟着条数涨。
  */
 export function PlaylistSheet({ dvdId, open, onClose, onOpenPlaylists }: Props) {
   const theme = useTheme();
-  // NOTE: Compose 文本框的 value 是共享状态对象，另存一份字符串镜像给提交逻辑用。
-  const draft = useNativeState('');
   const [draftText, setDraftText] = useState('');
   const [playlists, setPlaylists] = useState<VideoPlaylist[]>();
   const [failure, setFailure] = useState<string>();
@@ -75,12 +77,7 @@ export function PlaylistSheet({ dvdId, open, onClose, onOpenPlaylists }: Props) 
     setAttempt((value) => value + 1);
   };
 
-  const clearDraft = () => {
-    draft.set('');
-    setDraftText('');
-  };
-
-  // NOTE: 成功不弹提示——勾选框本身就是结果；失败在面板内提示（Snackbar 会被浮层遮住）。
+  // NOTE: 成功不弹提示——勾选框本身就是结果；失败在面板内提示（浮层之外的提示会被遮罩盖住）。
   const toggle = async (playlist: VideoPlaylist) => {
     if (!dvdId || busy.current) return;
     busy.current = true;
@@ -112,7 +109,7 @@ export function PlaylistSheet({ dvdId, open, onClose, onOpenPlaylists }: Props) 
       const next = await getVideoPlaylists(dvdId);
       setPlaylists(next);
       if (!next.some((item) => item.name === name)) throw new Error('创建失败，请换个名字再试');
-      clearDraft();
+      setDraftText('');
       setCreating(false);
     } catch (reason) {
       setActionError(reason instanceof Error ? reason.message : '新建片单失败');
@@ -122,76 +119,85 @@ export function PlaylistSheet({ dvdId, open, onClose, onOpenPlaylists }: Props) 
   };
 
   return (
-    <Host colorScheme="dark" seedColor={theme.accent}>
-      <BottomSheet
-        containerColor={theme.backgroundElement}
-        contentColor={theme.text}
-        contentPadding={0}
-        isPresented={open}
-        onDismiss={close}>
-        <Column spacing={12} style={{ padding: 16 }}>
-          <Text textStyle={{ fontSize: 18, fontWeight: '600' }}>加入片单</Text>
-          {failure && <Text textStyle={{ color: theme.textSecondary, fontSize: 14 }}>{failure}</Text>}
-          {failure && <Button label="重试" onPress={retry} variant="text" />}
-          {actionError && <Text textStyle={{ color: theme.danger, fontSize: 14 }}>{actionError}</Text>}
-          {!playlists && !failure && (
-            <Text textStyle={{ color: theme.textSecondary, fontSize: 14 }}>加载中…</Text>
-          )}
-          {playlists && playlists.length === 0 && (
-            <Text textStyle={{ color: theme.textSecondary, fontSize: 14 }}>还没有片单，先新建一个</Text>
-          )}
-          {playlists && playlists.length > 0 && (
-            <ScrollView style={{ height: Math.min(playlists.length * ROW_HEIGHT, MAX_LIST_HEIGHT) }}>
-              <Column>
-                {playlists.map((playlist) => (
-                  <Row alignment="center" key={playlist.key} onPress={() => toggle(playlist)} spacing={8}>
-                    <Checkbox onValueChange={() => toggle(playlist)} value={playlist.added} />
-                    <Text textStyle={{ color: playlist.added ? theme.accent : theme.text, fontSize: 14 }}>
-                      {playlist.name}
-                    </Text>
-                  </Row>
-                ))}
-              </Column>
-            </ScrollView>
-          )}
-          {creating ? (
-            <Column spacing={8}>
-              <TextInput
-                editable={!submitting}
-                multiline={false}
+    <Sheet onClose={close} title="加入片单" visible={open}>
+      {failure && <ThemedText type="small" themeColor="textSecondary">{failure}</ThemedText>}
+      {failure && <UiButton label="重试" onPress={retry} variant="text" />}
+      {actionError && <ThemedText style={{ color: theme.danger }} type="small">{actionError}</ThemedText>}
+      {!playlists && !failure && <ThemedText type="small" themeColor="textSecondary">加载中…</ThemedText>}
+      {playlists?.length === 0 && (
+        <ThemedText type="small" themeColor="textSecondary">还没有片单，先新建一个</ThemedText>
+      )}
+      {playlists && playlists.length > 0 && (
+        <ScrollView style={{ height: Math.min(playlists.length * ROW_HEIGHT, MAX_LIST_HEIGHT) }}>
+          {playlists.map((playlist) => (
+            <Pressable key={playlist.key} onPress={() => toggle(playlist)} style={styles.row}>
+              <Checkbox accessibilityLabel={playlist.name} onValueChange={() => toggle(playlist)} value={playlist.added} />
+              <ThemedText
                 numberOfLines={1}
-                onChangeText={setDraftText}
-                placeholder="片单名"
-                placeholderTextColor={theme.textSecondary}
-                style={{
-                  backgroundColor: theme.background,
-                  borderRadius: 8,
-                  paddingHorizontal: 12,
-                  paddingVertical: 12,
-                }}
-                textStyle={{ color: theme.text, fontSize: 14 }}
-                value={draft}
-              />
-              <Row spacing={8}>
-                <Button
-                  disabled={submitting}
-                  label="取消"
-                  onPress={() => {
-                    clearDraft();
-                    setCreating(false);
-                    setActionError(undefined);
-                  }}
-                  variant="text"
-                />
-                <Button disabled={submitting} label={submitting ? '创建中…' : '创建'} onPress={submit} />
-              </Row>
-            </Column>
-          ) : (
-            <Button label="新建片单" onPress={() => setCreating(true)} variant="text" />
-          )}
-          <Button label="查看我的片单" onPress={onOpenPlaylists} variant="text" />
-        </Column>
-      </BottomSheet>
-    </Host>
+                style={[styles.rowText, playlist.added && { color: theme.accent }]}>
+                {playlist.name}
+              </ThemedText>
+            </Pressable>
+          ))}
+        </ScrollView>
+      )}
+      {creating ? (
+        <View style={styles.create}>
+          <TextInput
+            editable={!submitting}
+            onChangeText={setDraftText}
+            placeholder="片单名"
+            placeholderTextColor={theme.textSecondary}
+            selectionColor={theme.accent}
+            style={[styles.input, { backgroundColor: theme.background, color: theme.text }]}
+            value={draftText}
+          />
+          <View style={styles.actions}>
+            <UiButton
+              label="取消"
+              onPress={() => {
+                setDraftText('');
+                setCreating(false);
+                setActionError(undefined);
+              }}
+              variant="text"
+            />
+            <UiButton disabled={submitting} label={submitting ? '创建中…' : '创建'} onPress={submit} />
+          </View>
+        </View>
+      ) : (
+        <UiButton label="新建片单" onPress={() => setCreating(true)} variant="text" />
+      )}
+      <UiButton label="查看我的片单" onPress={onOpenPlaylists} variant="text" />
+    </Sheet>
   );
 }
+
+const styles = StyleSheet.create({
+  row: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: Spacing.md,
+    height: ROW_HEIGHT,
+  },
+  rowText: {
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  create: {
+    gap: Spacing.sm,
+  },
+  input: {
+    borderRadius: Radius.sm,
+    fontSize: 14,
+    minHeight: 44,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  actions: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    justifyContent: 'flex-end',
+  },
+});
