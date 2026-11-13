@@ -38,14 +38,20 @@ export default function PlaylistsScreen() {
     }
   }, [expire]);
 
+  // NOTE: 不能在焦点到达时立刻刷新。原生 Stack 返回时正在转场，此刻 setItems 引起的重渲染
+  // 会让 tabs 屏被重新测量一次，底部栏会短暂落到内容末尾（约 2s 才自愈）。这里推迟到转场
+  // 结束（约 400ms）再拉取，期间展示已有数据。
   useFocusEffect(useCallback(() => {
     const controller = new AbortController();
     if (!user) {
       setLoading(false);
       return () => controller.abort();
     }
-    void load(controller.signal);
-    return () => controller.abort();
+    const timer = setTimeout(() => { void load(controller.signal); }, 400);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [load, user]));
 
   const refresh = async () => {

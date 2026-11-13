@@ -35,10 +35,14 @@ export default function SavedScreen() {
     }
   }, [expire, ready, user]);
 
+  // NOTE: 同上——焦点刷新推迟到转场结束，避免转场中重渲染导致底部栏错位。
   useFocusEffect(useCallback(() => {
     const controller = new AbortController();
-    void loadSaved(controller.signal);
-    return () => controller.abort();
+    const timer = setTimeout(() => { void loadSaved(controller.signal); }, 400);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [loadSaved]));
 
   const visibleVideos = ready && user ? videos : [];

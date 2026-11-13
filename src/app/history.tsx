@@ -12,13 +12,18 @@ export default function HistoryScreen() {
   const theme = useTheme();
   const [videos, setVideos] = useState<HistoryEntry[]>([]);
 
+  // NOTE: 焦点到达时立即 setVideos 会在原生 Stack 转场中触发重渲染，tabs 屏被重新测量、
+  // 底部栏短暂错位；推迟到转场结束后再读。
   useFocusEffect(useCallback(() => {
     let active = true;
-    getHistory().then((result) => {
-      if (active) setVideos(result);
-    });
+    const timer = setTimeout(() => {
+      getHistory().then((result) => {
+        if (active) setVideos(result);
+      });
+    }, 400);
     return () => {
       active = false;
+      clearTimeout(timer);
     };
   }, []));
 
