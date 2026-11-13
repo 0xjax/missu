@@ -33,6 +33,7 @@ import {
   VIDEO_FILTER_OPTIONS,
   VIDEO_SORT_OPTIONS,
 } from '@/constants/video-options';
+import { TabHeader } from '@/components/tab-header';
 import { useTheme } from '@/hooks/use-theme';
 import { useLanguage } from '@/stores/language';
 
@@ -217,6 +218,7 @@ function DiscoverView() {
 
   return (
     <SafeAreaView edges={['bottom']} style={[styles.screen, { backgroundColor: theme.background }]}>
+      <TabHeader title="发现" />
       <FlatList
         columnWrapperStyle={styles.row}
         contentContainerStyle={styles.content}
