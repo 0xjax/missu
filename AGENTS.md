@@ -19,6 +19,7 @@ bunx expo export --platform android
 - 真机调试（ADB、截图、日志、手动 reload）见 `docs/android-debugging.md`。
 - Debug 构建的「测试登录」按钮靠 `bun scripts/dev-test-login.js` 供凭据（读 `.env`，经 `adb reverse`，不进命令行参数），见 `docs/android-debugging.md` 的「测试登录（Debug）」。
 - 应用名 `Missu`，包名 `app.missu`；独立 APK 的构建与安装见 `docs/android-debugging.md` 的「构建独立 APK」，日常开发仍用 Expo Go。
+- Windows 沙箱下子进程写工作区报 EPERM / 拒绝访问（典型：`bun run start` 写 `expo-env.d.ts` 失败）时，运行 `bun run acl:fix` 一次性补齐 ACE 与 Low 完整性标签（幂等）。脚本须无沙箱运行，受限 shell 里改不了 ACL。
 
 ## Anti-Over-Engineering
 
