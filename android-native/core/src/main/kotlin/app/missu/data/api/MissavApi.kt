@@ -181,6 +181,16 @@ class MissavApi(
         }
     }
 
+    /**
+     * 通用视频列表页（`/latest`、`/actresses/{名}`、`/genres/{名}`…），分页用 `?page=N`。
+     * NOTE: 路径来自详情页信息行的归一化结果（已剥掉 `/dmNNN` 与语言段），直接交给这里即可。
+     * NOTE: 过滤/排序参数（filters/sort）暂不支持——等目录页需要时再加。
+     */
+    suspend fun getVideos(path: String, page: Int = 1): VideoList = withChallengeRetry {
+        val separator = if (path.contains('?')) '&' else '?'
+        val fullPath = if (page > 1) "$path${separator}page=$page" else path
+        HomeParser.parseVideoList(client.fetchHtml(fullPath), page)
+    }
     /** 收藏列表：`/saved`，分页 `?page=N`。未登录会 302 回首页，交给 [withAuthRetry] 自动重登。 */
     suspend fun getSaved(page: Int = 1): VideoList = withAuthRetry {
         withChallengeRetry {
