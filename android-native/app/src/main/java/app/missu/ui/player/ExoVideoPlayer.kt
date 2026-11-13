@@ -37,6 +37,7 @@ import okhttp3.OkHttpClient
 private const val TAG = "MissavPlayer"
 private const val AUTO_HIDE_MS = 3_000L
 private const val SEEK_STEP_MS = 10_000L
+private const val PROGRESS_REPORT_MS = 5_000L
 
 /**
  * 播放器：ExoPlayer + 官方 Material3 控件（[PlayerOverlay]）。
@@ -57,6 +58,8 @@ fun ExoVideoPlayer(
     modifier: Modifier = Modifier,
     isFullscreen: Boolean = false,
     onToggleFullscreen: () -> Unit = {},
+    initialPositionMs: Long = 0L,
+    onPositionReport: ((Long) -> Unit)? = null,
 ) {
     val context = LocalContext.current
 
@@ -86,6 +89,12 @@ fun ExoVideoPlayer(
             .build()
     }
 
+    // 观看进度上报：每 5 秒一次 + 退出时一次，交给历史存储。
+    // NOTE: 必须声明在 DisposableEffect 之前——它的 onDispose 会用到。
+    val reportPosition = rememberUpdatedState<(Long) -> Unit> { position ->
+        onPositionReport?.invoke(position)
+    }
+
     DisposableEffect(player) {
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(playing: Boolean) {
@@ -100,6 +109,7 @@ fun ExoVideoPlayer(
         }
         player.addListener(listener)
         onDispose {
+            reportPosition.value(player.currentPosition)
             player.removeListener(listener)
             player.release()
         }
@@ -109,7 +119,16 @@ fun ExoVideoPlayer(
         errorMessage = null
         player.setMediaItem(MediaItem.fromUri(url))
         player.prepare()
+        // 继续播放：接着上次的位置。
+        if (initialPositionMs > 0) player.seekTo(initialPositionMs)
         player.playWhenReady = true
+    }
+
+    LaunchedEffect(player) {
+        while (true) {
+            delay(PROGRESS_REPORT_MS)
+            if (player.isPlaying) reportPosition.value(player.currentPosition)
+        }
     }
 
     // 播放中 3 秒无操作隐藏控件。

@@ -7,6 +7,8 @@ import app.missu.data.api.ChallengeException
 import app.missu.data.api.HttpStatusException
 import app.missu.data.api.MissavApi
 import app.missu.data.api.SessionExpiredException
+import app.missu.data.store.HistoryEntry
+import app.missu.data.store.HistoryStore
 import app.missu.data.model.VideoDetail
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,7 +24,27 @@ sealed interface DetailUiState {
 class DetailViewModel(
     private val api: MissavApi,
     private val id: String,
+    private val history: HistoryStore,
 ) : ViewModel() {
+
+    /** 上次看到哪儿；0 表示没有记录，从头发放。 */
+    val startPositionMs: Long = history.get(id)?.positionMs ?: 0L
+
+    /** 播放器上报的进度写进历史。 */
+    fun reportProgress(positionMs: Long) {
+        val detail = (_state.value as? DetailUiState.Content)?.detail ?: return
+        if (positionMs <= 0) return
+        history.record(
+            HistoryEntry(
+                id = detail.id,
+                title = detail.title,
+                thumbnailUrl = detail.thumbnailUrl,
+                duration = detail.duration,
+                positionMs = positionMs,
+                updatedAt = System.currentTimeMillis(),
+            ),
+        )
+    }
     private val _state = MutableStateFlow<DetailUiState>(DetailUiState.Loading)
     val state: StateFlow<DetailUiState> = _state.asStateFlow()
 
