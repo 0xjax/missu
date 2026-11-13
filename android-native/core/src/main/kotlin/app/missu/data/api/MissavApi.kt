@@ -4,12 +4,14 @@ import app.missu.data.model.AccountUser
 import app.missu.data.model.HomeSection
 import app.missu.data.model.VideoDetail
 import app.missu.data.model.VideoList
+import app.missu.data.model.VideoPlaylist
 import app.missu.data.parse.DetailParser
 import app.missu.data.parse.HomeParser
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -121,6 +123,47 @@ class MissavApi(
         client.clearCookies()
     }
 
+    /**
+     * 当前影片可加入的片单及是否已在其中。
+     * NOTE: 片单接口只挂根路径（`/api/playlists/…`），带语言前缀会 404。
+     */
+    suspend fun getVideoPlaylists(dvdId: String): List<VideoPlaylist> = withAuthRetry {
+        withChallengeRetry {
+            val json = client.requestJson("GET", "/api/playlists/$dvdId", rawPath = true)
+            val data = runCatching {
+                Json.parseToJsonElement(json).jsonObject["data"]?.jsonArray
+            }.getOrNull() ?: return@withChallengeRetry emptyList()
+
+            data.mapNotNull { element ->
+                val item = element.jsonObject
+                val key = item["key"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+                VideoPlaylist(
+                    key = key,
+                    name = item["name"]?.jsonPrimitive?.contentOrNull ?: key,
+                    added = item["is_added"]?.jsonPrimitive?.booleanOrNull ?: false,
+                )
+            }
+        }
+    }
+
+    /** 把影片加入 / 移出片单。 */
+    suspend fun setPlaylistMembership(dvdId: String, key: String, added: Boolean) {
+        val body = buildJsonObject {
+            put("dvdId", dvdId)
+            put("key", key)
+        }.toString()
+
+        withAuthRetry {
+            withChallengeRetry {
+                client.requestJson(
+                    method = "POST",
+                    path = if (added) "/api/playlists/add" else "/api/playlists/remove",
+                    body = body,
+                    rawPath = true,
+                )
+            }
+        }
+    }
     /**
      * 用记住的凭据主动重登一次。返回是否成功。
      *

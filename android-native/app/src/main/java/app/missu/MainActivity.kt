@@ -193,6 +193,7 @@ private fun MissuApp() {
                 )
                 val state by viewModel.state.collectAsState()
                 val message by viewModel.message.collectAsState()
+                val playlists by viewModel.playlists.collectAsState()
                 LaunchedEffect(id) { viewModel.load() }
 
                 DetailScreen(
@@ -203,6 +204,10 @@ private fun MissuApp() {
                     onToggleSaved = viewModel::toggleSaved,
                     startPositionMs = viewModel.startPositionMs,
                     onPositionReport = viewModel::reportProgress,
+                    playlists = playlists,
+                    onOpenPlaylists = viewModel::openPlaylists,
+                    onClosePlaylists = viewModel::closePlaylists,
+                    onTogglePlaylist = viewModel::togglePlaylist,
                 )
             }
         }

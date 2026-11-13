@@ -10,10 +10,22 @@ import app.missu.data.api.SessionExpiredException
 import app.missu.data.store.HistoryEntry
 import app.missu.data.store.HistoryStore
 import app.missu.data.model.VideoDetail
+import app.missu.data.model.VideoPlaylist
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+
+/** 片单面板：隐藏 / 加载 / 出错 / 列表。 */
+sealed interface PlaylistUiState {
+    data object Hidden : PlaylistUiState
+    data object Loading : PlaylistUiState
+    data class Error(val message: String) : PlaylistUiState
+    data class Content(
+        val items: List<VideoPlaylist>,
+        val pendingKey: String? = null,
+    ) : PlaylistUiState
+}
 
 sealed interface DetailUiState {
     data object Loading : DetailUiState
@@ -29,6 +41,48 @@ class DetailViewModel(
 
     /** 上次看到哪儿；0 表示没有记录，从头发放。 */
     val startPositionMs: Long = history.get(id)?.positionMs ?: 0L
+
+    private val _playlists = MutableStateFlow<PlaylistUiState>(PlaylistUiState.Hidden)
+    val playlists: StateFlow<PlaylistUiState> = _playlists.asStateFlow()
+
+    fun openPlaylists() {
+        val detail = (_state.value as? DetailUiState.Content)?.detail ?: return
+        _playlists.value = PlaylistUiState.Loading
+        viewModelScope.launch {
+            _playlists.value = try {
+                PlaylistUiState.Content(api.getVideoPlaylists(detail.id))
+            } catch (error: Exception) {
+                PlaylistUiState.Error(describe(error))
+            }
+        }
+    }
+
+    fun closePlaylists() {
+        _playlists.value = PlaylistUiState.Hidden
+    }
+
+    /** 勾选 / 取消勾选某个片单。401 同样由 withAuthRetry 先自动重登一次。 */
+    fun togglePlaylist(item: VideoPlaylist) {
+        val detail = (_state.value as? DetailUiState.Content)?.detail ?: return
+        val current = _playlists.value as? PlaylistUiState.Content ?: return
+        if (current.pendingKey != null) return
+
+        _playlists.value = current.copy(pendingKey = item.key)
+        viewModelScope.launch {
+            try {
+                api.setPlaylistMembership(detail.id, item.key, !item.added)
+                _playlists.value = current.copy(
+                    items = current.items.map {
+                        if (it.key == item.key) it.copy(added = !item.added) else it
+                    },
+                    pendingKey = null,
+                )
+            } catch (error: Exception) {
+                _playlists.value = current.copy(pendingKey = null)
+                _message.value = describe(error)
+            }
+        }
+    }
 
     /** 播放器上报的进度写进历史。 */
     fun reportProgress(positionMs: Long) {

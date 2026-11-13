@@ -16,7 +16,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -31,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import app.missu.data.model.DetailInfoRow
 import app.missu.data.model.VideoDetail
+import app.missu.data.model.VideoPlaylist
 import app.missu.ui.player.ExoVideoPlayer
 import app.missu.ui.player.FullscreenEffect
 
@@ -44,6 +49,10 @@ fun DetailScreen(
     onToggleSaved: () -> Unit = {},
     startPositionMs: Long = 0L,
     onPositionReport: (Long) -> Unit = {},
+    playlists: PlaylistUiState = PlaylistUiState.Hidden,
+    onOpenPlaylists: () -> Unit = {},
+    onClosePlaylists: () -> Unit = {},
+    onTogglePlaylist: (VideoPlaylist) -> Unit = {},
 ) {
     var fullscreen by rememberSaveable { mutableStateOf(false) }
     FullscreenEffect(fullscreen)
@@ -81,6 +90,10 @@ fun DetailScreen(
                 onToggleSaved = onToggleSaved,
                 startPositionMs = startPositionMs,
                 onPositionReport = onPositionReport,
+                playlists = playlists,
+                onOpenPlaylists = onOpenPlaylists,
+                onClosePlaylists = onClosePlaylists,
+                onTogglePlaylist = onTogglePlaylist,
                 fullscreen = fullscreen,
                 onToggleFullscreen = { fullscreen = !fullscreen },
             )
@@ -99,6 +112,10 @@ private fun ColumnScope.DetailContent(
     onToggleSaved: () -> Unit,
     startPositionMs: Long,
     onPositionReport: (Long) -> Unit,
+    playlists: PlaylistUiState,
+    onOpenPlaylists: () -> Unit,
+    onClosePlaylists: () -> Unit,
+    onTogglePlaylist: (VideoPlaylist) -> Unit,
     fullscreen: Boolean,
     onToggleFullscreen: () -> Unit,
 ) {
@@ -159,6 +176,7 @@ private fun ColumnScope.DetailContent(
                 Button(onClick = onToggleSaved) {
                     Text(if (detail.saved) "已收藏" else "收藏")
                 }
+                TextButton(onClick = onOpenPlaylists) { Text("片单") }
                 message?.let { text ->
                     Text(
                         text = text,
@@ -184,8 +202,76 @@ private fun ColumnScope.DetailContent(
             }
         }
     }
+
+    if (playlists !is PlaylistUiState.Hidden) {
+        PlaylistSheet(state = playlists, onDismiss = onClosePlaylists, onToggle = onTogglePlaylist)
+    }
 }
 
+/** 加入片单的面板。NOTE: 只展示与勾选，新建片单要走站点的网页表单，暂未实现。 */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PlaylistSheet(
+    state: PlaylistUiState,
+    onDismiss: () -> Unit,
+    onToggle: (VideoPlaylist) -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+            Text(
+                text = "加入片单",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+            )
+
+            when (state) {
+                PlaylistUiState.Hidden -> Unit
+                PlaylistUiState.Loading -> Box(
+                    Modifier.fillMaxWidth().padding(24.dp),
+                    contentAlignment = Alignment.Center,
+                ) { CircularProgressIndicator() }
+
+                is PlaylistUiState.Error -> Text(
+                    text = state.message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(24.dp),
+                )
+
+                is PlaylistUiState.Content -> {
+                    if (state.items.isEmpty()) {
+                        Text(
+                            text = "还没有片单，去网页端新建一个吧",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(24.dp),
+                        )
+                    }
+                    state.items.forEach { item ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onToggle(item) }
+                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Checkbox(
+                                checked = item.added,
+                                onCheckedChange = { onToggle(item) },
+                                enabled = state.pendingKey == null || state.pendingKey == item.key,
+                            )
+                            Text(
+                                text = item.name,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(start = 8.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 @Composable
 private fun InfoRow(row: DetailInfoRow) {
     Row(
