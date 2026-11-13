@@ -217,7 +217,12 @@ $env:ADB = 'D:\platform-tools\adb.exe'
 bun scripts/dev-test-login.js
 ```
 
-脚本只在 127.0.0.1 上监听 `8787`，凭据不出现在命令行参数、日志或提交里；Ctrl+C 结束，`adb reverse --remove tcp:8787` 可手动撤销映射。服务没起时点按钮会提示先运行脚本。
+脚本只在 127.0.0.1 上监听 `8787`，凭据不出现在命令行参数、日志或提交里；Ctrl+C 结束，`adb reverse --remove tcp:8787` 可手动撤销映射。
+
+这条链路要**同时**成立：本机服务在跑 + `adb reverse tcp:8787 tcp:8787` 生效。点按钮报下面两种错，都是其中之一不在了：
+
+- `fetch failed: java.net.ConnectException: Failed to connect to /127.0.0.1:8787` —— 脚本没在跑，或 reverse 映射掉了（adb server 重启、换设备、手机断连都会让映射失效）。重新跑一次脚本即可，它会重建映射。
+- 服务不跨会话：DSH 重启会收掉后台任务，需要重新运行；有多台设备/多个传输条目时用 `ADB_SERIAL=<adb devices 里的 serial>` 指定目标。
 
 ## 结束调试
 
