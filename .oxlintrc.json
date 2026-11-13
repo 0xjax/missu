@@ -19,7 +19,7 @@
         "paths": [
           {
             "name": "react-native-paper",
-            "message": "已移除：界面控件由 src/components/ui 自绘，见 AGENTS.md「依赖选择」。"
+            "message": "已移除：界面控件由 src/components/ui 自绘或 @expo/ui 接管，见 AGENTS.md「依赖选择」。"
           },
           {
             "name": "expo-symbols",
@@ -44,12 +44,6 @@
           {
             "name": "@react-native-community/netinfo",
             "message": "已移除：它只服务过离线横幅，那个横幅已删；要恢复请先说明需求。"
-          }
-        ],
-        "patterns": [
-          {
-            "group": ["@expo/ui", "@expo/ui/*"],
-            "message": "已移除：Compose 控件的动画与选中态不可配置，改用 src/components/ui 的自绘原语。"
           }
         ]
       }

@@ -1,37 +1,75 @@
-import { ScrollView, StyleSheet } from 'react-native';
+import {
+  DropdownMenu,
+  DropdownMenuItem,
+  Host,
+  Row,
+  Text,
+  TextButton,
+} from '@expo/ui/jetpack-compose';
+import { useState } from 'react';
 
-import { UiButton } from '@/components/ui/button';
-import { Menu } from '@/components/ui/menu';
-import { Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import type { Choice } from './choice-menu-bar.types';
 
+// oxlint-disable-next-line no-restricted-imports -- 实验分支：Compose 工具栏菜单
 /**
- * 列表页工具栏：每个维度一个 40dp 触发器，有下拉选项的展开菜单。
- * NOTE: 触发器的文案就是当前选项值（或「筛选」等入口名），不加「排序：」之类前缀，维度由位置表达。
+ * 列表页工具栏：M3 TextButton 作为触发器，点开是系统 DropdownMenu。
+ * NOTE: 用 DropdownMenuItem 而不是 SelectableDropdownMenuItem——后者在 Expo Go 内置版本里会白屏；
+ * 选中态用文字颜色表达，不插入 ✓ 前缀（会让菜单项左右跳动）。
  */
 export function ChoiceMenuBar({ choices }: { choices: Choice[] }) {
+  const theme = useTheme();
+  const [openKey, setOpenKey] = useState<string>();
+
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bar}>
-      {choices.map((choice) => (
-        choice.onPress ? (
-          <UiButton key={choice.key} compact label={choice.text} onPress={choice.onPress} variant="text" />
-        ) : (
-          <Menu
-            items={choice.options}
-            key={choice.key}
-            label={choice.text}
-            onSelect={choice.onChange}
-            value={choice.value}
-          />
-        )
-      ))}
-    </ScrollView>
+    <Host matchContents>
+      <Row horizontalArrangement={{ spacedBy: 4 }} verticalAlignment="center">
+        {choices.map((choice) => {
+          if (choice.onPress) {
+            return (
+              <TextButton
+                contentPadding={{ start: 10, top: 8, end: 10, bottom: 8 }}
+                key={choice.key}
+                onClick={choice.onPress}>
+                <Text>{choice.text}</Text>
+              </TextButton>
+            );
+          }
+
+          const expanded = openKey === choice.key;
+          return (
+            <DropdownMenu
+              expanded={expanded}
+              key={choice.key}
+              onDismissRequest={() => setOpenKey(undefined)}>
+              <DropdownMenu.Trigger>
+                <TextButton
+                  contentPadding={{ start: 10, top: 8, end: 10, bottom: 8 }}
+                  onClick={() => setOpenKey(expanded ? undefined : choice.key)}>
+                  <Text>{`${choice.text} ▾`}</Text>
+                </TextButton>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Items>
+                {choice.options.map((option) => (
+                  <DropdownMenuItem
+                    // NOTE: 两项都显式传色——只给选中项传对象、其余传 undefined 时，
+                    // 原生视图复用会让上一次的强调色留在旧项上。
+                    elementColors={{ textColor: option.value === choice.value ? theme.accent : theme.text }}
+                    key={option.value}
+                    onClick={() => {
+                      setOpenKey(undefined);
+                      choice.onChange(option.value);
+                    }}>
+                    <DropdownMenuItem.Text>
+                      <Text>{option.label}</Text>
+                    </DropdownMenuItem.Text>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenu.Items>
+            </DropdownMenu>
+          );
+        })}
+      </Row>
+    </Host>
   );
 }
-
-const styles = StyleSheet.create({
-  bar: {
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
-});
