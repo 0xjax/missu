@@ -37,6 +37,8 @@ android {
 }
 
 dependencies {
+    implementation(project(":core"))
+
     implementation(platform("androidx.compose:compose-bom:2026.09.00"))
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui")
@@ -45,13 +47,12 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
     implementation("androidx.navigation:navigation-compose:2.10.2")
 
-    // 网络与解析：OkHttp + Jsoup，对应 legacy 的 fetch + node-html-parser。
+    // 网络：:core 已用 api 暴露 okhttp/coroutines，这里显式列出便于阅读；
+    // Jsoup 只在 :core 里用，app 不再声明。
     implementation("com.squareup.okhttp3:okhttp:5.5.1")
-    implementation("org.jsoup:jsoup:1.24.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

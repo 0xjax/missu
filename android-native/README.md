@@ -57,18 +57,28 @@ cd D:\missu\android-native
    - 不要装 NDK、CMake、system-image、Emulator、旧 API（本工程无原生代码，只跑真机）
 3. Gradle 相关不用改：缓存走标准位置 `%USERPROFILE%\.gradle`，JDK 用 AS 自带的 JBR（构建脚本里也是它）
 
-## 目录规划
+## 模块结构
 
 ```
-app/src/main/java/app/missu/
-  MainActivity.kt          单 Activity，Compose 宿主
-  ui/theme/                颜色/间距/圆角令牌（对齐 Expo 版 src/constants/theme.ts）
-  ui/home/  ui/latest/  ui/discover/  ui/account/
-  ui/detail/  ui/player/  ui/playlists/  ui/settings/  ui/login/
-  data/api/                OkHttp + 会话 Cookie + 语言前缀
-  data/parse/              Jsoup 解析（从 src/api/parse.ts 逐条搬）
-  data/store/              DataStore（profile / language / preferences / history / search-history）
+core/          纯 JVM 库（非 UI 层）——**不许出现 android.* / androidx.***
+  src/main/kotlin/app/missu/data/
+    api/    SourceConfig（语言前缀/dm 前缀）、MissavClient（OkHttp + 挑战翻译）、
+            MissavApi（getHome + 挑战重试）、Challenge（ChallengeHandler 契约）、Errors
+    model/  VideoSummary / HomeSection
+    parse/  HomeParser（Jsoup，选择器对照 legacy）
+  src/test/  解析测试 + 真实首页 fixture（resources/home-cn.html）
+
+app/           Android 应用（UI + 平台适配）
+  src/main/java/app/missu/
+    MainActivity.kt        当前是数据层验证屏，将来换成首页
+    ui/theme/              Material 3 主题
+    ui/challenge/          Cloudflare 人机验证页（WebView）
+    data/api/              AndroidCookieJar（CookieManager 适配）
+                           ChallengeHost（Activity 交接）
+                           AndroidApi（装配：OkHttp + 共享 Cookie + 验证页）
 ```
+
+**边界规则**：`:app` 依赖 `:core`，反向禁止。取数、解析、模型都只在 `:core`，因此它们能在纯 JVM 上跑测试，将来也能被服务端复用。
 
 ## 迁移顺序
 

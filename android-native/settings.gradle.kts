@@ -24,3 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "missu-native"
 include(":app")
+include(":core")

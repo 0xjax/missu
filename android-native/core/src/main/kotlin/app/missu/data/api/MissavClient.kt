@@ -33,7 +33,9 @@ class MemoryCookieJar : CookieJar {
 /** 站点 HTTP 客户端：UA、超时、Cookie，外加把人机验证响应翻译成 [ChallengeException]。 */
 class MissavClient(
     private val userAgent: String = SourceConfig.DEFAULT_USER_AGENT,
-    val cookieJar: MemoryCookieJar = MemoryCookieJar(),
+    // NOTE: 用 okhttp3.CookieJar 而不是具体实现——Android 侧传的是系统 CookieManager 的适配器，
+    // JVM 测试传内存实现，两者都要能进来。
+    val cookieJar: CookieJar = MemoryCookieJar(),
 ) {
     private val client = OkHttpClient.Builder()
         .cookieJar(cookieJar)
