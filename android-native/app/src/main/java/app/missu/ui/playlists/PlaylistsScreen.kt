@@ -12,12 +12,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -30,8 +37,12 @@ fun PlaylistsScreen(
     onRetry: () -> Unit,
     onOpen: (PlaylistSummary) -> Unit,
     onBack: () -> Unit,
+    createMessage: String? = null,
+    onCreate: (name: String, isPublic: Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
+    var dialogOpen by rememberSaveable { mutableStateOf(false) }
+
     Column(modifier.fillMaxSize()) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
@@ -39,6 +50,19 @@ fun PlaylistsScreen(
         ) {
             TextButton(onClick = onBack) { Text("← 返回") }
             Text("我的片单", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.weight(1f))
+            TextButton(onClick = { dialogOpen = true }) { Text("新建") }
+        }
+
+        if (dialogOpen) {
+            CreateDialog(
+                message = createMessage,
+                onConfirm = { name, isPublic ->
+                    onCreate(name, isPublic)
+                    dialogOpen = false
+                },
+                onDismiss = { dialogOpen = false },
+            )
         }
 
         when (state) {
@@ -60,6 +84,48 @@ fun PlaylistsScreen(
             }
         }
     }
+}
+
+/** 新建片单：站点只有表单，这里只收「名字 + 是否公开」，token 由数据层去读。 */
+@Composable
+private fun CreateDialog(
+    message: String?,
+    onConfirm: (name: String, isPublic: Boolean) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var name by rememberSaveable { mutableStateOf("") }
+    var isPublic by rememberSaveable { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("新建片单") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("片单名") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = isPublic, onCheckedChange = { isPublic = it })
+                    Text("公开片单", modifier = Modifier.padding(start = 8.dp))
+                }
+                message?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(name, isPublic) }) { Text("创建") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("取消") }
+        },
+    )
 }
 
 @Composable
