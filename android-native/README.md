@@ -9,6 +9,7 @@
 - ✅ 工程骨架可编译：`BUILD SUCCESSFUL`，产出 `app-debug.apk`（11.4 MB）
 - ✅ 工具链已收口：SDK/JDK 全局唯一，NDK/CMake/重复 SDK 已删（回收约 5.6 GB）
 - ✅ 数据层首块：`data/api` + `data/parse`，`getHome` 已用**真实抓取的首页**验证（4 个板块 / 56 条视频）
+- ✅ **真机端到端**：vivo V2507A 上点按钮 → `getHome` 直接拿到 HTML 并解析出同样 4 板块 / 56 条（未触发人机验证）
 - ⬜ 首页 UI（Compose 两列网格）
 - ⬜ 详情 / 播放 / 搜索 / 登录
 - ⬜ 发现 / 片单 / 收藏 / 历史 / 设置
@@ -120,6 +121,6 @@ app/           Android 应用（UI + 平台适配）
 **运行时（从 Expo 版带过来的教训）**
 
 - **底部栏高度**：M3 `NavigationBar` 自己处理窗口 inset，外面不要再加一次 `insets.bottom`，否则底栏高度翻倍（Expo 版踩过）。
-- **Cloudflare**：`cf_clearance` 必须让 OkHttp 与 WebView 用同一份 Cookie，否则验证过了仍 403。
+- **Cloudflare**：PC 上的 JVM 请求实测被 403 挑战（`cf-mitigated: challenge`），而**真机上的 OkHttp 本轮直接放行**。因此 `ChallengeActivity` 目前只是兜底：仅在收到 `ChallengeException` 时弹出，尚未被真实触发验证过。若哪天手机端也开始被挑战，这条链路就是唯一出路——`cf_clearance` 必须让 OkHttp 与 WebView 用同一份 Cookie（已用系统 `CookieManager` 打通）。
 - **语言前缀**：站点接口是 `/cn/api/...`，但片单接口挂在根路径 `/api/playlists/...`。
 - **播放器生命周期**：详情页留在回退栈里时 ExoPlayer 实例会一直挂着，离开必须 `release()`。
