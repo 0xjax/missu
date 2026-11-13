@@ -6,6 +6,7 @@ import app.missu.data.api.ChallengeException
 import app.missu.data.api.HttpStatusException
 import app.missu.data.api.MissavApi
 import app.missu.data.model.VideoSummary
+import app.missu.data.store.SearchHistoryStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,9 +25,16 @@ sealed interface SearchUiState {
     ) : SearchUiState
 }
 
-class SearchViewModel(private val api: MissavApi) : ViewModel() {
+class SearchViewModel(
+    private val api: MissavApi,
+    private val history: SearchHistoryStore,
+) : ViewModel() {
     private val _state = MutableStateFlow<SearchUiState>(SearchUiState.Idle)
     val state: StateFlow<SearchUiState> = _state.asStateFlow()
+
+    /** 最近搜索关键词，供空状态展示。 */
+    private val _recent = MutableStateFlow(history.recent())
+    val recent: StateFlow<List<String>> = _recent.asStateFlow()
 
     fun search(keyword: String) {
         val normalized = keyword.trim()
@@ -38,6 +46,9 @@ class SearchViewModel(private val api: MissavApi) : ViewModel() {
             _state.value = SearchUiState.Loading
             _state.value = try {
                 val page = api.searchVideos(normalized)
+                // 只在搜索成功后记入历史，避免把打错的词也留下。
+                history.record(normalized)
+                _recent.value = history.recent()
                 if (page.videos.isEmpty()) {
                     SearchUiState.Empty
                 } else {
@@ -47,6 +58,11 @@ class SearchViewModel(private val api: MissavApi) : ViewModel() {
                 SearchUiState.Error(describe(error))
             }
         }
+    }
+
+    fun clearHistory() {
+        history.clear()
+        _recent.value = emptyList()
     }
 
     /** 追加下一页；失败只把 loadingMore 复位并保留已加载结果，不整页报错。 */
