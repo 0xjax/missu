@@ -27,16 +27,9 @@ fun AccountScreen(
     onSaved: () -> Unit,
     onSettings: () -> Unit,
     onHistory: () -> Unit,
-    onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(onClick = onBack) { Text("← 返回") }
-        }
 
         when (state) {
             AuthUiState.Checking -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
