@@ -1,24 +1,24 @@
-import { Ionicons } from '@expo/vector-icons';
 import {
   Host,
+  Icon,
   NavigationBar,
   NavigationBarItem,
-  RNHostView,
   Text,
 } from '@expo/ui/jetpack-compose';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
+import type { ImageSourcePropType } from 'react-native';
 import { View } from 'react-native';
 
 import { useTheme } from '@/hooks/use-theme';
 
-// NOTE: 实验分支专用——用 Compose 的 M3 NavigationBar 替换 JS tab 栏，验证“原生 UI 迁移”的底栏可行性。
-// 图标仍用 Ionicons（Compose 的 Icon 只吃 XML vector drawable），通过 RNHostView 嵌进 Icon 插槽。
+// NOTE: 图标用 Android XML vector drawable（Material Icons 官方路径，见 assets/icons/*.xml）。
+// 不能用 Ionicons：那需要在 Compose 里嵌 RN 视图，而 RN 视图会吃掉触摸事件，导致点图标不生效。
 // NOTE: expo-router 的 tabBar 回调给的是 navigateToTab(routeKey)，不是 react-navigation 的 navigation 对象。
-const TAB_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-  '(home)': 'home',
-  latest: 'list',
-  discover: 'compass',
-  account: 'person',
+const TAB_ICONS: Record<string, ImageSourcePropType> = {
+  '(home)': require('../../assets/icons/tab-home.xml'),
+  latest: require('../../assets/icons/tab-list.xml'),
+  discover: require('../../assets/icons/tab-discover.xml'),
+  account: require('../../assets/icons/tab-account.xml'),
 };
 
 export function NativeTabBar({ state, descriptors, navigateToTab, insets }: BottomTabBarProps) {
@@ -31,7 +31,6 @@ export function NativeTabBar({ state, descriptors, navigateToTab, insets }: Bott
           {state.routes.map((route, index) => {
             const focused = state.index === index;
             const label = descriptors[route.key].options.title ?? route.name;
-            const icon = TAB_ICONS[route.name] ?? 'ellipse';
 
             return (
               <NavigationBarItem
@@ -46,9 +45,8 @@ export function NativeTabBar({ state, descriptors, navigateToTab, insets }: Bott
                 onClick={() => navigateToTab(route.key)}
                 selected={focused}>
                 <NavigationBarItem.Icon>
-                  <RNHostView matchContents>
-                    <Ionicons color={focused ? theme.accent : theme.textSecondary} name={icon} size={22} />
-                  </RNHostView>
+                  {/* NOTE: 不传 tint，图标继承 item 的 selected/unselected 图标色。 */}
+                  <Icon size={24} source={TAB_ICONS[route.name]} />
                 </NavigationBarItem.Icon>
                 <NavigationBarItem.Label>
                   <Text>{label}</Text>
