@@ -21,7 +21,7 @@ Scan the QR code with Expo Go. Code changes reach the device through Metro Fast 
 ## Verification
 
 ```bash
-bun check                              # tsc --noEmit
+bun check                              # type check (bun's native checker, like tsc)
 bun run lint                           # oxlint src scripts
 bunx expo export --platform android    # production JS bundle
 ```

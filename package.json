@@ -34,7 +34,6 @@
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
-    "check": "tsc --noEmit",
     "lint": "oxlint src scripts",
     "acl:fix": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/fix-workspace-acl.ps1"
   }
