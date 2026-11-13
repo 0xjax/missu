@@ -134,6 +134,51 @@ Metro 保持运行后，`src/` 下的 JavaScript/TypeScript 改动由 Fast Refre
 
 当前项目没有任何 CSS 文件（`src/` 下的样式都在 `StyleSheet.create` 里）。若日后引入 CSS 方案（如 NativeWind），纯 CSS 文件的改动不会触发 Fast Refresh，需要在 Expo Go 中手动 reload。
 
+## 重启 Metro 与「Expo Go 找不到开发服务器」
+
+Metro 每次重启都是新的 dev 会话，手机上正在跑的 App 连接随即失效：**重连一次是必然的**，不是故障。只在改 `app.json`、`node_modules` 变了（装/删依赖）、Fast Refresh 已进入报错状态时才重启。
+
+### 重启的正确姿势
+
+```powershell
+# 1. 确认 8081 没被上一轮残留进程占着
+Get-NetTCPConnection -LocalPort 8081 -State Listen -ErrorAction SilentlyContinue |
+  ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
+
+# 2. TMP/TEMP 指到工作区，否则 metro-file-map 与 hermesc 写 %TEMP% 会 EPERM
+New-Item -ItemType Directory -Force D:\missu\.tmp-metro | Out-Null
+$env:TMP='D:\missu\.tmp-metro'; $env:TEMP='D:\missu\.tmp-metro'
+
+# 3. 依赖变动过就先清缓存
+cd D:\missu; bun run start -- --clear
+```
+
+`.tmp-metro/` 命中 `.gitignore` 的 `.tmp-*`。不设 `TMP` 的后果是两个同源报错：`[metro-file-map] Cache write error: EPERM ...`（冷启动每次重建 file map）和 `bunx expo export` 在 Hermes 字节码阶段的 `Failed to open file ...\Temp\....hbc: permission denied`——都是 Temp 写权限问题，不是代码错误。
+
+### 连不上时按顺序查三件事
+
+```powershell
+# ① Metro 活着吗
+(Invoke-WebRequest http://localhost:8081/status -UseBasicParsing).Content   # packager-status:running
+
+# ② 手机能不能连到这台电脑（手机 IP：.\adb shell ip -4 addr show wlan0）
+& D:\platform-tools\adb.exe shell 'printf "GET /status HTTP/1.0\r\n\r\n" | nc -w 4 192.168.1.10 8081'
+
+# ③ 服务端发给客户端的地址对不对
+$h = @{ 'expo-platform'='android'; Accept='application/expo+json,application/json' }
+$m = (Invoke-WebRequest http://192.168.1.10:8081 -Headers $h -UseBasicParsing).Content | ConvertFrom-Json
+$m.extra.expoClient.hostUri
+```
+
+- ① 失败 → Metro 挂了，重启。
+- ① 成功、② 失败 → 网络/防火墙问题。
+- ①② 都成功 → **直接在 Expo Go 打开 `exp://<电脑局域网IP>:8081`，不要等自动检测**。Expo Go 的自动检测靠 mDNS 组播（UDP 5353），WLAN 处于「公用网络」配置、或有 VPN/代理虚拟网卡（如 FlClash 的 `198.18.0.1`）时它可能到不了手机；而 TCP 8081 仍可能是通的，所以「自动检测不到」不等于「连不上」。
+- ③ 必须是电脑局域网 IP；若为 `localhost:8081`，说明只绑了回环，手机永远打不开。
+
+### 最容易复发的一种：电脑 IP 变了
+
+`192.168.1.10` 是 DHCP 分配的（`PrefixOrigin: Dhcp`）。路由器重新分配或换过网络后地址会变，`exp://192.168.1.10:8081` 与 Expo Go 的「最近项目」一起失效，表现和「自动检测坏了」一模一样。根治二选一：路由器里按 MAC 把电脑绑成固定 IP；或 `adb reverse tcp:8081 tcp:8081` + `exp://127.0.0.1:8081`。后者不依赖局域网和 mDNS，但映射随 adb 服务重启失效（见上文「启动应用」的取舍）。
+
 ## 构建独立 APK
 
 需要脱离 Metro 验证图标、启动图或网络行为时使用。首次构建或修改 `app.json` 后先执行 `bunx expo prebuild --platform android` 生成 `android/`。本机工具链不在系统 PATH，位于 `.local/toolchain`（JDK 17、Android SDK、Gradle、Node），并已 gitignore。
