@@ -45,5 +45,13 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
     implementation("androidx.navigation:navigation-compose:2.10.2")
 
+    // 网络与解析：OkHttp + Jsoup，对应 legacy 的 fetch + node-html-parser。
+    implementation("com.squareup.okhttp3:okhttp:5.5.1")
+    implementation("org.jsoup:jsoup:1.24.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
+
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

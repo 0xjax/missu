@@ -8,9 +8,9 @@
 
 - ✅ 工程骨架可编译：`BUILD SUCCESSFUL`，产出 `app-debug.apk`（11.4 MB）
 - ✅ 工具链已收口：SDK/JDK 全局唯一，NDK/CMake/重复 SDK 已删（回收约 5.6 GB）
-- ✅ 单 Activity + Compose 深色主题 + 占位屏
-- ⬜ 网络层 + Jsoup 解析（下一步）
-- ⬜ 首页 / 详情 / 播放 / 搜索 / 登录
+- ✅ 数据层首块：`data/api` + `data/parse`，`getHome` 已用**真实抓取的首页**验证（4 个板块 / 56 条视频）
+- ⬜ 首页 UI（Compose 两列网格）
+- ⬜ 详情 / 播放 / 搜索 / 登录
 - ⬜ 发现 / 片单 / 收藏 / 历史 / 设置
 
 ## 版本矩阵（实测钉死）
