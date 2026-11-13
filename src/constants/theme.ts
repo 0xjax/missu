@@ -47,7 +47,3 @@ export const Radius = {
   lg: 12,
   full: 9999,
 } as const;
-
-// NOTE: 底部栏（JS Tabs）占据布局空间，滚动容器无需额外留白；只有悬浮提示要按这个高度抬高。
-// 这个值等于栏体高度 + 底部安全区，改 tab 栏尺寸时要同步改。
-export const TabBarInset = 80;

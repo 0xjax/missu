@@ -27,7 +27,7 @@
           },
           {
             "name": "expo-linking",
-            "message": "已移除：无直接使用；深层链接交给 expo-router。"
+            "message": "不要直接 import：它只是 expo-router 的必需 peer，深层链接由 expo-router 处理。"
           },
           {
             "name": "react-native-web",
@@ -40,6 +40,10 @@
           {
             "name": "@react-native-async-storage/async-storage",
             "message": "已移除：存储只有 expo-sqlite/kv-store 一套，见 src/storage/kv.ts。"
+          },
+          {
+            "name": "@react-native-community/netinfo",
+            "message": "已移除：它只服务过离线横幅，那个横幅已删；要恢复请先说明需求。"
           }
         ],
         "patterns": [

@@ -6,7 +6,6 @@ import { StyleSheet, useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import { OfflineBanner } from '@/components/offline-banner';
 import { Colors } from '@/constants/theme';
 import { AuthProvider } from '@/stores/auth';
 import { ChallengeProvider } from '@/stores/challenge';
@@ -55,7 +54,6 @@ export default function RootLayout() {
                     <Stack.Screen name="language" options={{ title: '内容语言' }} />
                     <Stack.Screen name="video/[id]" options={{ title: '视频详情' }} />
                   </Stack>
-                  <OfflineBanner />
                   <WebViewFetchProvider />
                 </PreviewProvider>
               </ChallengeProvider>

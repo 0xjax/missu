@@ -96,7 +96,6 @@
 - **Spacing**: 2 / 4 / 8 / 12 / 16 / 20 / 24 / 32 / 48 / 64，只用 `Spacing.*`
 - **Radius**: 8（控件）/ 10 / 12（卡片）/ 9999（胶囊），只用 `Radius.*`
 - **Color**: 深色底 `#000000`，卡片面 `#212225`，accent `#d85a76` 仅用于选中与强调
-- **TabBarInset**: 底部栏占据布局空间，滚动容器不用额外留白；只有悬浮提示（`OfflineBanner`）要按这个值抬高
 
 ## Known Limits
 
@@ -129,10 +128,10 @@
 ## Technical Stack
 
 - Expo SDK 58 + React Native 0.88 + TypeScript，包管理 bun
-- 路由：`expo-router`（文件路由）+ 根原生 `Stack`（转场、返回手势）；tab 栏用 `expo-router/js-tabs` 的 `Tabs`，tab 页头自绘 `TabHeader`
+- 路由：`expo-router`（文件路由）+ 根原生 `Stack`（转场、返回手势）；tab 栏用 `expo-router/js-tabs` 的 `Tabs`，tab 页头自绘 `TabHeader`；`expo-linking` 只作为它的必需 peer 声明，不直接使用
 - UI：`src/components/ui/` 七个自绘原语 + Reanimated + Gesture Handler；没有 UI 组件库
 - 数据：`src/api/*` 里的原生 `fetch`（带超时、AbortController、登录态判定）+ `node-html-parser` 解析；没有查询缓存库
 - 状态：React context（`src/stores/`），没有全局状态库
 - 存储：只有一套 —— `expo-sqlite/kv-store`，全 App 经 `src/storage/kv.ts` 取用
-- 媒体与系统：`expo-video`、`expo-image`、`react-native-webview`、`@react-native-community/netinfo`、`expo-haptics`、`expo-screen-orientation`、`expo-splash-screen`、`expo-system-ui`、`expo-constants`
+- 媒体与系统：`expo-video`、`expo-image`、`react-native-webview`、`expo-haptics`、`expo-screen-orientation`、`expo-splash-screen`、`expo-system-ui`、`expo-constants`
 - 图标：`@expo/vector-icons` 的 Ionicons；字体与图标不手绘
