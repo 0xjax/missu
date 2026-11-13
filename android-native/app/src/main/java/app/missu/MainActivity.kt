@@ -8,8 +8,19 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,7 +38,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import app.missu.ui.discover.DiscoverScreen
+import app.missu.ui.discover.DiscoverViewModel
 import app.missu.data.api.MissavApi
 import app.missu.data.api.createMissavApi
 import app.missu.data.store.CredentialStore
@@ -89,9 +104,41 @@ private fun MissuApp() {
     val authState by auth.state.collectAsState()
     val loginState by auth.loginState.collectAsState()
 
+    // 底部导航只在四个一级页面显示；详情/列表/收藏等二级页面全屏展示。
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = backStackEntry?.destination?.route
+    val showBottomBar = topLevels.any { it.route == currentRoute }
+
     // NOTE: 系统栏、刘海、输入法的内边距只在这里处理一次，各页面只负责内容布局。
-    // 需要贴边显示的页面（将来的全屏播放）自己在 destination 里 opt-out，不要在页面里重复加 padding。
-    Scaffold(contentWindowInsets = WindowInsets.safeDrawing) { innerPadding ->
+    // 底部由 NavigationBar 自己处理导航栏 inset，所以内容区只吃顶部与左右。
+    Scaffold(
+        contentWindowInsets = WindowInsets.safeDrawing.only(
+            WindowInsetsSides.Top + WindowInsetsSides.Horizontal,
+        ),
+        bottomBar = {
+            if (showBottomBar) {
+                NavigationBar {
+                    topLevels.forEach { item ->
+                        NavigationBarItem(
+                            selected = currentRoute == item.route,
+                            onClick = {
+                                if (currentRoute != item.route) {
+                                    navController.navigate(item.route) {
+                                        // 切一级页签时保留各自的滚动位置与已加载内容。
+                                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
+                            },
+                            icon = { Icon(item.icon, contentDescription = item.label) },
+                            label = { Text(item.label) },
+                        )
+                    }
+                }
+            }
+        },
+    ) { innerPadding ->
         NavHost(
             navController = navController,
             startDestination = "home",
@@ -110,10 +157,22 @@ private fun MissuApp() {
                     onRetry = viewModel::load,
                     onOpen = { id -> navController.navigate("detail/$id") },
                     onSearch = { navController.navigate("search") },
-                    onAccount = { navController.navigate("account") },
                 )
             }
 
+            composable("discover") {
+                val viewModel: DiscoverViewModel = viewModel(factory = factory { DiscoverViewModel(api) })
+                val states by viewModel.states.collectAsState()
+
+                DiscoverScreen(
+                    states = states,
+                    onLoad = viewModel::load,
+                    onLoadMore = viewModel::loadMore,
+                    onOpen = { path, title ->
+                        navController.navigate("list?p=${Uri.encode(path)}&t=${Uri.encode(title)}")
+                    },
+                )
+            }
             composable("search") {
                 val viewModel: SearchViewModel = viewModel(factory = factory { SearchViewModel(api) })
                 val state by viewModel.state.collectAsState()
@@ -135,7 +194,6 @@ private fun MissuApp() {
                     onHistory = { navController.navigate("history") },
                     onSettings = { navController.navigate("settings") },
                     onLogout = auth::logout,
-                    onBack = { navController.popBackStack() },
                 )
             }
 
@@ -246,6 +304,20 @@ private fun MissuApp() {
         }
     }
 }
+
+/** 底部导航的四个一级页面。 */
+private data class TopLevel(
+    val route: String,
+    val label: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+)
+
+private val topLevels = listOf(
+    TopLevel("home", "首页", Icons.Filled.Home),
+    TopLevel("discover", "发现", Icons.Filled.List),
+    TopLevel("search", "搜索", Icons.Filled.Search),
+    TopLevel("account", "我的", Icons.Filled.Person),
+)
 
 private inline fun <reified T : ViewModel> factory(crossinline create: () -> T): ViewModelProvider.Factory =
     object : ViewModelProvider.Factory {

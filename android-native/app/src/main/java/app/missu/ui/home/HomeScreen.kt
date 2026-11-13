@@ -35,7 +35,6 @@ fun HomeScreen(
     onRetry: () -> Unit,
     onOpen: (String) -> Unit,
     onSearch: () -> Unit,
-    onAccount: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when (state) {
@@ -57,7 +56,7 @@ fun HomeScreen(
             }
         }
 
-        is HomeUiState.Content -> HomeGrid(state.sections, onOpen, onSearch, onAccount, modifier)
+        is HomeUiState.Content -> HomeGrid(state.sections, onOpen, onSearch, modifier)
     }
 }
 
@@ -71,7 +70,6 @@ private fun HomeGrid(
     sections: List<HomeSection>,
     onOpen: (String) -> Unit,
     onSearch: () -> Unit,
-    onAccount: () -> Unit,
     modifier: Modifier,
 ) {
     LazyVerticalGrid(
@@ -101,18 +99,7 @@ private fun HomeGrid(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Box(
-                    modifier = Modifier
-                        .background(Color(0xFF212225), RoundedCornerShape(10.dp))
-                        .clickable(onClick = onAccount)
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
-                ) {
-                    Text(
-                        text = "我的",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+
             }
         }
 

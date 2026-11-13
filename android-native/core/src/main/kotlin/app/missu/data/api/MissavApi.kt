@@ -1,11 +1,13 @@
 package app.missu.data.api
 
 import app.missu.data.model.AccountUser
+import app.missu.data.model.DirectoryList
 import app.missu.data.model.HomeSection
 import app.missu.data.model.VideoDetail
 import app.missu.data.model.VideoList
 import app.missu.data.model.VideoPlaylist
 import app.missu.data.parse.DetailParser
+import app.missu.data.parse.DirectoryParser
 import app.missu.data.parse.HomeParser
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
@@ -181,6 +183,14 @@ class MissavApi(
         }
     }
 
+    /**
+     * 目录页（`/actresses`、`/genres`、`/makers`），分页 `?page=N`。
+     * NOTE: `kind` 必须与路径段一致，解析时用它筛链接。
+     */
+    suspend fun getDirectory(kind: String, page: Int = 1): DirectoryList = withChallengeRetry {
+        val path = if (page > 1) "/$kind?page=$page" else "/$kind"
+        DirectoryParser.parse(client.fetchHtml(path), kind, page)
+    }
     /**
      * 通用视频列表页（`/latest`、`/actresses/{名}`、`/genres/{名}`…），分页用 `?page=N`。
      * NOTE: 路径来自详情页信息行的归一化结果（已剥掉 `/dmNNN` 与语言段），直接交给这里即可。
