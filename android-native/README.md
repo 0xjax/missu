@@ -25,6 +25,7 @@
 - ✅ **搜索历史**：成功搜索后记入本地（上限 20，重复置顶），空输入时展示为可点胶囊，可清空
 - ✅ **我的片单**：`/playlists` 列表（名字 · 可见性 · 更新时间）+ 片单详情网格；真实页面 fixture 测试锁住解析规则
 - ✅ **新建片单**：站点只有 Blade 表单（`/playlists/create`），先 GET 读 `_token` 与字段名再 urlencoded POST；实测建出 `test` 后列表自动刷新
+- ✅ **编辑 / 删除片单**：详情页页头「编辑」→ 改名/描述/公开 + 删除（二次确认）；实测改名 `test→test2`、删除后列表只剩 `精选`
 - ⬜ 详情 / 播放 / 搜索 / 登录
 - ⬜ 发现 / 片单 / 收藏 / 历史 / 设置
 
@@ -176,6 +177,10 @@ cd android-native
   **例外**：登录接口自己的 401 表示账号密码错，要转成 `InvalidCredentialsException`，文案不能混。
 - **`checkSession()` 的 302 判据失效**：本项已实测不成立，启动时不要据此判断登录态（详见「记住账号」）。
 - **根路径接口**：片单与收藏挂在 `/api/...`，带 `/cn` 前缀会 404（`requestJson(rawPath = true)`）。
+- **表单 `action` 可能是绝对 URL**：片单删除表单的 `action` 是 `https://missav.ai/cn/playlists/{id}`，
+  再走「拼语言前缀」的构造函数会变成 `/cn/https://…` → **404**（实测踩过）。`postForm` 必须识别绝对 URL 原样使用。
+- **更新与删除的表单形态不同**：更新是 POST 到编辑页自身（`action` 为空、没有 `_method`）；
+  删除是 POST 到片单自身 URL 且带 `_method=delete`（Laravel 方法伪装）。两者都要先 GET 页面拿 `_token`。
 - **Cloudflare 目前只在 PC 上触发**：PC 的 JVM 请求被 403 挑战（`cf-mitigated: challenge`），而真机上的
   OkHttp 直接放行。所以 `ChallengeActivity` 是兜底链路、**尚未被真实触发验证过**；若哪天手机端也被挑战，
   这是唯一出路——`cf_clearance` 必须让 OkHttp 与 WebView 共用系统 `CookieManager`（已打通）。

@@ -32,6 +32,7 @@ fun PlaylistDetailScreen(
     onRetry: () -> Unit,
     onOpen: (String) -> Unit,
     onBack: () -> Unit,
+    onEdit: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxSize()) {
@@ -51,6 +52,8 @@ fun PlaylistDetailScreen(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(start = 4.dp),
             )
+            Spacer(Modifier.weight(1f))
+            TextButton(onClick = onEdit) { Text("编辑") }
         }
 
         when (state) {

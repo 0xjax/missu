@@ -11,7 +11,8 @@ import app.missu.data.model.VideoPlaylist
 import app.missu.data.parse.ApiJson
 import app.missu.data.parse.DetailParser
 import app.missu.data.parse.DirectoryParser
-import app.missu.data.parse.PlaylistCreateParser
+import app.missu.data.parse.PlaylistEditPage
+import app.missu.data.parse.PlaylistFormParser
 import app.missu.data.parse.PlaylistParser
 import app.missu.data.parse.HomeParser
 import kotlinx.serialization.json.Json
@@ -186,7 +187,7 @@ class MissavApi(
         val form = withAuthRetry {
             withChallengeRetry {
                 val html = client.fetchHtml(CREATE_PLAYLIST_PATH)
-                PlaylistCreateParser.parse(html) ?: throw IllegalStateException("新建片单页没有找到表单")
+                PlaylistFormParser.parseCreate(html) ?: throw IllegalStateException("新建片单页没有找到表单")
             }
         }
 
@@ -199,6 +200,39 @@ class MissavApi(
             withChallengeRetry {
                 val path = form.action.takeIf { it.isNotBlank() } ?: CREATE_PLAYLIST_PATH
                 client.postForm(path, fields)
+            }
+        }
+    }
+    /** 读取「修改片单」页：当前值 + 更新表单 + 删除表单（站点没有对应 JSON 接口）。 */
+    suspend fun getPlaylistEdit(id: String): PlaylistEditPage = withAuthRetry {
+        withChallengeRetry {
+            val html = client.fetchHtml("/playlists/$id/edit")
+            PlaylistFormParser.parseEdit(html) ?: throw IllegalStateException("修改片单页没有找到表单")
+        }
+    }
+
+    /** 更新片单（名称 / 描述 / 是否公开）。表单 action 为空表示提交回编辑页自身。 */
+    suspend fun updatePlaylist(id: String, name: String, description: String, isPublic: Boolean) {
+        val page = getPlaylistEdit(id)
+        val fields = page.update.fields.toMutableMap()
+        fields[page.update.nameField] = name
+        fields["description"] = description
+        fields["is_public"] = if (isPublic) "1" else "0"
+        withAuthRetry {
+            withChallengeRetry {
+                val path = page.update.action.takeIf { it.isNotBlank() } ?: "/playlists/$id/edit"
+                client.postForm(path, fields)
+            }
+        }
+    }
+
+    /** 删除片单：提交修改页里的删除表单（`_method=delete` + `_token` 到片单自身 URL）。 */
+    suspend fun deletePlaylist(id: String) {
+        val page = getPlaylistEdit(id)
+        withAuthRetry {
+            withChallengeRetry {
+                val path = page.deleteAction.takeIf { it.isNotBlank() } ?: "/playlists/$id"
+                client.postForm(path, page.deleteFields)
             }
         }
     }
