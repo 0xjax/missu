@@ -1,6 +1,7 @@
 package app.missu.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -39,7 +42,12 @@ private val UncensoredBadge = Color(0xD91E40AF)
 private val OtherBadge = Color(0xD91F2937)
 
 @Composable
-fun HomeScreen(state: HomeUiState, onRetry: () -> Unit, modifier: Modifier = Modifier) {
+fun HomeScreen(
+    state: HomeUiState,
+    onRetry: () -> Unit,
+    onOpen: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     when (state) {
         HomeUiState.Loading -> Centered(modifier) { CircularProgressIndicator() }
 
@@ -59,7 +67,7 @@ fun HomeScreen(state: HomeUiState, onRetry: () -> Unit, modifier: Modifier = Mod
             }
         }
 
-        is HomeUiState.Content -> HomeGrid(state.sections, modifier)
+        is HomeUiState.Content -> HomeGrid(state.sections, onOpen, modifier)
     }
 }
 
@@ -69,9 +77,10 @@ private fun Centered(modifier: Modifier, content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun HomeGrid(sections: List<HomeSection>, modifier: Modifier) {
+private fun HomeGrid(sections: List<HomeSection>, onOpen: (String) -> Unit, modifier: Modifier) {
     LazyVerticalGrid(
-        modifier = modifier,
+        // NOTE: 现在没有 Scaffold 提供 inset，状态栏/导航栏要自己避开，否则标题会压在状态栏下面。
+        modifier = modifier.statusBarsPadding().navigationBarsPadding(),
         columns = GridCells.Fixed(2),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 32.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -89,15 +98,15 @@ private fun HomeGrid(sections: List<HomeSection>, modifier: Modifier) {
                 items = section.videos,
                 key = { video -> "${section.id}-${video.id}" },
             ) { video ->
-                VideoCard(video)
+                VideoCard(video = video, onClick = { onOpen(video.id) })
             }
         }
     }
 }
 
 @Composable
-private fun VideoCard(video: VideoSummary) {
-    Column {
+private fun VideoCard(video: VideoSummary, onClick: () -> Unit) {
+    Column(modifier = Modifier.clickable(onClick = onClick)) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()

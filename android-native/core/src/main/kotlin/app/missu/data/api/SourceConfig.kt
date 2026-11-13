@@ -37,4 +37,15 @@ object SourceConfig {
     }
 
     fun localizedUrl(path: String): String = BASE_URL + localizedPath(path)
+
+    /**
+     * 去掉站点的 `/dmNNN` 前缀与语言段，得到稳定的内容路径（如 `/cn/playlists/1` → `/playlists/1`）。
+     * NOTE: 详情页里的链接带这两种前缀，归一化后才能交给列表页复用。
+     */
+    fun contentPath(pathname: String): String {
+        val segments = pathname.split('/').filter { it.isNotEmpty() }.toMutableList()
+        if (segments.firstOrNull()?.matches(Regex("dm\\d+")) == true) segments.removeAt(0)
+        if (segments.firstOrNull() in LANGUAGE_SEGMENTS) segments.removeAt(0)
+        return "/" + segments.joinToString("/")
+    }
 }
