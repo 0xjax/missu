@@ -74,22 +74,22 @@ cd D:\missu\android-native
 ```
 core/          纯 JVM 库（非 UI 层）——**不许出现 android.* / androidx.***
   src/main/kotlin/app/missu/data/
-    api/    SourceConfig（语言前缀/dm 前缀）、MissavClient（OkHttp + 挑战翻译）、
-            MissavApi（getHome + 挑战重试）、Challenge（ChallengeHandler 契约）、Errors
-    model/  VideoSummary / HomeSection
-    parse/  HomeParser（Jsoup，选择器对照 legacy）
-  src/test/  解析测试 + 真实首页 fixture（resources/home-cn.html）
+    api/    SourceConfig（语言前缀 /dm 前缀）、MissavClient（OkHttp + 挑战翻译 + JSON 请求）、
+            MissavApi（getHome / getVideoDetail / searchVideos / getSaved / getVideos /
+            getDirectory / login / 收藏 / 片单）、ContentLanguages、CredentialsProvider、Errors
+    model/  VideoSummary · HomeSection · VideoDetail · VideoList · DirectoryList ·
+            VideoPlaylist · AccountUser · DetailInfoRow
+    parse/  HomeParser · DetailParser（含 Dean Edwards 解包）· DirectoryParser · ApiJson
+  src/test/  20 个离线测试 + 真实页面 fixture（home-cn.html / detail.html / search.html）
 
 app/           Android 应用（UI + 平台适配）
   src/main/java/app/missu/
-    MainActivity.kt        当前是数据层验证屏，将来换成首页
-    ui/theme/              Material 3 主题
-    ui/challenge/          Cloudflare 人机验证页（WebView）
-    data/api/              AndroidCookieJar（CookieManager 适配）
-                           ChallengeHost（Activity 交接）
-                           AndroidApi（装配：OkHttp + 共享 Cookie + 验证页）
-    data/store/            ProfileStore（邮箱/昵称）
-                           CredentialStore（Keystore AES-GCM 加密的账号密码）
+    MainActivity.kt        壳层：Scaffold + 底部导航 + NavHost（所有路由集中在这里）
+    ui/home · ui/detail · ui/player · ui/search · ui/discover · ui/saved ·
+    ui/history · ui/settings · ui/account · ui/list · ui/components · ui/theme · ui/challenge
+    data/api/              AndroidCookieJar（CookieManager 适配）· ChallengeHost · AndroidApi
+    data/store/            ProfileStore（邮箱）· CredentialStore（Keystore 加密的账号密码）·
+                           SettingsStore（内容语言）· HistoryStore（观看进度）
 ```
 
 **边界规则**：`:app` 依赖 `:core`，反向禁止。取数、解析、模型都只在 `:core`，因此它们能在纯 JVM 上跑测试，将来也能被服务端复用。
@@ -111,25 +111,39 @@ app/           Android 应用（UI + 平台适配）
 - `AndroidManifest` 里 `allowBackup="false"`：密文不随云备份离开设备。
 - 因此不再需要 `.env` / `scripts/dev-test-login.js` / `adb reverse` 那条传凭据的长链路，已整套删除。
 
-## 迁移顺序
+## 现状（都经过真机验证）
 
-1. **网络层 + 解析**（唯一有不确定性的部分）：`getHome` 拿到板块 → 先写 JVM 验证跑通，再上 UI。
-2. **首页列表**：`getHome` / `getVideos` → 两列卡片网格。
-3. **详情 + 播放**：`getVideoDetail` → Media3 ExoPlayer。
-4. **搜索**：`searchVideos` + 搜索历史。
-5. **登录 / 人机验证**：`CookieManager` 与 OkHttp 共享 Cookie，第二个坑点。
-6. **发现 / 片单 / 收藏 / 历史 / 设置 / 语言**：纯 UI 体力活。
+- 首页 4 板块、详情（信息行里带路径的值可点进列表）、播放（全屏 / 倍速 / ±10 秒 / 进度，Material3 控件）
+- 搜索（分页）、收藏 + 收藏列表、片单成员、观看历史 + 继续播放、设置 + 7 种内容语言
+- 底部导航：首页 / 发现（女优 · 类型目录）/ 搜索 / 我的
+
+## 测试
+
+```powershell
+cd android-native
+.\gradlew.bat :core:test      # 20 个测试，全部离线
+```
+
+| 测试 | 覆盖 |
+|---|---|
+| `HomeParserTest` / `HomeFixtureTest` | 合成用例 + 真实首页 fixture（4 板块 56 条） |
+| `DetailFixtureTest` | 真实详情页：标题、8 行信息、`internalId`、打包脚本解出的 m3u8 |
+| `SearchFixtureTest` | 真实搜索页：12 条 + `nextPage` 信号 |
+| `DirectoryParserTest` | 计数后缀跨语言切分、占位链接去重、`/ranking` 排除 |
+| `ApiJsonTest` | 收藏状态与片单 JSON 的字段缺失/类型异常兜底 |
+
+联网测试默认跳过，加 `MISSU_LIVE=1` 才会跑（`LiveHomeTest` / `LiveDiagnosticsTest`）。
 
 ## Expo 版对应关系
 
 | Expo 版 | Kotlin 版 |
 |---|---|
 | `expo-router` | Navigation Compose（单 Activity） |
-| `expo-video` | Media3 ExoPlayer |
+| `expo-video` | Media3 ExoPlayer（`media3-ui-compose-material3` 控件） |
 | `react-native-webview` | 系统 `WebView` + `CookieManager` |
 | `node-html-parser` | Jsoup |
-| `expo-sqlite/kv-store` | DataStore Preferences |
-| `expo-image` | Coil（待引入） |
+| `expo-sqlite/kv-store` | SharedPreferences（`ProfileStore` / `SettingsStore` / `HistoryStore`） |
+| `expo-image` | Coil 3 |
 | `src/api/missav.ts` 的 22 个函数 | 同名 Kotlin 函数，签名对齐便于对照 |
 
 ## 已知坑（都踩过并已解决）
@@ -148,11 +162,27 @@ app/           Android 应用（UI + 平台适配）
 - **`build.ps1` 必须是 UTF-8 带 BOM** → Windows PowerShell 5.1 对无 BOM 的 UTF-8 按 ANSI 解码，中文全角字符会吞掉行尾换行，把下一行代码并进注释（曾导致 `JAVA_HOME` 从未生效）。
 - **Gradle daemon 占住 stdout** → 自动化采集输出时加 `MISSU_NO_DAEMON=1`，否则管道永远等不到 EOF。
 
-**运行时（从 Expo 版带过来的教训）**
+**站点契约（最容易安静出错的地方）**
+
+- **游客态不报错**：`/saved` 对游客返回 200 + 空列表，`/playlists` 对游客返回 200。所以「空结果」不能直接当成
+  「真的没有」，登录可见的列表页必须先用 `reloginWithRemembered()` 确认会话（已实测）。
+- **401 是会话失效、不是权限不足**：写接口（收藏 / 片单）用 401 表示需要重新登录，统一走 `withAuthRetry`。
+  **例外**：登录接口自己的 401 表示账号密码错，要转成 `InvalidCredentialsException`，文案不能混。
+- **`checkSession()` 的 302 判据失效**：本项已实测不成立，启动时不要据此判断登录态（详见「记住账号」）。
+- **根路径接口**：片单与收藏挂在 `/api/...`，带 `/cn` 前缀会 404（`requestJson(rawPath = true)`）。
+- **Cloudflare 目前只在 PC 上触发**：PC 的 JVM 请求被 403 挑战（`cf-mitigated: challenge`），而真机上的
+  OkHttp 直接放行。所以 `ChallengeActivity` 是兜底链路、**尚未被真实触发验证过**；若哪天手机端也被挑战，
+  这是唯一出路——`cf_clearance` 必须让 OkHttp 与 WebView 共用系统 `CookieManager`（已打通）。
+
+**UI 与交互**
 
 - **底部栏高度**：M3 `NavigationBar` 自己处理窗口 inset，外面不要再加一次 `insets.bottom`，否则底栏高度翻倍（Expo 版踩过）。
-- **Cloudflare**：PC 上的 JVM 请求实测被 403 挑战（`cf-mitigated: challenge`），而**真机上的 OkHttp 本轮直接放行**。因此 `ChallengeActivity` 目前只是兜底：仅在收到 `ChallengeException` 时弹出，尚未被真实触发验证过。若哪天手机端也开始被挑战，这条链路就是唯一出路——`cf_clearance` 必须让 OkHttp 与 WebView 用同一份 Cookie（已用系统 `CookieManager` 打通）。
-- **语言前缀**：站点接口是 `/cn/api/...`，但片单接口挂在根路径 `/api/playlists/...`。
+- **系统栏内边距只在壳层处理一次**（`Scaffold` + `WindowInsets.safeDrawing`）；页面里各自加 `statusBarsPadding`
+  会变成"每加一个页面都要记得加"，而且极易漏。需要贴边的页面单独 opt-out。
+- **列表页的空/错状态要区分**：网络上失败不能显示成"没有内容"，否则用户以为数据丢了。
+
+**播放器（Media3）**
+
 - **播放器生命周期**：详情页留在回退栈里时 ExoPlayer 实例会一直挂着，离开必须 `release()`。
 - **Media3 1.x 不含 HLS**：只加 `media3-exoplayer` 会在 `setMediaItem` 时抛
   `ClassNotFoundException: HlsMediaSource$Factory`，必须同时加 `media3-exoplayer-hls`。
@@ -165,3 +195,9 @@ app/           Android 应用（UI + 平台适配）
   必须挂在 `TextureView.setOnTouchListener` 上。
 - **弹层不能放在会被自动隐藏的控件树里**：倍速菜单挂在控件层内时，3 秒自动隐藏会把整棵树销毁，
   菜单一闪就关。菜单本体要由播放器持有，并在菜单展开期间暂停自动隐藏。
+
+**调试**
+
+- **vivo 只保留 W/E 级应用日志**：`Log.i` 完全看不到（实测），排查时用 `Log.w`，并且别把凭据写进日志。
+- **`uiautomator dump` 是单行 XML**：用正则取 `text="…"` 与 `bounds`，不要指望 `Select-String` 按行筛。
+- **Compose 的无障碍树只在控件可见时才有节点**：自动隐藏的控件 dump 不到，先点一下让它们出现。
