@@ -181,7 +181,7 @@ $m.extra.expoClient.hostUri
 
 ## 构建独立 APK
 
-需要脱离 Metro 验证图标、启动图或网络行为时使用。首次构建或修改 `app.json` 后先执行 `bunx expo prebuild --platform android` 生成 `android/`。本机工具链不在系统 PATH，位于 `.local/toolchain`（JDK 17、Android SDK、Gradle、Node），并已 gitignore。
+需要脱离 Metro 验证图标、启动图或网络行为时使用。首次构建或修改 `app.json` 后先执行 `bun run prebuild -- --platform android` 生成 `android/`（走 `package.json` 的 `prebuild` 脚本，它会带上 `EXPO_NO_TYPESCRIPT_SETUP=1`——项目没有安装 `typescript`，直接 `bunx expo prebuild` 会报 `CommandError: ... Install typescript`）。本机工具链不在系统 PATH，位于 `.local/toolchain`（JDK 17、Android SDK、Gradle、Node），并已 gitignore。
 
 ```bash
 cd D:/missu/android
