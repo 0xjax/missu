@@ -21,6 +21,12 @@ bunx expo export --platform android
 - 应用名 `Missu`，包名 `app.missu`；独立 APK 的构建与安装见 `docs/android-debugging.md` 的「构建独立 APK」，日常开发仍用 Expo Go。
 - Windows 沙箱下子进程写工作区报 EPERM / 拒绝访问（典型：`bun run start` 写 `expo-env.d.ts` 失败）时，运行 `bun run acl:fix` 一次性补齐 ACE 与 Low 完整性标签（幂等）。脚本须无沙箱运行，受限 shell 里改不了 ACL。
 
+## 依赖选择（不许靠猜）
+
+- 不用「行为/动画封在内部、只能靠猜默认值调参」的组件。典型反面案例：`expo-router` 的 `NativeTabs` —— 底层是 RNS `TabsContainer` → Material `BottomNavigationView`，托盘（active indicator）、按压波纹、图标交叉淡入全在 Material 内部，既没有过渡参数，也关不掉「旧图标先消失、新图标再淡入」的空档。
+- 需要控制观感的 UI **自己用 RN 视图 + Reanimated 画**（例：`src/components/tab-header.tsx`；tab 头部与底部栏都不再包原生组件）；原生只留给系统级能力：Stack 转场与返回手势、播放管线、通知、权限。
+- 引入任何依赖前先确认：它的可配置面能否覆盖设计需求？如果不能，就自绘或换库，不要在别人的默认值上反复试参数。
+
 ## Anti-Over-Engineering
 
 - Only make changes directly requested or clearly necessary; no extra features, refactors, or adjacent improvements.

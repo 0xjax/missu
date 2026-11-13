@@ -1,5 +1,6 @@
-import { TabStack } from '@/components/tab-stack';
+import { Slot } from 'expo-router';
 
+// NOTE: tab 内不嵌原生 Stack，标题栏由页面用 TabHeader 自绘（见 components/tab-header.tsx）。
 export default function LatestTabLayout() {
-  return <TabStack title="列表" />;
+  return <Slot />;
 }
