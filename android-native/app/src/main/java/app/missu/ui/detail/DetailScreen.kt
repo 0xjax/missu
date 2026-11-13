@@ -32,6 +32,8 @@ fun DetailScreen(
     onRetry: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    message: String? = null,
+    onToggleSaved: () -> Unit = {},
 ) {
     Column(modifier.fillMaxSize()) {
         Row(
@@ -58,13 +60,13 @@ fun DetailScreen(
                 }
             }
 
-            is DetailUiState.Content -> DetailContent(state.detail)
+            is DetailUiState.Content -> DetailContent(state.detail, message, onToggleSaved)
         }
     }
 }
 
 @Composable
-private fun DetailContent(detail: VideoDetail) {
+private fun DetailContent(detail: VideoDetail, message: String?, onToggleSaved: () -> Unit) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 32.dp),
@@ -103,6 +105,26 @@ private fun DetailContent(detail: VideoDetail) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
+        }
+
+        item(key = "actions") {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                // NOTE: 收藏状态来自 /api/items/{id}/view；401 会先自动重登一次（见 withAuthRetry）。
+                Button(onClick = onToggleSaved) {
+                    Text(if (detail.saved) "已收藏" else "收藏")
+                }
+                message?.let { text ->
+                    Text(
+                        text = text,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
         }
 
         items(detail.info, key = { row -> row.label }) { row ->

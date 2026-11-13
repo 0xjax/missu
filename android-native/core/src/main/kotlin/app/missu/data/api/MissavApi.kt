@@ -8,6 +8,7 @@ import app.missu.data.parse.DetailParser
 import app.missu.data.parse.HomeParser
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -30,9 +31,36 @@ class MissavApi(
     /** 首页板块。站点直出 HTML，直接 Jsoup 解析，不需要 WebView。 */
     suspend fun getHome(): List<HomeSection> = withChallengeRetry { HomeParser.parseHome(client.fetchHtml("/")) }
 
-    /** 详情页。播放地址从内联打包脚本里解出来，见 [app.missu.data.parse.DetailParser.extractPlaybackUrl]。 */
+    /**
+     * 详情页。播放地址从内联打包脚本里解出来（见 [app.missu.data.parse.DetailParser.extractPlaybackUrl]）。
+     * NOTE: 顺带查收藏状态，查不到就当「未收藏」——详情页不该因为收藏接口抖动而整体失败。
+     */
     suspend fun getVideoDetail(id: String): VideoDetail = withChallengeRetry {
-        DetailParser.parse(client.fetchHtml("/$id"), id)
+        val detail = DetailParser.parse(client.fetchHtml("/$id"), id)
+        val internalId = detail.internalId ?: return@withChallengeRetry detail
+        val saved = runCatching { isSaved(internalId) }.getOrDefault(false)
+        detail.copy(saved = saved)
+    }
+
+    /** 收藏状态。`rawPath`：收藏接口只挂在根路径。 */
+    suspend fun isSaved(internalId: String): Boolean = withAuthRetry {
+        withChallengeRetry {
+            val json = client.requestJson("GET", "/api/items/$internalId/view", rawPath = true)
+            Json.parseToJsonElement(json).jsonObject["saved"]?.jsonPrimitive?.booleanOrNull ?: false
+        }
+    }
+
+    /** 收藏 / 取消收藏。401 会自动重登一次再重试（见 [withAuthRetry]）。 */
+    suspend fun setSaved(internalId: String, saved: Boolean) {
+        withAuthRetry {
+            withChallengeRetry {
+                client.requestJson(
+                    method = if (saved) "POST" else "DELETE",
+                    path = "/api/items/$internalId/save",
+                    rawPath = true,
+                )
+            }
+        }
     }
 
     suspend fun html(path: String): String = withChallengeRetry { client.fetchHtml(path) }

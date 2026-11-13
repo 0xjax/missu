@@ -73,24 +73,36 @@ class MissavClient(
     }
 
     /**
-     * JSON POST。站点的写接口按浏览器态校验（Origin / Referer / XHR / Content-Type），
-     * 少任何一个都可能被拒。
-     * NOTE: 401 在这里统一表示会话失效；**登录接口的 401 语义不同**（账号密码错），由调用方转换。
+     * JSON GET/POST/DELETE。
+     *
+     * NOTE: `rawPath = true` 时不加语言前缀——收藏与片单接口只挂在根路径（`/api/items/...`），
+     * 带 `/{lang}` 前缀会 404（legacy 的 rawPath 参数就是干这个的）。
+     * NOTE: 401 统一表示会话失效；**登录接口的 401 语义不同**（账号密码错），由调用方转换。
      */
-    suspend fun postJson(path: String, body: String): String = withContext(Dispatchers.IO) {
+    suspend fun requestJson(
+        method: String,
+        path: String,
+        body: String? = null,
+        rawPath: Boolean = false,
+    ): String = withContext(Dispatchers.IO) {
         val referer = SourceConfig.BASE_URL +
             if (SourceConfig.contentLanguage == "tw") "/" else "/${SourceConfig.contentLanguage}/"
-        val request = Request.Builder()
-            .url(SourceConfig.localizedUrl(path))
+        val builder = Request.Builder()
+            .url(if (rawPath) SourceConfig.BASE_URL + path else SourceConfig.localizedUrl(path))
             .header("User-Agent", userAgent)
             .header("Accept", "application/json")
             .header("Origin", SourceConfig.BASE_URL)
             .header("Referer", referer)
             .header("X-Requested-With", "XMLHttpRequest")
-            .post(body.toRequestBody(JSON_MEDIA_TYPE))
-            .build()
 
-        client.newCall(request).execute().use { response ->
+        when (method) {
+            "GET" -> builder.get()
+            "POST" -> builder.post((body ?: "").toRequestBody(JSON_MEDIA_TYPE))
+            "DELETE" -> builder.delete()
+            else -> throw IllegalArgumentException("unsupported method: $method")
+        }
+
+        client.newCall(builder.build()).execute().use { response ->
             val text = response.body.string()
             if (response.code == 403 ||
                 response.header("cf-mitigated") == "challenge" ||
@@ -103,6 +115,9 @@ class MissavClient(
             text
         }
     }
+
+    /** 兼容旧调用点：登录用的 JSON POST（走语言前缀）。 */
+    suspend fun postJson(path: String, body: String): String = requestJson("POST", path, body)
 
     /** 清空 Cookie 罐（登录前必须调用，见 [ClearableCookieJar]）。 */
     fun clearCookies() {
