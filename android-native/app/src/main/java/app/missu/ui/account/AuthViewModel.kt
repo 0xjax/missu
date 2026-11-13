@@ -1,5 +1,6 @@
 package app.missu.ui.account
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.missu.data.api.ChallengeException
@@ -49,38 +50,21 @@ class AuthViewModel(
     }
 
     /**
-     * 启动时恢复登录态：
-     * 1. 没有本地资料 → 未登录；
-     * 2. 会话仍有效 → 直接用；
-     * 3. 会话失效 → 用记住的凭据自动重登，失败（改密码等）才清凭据回落到未登录。
-     * NOTE: 只有「受保护页面被 302 回首页」才判会话失效；网络/挑战失败维持原状，避免误登出/误重登。
+     * 启动时恢复登录态：有本地资料就直接显示已登录（乐观恢复）。
+     *
+     * WARNING: 这里**不**调用 `checkSession()`。实测当前站点对游客访问 `/playlists` 返回 200 而不是
+     * 302 回首页，用它判断的结果永远是「会话有效」，据此做启动重登只会是死代码。
+     * 真正的会话失效信号只会出现在需要登录的接口上，由 `MissavApi.withAuthRetry` 负责
+     * 「401 → 用记住的凭据重登一次 → 重试」。
      */
     private fun restore() {
-        viewModelScope.launch {
-            val saved = store.read()
-            if (saved == null) {
-                _state.value = AuthUiState.LoggedOut
-                return@launch
-            }
-
-            if (api.checkSession()) {
-                _state.value = AuthUiState.LoggedIn(saved)
-                return@launch
-            }
-
-            val remembered = credentials.load()
-            val user = remembered?.let { (email, password) ->
-                runCatching { api.login(email, password) }.getOrNull()
-            }
-            if (user != null) {
-                store.write(user)
-                _state.value = AuthUiState.LoggedIn(user)
-            } else {
-                store.clear()
-                // NOTE: 凭据已经失效（大概率改了密码），删掉避免每次启动都白试一次。
-                credentials.clear()
-                _state.value = AuthUiState.LoggedOut
-            }
+        val saved = store.read()
+        if (saved == null) {
+            Log.w(TAG, "restore: no local profile")
+            _state.value = AuthUiState.LoggedOut
+        } else {
+            Log.w(TAG, "restore: local profile found, assuming logged in")
+            _state.value = AuthUiState.LoggedIn(saved)
         }
     }
 
@@ -112,6 +96,11 @@ class AuthViewModel(
 
     fun clearLoginError() {
         _loginState.value = LoginUiState.Idle
+    }
+
+    private companion object {
+        // NOTE: 只记分支名，绝不打印邮箱或密码。
+        const val TAG = "MissavAuth"
     }
 
     private fun describe(error: Exception): String = when (error) {

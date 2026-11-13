@@ -24,6 +24,7 @@ import kotlinx.serialization.json.put
 class MissavApi(
     private val client: MissavClient = MissavClient(),
     private val challenge: ChallengeHandler? = null,
+    private val credentials: CredentialsProvider? = null,
 ) {
 
     /** 首页板块。站点直出 HTML，直接 Jsoup 解析，不需要 WebView。 */
@@ -68,8 +69,11 @@ class MissavApi(
     }
 
     /**
-     * 启动时校验会话：只有「受保护页面被 302 回首页」才判失效；
-     * 挑战/网络错误一律维持登录态，避免误登出（legacy 结论）。
+     * 校验会话：只有「受保护页面被 302 回首页」才判失效。
+     *
+     * WARNING: 实测在当前站点**对游客访问 `/playlists` 返回 200 而不是 302**（应用日志里
+     * 「restore: session valid」正是这个原因），所以这个函数不能用来判断「要不要自动重登」，
+     * 只保留给「确实拿到 302 信号」的少数场景。真正的失效信号请用 [withAuthRetry]。
      */
     suspend fun checkSession(): Boolean = try {
         client.fetchHtml("/playlists")
@@ -98,6 +102,25 @@ class MissavApi(
         val path = if (page > 1) "/search/$encoded?page=$page" else "/search/$encoded"
         HomeParser.parseVideoList(client.fetchHtml(path), page)
     }
+
+    /**
+     * 受保护请求的包装：拿到 [SessionExpiredException] 时用记住的凭据自动重登一次再重试。
+     * NOTE: 重登被拒（改过密码）就清掉凭据并抛原始错误，避免死循环。
+     * TODO: 收藏/片单这些接口迁移过来时统一走这里。
+     */
+    suspend fun <T> withAuthRetry(block: suspend () -> T): T =
+        try {
+            block()
+        } catch (error: SessionExpiredException) {
+            val remembered = credentials?.load() ?: throw error
+            try {
+                login(remembered.first, remembered.second)
+            } catch (relogin: Exception) {
+                if (relogin is InvalidCredentialsException) credentials.clear()
+                throw error
+            }
+            block()
+        }
 
     private suspend fun <T> withChallengeRetry(block: suspend () -> T): T =
         try {
