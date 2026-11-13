@@ -21,5 +21,9 @@ dependencies {
     implementation("org.jsoup:jsoup:1.24.1")
     api("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
 
+    // 站点有 JSON 接口（登录、收藏、片单）。core 是纯 JVM，不能用 Android 自带的 org.json，
+    // 也不需要编译器插件——只用 Json.parseToJsonElement 这类运行时 API。
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.13.0")
+
     testImplementation("junit:junit:4.13.2")
 }

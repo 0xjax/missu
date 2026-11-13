@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,6 +35,7 @@ fun HomeScreen(
     onRetry: () -> Unit,
     onOpen: (String) -> Unit,
     onSearch: () -> Unit,
+    onAccount: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when (state) {
@@ -55,7 +57,7 @@ fun HomeScreen(
             }
         }
 
-        is HomeUiState.Content -> HomeGrid(state.sections, onOpen, onSearch, modifier)
+        is HomeUiState.Content -> HomeGrid(state.sections, onOpen, onSearch, onAccount, modifier)
     }
 }
 
@@ -69,6 +71,7 @@ private fun HomeGrid(
     sections: List<HomeSection>,
     onOpen: (String) -> Unit,
     onSearch: () -> Unit,
+    onAccount: () -> Unit,
     modifier: Modifier,
 ) {
     LazyVerticalGrid(
@@ -79,19 +82,37 @@ private fun HomeGrid(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item(key = "search-entry", span = { GridItemSpan(maxLineSpan) }) {
-            // NOTE: 搜索入口先做成一个只读的"输入框"，点开进独立搜索页；真正输入在那边。
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFF212225), RoundedCornerShape(10.dp))
-                    .clickable(onClick = onSearch)
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = "搜索番号、女优、关键词",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                // NOTE: 搜索入口先做成一个只读的"输入框"，点开进独立搜索页；真正输入在那边。
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(Color(0xFF212225), RoundedCornerShape(10.dp))
+                        .clickable(onClick = onSearch)
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                ) {
+                    Text(
+                        text = "搜索番号、女优、关键词",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .background(Color(0xFF212225), RoundedCornerShape(10.dp))
+                        .clickable(onClick = onAccount)
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                ) {
+                    Text(
+                        text = "我的",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
 

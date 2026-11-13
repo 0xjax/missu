@@ -81,9 +81,19 @@ app/           Android 应用（UI + 平台适配）
     data/api/              AndroidCookieJar（CookieManager 适配）
                            ChallengeHost（Activity 交接）
                            AndroidApi（装配：OkHttp + 共享 Cookie + 验证页）
+    data/store/            ProfileStore（邮箱/昵称）
+                           CredentialStore（Keystore AES-GCM 加密的账号密码）
 ```
 
 **边界规则**：`:app` 依赖 `:core`，反向禁止。取数、解析、模型都只在 `:core`，因此它们能在纯 JVM 上跑测试，将来也能被服务端复用。
+
+## 记住账号
+
+- 第一次手动登录后，邮箱 + 密码用 **Android Keystore 里的密钥做 AES-GCM 加密**再落盘（`data/store/CredentialStore.kt`）。
+- 会话失效（受保护页面被 302 回首页）时，自动用记住的凭据重登一次；重登失败（改过密码）就清掉凭据、回到登录页。
+- 网络/人机验证失败**不**触发重登，也不登出（沿用 legacy 结论：只有 302 回首页才算失效）。
+- `AndroidManifest` 里 `allowBackup="false"`：密文不随云备份离开设备。
+- 因此不再需要 `.env` / `scripts/dev-test-login.js` / `adb reverse` 那条传凭据的长链路，已整套删除。
 
 ## 迁移顺序
 

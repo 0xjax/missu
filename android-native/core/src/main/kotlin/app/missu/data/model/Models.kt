@@ -18,6 +18,12 @@ data class HomeSection(
     val morePath: String? = null,
 )
 
+/** 登录用户。源站只返回 name，邮箱由本次登录补全。 */
+data class AccountUser(
+    val email: String,
+    val username: String? = null,
+)
+
 /** 一页视频列表；`nextPage` 为空表示没有下一页。 */
 data class VideoList(
     val videos: List<VideoSummary>,

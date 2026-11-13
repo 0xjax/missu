@@ -1,5 +1,8 @@
 package app.missu.data.api
 
+/** 登录时账号或密码不对（登录接口自身的 401）。 */
+class InvalidCredentialsException : Exception("邮箱或密码错误")
+
 /** 请求失败（非 2xx）。 */
 class HttpStatusException(val status: Int) : Exception("请求失败（HTTP $status）")
 
