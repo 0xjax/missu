@@ -2,11 +2,12 @@
 
 `D:\missu` 下 Expo 版的 Kotlin 重写。目标：拿回完全可控的原生实现——没有 Metro、没有 Expo Go 版本错配、Compose 代码全是自己的。
 
-**分段迁移**：先把「网络 + 解析」跑通，再按屏幕逐块搬。Expo 版在这期间保持可运行，作为参照实现和验收标准。
+**分段迁移**：先把「网络 + 解析」跑通，再按屏幕逐块搬。Expo 版不再构建 APK，仅作参照实现。
 
 ## 当前状态
 
 - ✅ 工程骨架可编译：`BUILD SUCCESSFUL`，产出 `app-debug.apk`（11.4 MB）
+- ✅ 工具链已收口：SDK/JDK 全局唯一，NDK/CMake/重复 SDK 已删（回收约 5.6 GB）
 - ✅ 单 Activity + Compose 深色主题 + 占位屏
 - ⬜ 网络层 + Jsoup 解析（下一步）
 - ⬜ 首页 / 详情 / 播放 / 搜索 / 登录
@@ -16,14 +17,17 @@
 
 | 组件 | 版本 | 备注 |
 |---|---|---|
-| Gradle | **9.6.0** | wrapper 指向腾讯镜像；AGP 9.x 硬性要求 ≥ 9.6.0 |
+| Gradle | **9.6.0**（wrapper） | AGP 9.x 硬性要求 ≥ 9.6.0；发行包走腾讯镜像 |
 | AGP | **9.5.1** | 9.x 起 **Kotlin 支持内置**，不要再加 `org.jetbrains.kotlin.android` 插件 |
 | Kotlin | 2.4.21 | 只通过 `org.jetbrains.kotlin.plugin.compose` 参与 |
 | Compose BOM | 2026.09.00 | |
-| activity-compose / navigation-compose / lifecycle-vm-compose | 1.13.0 / 2.10.2 / 2.11.0 | |
-| compileSdk | **37**（+ `compileSdkMinor = 0`） | 新 AndroidX 要求 ≥ 37；本机装的是 `android-37.0` |
+| activity / navigation / lifecycle-vm | 1.13.0 / 2.10.2 / 2.11.0 (compose 版) | |
+| compileSdk | **37**（+ `compileSdkMinor = 0`） | 新 AndroidX 要求 ≥ 37 |
 | targetSdk / minSdk | 36 / 26 | 编译用新 API、运行时行为按 36 走 |
-| JDK | 17 | `D:\missu\.local\toolchain\jdk-tmp\jdk-17.0.2` |
+| JDK | 17 | `D:\Android\jdk-17` |
+| Android SDK | API 37.0 + Build-Tools 37 + Platform-Tools | `D:\Android\Sdk` |
+
+**SDK 与 JDK 是全局安装物**，不在项目里；项目只通过 `local.properties`（`sdk.dir=D:/Android/Sdk`，已 gitignore）和 `build.ps1` 引用它们。
 
 ## 构建
 
@@ -34,23 +38,26 @@ cd D:\missu\android-native
 .\build.ps1 release    # release（沿用 debug 签名，仅自用侧载）
 ```
 
-`build.ps1` 里把 5 个环境变量一次性配好，它们都不是可选的：
+自动化场景（需要采集输出）加环境变量 `MISSU_NO_DAEMON=1`：**Gradle daemon 会一直占着 stdout，管道等不到 EOF，命令看起来"卡死"**——构建其实早就结束了。
+
+`build.ps1` 里固定了 5 个环境变量：
 
 | 变量 | 值 | 为什么 |
 |---|---|---|
-| `JAVA_HOME` | `.local/toolchain/jdk-tmp/jdk-17.0.2` | 不在 PATH |
-| `ANDROID_HOME` | `.local/toolchain/sdk` | 不在 PATH；与 `local.properties` 的 `sdk.dir` 一致 |
+| `JAVA_HOME` | `D:\Android\jdk-17` | 不在 PATH |
+| `ANDROID_HOME` | `D:\Android\Sdk` | 与 `local.properties` 一致 |
 | `GRADLE_USER_HOME` | `.local/gradle-home` | 用户目录的 `~/.gradle` 里 `native-platform.dll` 加载失败 |
-| `ANDROID_USER_HOME` | `.local/android-home` | `~/.android` 被拒写（analytics.settings） |
+| `ANDROID_USER_HOME` | `.local/android-home` | `~/.android` 被拒写 |
 | `TMP` / `TEMP` | `.tmp-gradle` | `%TEMP%` 拒写，`generateDebugGlobalSynthetics` 会 `AccessDeniedException` |
 
 ## Android Studio 设置（一次性）
 
 1. **Open** → 选 `D:\missu\android-native`（不要选父目录 `D:\missu`，那是 Expo 工程）。
-2. Settings → Build, Execution, Deployment → Build Tools → Gradle：
-   - **Gradle user home** 改成 `D:\missu\.local\gradle-home`（否则 AS 会踩 `native-platform.dll` 那个坑）
-   - **Gradle JDK** 用 AS 自带的 JBR 21 即可
-3. 系统镜像（Emulator）不必装：本工程只跑真机。
+2. Settings → Languages & Frameworks → **Android SDK** → Android SDK Location = `D:\Android\Sdk`
+   - 只应有：Android API 37.0、Build-Tools 37、Platform-Tools
+   - 不要装 NDK、CMake、system-image、Emulator、旧 API（本工程无原生代码，只跑真机）
+3. Settings → Build, Execution, Deployment → Build Tools → Gradle → **Gradle user home** = `D:\missu\.local\gradle-home`
+   （不改就踩 `native-platform.dll` 那个坑）
 
 ## 目录规划
 
@@ -67,7 +74,7 @@ app/src/main/java/app/missu/
 
 ## 迁移顺序
 
-1. **网络层 + 解析**（唯一有不确定性的部分）：`getHome` 拿到板块 → 先写 JVM 单测跑通，再上 UI。
+1. **网络层 + 解析**（唯一有不确定性的部分）：`getHome` 拿到板块 → 先写 JVM 验证跑通，再上 UI。
 2. **首页列表**：`getHome` / `getVideos` → 两列卡片网格。
 3. **详情 + 播放**：`getVideoDetail` → Media3 ExoPlayer。
 4. **搜索**：`searchVideos` + 搜索历史。
@@ -86,17 +93,21 @@ app/src/main/java/app/missu/
 | `expo-image` | Coil（待引入） |
 | `src/api/missav.ts` 的 22 个函数 | 同名 Kotlin 函数，签名对齐便于对照 |
 
-## 已知坑（构建期踩过并已解决）
+## 已知坑（都踩过并已解决）
 
-- **`native-platform.dll` 加载失败**：`GRADLE_USER_HOME` 指到工作区（`.local/gradle-home`）即可，用户目录那份是坏的。
-- **`AccessDeniedException: %TEMP%\global_synthetics_*`**：`TMP`/`TEMP` 指到 `.tmp-gradle`。
-- **`FAIL_ON_PROJECT_REPOS` 冲突**：本机 `GRADLE_USER_HOME/init.d/mirrors.gradle` 会在 project 级注入阿里云镜像（国内加速），所以 `settings.gradle.kts` 不能设那个模式。
-- **AGP 9 内置 Kotlin**：再加 `org.jetbrains.kotlin.android` 会直接报错——插件自己会告诉你删掉。
-- **compileSdk 必须是 37**：Compose BOM 2026.09 的 AndroidX 组件要求 ≥ 37，36 会被依赖元数据拒绝。
+**构建环境**
 
-## 运行时注意（从 Expo 版带过来的教训）
+- **`native-platform.dll` 加载失败** → `GRADLE_USER_HOME` 指到 `.local/gradle-home`。
+- **`AccessDeniedException: %TEMP%\global_synthetics_*`** → `TMP`/`TEMP` 指到 `.tmp-gradle`。
+- **`FAIL_ON_PROJECT_REPOS` 冲突** → 本机 `GRADLE_USER_HOME/init.d/mirrors.gradle` 会注入阿里云镜像，`settings.gradle.kts` 不能设那个模式（镜像已同时写进工程，换机器也能用）。
+- **AGP 9 内置 Kotlin** → 再加 `org.jetbrains.kotlin.android` 会直接报错。
+- **compileSdk 必须 37** → Compose BOM 2026.09 的 AndroidX 组件要求 ≥ 37。
+- **`build.ps1` 必须是 UTF-8 带 BOM** → Windows PowerShell 5.1 对无 BOM 的 UTF-8 按 ANSI 解码，中文全角字符会吞掉行尾换行，把下一行代码并进注释（曾导致 `JAVA_HOME` 从未生效）。
+- **Gradle daemon 占住 stdout** → 自动化采集输出时加 `MISSU_NO_DAEMON=1`，否则管道永远等不到 EOF。
 
-- **底部栏高度**：M3 `NavigationBar` 自己处理窗口 inset，外面不要再加一次 `insets.bottom`。
+**运行时（从 Expo 版带过来的教训）**
+
+- **底部栏高度**：M3 `NavigationBar` 自己处理窗口 inset，外面不要再加一次 `insets.bottom`，否则底栏高度翻倍（Expo 版踩过）。
 - **Cloudflare**：`cf_clearance` 必须让 OkHttp 与 WebView 用同一份 Cookie，否则验证过了仍 403。
 - **语言前缀**：站点接口是 `/cn/api/...`，但片单接口挂在根路径 `/api/playlists/...`。
 - **播放器生命周期**：详情页留在回退栈里时 ExoPlayer 实例会一直挂着，离开必须 `release()`。
