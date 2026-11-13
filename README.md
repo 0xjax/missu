@@ -1,49 +1,47 @@
-# Missu
+# missu
 
-Android client for missav.ai, built with Expo SDK 58, React Native, TypeScript and Expo Router.
+Missu 的 Android 客户端。**现役实现是 Kotlin + Jetpack Compose**（`android-native/`）；仓库根保留的是 Expo/React Native 的旧实现，只作参照与设计规格，不再构建运行。
 
-The source site serves server-rendered HTML instead of a JSON API, so the app fetches pages directly and parses them on device. Parsing contracts live in `docs/api/openapi.json`; `docs/api/README.md` records the source constraints and how to regenerate the spec from HAR captures.
+## 快速开始
 
-## Requirements
-
-- Bun, used for package management and scripts
-- Android device running Expo Go for daily development; iOS and web are out of scope
-
-## Development
-
-```bash
-bun install
-bun run start
+```powershell
+cd android-native
+.\build.ps1 install          # 构建 debug APK 并装到已连接的设备
+adb shell am start -n app.missu/.MainActivity
 ```
 
-Scan the QR code with Expo Go. Code changes reach the device through Metro Fast Refresh — do not restart Metro, rescan or force-stop the app to apply them. For a standalone APK that runs without Metro, see "构建独立 APK" in `docs/android-debugging.md`, which also covers wireless ADB, screenshots and log capture.
+首次或换机器时的工具链配置、版本矩阵、已知构建坑，见 [`android-native/README.md`](android-native/README.md)。
 
-## Verification
-
-```bash
-bun check                              # type check (bun's native checker, like tsc)
-bun run lint                           # oxlint src scripts
-bunx expo export --platform android    # production JS bundle
-```
-
-## Layout
+## 目录
 
 ```
-src/api/         fetch + HTML parsing (missav.ts, parse.ts, with-timeout.ts)
-src/app/         Expo Router file routes
-src/components/  shared UI, including the video player and preview overlay
-src/constants/   theme tokens, channel groups, language list
-src/hooks/       theme and layout hooks
-src/storage/     key-value persistence (history, search history, session-adjacent state)
-src/stores/      React context stores (auth, language, preferences, preview, challenge)
-src/utils/       formatting and haptics helpers
-scripts/         har-to-openapi.js, used to regenerate the API draft
-docs/            API contracts, Android debugging notes, design context
+android-native/      Kotlin + Compose 工程（现役）
+  app/src/main/java/app/missu/
+  build.ps1          构建脚本（配好 JDK/SDK/临时目录）
+  README.md          构建说明、版本矩阵、迁移顺序、已知坑
+
+src/                 legacy Expo/React Native 源码（参照实现）
+app.json             legacy Expo 配置
+DESIGN.md            设计语言、控件规格、迁移中仍然有效的约束
+AGENTS.md            仓库规则（命令、依赖策略、验证方式）
+docs/android-debugging.md   真机调试：无线 ADB、截图、日志、卡巴斯基与 ACL 的坑
 ```
 
-## Implementation notes
+## 工具链
 
-- Android only. Design and acceptance target a physical device.
-- Requests go through `fetch` against the source site; Cloudflare challenges are surfaced through a WebView handshake, and `cf_clearance` is shared with the native cookie jar so the original request can retry.
-- Media playback uses `expo-video` over HLS; cards carry a short preview clip whose URL is derived from the thumbnail, so previews add no requests.
-- State is persisted with `expo-sqlite/kv-store`; the AsyncStorage layout from earlier builds is migrated once on startup.
+| 件 | 位置 |
+|---|---|
+| Android SDK | `D:\Android\Sdk`（API 37.0 + Build-Tools 37 + Platform-Tools） |
+| JDK | Android Studio 自带 JBR 21 |
+| Gradle | wrapper 9.6.0（发行包走腾讯镜像），缓存 `%USERPROFILE%\.gradle` |
+| adb | `D:\platform-tools\adb.exe` |
+
+## 迁移进度
+
+- ✅ 工程骨架可编译、可装机
+- ✅ 工具链收口（全局 SDK/JDK、标准 Gradle 缓存、清掉约 10 GB 冗余）
+- ⬜ 网络层 + Jsoup 解析（`getHome` 验证）
+- ⬜ 首页 / 详情 / 播放 / 搜索 / 登录
+- ⬜ 发现 / 片单 / 收藏 / 历史 / 设置
+
+功能规格以 legacy Expo 版为参照：`src/api/missav.ts`（22 个接口）、`src/api/parse.ts`（HTML 解析规则）、`DESIGN.md`（控件与交互规格）。

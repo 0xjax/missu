@@ -1,5 +1,7 @@
 # Impeccable Design Context
 
+> **实现目标已变更（2026-11）**：现役实现是 **Kotlin + Jetpack Compose**（`android-native/`）。本文的设计原则、控件规格、已知限制继续有效；「组件框架」「Technical Stack」两节描述的是 legacy Expo 实现，只作参照与迁移输入。
+
 ## Users
 
 **Who**: 中文用户，Android 手机竖屏，单手操作，多在夜间或弱光环境使用。
@@ -127,11 +129,17 @@
 
 ## Technical Stack
 
-- Expo SDK 58 + React Native 0.88 + TypeScript，包管理 bun
-- 路由：`expo-router`（文件路由）+ 根原生 `Stack`（转场、返回手势）；tab 栏用 `expo-router/js-tabs` 的 `Tabs`，tab 页头自绘 `TabHeader`；`expo-linking` 只作为它的必需 peer 声明，不直接使用
-- UI：`src/components/ui/` 七个自绘原语 + Reanimated + Gesture Handler；没有 UI 组件库
-- 数据：`src/api/*` 里的原生 `fetch`（带超时、AbortController、登录态判定）+ `node-html-parser` 解析；没有查询缓存库
-- 状态：React context（`src/stores/`），没有全局状态库
-- 存储：只有一套 —— `expo-sqlite/kv-store`，全 App 经 `src/storage/kv.ts` 取用
-- 媒体与系统：`expo-video`、`expo-image`、`react-native-webview`、`expo-haptics`、`expo-screen-orientation`、`expo-splash-screen`、`expo-system-ui`、`expo-constants`
-- 图标：`@expo/vector-icons` 的 Ionicons；字体与图标不手绘
+**现役（Kotlin 原生，`android-native/`）**
+
+- Kotlin 2.4.21 + Jetpack Compose（BOM 2026.09.00）+ Material 3；AGP 9.5.1 / Gradle 9.6.0
+- 单 Activity + Navigation Compose；界面一律自己写 Compose，不引第三方 UI 组件库
+- 数据层：OkHttp + Jsoup（对应 legacy 的 `fetch` + `node-html-parser`）
+- 存储：DataStore（对应 legacy 的 `expo-sqlite/kv-store`）
+- 媒体：Media3 ExoPlayer；图片 Coil；网页/人机验证：系统 `WebView` + `CookieManager`
+
+**legacy（Expo，仅参照）**
+
+- Expo SDK 58 + React Native 0.88 + TypeScript
+- 路由 `expo-router`；UI 是 `src/components/ui/` 的七个自绘原语 + Reanimated + Gesture Handler
+- 数据 `src/api/*`；存储 `expo-sqlite/kv-store`；媒体 `expo-video` / `expo-image` / `react-native-webview`
+- 不再构建、不再运行；`node_modules` 已删除，需要时 `bun install`
