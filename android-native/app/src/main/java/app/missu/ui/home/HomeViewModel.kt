@@ -38,6 +38,8 @@ class HomeViewModel(private val api: MissavApi) : ViewModel() {
     private fun describe(error: Exception): String = when (error) {
         is ChallengeException -> "站点要求人机验证，请重试"
         is HttpStatusException -> "请求失败（HTTP ${error.status}）"
+        // NOTE: OkHttp 的连接类异常 message 是英文（"connection closed" 之类），不直接甩给用户。
+        is java.io.IOException -> "网络连接中断，请重试"
         else -> error.message ?: error::class.simpleName ?: "未知错误"
     }
 }

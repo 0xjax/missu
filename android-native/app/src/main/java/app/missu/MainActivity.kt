@@ -4,8 +4,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -35,7 +39,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             MissuTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    MissuNavHost()
+                    MissuApp()
                 }
             }
         }
@@ -50,38 +54,46 @@ private fun rememberApi(): MissavApi {
 }
 
 @Composable
-private fun MissuNavHost() {
+private fun MissuApp() {
     val navController = rememberNavController()
     val api = rememberApi()
 
-    NavHost(navController = navController, startDestination = "home") {
-        composable("home") {
-            val viewModel: HomeViewModel = viewModel(factory = factory { HomeViewModel(api) })
-            val state by viewModel.state.collectAsState()
-            LaunchedEffect(Unit) { viewModel.load() }
+    // NOTE: 系统栏、刘海、输入法的内边距只在这里处理一次，各页面只负责内容布局。
+    // 需要贴边显示的页面（将来的全屏播放）自己在 destination 里 opt-out，不要在页面里重复加 padding。
+    Scaffold(contentWindowInsets = WindowInsets.safeDrawing) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = "home",
+            modifier = Modifier.padding(innerPadding),
+        ) {
+            composable("home") {
+                val viewModel: HomeViewModel = viewModel(factory = factory { HomeViewModel(api) })
+                val state by viewModel.state.collectAsState()
+                LaunchedEffect(Unit) { viewModel.load() }
 
-            HomeScreen(
-                state = state,
-                onRetry = viewModel::load,
-                onOpen = { id -> navController.navigate("detail/$id") },
-            )
-        }
+                HomeScreen(
+                    state = state,
+                    onRetry = viewModel::load,
+                    onOpen = { id -> navController.navigate("detail/$id") },
+                )
+            }
 
-        composable("detail/{id}") { entry ->
-            val id = entry.arguments?.getString("id").orEmpty()
-            // NOTE: key 用 id —— 换一集详情时复用同一个 ViewModel 会显示上一条数据。
-            val viewModel: DetailViewModel = viewModel(
-                key = "detail-$id",
-                factory = factory { DetailViewModel(api, id) },
-            )
-            val state by viewModel.state.collectAsState()
-            LaunchedEffect(id) { viewModel.load() }
+            composable("detail/{id}") { entry ->
+                val id = entry.arguments?.getString("id").orEmpty()
+                // NOTE: key 用 id —— 换一集详情时复用同一个 ViewModel 会显示上一条数据。
+                val viewModel: DetailViewModel = viewModel(
+                    key = "detail-$id",
+                    factory = factory { DetailViewModel(api, id) },
+                )
+                val state by viewModel.state.collectAsState()
+                LaunchedEffect(id) { viewModel.load() }
 
-            DetailScreen(
-                state = state,
-                onRetry = viewModel::load,
-                onBack = { navController.popBackStack() },
-            )
+                DetailScreen(
+                    state = state,
+                    onRetry = viewModel::load,
+                    onBack = { navController.popBackStack() },
+                )
+            }
         }
     }
 }
