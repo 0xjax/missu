@@ -24,8 +24,11 @@ bunx expo export --platform android
 ## 依赖选择（不许靠猜）
 
 - 不用「行为/动画封在内部、只能靠猜默认值调参」的组件。典型反面案例：`expo-router` 的 `NativeTabs` —— 底层是 RNS `TabsContainer` → Material `BottomNavigationView`，托盘（active indicator）、按压波纹、图标交叉淡入全在 Material 内部，既没有过渡参数，也关不掉「旧图标先消失、新图标再淡入」的空档。
-- 需要控制观感的 UI **自己用 RN 视图 + Reanimated 画**（例：`src/components/tab-header.tsx`；tab 头部与底部栏都不再包原生组件）；原生只留给系统级能力：Stack 转场与返回手势、播放管线、通知、权限。
+- 界面 UI **自己用 RN 视图 + Reanimated 画**，原语只在 `src/components/ui/` 增加（`Sheet` / `Menu` / `Pill` / `UiButton` / `Checkbox` / `SearchField` / `Toast`，职责见 DESIGN.md 的「组件框架」）；页面里 NEVER 就地发明控件。原生只留给系统级能力：Stack 转场与返回手势、播放管线、WebView、通知、权限、键盘、`Switch`/`Alert`。
 - 引入任何依赖前先确认：它的可配置面能否覆盖设计需求？如果不能，就自绘或换库，不要在别人的默认值上反复试参数。
+- 已被移除、`oxlint` 会拦住重新引入：`@expo/ui`（Compose 控件）、`react-native-paper`、`expo-symbols`、`expo-linking`、`react-native-web`、`react-dom`。前两个的动画与选中态封在 Material / Compose 内部，且曾两次把 dev 环境搞崩（白屏、`Cannot set prop 'modifiers'` 红条）；后四个与 Android 交付无关。
+- 「社区推荐」不是引入理由：状态管理（Zustand / Legend State）、查询缓存（TanStack Query）、存储（MMKV）、绘图（Skia）、样式引擎（NativeWind）当前都**没有**实测需求，因此都没有引入。要用它们，先给出本仓库里的具体问题与实测数据。
+- 加原生模块（Expo Go 内置不到的）等于放弃 Expo Go 直接调试：必须同时更新 `docs/android-debugging.md` 的调试流程，并明确告知用户。
 
 ## Anti-Over-Engineering
 
@@ -64,6 +67,8 @@ bunx expo export --platform android
 
 ## Verification
 
-- 类型检查：`bun check`；Lint：`bun run lint`。
+- 类型检查：`bun check`（= `tsc --noEmit`）；Lint：`bun run lint`。
 - Android 生产 JS 打包：`bunx expo export --platform android`；除非明确要求原生构建，NEVER 使用 Gradle。
+- 依赖禁令由 `.oxlintrc.json` 的 `no-restricted-imports` 强制：移除一个依赖要同时收掉引用和豁免，`bun run lint` 通过才算收干净。
+- `expo export` 在 Hermes 字节码阶段可能报 `Failed to open file …\Temp\….hbc…: permission denied`（Windows 上 Temp 写权限或安全软件拦截）：把 `TMP`/`TEMP` 指到工作区（如 `$env:TMP="<repo>\.tmp"`）再跑，这不是代码错误。
 - After structural changes, update stale descriptions in AGENTS.md and DESIGN.md proactively.

@@ -12,5 +12,40 @@
   "categories": {
     "correctness": "error"
   },
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "react-native-paper",
+            "message": "已移除：界面控件由 src/components/ui 自绘，见 AGENTS.md「依赖选择」。"
+          },
+          {
+            "name": "expo-symbols",
+            "message": "已移除：iOS 专用，Android 交付不需要。"
+          },
+          {
+            "name": "expo-linking",
+            "message": "已移除：无直接使用；深层链接交给 expo-router。"
+          },
+          {
+            "name": "react-native-web",
+            "message": "已移除：Web 不是交付目标。"
+          },
+          {
+            "name": "react-dom",
+            "message": "已移除：Web 不是交付目标。"
+          }
+        ],
+        "patterns": [
+          {
+            "group": ["@expo/ui", "@expo/ui/*"],
+            "message": "已移除：Compose 控件的动画与选中态不可配置，改用 src/components/ui 的自绘原语。"
+          }
+        ]
+      }
+    ]
+  },
   "ignorePatterns": ["dist/**"]
 }
