@@ -24,7 +24,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
+import androidx.navigation.NavType
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import androidx.navigation.compose.rememberNavController
 import app.missu.data.api.MissavApi
 import app.missu.data.api.createMissavApi
@@ -33,7 +35,10 @@ import app.missu.data.store.ProfileStore
 import app.missu.data.store.HistoryStore
 import app.missu.data.store.SettingsStore
 import app.missu.ui.history.HistoryScreen
+import android.net.Uri
 import app.missu.ui.history.HistoryViewModel
+import app.missu.ui.list.VideoListScreen
+import app.missu.ui.list.VideoListViewModel
 import app.missu.ui.settings.SettingsScreen
 import app.missu.ui.account.AccountScreen
 import app.missu.ui.account.AuthViewModel
@@ -157,6 +162,31 @@ private fun MissuApp() {
                     onBack = { navController.popBackStack() },
                 )
             }
+            composable(
+                route = "list?p={p}&t={t}",
+                arguments = listOf(
+                    navArgument("p") { defaultValue = "/latest" },
+                    navArgument("t") { defaultValue = "列表" },
+                ),
+            ) { entry ->
+                val path = Uri.decode(entry.arguments?.getString("p").orEmpty())
+                val title = Uri.decode(entry.arguments?.getString("t").orEmpty())
+                val viewModel: VideoListViewModel = viewModel(
+                    key = "list-$path",
+                    factory = factory { VideoListViewModel(api, path) },
+                )
+                val state by viewModel.state.collectAsState()
+                LaunchedEffect(path) { viewModel.load() }
+
+                VideoListScreen(
+                    title = title,
+                    state = state,
+                    onRetry = viewModel::load,
+                    onLoadMore = viewModel::loadMore,
+                    onOpen = { id -> navController.navigate("detail/$id") },
+                    onBack = { navController.popBackStack() },
+                )
+            }
             composable("history") {
                 val viewModel: HistoryViewModel = viewModel(
                     factory = factory { HistoryViewModel(historyStore) },
@@ -208,6 +238,9 @@ private fun MissuApp() {
                     onOpenPlaylists = viewModel::openPlaylists,
                     onClosePlaylists = viewModel::closePlaylists,
                     onTogglePlaylist = viewModel::togglePlaylist,
+                    onOpenPath = { path, title ->
+                        navController.navigate("list?p=${Uri.encode(path)}&t=${Uri.encode(title)}")
+                    },
                 )
             }
         }

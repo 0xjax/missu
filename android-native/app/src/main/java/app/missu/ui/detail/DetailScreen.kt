@@ -53,6 +53,7 @@ fun DetailScreen(
     onOpenPlaylists: () -> Unit = {},
     onClosePlaylists: () -> Unit = {},
     onTogglePlaylist: (VideoPlaylist) -> Unit = {},
+    onOpenPath: (path: String, title: String) -> Unit = { _, _ -> },
 ) {
     var fullscreen by rememberSaveable { mutableStateOf(false) }
     FullscreenEffect(fullscreen)
@@ -94,6 +95,7 @@ fun DetailScreen(
                 onOpenPlaylists = onOpenPlaylists,
                 onClosePlaylists = onClosePlaylists,
                 onTogglePlaylist = onTogglePlaylist,
+                onOpenPath = onOpenPath,
                 fullscreen = fullscreen,
                 onToggleFullscreen = { fullscreen = !fullscreen },
             )
@@ -116,6 +118,7 @@ private fun ColumnScope.DetailContent(
     onOpenPlaylists: () -> Unit,
     onClosePlaylists: () -> Unit,
     onTogglePlaylist: (VideoPlaylist) -> Unit,
+    onOpenPath: (path: String, title: String) -> Unit,
     fullscreen: Boolean,
     onToggleFullscreen: () -> Unit,
 ) {
@@ -188,7 +191,7 @@ private fun ColumnScope.DetailContent(
         }
 
         items(detail.info, key = { row -> row.label }) { row ->
-            InfoRow(row)
+            InfoRow(row = row, onOpenPath = onOpenPath)
         }
 
         detail.description?.let { description ->
@@ -273,7 +276,7 @@ private fun PlaylistSheet(
     }
 }
 @Composable
-private fun InfoRow(row: DetailInfoRow) {
+private fun InfoRow(row: DetailInfoRow, onOpenPath: (path: String, title: String) -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         verticalAlignment = Alignment.Top,
@@ -284,12 +287,25 @@ private fun InfoRow(row: DetailInfoRow) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Text(
-            // NOTE: 可点击的值（女优/类型/厂商…）暂时按纯文本显示，等做 /latest 列表页再接跳转。
-            text = row.values.joinToString("，") { it.text },
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.Unspecified,
+        // NOTE: 带 path 的值（女优/类型/厂商…）可点，跳到对应的 /latest 列表页。
+        androidx.compose.foundation.layout.FlowRow(
             modifier = Modifier.weight(1f),
-        )
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            row.values.forEach { value ->
+                // NOTE: 先取成局部变量——跨模块的 data class 属性在 lambda 里不会被智能转换。
+                val path = value.path
+                Text(
+                    text = value.text,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (path != null) MaterialTheme.colorScheme.primary else Color.Unspecified,
+                    modifier = if (path != null) {
+                        Modifier.clickable { onOpenPath(path, value.text) }
+                    } else {
+                        Modifier
+                    },
+                )
+            }
+        }
     }
 }
