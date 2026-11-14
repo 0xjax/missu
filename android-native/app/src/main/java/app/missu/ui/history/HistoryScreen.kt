@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.missu.data.store.HistoryEntry
 import coil3.compose.AsyncImage
+import app.missu.ui.components.PageTopBar
 
 @Composable
 fun HistoryScreen(
@@ -42,17 +43,16 @@ fun HistoryScreen(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(onClick = onBack) { Text("← 返回") }
-            Text("观看历史", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.weight(1f))
-            if (entries.isNotEmpty()) {
-                TextButton(onClick = onClear) { Text("清空") }
-            }
-        }
+        PageTopBar(
+            title = "观看历史",
+            onBack = onBack,
+            actions = {
+                // NOTE: 把操作放进 actions，而不是在标题后面塞 Spacer(weight) —— 那是手搓顶栏的写法。
+                if (entries.isNotEmpty()) {
+                    TextButton(onClick = onClear) { Text("清空") }
+                }
+            },
+        )
 
         if (entries.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

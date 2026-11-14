@@ -17,11 +17,11 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material3.ShortNavigationBar
+import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -124,9 +124,11 @@ private fun MissuApp() {
         ),
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar {
+                // NOTE: M3E 的紧凑底栏（ShortNavigationBar）替代基线 NavigationBar——3 个目的地正合适，
+                // 高度更矮、指示器是药丸形。大屏场景的 WideNavigationRail 暂不需要（只交付手机）。
+                ShortNavigationBar {
                     topLevels.forEach { item ->
-                        NavigationBarItem(
+                        ShortNavigationBarItem(
                             selected = currentRoute == item.route,
                             onClick = {
                                 if (currentRoute != item.route) {
@@ -154,6 +156,7 @@ private fun MissuApp() {
             composable("home") {
                 val viewModel: HomeViewModel = viewModel(factory = factory { HomeViewModel(api) })
                 val state by viewModel.state.collectAsState()
+                val refreshing by viewModel.refreshing.collectAsState()
                 LaunchedEffect(Unit) { viewModel.load() }
 
                 // 语言变了就重新拉首页（请求 URL 跟着语言变），其余页面下次进入时自然用新语言。
@@ -161,6 +164,8 @@ private fun MissuApp() {
 
                 HomeScreen(
                     state = state,
+                    refreshing = refreshing,
+                    onRefresh = viewModel::refresh,
                     onRetry = viewModel::load,
                     onOpen = { id -> navController.navigate("detail/$id") },
                     onSearch = { navController.navigate("search") },
@@ -172,13 +177,16 @@ private fun MissuApp() {
                 val states by viewModel.states.collectAsState()
                 val sort by viewModel.sort.collectAsState()
                 val filters by viewModel.filters.collectAsState()
+                val refreshingKinds by viewModel.refreshing.collectAsState()
 
                 DiscoverScreen(
                     states = states,
                     sort = sort,
                     filters = filters,
+                    refreshingKinds = refreshingKinds,
                     onLoad = viewModel::load,
                     onLoadMore = viewModel::loadMore,
+                    onRefresh = viewModel::refresh,
                     onOpen = { path, title ->
                         navController.navigate("list?p=${Uri.encode(path)}&t=${Uri.encode(title)}")
                     },

@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import app.missu.data.api.CONTENT_LANGUAGES
+import app.missu.ui.components.PageTopBar
 
 @Composable
 fun SettingsScreen(
@@ -26,13 +27,7 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(onClick = onBack) { Text("← 返回") }
-            Text("设置", style = MaterialTheme.typography.titleMedium)
-        }
+        PageTopBar(title = "设置", onBack = onBack)
 
         Text(
             text = "内容语言",

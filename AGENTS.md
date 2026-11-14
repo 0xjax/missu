@@ -34,7 +34,8 @@ cd android-native
 
 ## 依赖选择（不许靠猜）
 
-- 原生侧 UI 一律 **Material 3 + 自己写的 Compose**，不引入第三方 UI 组件库；需要行为可控时宁可自绘，也不要在别人的默认值上反复试参数。
+- 原生侧 UI 一律 **Material 3 Expressive + 自己写的 Compose**，不引入第三方 UI 组件库；需要行为可控时宁可自绘，也不要在别人的默认值上反复试参数。
+- MD3E 的版本门、配方、API 签名先查 `.agents/skills/md3e`（从 `references/version-baseline.md` 起手），别靠记忆：本工程走 **material3 1.5.0-rc01** 全套 M3E，退役组件（`SegmentedButton` / `NavigationBar` / `Medium|LargeTopAppBar`）不用于新代码。
 - 不用「行为/动画封在内部、只能靠猜默认值调参」的组件。遗留反面案例：Expo 侧的 `NativeTabs`（底层 RNS → Material `BottomNavigationView`）、`@expo/ui`（Compose 控件不可配，且 Expo Go 与 npm 版本错配时两次把环境搞崩）。
 - 引入任何依赖前先确认：它的可配置面能否覆盖设计需求？不能就自绘或换库。
 - 「社区推荐」不是引入理由：状态管理、查询缓存、绘图库当前都没有实测需求；要用先给出具体问题与实测数据。

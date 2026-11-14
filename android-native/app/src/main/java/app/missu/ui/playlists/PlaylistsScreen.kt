@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package app.missu.ui.playlists
 
 import androidx.compose.foundation.clickable
@@ -16,7 +18,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -30,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.missu.data.model.PlaylistSummary
+import app.missu.ui.components.PageTopBar
 
 @Composable
 fun PlaylistsScreen(
@@ -44,15 +47,13 @@ fun PlaylistsScreen(
     var dialogOpen by rememberSaveable { mutableStateOf(false) }
 
     Column(modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(onClick = onBack) { Text("← 返回") }
-            Text("我的片单", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.weight(1f))
-            TextButton(onClick = { dialogOpen = true }) { Text("新建") }
-        }
+        PageTopBar(
+            title = "我的片单",
+            onBack = onBack,
+            actions = {
+                TextButton(onClick = { dialogOpen = true }) { Text("新建") }
+            },
+        )
 
         if (dialogOpen) {
             CreateDialog(
@@ -67,7 +68,7 @@ fun PlaylistsScreen(
 
         when (state) {
             PlaylistsUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+                LoadingIndicator()
             }
 
             PlaylistsUiState.Empty -> CenteredHint("还没有片单")

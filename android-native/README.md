@@ -27,6 +27,7 @@
 - ✅ **片单内移除影片**：页头「整理」→ 卡片右上角才出现圆点 → 二次确认 → `DELETE /api/playlists/{片单id}/{影片id}`；实测 8→7 条，重进页面仍是 7 条（服务端生效）
 - ✅ **新建片单**：站点只有 Blade 表单（`/playlists/create`），先 GET 读 `_token` 与字段名再 urlencoded POST；实测建出 `test` 后列表自动刷新
 - ✅ **编辑 / 删除片单**：详情页页头「编辑」→ 改名/描述/公开 + 删除（二次确认）；实测改名 `test→test2`、删除后列表只剩 `精选`
+- ✅ **M3E 主题与组件**：`MaterialExpressiveTheme` + `MotionScheme.expressive()`；二级页统一 `PageTopBar`（up 图标 + Tooltip）；底栏换 `ShortNavigationBar`；转圈换 `LoadingIndicator`；首页第一个板块用 `HorizontalMultiBrowseCarousel` 当推荐位；首页/发现支持下拉刷新（`PullToRefreshBox`）；女优排序换连通 `ToggleButton` 组（`SegmentedButton` 在 M3E 已退役）
 
 
 ## 版本矩阵（实测钉死）
@@ -36,12 +37,12 @@
 | Gradle | **9.6.0**（wrapper） | AGP 9.x 硬性要求 ≥ 9.6.0；发行包走腾讯镜像 |
 | AGP | **9.5.1** | 9.x 起 **Kotlin 支持内置**，不要再加 `org.jetbrains.kotlin.android` 插件 |
 | Kotlin | 2.4.21 | 只通过 `org.jetbrains.kotlin.plugin.compose` 参与 |
-| Compose BOM | 2026.09.00 | |
+| Compose BOM | **alpha 2026.11.00** | 走 alpha 线：全套 M3E 组件只在 material3 **1.5.0-rc01**；稳定线 1.4.0 只有部分 Expressive（主题/动效/ShortNavigationBar 有，FloatingToolbar/ButtonGroup/LoadingIndicator/柔性顶栏没有） |
 | activity / navigation / lifecycle-vm | 1.13.0 / 2.10.2 / 2.11.0 (compose 版) | |
-| compileSdk | **37**（+ `compileSdkMinor = 0`） | 新 AndroidX 要求 ≥ 37 |
+| compileSdk | **37 + `compileSdkMinor = 1`** | Compose 1.13-rc 要求 ≥ 37.1；新 AndroidX 要求 ≥ 37 |
 | targetSdk / minSdk | 36 / 26 | 编译用新 API、运行时行为按 36 走 |
 | JDK | **独立 Temurin 21**（`D:\Android\jdk-21`）+ 回落 AS 自带 JBR | 目录名带版本；`build.ps1` **自动发现** `D:\Android\jdk-*` 并取 major 最高者，升级只需解压出 `jdk-25`，脚本不用改。版本信息见目录内 `MISSU-JDK-VERSION.txt` |
-| Android SDK | API 37.0 + **Build-Tools 36.0.0** + Platform-Tools 37.0.1 | `D:\Android\Sdk`（AGP 9.5.1 默认用 build-tools 36，与 compileSdk 37 无关） |
+| Android SDK | API **37.1** + **Build-Tools 36.0.0** + Platform-Tools 37.0.1 | `D:\Android\Sdk`（AGP 9.5.1 默认用 build-tools 36，与 compileSdk 37.1 无关；37.0 与 37.1 两个平台可以共存） |
 | Android Studio | **已卸载**（曾用 2026.2.2 / `AI-262.10968.63.2622.16840690`） | **构建不需要它**：JDK、SDK、Gradle wrapper 都是独立的。装它只是为了 IDE，不装也能构建、装机、跑测试 |
 
 **SDK 与 JDK 是全局安装物**，不在项目里；项目只通过 `local.properties`（`sdk.dir=D:/Android/Sdk`，已 gitignore）和 `build.ps1` 引用它们。
@@ -62,8 +63,8 @@
 
 | 依赖 | 版本 | 用途 |
 |---|---|---|
-| Compose BOM | 2026.09.00 | 统一 Compose 版本 |
-| material3 / ui / ui-tooling-preview / debug ui-tooling | 由 BOM 决定 | UI |
+| Compose BOM | **alpha 2026.11.00** | 统一 Compose 版本；material3 解析成 **1.5.0-rc01**、core 解析成 1.13.0-rc01（预发布栈） |
+| material3 / ui / ui-tooling-preview / debug ui-tooling | 由 BOM 决定 | UI；M3E 组件（Carousel / ShortNavigationBar / LoadingIndicator / ToggleButton 组）也在这里 |
 | material-icons-core | 由 BOM 决定 | 底部导航 4 个图标（不引 `icons-extended`，体积大） |
 | activity-compose | 1.13.0 | `setContent` / `enableEdgeToEdge` |
 | lifecycle-viewmodel-compose | 2.11.0 | `viewModel()` |
@@ -393,7 +394,22 @@ fixture 都是**真机抓的真实页面**（`home-cn.html` / `detail.html` / `s
 - **底部栏高度**：M3 `NavigationBar` 自己处理窗口 inset，外面不要再加一次 `insets.bottom`，否则底栏高度翻倍（Expo 版踩过）。
 - **系统栏内边距只在壳层处理一次**（`Scaffold` + `WindowInsets.safeDrawing`）；页面里各自加 `statusBarsPadding`
   会变成"每加一个页面都要记得加"，而且极易漏。需要贴边的页面单独 opt-out。
-- **列表页的空/错状态要区分**：网络上失败不能显示成"没有内容"，否则用户以为数据丢了。
+- **列表页的空/错状态要区分**：网络上失败不能显示成"内容为空"，否则用户以为数据丢了。
+
+**M3E / Compose 1.13-rc（预发布栈）**
+
+- **全套 M3E 只在 1.5.0 线**：稳定线 material3 1.4.0 只剩主题 + 动效 + `ShortNavigationBar`；`FloatingToolbar` /
+  `ButtonGroup` / `LoadingIndicator` / `ToggleButton` / 柔性顶栏都要 1.5。换 BOM 时先看 `.agents/skills/md3e/references/version-baseline.md`。
+- **`compose-bom-alpha:2026.11.00` 要求 `compileSdk ≥ 37.1`**：只装 `android-37.0` 会在解析依赖时失败，
+  两个平台可以共存（`sdkmanager "platforms;android-37.1"`）。
+- **实验 API 逐文件 opt-in**：`LoadingIndicator` 是 `@ExperimentalMaterial3ExpressiveApi`，`TopAppBar`/`Tooltip` 是
+  `@ExperimentalMaterial3Api`；用文件级 `@file:OptIn(...)`，别在每处调用点写。
+- **Carousel 的真实签名和网上示例不一样**：`rememberCarouselState(itemCount = { … })`（**lambda**，不是 Int），
+  宽度参数是 `preferredItemWidth` 而不是 `itemWidth`（beta01 起改名）。照示例写必然编译失败。
+- **退役但还能编译**：`SegmentedButton` / `NavigationBar` / `Medium|LargeTopAppBar` 在 M3E 里已被替代
+  （`ToggleButton` 连通组 / `ShortNavigationBar` / 柔性顶栏）。编译不报错，但写出来就是「M3 味」而不是「M3E 味」。
+- **整页转圈统一 `LoadingIndicator`**：基线 `CircularProgressIndicator` 已经全换掉；极小尺寸（14–16dp）也用它，
+  注意它**没有** `strokeWidth` 参数。
 
 **播放器（Media3）**
 

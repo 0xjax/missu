@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package app.missu.ui.saved
 
 import androidx.compose.foundation.layout.Arrangement
@@ -15,7 +17,7 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -24,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.missu.ui.components.VideoGridCard
+import app.missu.ui.components.PageTopBar
 
 @Composable
 fun SavedScreen(
@@ -35,17 +38,11 @@ fun SavedScreen(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(onClick = onBack) { Text("← 返回") }
-            Text("我的收藏", style = MaterialTheme.typography.titleMedium)
-        }
+        PageTopBar(title = "我的收藏", onBack = onBack)
 
         when (state) {
             SavedUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+                LoadingIndicator()
             }
 
             SavedUiState.Empty -> CenteredHint("还没有收藏，去详情页点收藏试试")
@@ -70,7 +67,7 @@ fun SavedScreen(
                             contentAlignment = Alignment.Center,
                         ) {
                             if (state.loadingMore) {
-                                CircularProgressIndicator()
+                                LoadingIndicator()
                             } else {
                                 Button(onClick = onLoadMore) { Text("加载更多") }
                             }

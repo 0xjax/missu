@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package app.missu.ui.detail
 
 import androidx.compose.foundation.background
@@ -18,7 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.foundation.clickable
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +40,7 @@ import app.missu.data.model.VideoDetail
 import app.missu.data.model.VideoPlaylist
 import app.missu.ui.player.ExoVideoPlayer
 import app.missu.ui.player.FullscreenEffect
+import app.missu.ui.components.PageTopBar
 
 @Composable
 fun DetailScreen(
@@ -60,17 +63,12 @@ fun DetailScreen(
 
     Column(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         if (!fullscreen) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                TextButton(onClick = onBack) { Text("← 返回") }
-            }
+            PageTopBar(title = "", onBack = onBack)
         }
 
         when (state) {
             DetailUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+                LoadingIndicator()
             }
 
             is DetailUiState.Error -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -232,7 +230,7 @@ private fun PlaylistSheet(
                 PlaylistUiState.Loading -> Box(
                     Modifier.fillMaxWidth().padding(24.dp),
                     contentAlignment = Alignment.Center,
-                ) { CircularProgressIndicator() }
+                ) { LoadingIndicator() }
 
                 is PlaylistUiState.Error -> Text(
                     text = state.message,
