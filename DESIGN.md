@@ -1,6 +1,7 @@
 # Impeccable Design Context
 
-> **实现目标已变更（2026-11）**：现役实现是 **Kotlin + Jetpack Compose**（仓库根；Gradle 根 = 仓库根，`legacy/expo/` 是归档的旧实现）。本文的设计原则、控件规格、已知限制继续有效；「组件框架」「Technical Stack」两节描述的是 legacy Expo 实现，只作参照与迁移输入。
+> **实现目标已变更（2026-11）**：现役实现是 **Kotlin + Jetpack Compose**（仓库根；Gradle 根 = 仓库根）。本文只记录现役口径；
+> 已归档的 Expo 版（控件口径、已知限制、技术栈）在 [`legacy/expo/DESIGN-legacy.md`](legacy/expo/DESIGN-legacy.md)。
 
 ## Users
 
@@ -33,7 +34,7 @@
 **Theme**: 跟随系统。深色是事实上的主体验（夜间使用为主），浅色可用但未逐屏校验。
 
 **References**:
-- Material 3 Expressive 的控件密度：分段按钮 40dp、菜单按钮 40dp
+- Material 3 Expressive 的控件尺码：FAB 重新基线到 56dp（`SmallFloatingActionButton` 的 40dp 已退役）、按钮内边距 16dp（24dp 已过时）
 - 原生媒体类应用的信息密度：一屏 6 张卡，滚动前不铺三层控件
 
 **Anti-references**（绝对不要）:
@@ -44,41 +45,34 @@
 
 ## Design Principles
 
-1. **自绘优先** — 界面 UI 全部用 RN 视图 + Reanimated 画（`src/components/ui/`），实测参数、可改可关。原生只留给系统能力：Stack 转场与返回手势、播放管线（`expo-video`）、WebView、通知、权限、键盘、`Switch`/`Alert` 这类系统对话框。
-   - 反面案例：`@expo/ui` 的 Compose 控件（旧版曾用 DropdownMenu / BottomSheet / Picker / ToggleButton / Checkbox），托盘、波纹、选中图标、弹层高度都在 Material 内部，`seedColor` 只能近似配色。SDK 58 早期 Expo Go 内置版本落后于 npm，曾两次把 dev 环境搞崩（白屏、`Cannot set prop 'modifiers'` 红条）；**当前 `bundledNativeModules.json` 与 npm 都是 `~58.0.28`，版本错配风险已消除**——不用它的理由仍是观感与可配置性，不是稳定性。已全部移除。
-   - 反面案例：`react-native-paper` 整个 Material 库只为 5 个控件存在（Snackbar / Chip / Searchbar / Menu），主题还得再对一遍。已全部移除。
+1. **自绘优先** — 界面 UI 全部用 Compose 自己画，实测参数、可改可关；Material 3E 组件直接用官方 `androidx.compose.material3`，但**不引第三方 UI 组件库**——行为封在内部就只能靠猜默认值调参。系统能力才交给平台：返回手势、播放管线（Media3）、WebView、通知、权限、键盘。
+   - 反面案例的完整记录在 [`legacy/expo/DESIGN-legacy.md`](legacy/expo/DESIGN-legacy.md)：`@expo/ui` 的 Compose 控件不可配（托盘、波纹、弹层高度都在 Material 内部），`react-native-paper` 整个 Material 库只为 5 个控件存在、主题还得再对一遍。两条都已从代码里删掉，结论对 native 同样成立。
 2. **同维度单一控件** — 一个维度只允许一种控件形态；频道、周期、筛选、排序各自最多占一个按钮。
-3. **尺寸守规范** — 控件高 40dp（分段/菜单）、页面左右留白 16dp；验收时用 `uiautomator dump` 量真实 bounds，不靠肉眼。
+3. **尺寸守规范** — 控件尺寸一律用 MD3E 组件的默认尺码（按钮基线 40dp、FAB 56dp），不再自定高度；页面左右留白 16dp；验收时用 `uiautomator dump` 量真实 bounds，不靠肉眼。
 4. **选中态轻量表达** — 触发器只显示当前选项值（如 `全部`、`发行日期`），维度由按钮位置表达，不加「筛选 / 排序」前缀；菜单里的选中项只改文字颜色，不插入 `✓` 之类的字符前缀（会撑动布局、行宽跳动）。
 5. **状态一致** — 加载、空、错误、重试在首页/列表/发现/详情用同一套表达，错误必须可重试。
 
-> Expo 版那套自绘原语（`Sheet` / `Menu` / `Pill` / `UiButton` / `Checkbox` / `SearchField` / `Toast`）
-> 已随归档实现移到 [`legacy/expo/DESIGN-legacy.md`](legacy/expo/DESIGN-legacy.md)；现役 native 版不再有这层原语，
-> 直接用 Material 3 Expressive 组件（见下面的 Control Map）。
+> 现役 native 版没有自绘原语层，直接用 Material 3 Expressive 组件（见下面的 Control Map）；Expo 版那层原语（`Sheet` / `Menu` / `Pill` / `Toast` …）见
+> [`legacy/expo/DESIGN-legacy.md`](legacy/expo/DESIGN-legacy.md)。
 
 ## Control Map
 
-> 前半部分是现役 native 的实现；其余行描述的是归档 Expo 版（里面出现 `expo-router` / `FlatList` / `VideoCard` / `TabHeader`
-> 这类 RN 组件的行就是 legacy 口径），两者冲突时**以 native 为准**。
+> 表里的每一行都是**现役 native 实现**。Expo 版当年怎么做的、以及 native 没实现的几项（长按预览、频道/周期菜单、自动播放开关、Toast 反馈），
+> 都在 [`legacy/expo/DESIGN-legacy.md`](legacy/expo/DESIGN-legacy.md)——那是归档，不是待办。
 
 | 场景 | 控件 | 规格 |
 |---|---|---|
-| 底部导航 | `expo-router/js-tabs` 的 `Tabs` | 纯 RN 栏，**3 项固定（首页/发现/我的）**，配色只来自 theme |
-| 页头 | `TabHeader`（自绘） | 每个 tab 页自己画大标题，不用原生 Stack header |
+| 底部导航 | `ShortNavigationBar` | 3 个目的地，用 `ShortNavigationBarItem`；指示器是药丸形。`NavigationBar` 属 M3 基线，M3E 目标下不再用 |
 | 首页板块 | 板块网格（每板块**上限 6 条**）+ 标题行「更多」 | 站点每个板块直出 16 条上下，全铺出来首页实测 64 张卡 = 32 行（约 6000dp）；现在首页只当预览，非轮播板块 `take(6)`（2 列 × 3 行），标题行右侧「更多」→ 复用已有 `/list` 分页页。轮播板块（第一个）不受限，它高度固定 |
 | 个人中心（我的） | `ListItem` 分组容器 + 资料卡 | 资料卡 `extraLarge` 圆角 + `surfaceContainerHigh`，首字母头像取 `primary`；四个入口装在 `surfaceContainerLow`（`largeIncreased` 圆角）里，行间分隔线从图标位之后开始；「退出登录」单独一张容器并挂 `error` 色，破坏性动作不与普通入口同层 |
-| 频道 / 周期 / 筛选 / 排序 | `ChoiceMenuBar` + `Menu` | 40dp 触发器 + 自绘浮层，选中项只改文字颜色 |
-| 一级分类（发现页） | `PrimaryTabRow` | 三项等宽（女优/类型/厂商）；基线 `TabRow` 已废弃；发现页**不放搜索入口**（搜索的唯一入口是首页顶部的 `SearchBox`），搜索不单独占页签 |
-| 厂商频道组 | `CollapsibleGroup` + `SettingsRow` | 默认折叠三组（素人/无码影片/亚洲 AV），路径见 `src/constants/channel-groups.ts` |
+| 一级分类（发现页） | `PrimaryTabRow` | 三项等宽（女优/类型/厂商）；基线 `TabRow` 已废弃；发现页**不放搜索入口**（搜索的唯一入口是首页顶部的 `SearchBar`），搜索不单独占页签 |
 | 目录栅格（发现页） | `LazyVerticalGrid` | 女优双列卡片（48dp 圆角头像 + 名字 + 条数 + 出道两行）；类型/厂商三列卡片（`surfaceContainer` 圆角面，名称两行 + 条数压底）。单列时右侧有约 160dp 空白，双/三列后一屏条目数从 9.5 提到 16–24 |
 | 无头像占位 | `MaterialShapes.Cookie9Sided` + 三档容器色 | 站点上刚出道的新人常没有头像图。占位不做「灰圈 + 中性首字」（读起来像加载失败），改成 M3E 多边形 + 首字，颜色按条目 id 哈希在 primary/secondary/tertiary 容器里取一档：同一人每次都一样（不闪），不同条目之间有细微差异。形状固定、只变颜色，避免整列花掉 |
-| 视频卡封面角标 | `VideoCard` | 左下变体标签（中文字幕 / 无码影片），右下时长；标签取自卡片 HTML，不新增请求 |
-| 长按预览 | `VideoCard` 长按 + 全屏 `Modal` | 350ms 长按（带 haptic）弹静音循环预览；预览片由封面地址推导为同目录 `preview.mp4`（原站卡片自带，零额外请求），加载失败保留封面；松手停留，点空白/返回键关闭，短按仍进详情 |
-| 详情信息块 | 详情页内联行 | 8 行（发行日期/番号/标题/女优/类型/系列/发行商/标籤），文案随内容语言变化不硬编码；标签 `textSecondary` 与值同行，可点击值用 accent 色跳 `/latest?source=path`。不用下划线：Android 嵌套 `Text` 的下划线会错位成漂浮短线 |
-| 详情页片单 | 收藏旁「片单」按钮 + `Sheet` | 打开时 `GET /api/playlists/{dvdId}`；点行或勾选框乐观切换再 `POST /api/playlists/add\|remove`；超过 6 行面板内滚动；「新建片单」就地展开单行输入框，提交后重新拉列表；未登录先跳登录 |
-| 删除片单 | 片单详情页页头「编辑」→ 编辑页内「删除片单」 | 系统 `Alert` 二次确认（destructive）；确认后提交站点「修改片单」页里的删除表单（`_method=delete` + `_token`），成功后返回列表；列表页不放破坏性入口（滑动露出删除这类方案同理不采用）。改名/描述/公开与删除同在这一个编辑页，站点上它们本就是同一张表单 |
+| 视频卡封面角标 | `VideoGridCard` | 左下变体标签（中文字幕 / 无码影片），右下时长；标签取自卡片 HTML，不新增请求 |
+| 详情信息块 | 详情页内联行 | 8 行（发行日期/番号/标题/女优/类型/系列/发行商/标籤），文案随内容语言变化不硬编码；标签 `onSurfaceVariant` 与值同行，可点击值用 accent 色跳 `/latest?source=path`。不用下划线：Android 嵌套 `Text` 的下划线会错位成漂浮短线 |
+| 详情页片单 | 收藏旁「片单」按钮 + `ModalBottomSheet` | 打开时 `GET /api/playlists/{dvdId}`；点行或勾选框乐观切换再 `POST /api/playlists/add\|remove`；超过 6 行面板内滚动；「新建片单」就地展开单行输入框，提交后重新拉列表；未登录先跳登录 |
+| 删除片单 | 片单详情页页头「编辑」→ 编辑页内「删除片单」 | `AlertDialog` 二次确认（destructive）；确认后提交站点「修改片单」页里的删除表单（`_method=delete` + `_token`），成功后返回列表；列表页不放破坏性入口（滑动露出删除这类方案同理不采用）。改名/描述/公开与删除同在这一个编辑页，站点上它们本就是同一张表单 |
 | 二级页顶栏 | `TopAppBar` + `PageTopBar` | up 图标 + 标题 + 动作槽；返回图标挂 `PlainTooltip`；容器色取 `background`（默认 surface 在纯黑底上会露灰边）；`onBack` 可空——「我的」这类一级页签只借它放标题，不伪造返回键 |
-| 底部导航 | `ShortNavigationBar` | 3 个目的地，用 `ShortNavigationBarItem`；指示器是药丸形。`NavigationBar` 属 M3 基线，M3E 目标下不再用 |
 | 首页推荐位 | `HorizontalMultiBrowseCarousel` | 只给第一个板块做轮播（大项 + 中项 + 小项随滚动变形吸附，这是 M3E carousel 的核心行为，别关）；其余板块保持网格，全轮播会让首页变横向长龙 |
 | 下拉刷新 | `PullToRefreshBox` | 首页与发现页（发现页只包住有内容的支）；刷新时内容留在原地、只有顶部指示器转；失败保留旧列表 |
 | 排序切换 | `ToggleButton` 连通组 | 女优排序（影片 / 出道）；首尾 `connected*ButtonShapes()` 咬合，语义 `Role.RadioButton`；`SegmentedButton` 已退役 |
@@ -91,29 +85,45 @@
 | 导航转场 | 整幅横滑（**1:1 位移，全程不透明**） | 页与页像一张长纸前后推：进场页从一侧滑入、退场页向另一侧滑出，两页始终不透明，所以不存在叠加、也不暴露窗口底色（alpha 过渡在整屏内容上必然出问题：交叉淡入=文字重影，顺序淡出=中间整屏空底色=「闪一下」）。方向按底栏顺序判断，推进入口（详情/列表）为右进左出，返回反向。300ms。**涉及详情页的交接不走横滑**，见下一行 |
 | 卡片 → 详情 | container transform：封面自己长成播放器框 | 卡片封面和详情页顶部的播放器框是同一个容器，所以不能让页面横滑、也不能纯淡入——让那个容器从卡片位置/尺寸长到页首 16:9，页面本身用 fade through 交接（旧页 90ms 淡出、新页延迟 90ms 用 210ms 淡入）。播放器框在**首帧就存在**：解析播放地址的那几百毫秒里铺的是卡片封面，所以容器长到位时画面不会变。进入与返回都走这一套（返回是容器缩回卡片）；**返回时容器内容换回封面**、音频在转场第一帧就停——反向的落点必须是卡片上那张封面，不能是一帧活视频 |
 | 静帧 → 画面 | 封面留到视频第一帧：先虚焦退场，再 200ms 显影 | 容器长大到位的那一瞬间视频通常还没出画。所以封面**一直铺到 `onRenderedFirstFrame`**（中途容器里不会空、也不会先冒出控件）。落位 300ms 后开始**虚焦 12dp + 压暗 22%**（1.5s 渐变——按典型视频起步延迟 2–3s 定，不是普通状态切换的 300ms，否则会"一闪就完成然后一直锁死"），虚化后**保持**到出画为止：削掉封面的"认知抓力"，让唯一的主角是还没出现的视频；出画时封面 200ms 淡出=画面在下面显影，控件同时出现、3 秒后自动隐藏。等待中的指示器**延迟 600ms** 才出现（秒开时不该闪一下），且用 `CircularWavyProgressIndicator`（波浪环）而不是页面级的 `LoadingIndicator`（形变团块）——「媒体流在续」和「界面在取数」是两种等待，形状家族不同才分得清。播放失败时立即撤封面，让错误层露出来 |
-| 语言设置 | **一个设置项**（界面 + 内容同轴） | 语言 = 界面语言 + 站点内容语言，不是两个开关：详情页的信息行标签（发行日期 / Release date / 発売日）是站点按内容语言返回的、我们只透传，两个轴一分开就会出现「中文界面 + 英文标签」的混排。选项 = **有翻译的**语言（跟随系统 / 简体中文 / English / 日本語）——内容是路径前缀、界面是一份翻译，列出后者做不到的语言等于承诺一个错配。跟随系统时：界面回退英文，内容按系统语言（站点支持就跟）。切换当场生效，不重建 Activity |
+| 语言设置 | **一个设置项**（界面 + 内容同轴） | 语言 = 界面语言 + 站点内容语言，不是两个开关：详情页的信息行标签（发行日期 / Release date / 発売日）是站点按内容语言返回的、我们只透传，两个轴一分开就会出现「中文界面 + 英文标签」的混排。选项 = **有翻译的**语言（跟随系统 / 简体中文 / 繁體中文 / English / 日本語）——内容是路径前缀、界面是一份翻译，列出后者做不到的语言等于承诺一个错配。跟随系统时：界面回退英文，内容按系统语言（站点支持就跟）。切换当场生效，不重建 Activity |
 | 错误与提示 | 状态存 `UiMessage`（类型 + 参数），渲染时才取文案 | 以前 10 个 ViewModel 各有一份 `describe(error)`，把中文文案塞进状态（`Error(message: String)`）——界面语言一变，屏幕上留着的还是旧语言。现在数据层只给类型（`UiMessage.Network / Http(status) / …`），`@Composable fun UiMessage.text()` 按当前资源取字符串 |
 | 页签状态保持 | 页签级 ViewModel 提到 Activity 作用域 | 放在目的地里的话，切走页签会销毁目的地、连同 ViewModel 一起清掉，切回来就是「新建 VM → Loading → 重新请求」：用户看到先一帧旧画面再一个转圈。提到外层后，切页签只是视图切换，内容原地保留；要新内容走下拉刷新 |
 | 分页加载更多 | `LoadMoreFooter` | 列表页与收藏页共用；加载中把按钮换成 `LoadingIndicator`，按钮留在原地会让列表底部高度跳变 |
 | 登录页 | 整宽主行动 + 内联错误 | 「登录」是整宽 `Button`，加载中按钮内换成 `onPrimary` 色的 `LoadingIndicator`（默认 `primary` 压在粉色按钮上看不见）；账号密码错误写在字段下方，不弹 dialog |
-| 女优筛选 | `Sheet` + 手风琴 + `Pill` | 4 个维度各占一行，行内显示当前值，点行展开该维度的胶囊网格；选中即生效并收起。出道年份有 26 个选项，四列同时铺开会撑爆面板 |
-| 搜索 | `SearchBox` + `SearchField` | 列表页与首页共用；聚焦时展示搜索历史胶囊 |
-| 内容语言 | 设置页内单选分组 | 7 种语言；整行 `selectable(role = RadioButton)`，行尾 `RadioButton(onClick = null)`（整行已可点，控件再接点击会让读屏看到两个节点）；选中态由控件表达，不再给整行刷硬编码底色；路径前缀由 api 层统一拼接，切换后列表换 key 重拉 |
+| 女优筛选 | `ModalBottomSheet` + 分组 `FilterChip` 网格 | 四组（身高 / 罩杯 / 年龄 / 出道年份）在同一个 `LazyColumn` 里分组列出：每组一个 `labelLarge` 标题 + `FlowRow` 铺开的胶囊；再点一次同一项 = 取消该组。面板高度锁在 520dp 内滚动——出道年份有 26 个选项，四组全铺开会撑爆。不用手风琴：展开/收起多一次点击，且一次只会用到一个维度 |
+| 内容语言 | 设置页内单选分组 | **与上文「语言设置」是同一个设置项**，不单列语言清单；整行 `selectable(role = RadioButton)`，行尾 `RadioButton(onClick = null)`（整行已可点，控件再接点击会让读屏看到两个节点）；选中态由控件表达，不再给整行刷硬编码底色 |
 | 外观设置 | 设置页「外观」分组 | `跟随系统 / 浅色 / 深色` 三选一（`ThemeMode` 存进 SharedPreferences）+「主题色」一排六块（跟随壁纸 / 品牌粉 / 紫 / 蓝 / 青绿 / 琥珀，`ColorSource`）；色块边长按可用宽度均分（上限 48dp），窄屏不会把最后一块挤出去；改完立刻重组整棵树，不需要重启 |
-| 自动播放 | 设置行 + 系统 `Switch` | 默认开；关闭后打开视频保持暂停，不影响当前播放中的视频 |
-| 视频快进退 | 播放器下方 6 个按钮 | 10 秒 / 1 分钟 / 10 分钟双向，36dp 高，点击调用 `seekBy` 并显示提示；按下态用 accent 填充 + 白字，比降透明度更明显 |
-| 倍速设置 | 底部条「倍速」按钮 + `Sheet` | 播放倍速 0.75–2x，选中的存进偏好并对所有视频生效；长按不再临时加速，定位靠 6 个 seek 按钮与双击连击 |
-| 播放器控件 | 自建覆盖层 + 全屏 `Modal` | 播放/暂停常驻底部条左侧（快进快捷键会唤出控件，居中大按钮会遮挡画面）；进度条单击/拖动、连击快进退（同方向，N 击 = N-1 次）；单击只显隐控件；快进退用居中圆角提示，700ms 后消失；控件 150ms 淡入淡出，seek 期间不切换播放图标；全屏锁横屏并隐藏状态栏 |
-| 人机验证 | 全局 Modal + `WebView` | Cloudflare 挑战时显式验证；cf_clearance 与 RN fetch 共享，验证后自动重试原请求 |
-| 反馈 | `Toast` + haptics | 收藏、登录、播放手势 |
+| 倍速设置 | 底部条「倍速」小胶囊 + `DropdownMenu` | 0.5 / 0.75 / 1 / 1.25 / 1.5 / 2x，当前值用 `primary` 标出。菜单本体由播放器持有、挂在控件层**之外**——挂进去会跟着控件一起被自动隐藏销毁（实测「菜单一闪就关」）。`speed` 是播放器实例内的状态，换视频回到 1x（legacy 曾跨视频持久化，native 没做） |
+| 播放器控件 | media3 的 `PlayerDefaults`（Compose Material3）官方槽位 + 右侧两颗小胶囊 | 中心「快退 / 播放暂停 / 快进」与底部进度条都由 media3 提供（按钮尺寸、渐变底、无障碍语义不抄 internal 常量，避免随版本漂移）；我们只在 `below` 槽位补倍速与全屏两颗 `OverlayChip`（放 `above` 会浮到画面中间挡内容）。单击画面只显隐控件，控件 150ms 淡入淡出，播放中 3 秒无操作自动隐藏（倍速菜单开着时不隐藏）；全屏锁横屏并隐藏状态栏 |
+| 人机验证 | 独立 `ChallengeActivity` + `WebView` | Cloudflare 挑战时显式验证；`cf_clearance` 与 OkHttp 共享 `CookieManager`，验证后自动重试原请求 |
+
+## Motion
+
+选型只有一条判据：**转场两端是不是同一个持续存在的容器**。判据、模式定义、时长档位都来自 `.agents/skills/md3e` 的运动系统，这里只记本工程的落点。
+
+| 场景 | 模式 | 时长 / 曲线 | 落点 |
+|---|---|---|---|
+| 卡片 → 详情播放器 | container transform（封面自己长成播放器框）+ 页面 fade through | 容器 `tween` 300ms；旧页 90ms 淡出、新页延迟 90ms 用 210ms 淡入 | `ui/components/HeroMotion.kt` |
+| 页面三态（加载 / 空 / 错 / 内容） | fade through | 90 + 210，两段不重叠 | `PageStateTransition` |
+| 其余页面切换 | shared axis X（整幅横滑，1:1 位移） | 300ms `tween` | `MainActivity` 的 nav 转场 |
+| 同页内的显隐（播放器控件、提示） | fade | 150ms | 播放器覆盖层 |
+| 组件内部（按压、展开、形态变化） | 交给 `MotionScheme.expressive()` | 官方 spring | `MaterialExpressiveTheme` |
+
+三条硬规则：
+
+1. **整屏内容不能用 alpha 过渡**。交叉淡入 = 两页文字叠在一起；顺序淡出再淡入 = 中间整屏露出窗口底色（「闪一下」）。整屏切换要么不透明横滑，要么让容器自己长过去（container transform），页面本身只用 fade through 兜住。方向按底栏顺序定，推进入口（详情 / 列表）右进左出。
+2. **共享元素的时长必须等于导航转场的时长，且两边都用 `tween`**。一方是空间 spring 的话，转场结束的那一刻会把还在跑的动画硬切成终点。试过用 `MotionScheme.expressive()` 的空间 spring 做横滑，节奏和页面内容不齐，已换回 300ms tween。
+3. **两种等待必须长得不一样**：界面取数用页面级 `LoadingIndicator`（形变团块），媒体流缓冲用 `CircularWavyProgressIndicator`（波浪环）。同一形状家族会让「网站在响应」和「视频在起播」混成一件事。
+
+`MotionScheme.expressive()` 管的是官方组件内部动效，页面转场它不管——两层的时长与曲线得各自定，不能指望前者给后者提供节奏。实现层的坑（组合期约束、`isCurrent` 判离开、`remember` 的 key 不能是派生值）记在 `docs/android-native.md`「已知坑」，不在这里重复。
 
 ## Design Tokens
 
 - **圆角**：只用 `MaterialTheme.shapes`（M3E 八档）。封面/缩略图 `medium`(12dp)、分组容器 `largeIncreased`(20dp)、资料卡 `extraLarge`(28dp)、角标 `extraSmall`(4dp)
 - **间距**：4 / 8 / 12 / 16 / 20 / 24 / 32；页面左右留白固定 16dp，分组之间 8–12dp
-- **色板**：整套由品牌粉 `#D85A76` 推导——固定色相，按 M3 的 tone（`L*`）取各角色，超出 sRGB 色域时降饱和度：
+- **色板**：每套都由种子色推导——固定色相，按 M3 的 tone（`L*`）取各角色，超出 sRGB 色域时降饱和度：
   - 深色（主体验）`primary` 钉在该色相的 **tone 55**（品牌粉本身正好是这个音调），白字压它 **3.7:1**：够图形/大字的 3:1，不够正文级 4.5:1，所以强调色只做图形强调（FAB、选中态、进度条），不做小字正文底色
-  - 浅色 `primary` 用 tone 40 的深一档品牌粉 `#AA2F51`，白字 **6.5:1**
+  - 浅色 `primary` 用该色相 tone 40 的深一档（品牌粉是 `#AA2F51`），白字 **6.5:1**
   - 五档 `surfaceContainer*` 必须显式给：只给 `surface` 时官方推导出的容器色会和底色几乎重合，「分组容器 / 卡片」的层级会整个丢掉（只剩分隔线）
   - `secondary` / `tertiary` / `error` / `outline` / `inverse*` 同源推导；所有 on/容器 配对实测对比度 ≥ 5.49:1
 - **深色底的取值**：默认用 M3 的 neutral **tone 6**（`#171213`），**不是纯黑**。纯黑是 MD2 起就不推荐的深色底：OLED 上黑底与亮像素相邻会拖影，且纯黑之上留不出「更亮的容器」这一档。实测标准深色：底 `#171213` / 分组容器 `#221F1F`（通道差约 12 级）；纯黑模式：底 `#000000` / 容器 `#1E1B1B`
@@ -125,31 +135,21 @@
 
 ## Known Limits
 
-- `Sheet` / `Menu` 都是 RN `Modal`：遮罩会盖住底部 tab 栏，这是 Modal 的正常行为，弹层内不要再依赖 tab 栏可见
-- `Menu` 的浮层坐标是按下那一刻 `measureInWindow` 测的：浮层打开后不会跟随列表滚动（Modal 已经挡住滚动），因此不要在会自己动的容器里当锚点
-- 女优筛选从「4 个原生 Picker」改成「手风琴 + 胶囊」：滚轮/下拉在 26 个年份选项上比胶囊网格慢，改动是取舍不是退步
-- 不做 iOS / Web 适配：这两个平台的依赖（`react-native-web`、`react-dom`）与回退实现已删除，恢复需要重新引入并重测
-- 存储只有一套（`expo-sqlite/kv-store`）：早前写在 AsyncStorage 里的历史 / 搜索记录 / 登录资料不再迁移，从那些版本升上来会丢这批本地数据；要恢复只能重新引入 AsyncStorage 与迁移代码
-- 频道分组是静态清单（`src/constants/channel-groups.ts`），站点改版需手工同步
-- 内容语言只切换站点数据（路径前缀 `/cn`、`/en` …），App 界面文案仍为中文；「随机」板块在非中文语言下没有「更多」链接，可能不显示
-- `ko / ms / th` 语言只在站点菜单中确认存在，Cloudflare 拦截导致尚未拿到 200 实测
+- 不做 iOS / Web 适配：只交付 Android（`*.ios.*` / `*.web.*` 已删除，`*.android.*` 也已并入普通文件）；恢复需要重新引入对应实现并重测
+- 站点的内容语言比 App 界面翻译多：菜单里有 `cn / tw / ja / en / ko / ms / th`，界面只翻了 4 种。「跟随系统」时界面回退英文、内容按系统语言走，两者可以不一致（ja 内容 + 英文界面是允许的组合）
+- `ko / ms / th` 只在站点菜单中确认存在，Cloudflare 拦截导致尚未拿到 200 实测
+- 「随机」板块在非中文语言下没有「更多」链接，可能不显示
 - 人机验证走 WebView + 共享 Cookie；若 Cloudflare 进一步按 TLS 指纹拒绝，验证后仍可能 403（备选是让 WebView 代取 HTML，未做）
 - 登录前必须清空 Cookie 罐：带旧会话/Cloudflare Cookie 时 `/api/login` 返回 401；清空后登录响应写入新会话
-- 登录态失效只认「受保护页面被 302 回首页」：原生 `fetch` 看 `response.url`，WebView 看回传的最终地址。不能用「页面里有没有 `/logout`」判断——挑战页、502 页、精简布局的表单页都没有它，会把有效会话误判成失效并主动登出
+- 登录态失效只认「受保护页面被 302 回首页」：看 `response.url` / WebView 回传的最终地址。不能用「页面里有没有 `/logout`」判断——挑战页、502 页、精简布局的表单页都没有它，会把有效会话误判成失效并主动登出
 - 站点所有页面都内嵌 `#login_email` 登录弹窗，因此也不能靠「有没有登录表单」判断登录态
-- 片单列表/详情都是服务端直出的 HTML，原生 `fetchHtml` 即可（实测 ~0.8s，7 条影片）；WebView 只在原生取数失败时兜底。早前“原生只有空壳、必须 WebView”的结论不成立，已实测推翻
+- 片单列表/详情都是服务端直出的 HTML，直接解析即可（实测 ~0.8s，7 条影片）；WebView 只在原生取数失败时兜底。早前“原生只有空壳、必须 WebView”的结论不成立，已实测推翻
 - 详情页「相关推荐」不在 HTML 里：由页面内 Vue 组件向 Recombee（`client-rapi-missav.recombee.com`，带 `frontend_sign`）请求后渲染，原生 HTML 只有空壳，因此未实现；要做就是新增第三方请求与签名逻辑，不是解析问题。信息块本身是服务端直出，可直接解析
 - 首页顶部「推荐给你」与详情页「相关推荐」同源：站点用 Recombee 个性化接口（原生 HTML 只有占位骨架和 `x-for` 模板），未实现，首页用「今日热门」替代
-- 从详情页跳列表必须用 `router.dismissTo`（弹出详情页）而不是 `push`/`replace`：详情页留在根栈里不卸载，播放器与 ExoPlayer 实例会一直挂着；播放器另有失焦暂停兜底
-- 片单接口挂在根路径（`/api/playlists/...`），没有语言前缀；其它接口是 `/cn/api/...`。`fetchJson` 因此带 `rawPath` 开关，写错前缀会 404「route cn/api/playlists/... could not be found」
-- 新建/删除片单没有 JSON 接口，是服务端直出的网页表单（新建页 `/playlists/create/{dvdId}`，删除表单在「修改片单」页 `/playlists/{id}/edit`，`_method=delete` + `_token`，POST 到片单自身 URL）。原生 `fetchHtml` 实测就能取到表单，WebView 只作回退；只有片单列表/详情这类客户端渲染的页面必须走 WebView
-- 片单面板里行点击和 `Checkbox` 的 `onValueChange` 是同一次点击的两条路径，用同步 ref 去重，否则一次点击会切两次
-- `Toast` 渲染在 `Sheet` 之外时会被 Modal 遮罩盖住：片单面板的操作失败文案直接写在面板里，不用 Toast
-- 播放/暂停、全屏、倍速按钮必须用 RNGH `Gesture.Tap`，不能用 RN `Pressable`：双击后第一次点击会被手势竞技场吞掉
-- 视频画面只挂一个 `Tap` 手势：长按加速曾与它组成 `Simultaneous` 组合，`onFinalize` 受渲染期闭包影响会漏掉、倍速卡住，已整体移除
-- 全屏 Modal 内要嵌套 `GestureHandlerRootView`；内联播放器保持挂载、Modal 共享同一 player；退出时重挂内联 `VideoView` 刷新 SurfaceView 并 seek 回原时间点，期间用 seeking 保护屏蔽暂停图标
-- 退出全屏重挂 surface 会有约 300–400ms 画面停顿，是双视图 Modal 方案的已知取舍；根治需改为单常驻 `VideoView`，当前不做
-- seek 期间 `playingChange` 的短暂 paused 要屏蔽，避免暂停图标闪烁；快进后主动显示控件
+- 片单接口挂在根路径（`/api/playlists/...`），没有语言前缀；其它接口是 `/cn/api/...`。请求层因此带 `rawPath` 开关，写错前缀会 404「route cn/api/playlists/... could not be found」
+- 新建/删除片单没有 JSON 接口，是服务端直出的网页表单（新建页 `/playlists/create/{dvdId}`，删除表单在「修改片单」页 `/playlists/{id}/edit`，`_method=delete` + `_token`，POST 到片单自身 URL）。直接取 HTML 实测就能拿到表单，WebView 只作回退
+
+> Expo 时代的已知限制（RN `Modal` 遮罩、RNGH 手势、`expo-sqlite` 存储那些）见 [`legacy/expo/DESIGN-legacy.md`](legacy/expo/DESIGN-legacy.md)。
 
 ## Technical Stack
 
@@ -157,13 +157,9 @@
 
 - Kotlin 2.4.21 + Jetpack Compose（BOM **alpha 2026.11.00** → material3 1.5.0-rc01）+ Material 3 **Expressive**；AGP 9.5.1 / Gradle 9.6.0
 - 单 Activity + Navigation Compose；界面一律自己写 Compose，不引第三方 UI 组件库
-- 数据层：OkHttp + Jsoup（对应 legacy 的 `fetch` + `node-html-parser`）
+- 数据层：OkHttp + Jsoup
 - 存储：目前是 `SharedPreferences`（凭据再用 Android Keystore 里的密钥做 AES-GCM 加密）；迁 DataStore / Room 只在代码 TODO 里，尚未发生
 - 媒体：Media3 ExoPlayer；图片 Coil；网页/人机验证：系统 `WebView` + `CookieManager`
 
-**legacy（Expo，仅参照）**
-
-- Expo SDK 58 + React Native 0.88 + TypeScript
-- 路由 `expo-router`；UI 是 `legacy/expo/src/components/ui/` 的七个自绘原语 + Reanimated + Gesture Handler（见 `legacy/expo/DESIGN-legacy.md`）
-- 数据 `legacy/expo/src/api/*`；存储 `expo-sqlite/kv-store`；媒体 `expo-video` / `expo-image` / `react-native-webview`
-- 不再构建、不再运行；`node_modules` 已删除，需要时 `bun install`
+> Expo 版的技术栈（SDK 58 / RN 0.88 / `expo-router` / `expo-sqlite` 存储 / `expo-video`）记在
+> [`legacy/expo/DESIGN-legacy.md`](legacy/expo/DESIGN-legacy.md)。那份归档不再构建、不再运行，`node_modules` 已删除，需要时 `bun install`。
