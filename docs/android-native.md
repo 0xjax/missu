@@ -478,27 +478,43 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
   重试原请求后首页正常加载，全程无需用户操作。PC 的 JVM 请求同样会被挑战（`cf-mitigated: challenge`），
   所以这条链路不是"未验证的兜底"：改任何 Cookie 相关代码都必须保证 OkHttp 与 WebView 共用系统 `CookieManager`，
   否则验证过了仍然 403。
-- **浮层里的真实挑战已取证（2026-11-15 05:02）**：临时 harness 强制抬起浮层后，WebView 打开 `https://missav.ai/cn`
-  收到了**真的挑战页**（标题 `Just a moment...`，最终地址 `https://missav.ai/dm247/cn`），截图留在 `ChallengeDiagnostics` 的
-  产物里——**`Dialog` 窗口里的 WebView 能正常渲染 Cloudflare 挑战**，这条疑问可以消掉。
-  页面先显示 "Performing security verification / Ray ID …"，随后给出 **Turnstile 勾选框**；实测 10 秒内未放行，
-  而用户侧多次观察是「算力校验走完自己跳过」——两种都可能，所以**等待要按「可能要几十秒」设计**，
-  不能按「1–3 秒必过」假设（轮询上限已放宽到 60 秒）。
-  **仍未验**：① 真 403 进来时浮层被抬起（入口一次没自然触发过，用户侧经验是「退出再登录」很容易触发）；
-  ② 通过之后那次重试（`:core` 既有逻辑，本次未改）。
-  验收标准：下次自然触发时浮层淡出、页面自己继续加载 = 全链通过。
+- **浮层里的真实挑战已取证，含一次自然触发**：
+  - 2026-11-15 05:02（临时 harness 强制抬起）：WebView 打开 `https://missav.ai/cn` 收到**真的挑战页**
+    （标题 `Just a moment...`，最终地址 `https://missav.ai/dm247/cn`）——**`Dialog` 窗口里的 WebView 能正常渲染
+    Cloudflare 挑战**。页面先显示 "Performing security verification / Ray ID …"，随后给出 **Turnstile 勾选框**。
+  - 2026-11-15 06:11（**自然触发**，用户点「今日热门」）：`shown path=/today-hot?sort=today_views` →
+    `page={"t":"Just a moment...","d":false,…}`（两次）→ `finish passed=true attempts=23 in 11963ms html=0`。
+    即真 403 → 浮层淡入 → 挑战页渲染 → Turnstile 勾选 → clearance 到手 → 收工，全程约 12 秒。
+    这一条把「入口从没自然触发过」划掉了。
+  - 按此把**等待按「可能要几十秒」设计**（轮询上限 60 秒），不要按「1–3 秒必过」假设。
+  - **仍未验**：通过之后那次重试的完整链路（`:core` 既有逻辑，本次未改）。
 - **只按 cookie 判「通过」会误判（已实测并修掉）**：那次 harness 在 10s 时塞了一个假 `cf_clearance`，旧逻辑立刻判定通过
   并去读 HTML，而页面仍停在挑战页（`html=44698` 正是挑战页本身）。真机上「cookie 还在但页面仍是挑战页」很容易发生——
   cookie 由别的出口 IP 签发、或刚被站点作废。现在判通过前会再用 `document.title` 确认页面已离开挑战页（`Just a moment` 不算过）。
-- **页面明暗由我们决定：注入 `color-scheme`**（2026-11-15 05:35 实测——这条推翻了我先前「页面恒亮、改不动」的判断）：
-  站点页面的 `html` / `body` 背景都是 `rgba(0, 0, 0, 0)`（透明），`body` 也没有显式 `color`，所以**底色一直是我们这层给的**；
-  而默认文字颜色由浏览器的 `color-scheme` 决定——探针实测：设成 `dark` 时 `body.color` 变成 `rgb(255, 255, 255)`，
-  设成 `light` 时是 `rgb(0, 0, 0)`。之前「看起来固定亮」其实是我给 WebView 垫了白底。
-  现在的做法：WebView 背景 = `surfaceContainerLow`，并在 `onPageStarted` / `onPageFinished` 注入
-  `document.documentElement.style.colorScheme = <跟随应用明暗>`。暗色下呈现站点原生的深色皮肤（深底白字），
-  浅色下是深字浅底，两种都可读；翻转只需这一行，不用注入样式表。
-  NOTE: `prefers-color-scheme` 仍然是 `false` 且改不动（覆写 WebView 的 context、`androidx.webkit` 的算法压暗都试过、已回退），
-  但它与这件事无关——站点用的是 `color-scheme` 的默认值，不是媒体查询。
+- **两种页面、两套配色**（2026-11-15 05:35 与 06:11 两次实测——后者推翻了我先前「注入 `color-scheme` 就够」的判断）：
+  - **站点自己的页面**：`html` / `body` 背景都是 `rgba(0, 0, 0, 0)`（透明），`body` 没有显式 `color`，所以底色一直是我们给的；
+    默认文字颜色由 `color-scheme` 决定（探针实测：设 `dark` → `body.color = rgb(255,255,255)`，设 `light` → `rgb(0,0,0)`）。
+    做法：WebView 背景 = `surfaceContainerLow`，注入 `document.documentElement.style.colorScheme`。
+    暗色下是站点原生深色皮肤，浅色下深字浅底。之前「看起来固定亮」其实是我给 WebView 垫了白底。
+  - **Cloudflare 挑战页是另一套 CSS，只认浅色**：浅色版连 `body` 背景都没有（下发源码里只有 `body{display:flex…}`，
+    文字色来自 fallback 的 `html{color:#313131}`），**它假设画布是白的**。于是上一版「深色主题 + 注入 color-scheme」
+    在 06:11 现场成了**深底深字**：实测 bg `#101010`、文字最亮 `#313131`，对比度 **2.15:1**。不是选错颜色，
+    是这页默认拿白画布当底。
+  - **CF 自带深色版**：从它下发的 `chl_page` 脚本里读得到
+    `@media (prefers-color-scheme: dark){body{background-color:#000;color:#f2f2f2} body a{color:#82b6ff} …}`
+    （还带页脚分隔线、提示框 `#313131` 一整套）。问题在于它挂在媒体查询上，而 **WebView 的 `prefers-color-scheme`
+    恒为 `light`**。
+  - **「让系统/应用变深色」这条路已证伪**：06:11 那次 `themeMode=SYSTEM`、系统深色、Activity 的 `uiMode` 本来就是 night，
+    探针仍报 `d=false`。别再试第三次（覆写 WebView context 的 `uiMode`、`androidx.webkit` 的算法压暗都试过、已回退）。
+  - **现在的做法（`applyPageTheme`）**：只在**深色主题 + 标题确实是挑战页**时，从 CSSOM 里把
+    `prefers-color-scheme: dark` 那组规则「解包」成无条件规则重放——**配色仍是 CF 自己的**，只是不再受媒体查询限制；
+    再把 `html,body` 背景设成 `transparent` 交回 Compose 的容器色，并留一条 `html{color:#F2F2F2!important}` 兜底。
+    CF 的样式可能晚于 `onPageFinished` 注入：解包到 0 条就按轮询（500ms）重试，抓到即停（`dataset.rules` 记状态，不重复注入）。
+    浅色主题**什么都不注入**——页面本来就是浅色皮肤，落在浅色容器上正好。
+  - 已离线验证（Chrome 无头 + 真 DOM fixture）：解包成功（body/h1 → `#f2f2f2`、链接 → `#82b6ff`，重复调用不重复注入）；
+    样式迟到的竞态也覆盖了（先返回 0、样式到了再解包能抓到）。
+  - **仍不完美**：Turnstile 勾选框是**跨域 iframe**，主题由 CF 页面决定，我们改不到——深色主题下它会是一块浅色小部件
+    （05:02 / 06:11 两张现场图都能看到）。要连它一起变深，只能让引擎的 `prefers-color-scheme` 变 true，那条路上面已证伪。
 - **浮层先隐形，确认是真挑战页才淡入**（2026-11-15 05:52 实测）：以前是「先弹出、再发现浏览器没被挑战、然后快速关掉」，
   正常首页上也会闪一下防护层，观感是错的。现在窗口照常存在（Chromium 才认为它可见、挑战才跑得起来），但内容 `alpha = 0`：
   轮询读到标题不是 `Just a moment` 就直接走「代取 HTML」并在**用户什么都没看到**的情况下收工；
@@ -512,8 +528,12 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
   adb pull /sdcard/Android/data/app.missu/files/challenge/   # events.log + PNG，只留最近 12 张
   ```
 
-  事件：`shown url=…` / `page=<标题>|dark=<true|false> url=…` / `passed attempts=N in Xms html=Len` / `blocked` / `cancelled`；
+  事件：`shown path=…` / `page={"t":…,"d":…,"bg":…,"fg":…} url=…` / `finish passed=… attempts=… in …ms html=…` /
+  `cancelled …`。`page` 里的 `t` 是标题（分辨挑战页与真页面）、`d` 是 `prefers-color-scheme`、`bg`/`fg` 是 `body` 的计算色
+  （判读「页面为什么读不清」的直接证据）。
   截图：抬起后 0.4s、`onPageFinished` 时、结束时各一张；`page` 那张是判读「挑战页有没有真的渲染出来」的关键。
+  挑战页的 DOM 会另存一份 `challenge-*.html`（每个请求只存一次）——不必再等一次现场就能看 CF 怎么写页面、
+  Turnstile 带什么参数。
   **NOTE**：vivo 的 logcat 会把 URL 打成 `****`，完整 URL 只在 `events.log` 里——判读以文件为准。
 - **「看到的是正常页面」不等于误触发**：判定条件是 `403 | cf-mitigated: challenge | 挑战页标题`（三者任一），
   命中后 `withChallengeRetry` 用 `handler.verify(/)` 抬起浮层，WebView 里通过后显示的就是**真实页面**
@@ -540,8 +560,10 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
   不是没网。真要重试这条杠杆，必须停 Clash 后**等 30–60 秒让 DNS 缓存过期**（或切飞行模式，但那会断 adb）再冷启动。
 - **验收方式：等自然触发，用钩子判读**。日常使用（尤其是退出再登录这类操作）本来就会不定期撞上，
   触发后 `adb pull /sdcard/Android/data/app.missu/files/challenge/` 就能判读：
-  ① `page=<标题>|dark=…`——标题是 `Just a moment` 说明确实是挑战页；② 有没有 `finish passed=true`；
-  ③ `page-*.html` 用来验证「代取的 HTML 能不能被解析器吃下去」。
+  ① `page={"t":…}` 里的标题是 `Just a moment` 说明确实是挑战页；② 有没有 `finish passed=true`；
+  ③ `page-*.html` 用来验证「代取的 HTML 能不能被解析器吃下去」；
+  ④ `page={"d":…,"bg":…,"fg":…}`——深色主题下要看到 `bg` 是透明的、`fg` 是浅色（`applyPageTheme` 生效的证据）；
+  `challenge-*.html` 则是挑战页自己的 DOM（每个请求只存一次）。
   判读重点：静默期（`alpha=0`）里 Turnstile 是否照常跑通——若出现浮层但勾选框不响应，就是 Chromium 对不可见窗口的处理差异，
   退路是把 `1473ec1` 一条 revert 掉（退回「先显示、再快速关闭」）。
 - **手动删 cookie 只用于排障，不要当测试手段**：先 `am force-stop`，再

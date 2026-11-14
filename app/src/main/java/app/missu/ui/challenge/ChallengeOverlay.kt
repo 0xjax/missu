@@ -64,6 +64,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import org.json.JSONTokener
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.resume
 
@@ -214,12 +216,13 @@ private fun samePath(actual: String, expected: String): Boolean {
 }
 
 /**
- * 让页面跟随应用明暗。
+ * 让**站点自己的页面**跟随应用明暗。
  *
  * 实测（2026-11-15 05:35）：站点的 `html` / `body` 背景都是 `rgba(0, 0, 0, 0)`，`body` 也没有显式 `color`——
  * 默认文字颜色由浏览器的 `color-scheme` 决定：设成 `dark` 时 `color` 变成 `rgb(255, 255, 255)`，
- * 设成 `light` 时是 `rgb(0, 0, 0)`。所以「底色我们给 + 文字/控件颜色交给 color-scheme」就能两全：
- * 暗色下是站点原生的深色皮肤，浅色下也不会出现「白底白字」。
+ * 设成 `light` 时是 `rgb(0, 0, 0)`。所以「底色我们给 + 文字/控件颜色交给 color-scheme」就能两全。
+ *
+ * WARNING: 这一招对 **Cloudflare 挑战页无效**——它有自己写死的 `html{color:#313131}`，见 [PAGE_THEME_JS]。
  */
 private fun applyColorScheme(view: WebView, dark: Boolean) {
     val scheme = if (dark) "dark" else "light"
@@ -228,6 +231,74 @@ private fun applyColorScheme(view: WebView, dark: Boolean) {
         null,
     )
 }
+
+/**
+ * 把 Cloudflare 挑战页自带的深色样式「解包」成无条件规则，并把画布交回主题色。
+ *
+ * 证据（2026-11-15 06:11 现场，见 docs/android-native.md）：
+ * - 挑战页的浅色版**根本没给 `body` 背景**（只有 `body{display:flex…}`，文字色来自 fallback 的
+ *   `html{color:#313131}`），它假设画布是白的；放进我们的深色容器就是深底深字（实测对比度 2.15:1）。
+ * - CF 自己写好了深色版：`@media (prefers-color-scheme: dark){body{background-color:#000;color:#f2f2f2}…}`
+ *   （链接 `#82b6ff`、页脚分隔线、提示框 `#313131` 等一整套）。但 WebView 的 prefers-color-scheme
+ *   恒为 light（app 的 `uiMode` 已经是 night 时也报 false），媒体查询永远不成立。
+ *
+ * 所以从 CSSOM 里把这些规则取出来、用同样的选择器与声明重放一遍：配色仍是 CF 自己的，
+ * 只是不再受媒体查询限制。画布用 `transparent` 交回 Compose 的容器色，免得出现第二种底色。
+ *
+ * @return 解包到的规则条数；0 = CF 的样式还没注入（调用方下一轮再试），-1 = 文档还没准备好
+ */
+private const val PAGE_THEME_JS = """
+(function(dark){
+  var doc=document, root=doc.documentElement;
+  if(!root){return -1;}
+  var st=doc.getElementById('missu-theme');
+  if(!st){
+    st=doc.createElement('style');
+    st.id='missu-theme';
+    (doc.head||root).appendChild(st);
+  }
+  if(dark&&st.dataset.rules==='1'){return Number(st.dataset.count||0);}
+  var collected=[];
+  if(dark){
+    var walk=function(list){
+      for(var i=0;i<list.length;i++){
+        var r=list[i];
+        if(r.type===4&&/prefers-color-scheme:\s*dark/i.test(r.conditionText||'')){
+          for(var j=0;j<r.cssRules.length;j++){collected.push(r.cssRules[j].cssText);}
+        }else if(r.cssRules){
+          try{walk(r.cssRules);}catch(e){}
+        }
+      }
+    };
+    var sheets=doc.styleSheets;
+    for(var k=0;k<sheets.length;k++){
+      var rules=null;
+      try{rules=sheets[k].cssRules;}catch(e){continue;}
+      if(rules){walk(rules);}
+    }
+  }
+  var css=collected.join('\n');
+  if(dark){
+    css+='\nhtml,body{background-color:transparent!important}';
+    css+='\nhtml{color:#F2F2F2!important}';
+  }
+  st.textContent=css;
+  st.dataset.rules=(dark&&collected.length)?'1':'0';
+  st.dataset.count=String(collected.length);
+  return collected.length;
+})(%s)
+"""
+
+private fun applyPageTheme(view: WebView, dark: Boolean, onRules: (Int) -> Unit = {}) {
+    view.evaluateJavascript(PAGE_THEME_JS.format(if (dark) "true" else "false")) { raw ->
+        onRules(raw.trim().toIntOrNull() ?: -1)
+    }
+}
+
+/** 取证探针：标题能分辨挑战页与真页面，后两项是「页面为什么读不清」的直接证据。 */
+private const val PROBE_JS =
+    "JSON.stringify({t:document.title,d:matchMedia('(prefers-color-scheme: dark)').matches," +
+        "bg:getComputedStyle(document.body).backgroundColor,fg:getComputedStyle(document.body).color})"
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -266,6 +337,10 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
     // WebView 在 factory 里创建、在 LaunchedEffect 里被轮询读：用普通引用而不是 Compose 状态，
     // 免得在组合期写状态。销毁交给 AndroidView 的 onRelease。
     val webView = remember(request) { AtomicReference<WebView?>(null) }
+    // 挑战页自带的深色样式可能比 onPageFinished 更晚注入：解包到 0 条就下一轮重试（见 applyPageTheme）。
+    val themeRules = remember(request) { AtomicInteger(0) }
+    // 挑战页的 DOM 只存一次：下次要看 CF 到底怎么写的、Turnstile 带什么参数，就不必再等一次现场。
+    val htmlDumped = remember(request) { AtomicBoolean(false) }
 
     // 取证：抬起即记一行，并在页面刚开始加载时留一张（此时通常是白底或正在加载）。
     LaunchedEffect(request) {
@@ -327,6 +402,10 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
             val onTarget = samePath(view.url.orEmpty(), SourceConfig.localizedUrl(request.path))
             // 真挑战页才显形；其余情况（浏览器直接拿到了目标页）全程不显示任何东西。
             if (challengePage || attempts >= REVEAL_AFTER_ATTEMPTS) revealed = true
+            // 深色主题 + 挑战页：CF 的深色样式可能晚于 onPageFinished 注入，没抓到就每轮补一次。
+            if (challengePage && darkTheme && themeRules.get() <= 0) {
+                applyPageTheme(view, darkTheme) { n -> themeRules.set(n) }
+            }
             when {
                 // 首选结局：clearance 到手，交给 OkHttp 重试，之后所有请求都通。
                 clearance && !challengePage -> finish(passed = true, html = null)
@@ -379,8 +458,8 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
                         .fillMaxWidth()
                         .padding(top = 12.dp)
                         .clip(MaterialTheme.shapes.medium)
-                        // NOTE: 站点页面是亮色皮肤（WebView 的 `prefers-color-scheme` 恒为 light，改不动），
-                        // 但加载前那一两秒不该是一块刺眼的白——先铺主题容器色，页面画出来自然盖上去。
+                        // NOTE: 挑战页自身不带背景（浅色版连 `body` 背景都没有），底色由这层给；
+                        // 深色主题下再由 applyPageTheme 把 CF 的深色样式解包进来，文字才不会落在深底上。
                         .background(MaterialTheme.colorScheme.surfaceContainerLow),
                 ) {
                     AndroidView(
@@ -403,11 +482,21 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
                                     override fun onPageFinished(view: WebView, pageUrl: String) {
                                         applyColorScheme(view, darkTheme)
                                         // 取证：标题能独立证明收到的是挑战页（Just a moment...）还是正常页；
-                                        // prefers-color-scheme 是「页面为什么是亮色」的唯一直接证据（站点按它切深色变体）。
-                                        view.evaluateJavascript(
-                                            "[document.title, matchMedia('(prefers-color-scheme: dark)').matches].join('|')",
-                                        ) { probe ->
-                                            ChallengeDiagnostics.event(context, "page=$probe url=$pageUrl")
+                                        // prefers-color-scheme 与 body 的计算色是「页面为什么读不清」的直接证据。
+                                        view.evaluateJavascript(PROBE_JS) { raw ->
+                                            val text =
+                                                runCatching { JSONTokener(raw).nextValue() as? String }.getOrNull().orEmpty()
+                                            ChallengeDiagnostics.event(context, "page=$text url=$pageUrl")
+                                            val probe = runCatching { JSONObject(text) }.getOrNull()
+                                            if (probe?.optString("t")?.contains(CHALLENGE_TITLE, true) == true) {
+                                                // 挑战页自己写死浅色文字，深色主题下必须靠解包 CF 的深色样式。
+                                                if (darkTheme) applyPageTheme(view, darkTheme) { n -> themeRules.set(n) }
+                                                if (htmlDumped.compareAndSet(false, true)) {
+                                                    readHtml(view) { html ->
+                                                        if (html != null) ChallengeDiagnostics.saveHtml(context, html, "challenge")
+                                                    }
+                                                }
+                                            }
                                         }
                                         shot("page")
                                     }
