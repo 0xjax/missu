@@ -333,7 +333,7 @@ private fun MissuApp() {
                     onOpen = { videoId -> navController.navigate("detail/$videoId") },
                     onBack = { navController.popBackStack() },
                     onEdit = { navController.navigate("playlist/$id/edit") },
-                    onRemove = viewModel::remove,
+                    onRemove = viewModel::removeAll,
                 )
             }
 

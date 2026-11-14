@@ -88,7 +88,8 @@
 | 首页推荐位 | `HorizontalMultiBrowseCarousel` | 只给第一个板块做轮播（大项 + 中项 + 小项随滚动变形吸附，这是 M3E carousel 的核心行为，别关）；其余板块保持网格，全轮播会让首页变横向长龙 |
 | 下拉刷新 | `PullToRefreshBox` | 首页与发现页（发现页只包住有内容的支）；刷新时内容留在原地、只有顶部指示器转；失败保留旧列表 |
 | 排序切换 | `ToggleButton` 连通组 | 女优排序（影片 / 出道）；首尾 `connected*ButtonShapes()` 咬合，语义 `Role.RadioButton`；`SegmentedButton` 已退役 |
-| 片单内移除影片 | 页头「整理」/「完成」二态 → 卡片右上角圆点「×」 + `Alert` | 移除入口不常驻（会压封面、易误触）：进整理模式才显示自绘 26dp 半透明圆点（Compose 触控区撑到 48dp），同模式下点卡片不再进详情；二次确认后 `DELETE /api/playlists/{片单id}/{影片id}`，成功只从本地列表删这一条（删空转空态），不做滑动删除、不藏进长按。入口取名「整理」以区别于右侧「编辑」（改片单名/删片单） |
+| 我的片单操作 | `FloatingActionButtonMenu` | 右下 FAB 展开「新建片单 / 刷新列表」；FAB 与菜单项容器色显式取 `primary`（默认 `primaryContainer` 是紫色，与粉色 accent 不搭）；主操作不再占顶栏动作位 |
+| 片单内移除影片 | 页头「整理」/「完成」二态 + `HorizontalFloatingToolbar` | 整理模式里点卡片是选中/取消（不进详情），浮条里是连体 `ButtonGroup`「全选 / 移出 N 部」（放不下自动进溢出菜单）；二次确认后逐条 `DELETE /api/playlists/{片单id}/{影片id}`，成功只删本地这几条（删空转空态）。不做滑动删除、不藏进长按；入口取名「整理」以区别于右侧「编辑」 |
 | 女优筛选 | `Sheet` + 手风琴 + `Pill` | 4 个维度各占一行，行内显示当前值，点行展开该维度的胶囊网格；选中即生效并收起。出道年份有 26 个选项，四列同时铺开会撑爆面板 |
 | 搜索 | `SearchBox` + `SearchField` | 列表页与首页共用；聚焦时展示搜索历史胶囊 |
 | 内容语言 | 设置行 → `/language` 子页 | 7 种语言，当前项 accent 色；路径前缀由 api 层统一拼接，切换后列表换 key 重拉 |

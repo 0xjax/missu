@@ -14,12 +14,20 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonMenu
+import androidx.compose.material3.FloatingActionButtonMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -45,15 +53,10 @@ fun PlaylistsScreen(
     modifier: Modifier = Modifier,
 ) {
     var dialogOpen by rememberSaveable { mutableStateOf(false) }
+    var fabExpanded by rememberSaveable { mutableStateOf(false) }
 
     Column(modifier.fillMaxSize()) {
-        PageTopBar(
-            title = "我的片单",
-            onBack = onBack,
-            actions = {
-                TextButton(onClick = { dialogOpen = true }) { Text("新建") }
-            },
-        )
+        PageTopBar(title = "我的片单", onBack = onBack)
 
         if (dialogOpen) {
             CreateDialog(
@@ -66,22 +69,69 @@ fun PlaylistsScreen(
             )
         }
 
-        when (state) {
-            PlaylistsUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                LoadingIndicator()
+        // NOTE: 列表区单独包一层 Box，M3E 的 FloatingActionButtonMenu 才能浮在内容上；
+        // weight(1f) 让它占满余下高度，底栏与顶栏各司其职。
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            when (state) {
+                PlaylistsUiState.Loading -> Box(
+                    Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    LoadingIndicator()
+                }
+
+                PlaylistsUiState.Empty -> CenteredHint("还没有片单")
+
+                is PlaylistsUiState.Error -> CenteredHint(state.message, onRetry)
+
+                is PlaylistsUiState.Content -> LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(vertical = 8.dp),
+                ) {
+                    items(items = state.playlists, key = { it.path }) { playlist ->
+                        PlaylistRow(playlist = playlist, onClick = { onOpen(playlist) })
+                    }
+                }
             }
 
-            PlaylistsUiState.Empty -> CenteredHint("还没有片单")
-
-            is PlaylistsUiState.Error -> CenteredHint(state.message, onRetry)
-
-            is PlaylistsUiState.Content -> LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(vertical = 8.dp),
+            FloatingActionButtonMenu(
+                expanded = fabExpanded,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+                button = {
+                    // NOTE: FAB 默认用 primaryContainer（M3 默认调色板是紫色），与我们的粉色 accent 不搭，
+                    // 这里显式取 primary/onPrimary。
+                    FloatingActionButton(
+                        onClick = { fabExpanded = !fabExpanded },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                    ) {
+                        Icon(
+                            imageVector = if (fabExpanded) Icons.Filled.Close else Icons.Filled.Add,
+                            contentDescription = if (fabExpanded) "收起" else "更多操作",
+                        )
+                    }
+                },
             ) {
-                items(items = state.playlists, key = { it.path }) { playlist ->
-                    PlaylistRow(playlist = playlist, onClick = { onOpen(playlist) })
-                }
+                FloatingActionButtonMenuItem(
+                    onClick = {
+                        fabExpanded = false
+                        dialogOpen = true
+                    },
+                    text = { Text("新建片单") },
+                    icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                )
+                FloatingActionButtonMenuItem(
+                    onClick = {
+                        fabExpanded = false
+                        onRetry()
+                    },
+                    text = { Text("刷新列表") },
+                    icon = { Icon(Icons.Filled.Refresh, contentDescription = null) },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                )
             }
         }
     }

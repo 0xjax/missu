@@ -1,4 +1,7 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+@file:OptIn(
+    androidx.compose.material3.ExperimentalMaterial3Api::class,
+    androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class,
+)
 
 package app.missu.ui.playlists
 
@@ -8,10 +11,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -19,8 +20,14 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonGroup
+import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.HorizontalFloatingToolbar
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -37,20 +44,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import app.missu.data.model.VideoSummary
-import app.missu.ui.components.VideoGridCard
 import app.missu.ui.components.PageTopBar
+import app.missu.ui.components.VideoGridCard
 
 /**
- * 片单详情：标题 + 影片网格，页头「整理」打开后才在卡片上显示「移除」。
+ * 片单详情：标题 + 影片网格，页头「整理」进入批量选择模式。
  *
- * NOTE: 移除入口不常驻——常驻的角标会压住封面，也容易误触。按 DESIGN.md 的做法做成
- * 「整理」/「完成」二态 + 二次确认对话框（站点自己也会 confirm），不做滑动删除、不藏进长按。
- * NOTE: 管理模式里点卡片不再进详情，避免想移除却跳走了。
- * NOTE: 入口叫「整理」而不是「管理」——页头右边是「编辑」（改片单名/删片单），两个词要拉开距离。
+ * NOTE: 整理模式用 M3E 的 [HorizontalFloatingToolbar] 承载批量动作（全选 / 移出所选），
+ * 动作本身是一组连体 [ButtonGroup]——窄屏放不下时由组件自己收进溢出菜单，不用我们算宽度。
+ * NOTE: 点卡片在整理模式下是「选中/取消」，不再进详情，避免想移除却跳走。
+ * NOTE: 破坏性操作仍弹一次确认（站点自己也会 confirm），不做滑动删除、不藏进长按。
  */
 @Composable
 fun PlaylistDetailScreen(
@@ -61,117 +65,177 @@ fun PlaylistDetailScreen(
     onOpen: (String) -> Unit,
     onBack: () -> Unit,
     onEdit: () -> Unit = {},
-    onRemove: (String) -> Unit = {},
+    onRemove: (List<String>) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val content = state as? PlaylistDetailUiState.Content
     val title = content?.name ?: fallbackTitle
-    var pendingRemove by remember { mutableStateOf<VideoSummary?>(null) }
-    // NOTE: 用 saveable —— 轮屏或系统回收后回来仍停在管理模式，不会让入口突然消失。
+    // NOTE: 用 List 而不是 Set —— rememberSaveable 能直接存 ArrayList，Set 不行。
+    var selected by rememberSaveable { mutableStateOf(emptyList<String>()) }
+    var pendingRemove by remember { mutableStateOf(emptyList<String>()) }
     var managing by rememberSaveable { mutableStateOf(false) }
-    // 列表空了就没有可移除的东西，管理模式自动退出。
+    // 列表空了就没有可整理的东西，整理模式自动退出。
     if (content == null && managing) managing = false
 
-    Column(modifier.fillMaxSize()) {
-        PageTopBar(
-            title = title,
-            onBack = onBack,
-            actions = {
-                if (content != null) {
-                    TextButton(onClick = { managing = !managing }) {
-                        Text(if (managing) "完成" else "整理")
+    val removing = content?.removingIds.orEmpty()
+    val allSelected = content != null && content.videos.isNotEmpty() &&
+        selected.size == content.videos.size
+
+    Box(modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
+            PageTopBar(
+                title = title,
+                onBack = onBack,
+                actions = {
+                    if (content != null) {
+                        TextButton(onClick = {
+                            managing = !managing
+                            if (!managing) selected = emptyList()
+                        }) {
+                            Text(if (managing) "完成" else "整理")
+                        }
                     }
-                }
-                TextButton(onClick = onEdit) { Text("编辑") }
-            },
-        )
-
-        message?.let {
-            Text(
-                text = it,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(horizontal = 16.dp),
+                    TextButton(onClick = onEdit) { Text("编辑") }
+                },
             )
-        }
 
-        when (state) {
-            PlaylistDetailUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                LoadingIndicator()
+            message?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
             }
 
-            PlaylistDetailUiState.Empty -> CenteredHint("这个片单还是空的")
+            when (state) {
+                PlaylistDetailUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    LoadingIndicator()
+                }
 
-            is PlaylistDetailUiState.Error -> CenteredHint(state.message, onRetry)
+                PlaylistDetailUiState.Empty -> CenteredHint("这个片单还是空的")
 
-            is PlaylistDetailUiState.Content -> LazyVerticalGrid(
-                modifier = Modifier.fillMaxSize(),
-                columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 32.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                items(items = state.videos, key = { it.id + it.pageUrl }) { video ->
-                    Box {
-                        VideoGridCard(
-                            video = video,
-                            onClick = { if (!managing) onOpen(video.id) },
-                        )
-                        if (managing) {
-                            RemoveButton(
-                                removing = state.removingId == video.id,
-                                onClick = { pendingRemove = video },
-                                modifier = Modifier.align(Alignment.TopEnd).padding(6.dp),
+                is PlaylistDetailUiState.Error -> CenteredHint(state.message, onRetry)
+
+                is PlaylistDetailUiState.Content -> LazyVerticalGrid(
+                    modifier = Modifier.fillMaxSize(),
+                    columns = GridCells.Fixed(2),
+                    // NOTE: 整理模式下底部要给浮动工具栏留出空间，否则最后一行被它压住。
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = 12.dp,
+                        bottom = if (managing) 120.dp else 32.dp,
+                    ),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    items(items = state.videos, key = { it.id + it.pageUrl }) { video ->
+                        val toggle = {
+                            selected = if (video.id in selected) {
+                                selected - video.id
+                            } else {
+                                selected + video.id
+                            }
+                        }
+                        Box {
+                            VideoGridCard(
+                                video = video,
+                                onClick = { if (managing) toggle() else onOpen(video.id) },
                             )
+                            if (managing) {
+                                SelectionBadge(
+                                    selected = video.id in selected,
+                                    removing = video.id in removing,
+                                    onClick = toggle,
+                                    modifier = Modifier.align(Alignment.TopEnd).padding(6.dp),
+                                )
+                            }
                         }
                     }
                 }
             }
         }
+
+        if (managing && content != null) {
+            HorizontalFloatingToolbar(
+                expanded = true,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(horizontal = 16.dp, vertical = 20.dp),
+            ) {
+                ButtonGroup(
+                    overflowIndicator = { menuState ->
+                        ButtonGroupDefaults.OverflowIndicator(menuState)
+                    },
+                ) {
+                    clickableItem(
+                        onClick = {
+                            selected = if (allSelected) emptyList() else content.videos.map { it.id }
+                        },
+                        label = if (allSelected) "取消全选" else "全选",
+                    )
+                    clickableItem(
+                        onClick = { if (selected.isNotEmpty()) pendingRemove = selected },
+                        label = if (selected.isEmpty()) "移出影片" else "移出 ${selected.size} 部",
+                        enabled = selected.isNotEmpty() && removing.isEmpty(),
+                    )
+                }
+            }
+        }
     }
 
-    pendingRemove?.let { video ->
+    if (pendingRemove.isNotEmpty()) {
         AlertDialog(
-            onDismissRequest = { pendingRemove = null },
-            title = { Text("从片单移除？") },
-            text = { Text("《${video.title}》会从「$title」里移除，影片本身不受影响。") },
+            onDismissRequest = { pendingRemove = emptyList() },
+            title = { Text("移出所选影片？") },
+            text = { Text("会把选中的 ${pendingRemove.size} 部从「$title」里移除，影片本身不受影响。") },
             confirmButton = {
                 TextButton(onClick = {
-                    pendingRemove = null
-                    onRemove(video.id)
+                    val ids = pendingRemove
+                    pendingRemove = emptyList()
+                    selected = emptyList()
+                    onRemove(ids)
                 }) { Text("移除") }
             },
             dismissButton = {
-                TextButton(onClick = { pendingRemove = null }) { Text("取消") }
+                TextButton(onClick = { pendingRemove = emptyList() }) { Text("取消") }
             },
         )
     }
 }
 
-/**
- * 封面右上角的移除入口。
- * NOTE: 自绘一个半透明圆点而不是用 IconButton——默认的图标内边距与最小触控尺寸会把封面压花，
- * 这里的点击区域靠 padding 撑到 26dp，视觉上只占很小一块。
- */
+/** 整理模式下的选中标记：未选是空心点，已选中是 accent 实心 + 对勾，移除中是 M3E 转圈。 */
 @Composable
-private fun RemoveButton(removing: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun SelectionBadge(
+    selected: Boolean,
+    removing: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Box(
         modifier = modifier
             .size(26.dp)
             .clip(CircleShape)
-            .background(Color(0xCC000000))
+            .background(if (selected) MaterialTheme.colorScheme.primary else Color(0xCC000000))
             .clickable(enabled = !removing, onClick = onClick)
-            .semantics { contentDescription = "从片单移除" },
+            .semantics { contentDescription = if (selected) "已选中" else "未选中" },
         contentAlignment = Alignment.Center,
     ) {
-        if (removing) {
-            // NOTE: 这么小的尺寸下用 LoadingIndicator（M3E 的多边形转圈），不需要再给 strokeWidth。
-            LoadingIndicator(
+        when {
+            removing -> LoadingIndicator(modifier = Modifier.size(16.dp), color = Color.White)
+            selected -> Icon(
+                Icons.Filled.Check,
+                contentDescription = null,
+                tint = Color.White,
                 modifier = Modifier.size(16.dp),
-                color = Color.White,
             )
-        } else {
-            Text("×", color = Color.White, fontSize = 15.sp)
+            else -> Box(
+                Modifier
+                    .size(12.dp)
+                    .clip(CircleShape)
+                    .background(Color(0x33FFFFFF)),
+            )
         }
     }
 }
