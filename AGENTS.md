@@ -28,6 +28,7 @@ cd android-native
 - **没有 Metro / Fast Refresh**。改 Kotlin 代码 → 重新编译装机（增量约 10–30 秒）→ `adb shell am start -n app.missu/.MainActivity`。
 - 两个模块：`:core` 是**纯 JVM**（取数/解析/模型，不许 `android.*` / `androidx.*`），`:app` 是 Android UI 与平台适配；`:app` 依赖 `:core`，反向禁止。解析测试在 `:core`，用 `.\gradlew.bat :core:test` 跑。
 - 真机调试（无线 ADB、截图、日志、uiautomator）见 `docs/android-debugging.md`。
+- 真机上**纯操作、不需要读屏判断的长链路**（如建片单→加影片→移除→复原）→ 直接把步骤交给我，别逐步调工具；需要看截图/读 UI 才能判断的（布局、文案、状态是否真的变了）才自己驱动。
 - 卡巴斯基会拦 DSH 子进程与 `java.exe` 的写入：工作区 `D:\missu` 在排除列表里，构建临时目录也因此落在 `.tmp-gradle`，不要改回 `%TEMP%`。
 - legacy 的 Expo 侧没有 `node_modules`（已删）；需要对照或重跑时先 `bun install`。
 
