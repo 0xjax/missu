@@ -65,11 +65,13 @@ fun SettingsScreen(
     colorSource: ColorSource,
     followThemeIcon: Boolean,
     pureBlack: Boolean,
+    autoplay: Boolean,
     onAppLanguageChange: (AppLanguage) -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
     onColorSourceChange: (ColorSource) -> Unit,
     onFollowThemeIconChange: (Boolean) -> Unit,
     onPureBlackChange: (Boolean) -> Unit,
+    onAutoplayChange: (Boolean) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -165,6 +167,33 @@ fun SettingsScreen(
                     },
                 ) {
                     Text(text = stringResource(R.string.settings_pure_black), style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+
+            SectionLabel(stringResource(R.string.settings_playback))
+
+            // NOTE: 播放相关只有这一项。默认开——本 App 的核心是「点开就看」，关掉是给
+            // 「不想在公共场合突然出声」的人一个开关，不是默认体验。
+            SettingsGroup {
+                ListItem(
+                    modifier = Modifier.selectable(
+                        selected = autoplay,
+                        role = Role.Switch,
+                        onClick = { onAutoplayChange(!autoplay) },
+                    ),
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    supportingContent = {
+                        Text(
+                            text = stringResource(R.string.settings_autoplay_note),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    trailingContent = {
+                        Switch(checked = autoplay, onCheckedChange = onAutoplayChange)
+                    },
+                ) {
+                    Text(text = stringResource(R.string.settings_autoplay), style = MaterialTheme.typography.bodyLarge)
                 }
             }
 

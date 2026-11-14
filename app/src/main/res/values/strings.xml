@@ -147,6 +147,11 @@
     <string name="settings_pure_black">Pure black background</string>
     <string name="settings_pure_black_note">Dark theme only. Saves power, but flattens the container hierarchy.</string>
     <string name="settings_language">Language</string>
+
+    <!-- 播放 -->
+    <string name="settings_playback">Playback</string>
+    <string name="settings_autoplay">Autoplay</string>
+    <string name="settings_autoplay_note">When off, a video opens paused on its first frame until you press play</string>
     <string name="settings_language_system">Follow system</string>
     <string name="settings_language_note">Sets both the app language and the language of the content fetched from the site. For a system language the app has not been translated into yet, the interface falls back to English.</string>
 

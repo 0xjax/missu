@@ -141,6 +141,11 @@
     <string name="settings_pure_black">純黒の背景</string>
     <string name="settings_pure_black_note">ダークテーマでのみ有効になります。消費電力を抑えられますが、階層の表現は弱くなります</string>
     <string name="settings_language">言語</string>
+
+    <!-- 再生 -->
+    <string name="settings_playback">再生</string>
+    <string name="settings_autoplay">自動再生</string>
+    <string name="settings_autoplay_note">オフにすると、動画は最初のフレームで停止した状態で開きます</string>
     <string name="settings_language_system">端末の設定に合わせる</string>
     <string name="settings_language_note">アプリの表示言語と、サイトから取得するコンテンツの言語をまとめて切り替えます。未対応の言語では表示が英語になり、コンテンツは端末の言語のままになります。</string>
 

@@ -128,6 +128,18 @@ class SettingsStore(context: Context) {
         prefs.edit().putFloat(KEY_PLAYBACK_SPEED, value).apply()
     }
 
+    /**
+     * 打开视频是否自动开始播放。默认**开**。
+     *
+     * NOTE: 本 App 的核心是「点开就看」，所以默认值与当前行为一致——这个开关只把选择权给出来，
+     * 不改变多数人的手感。关掉后播放器仍然 `prepare()`：首帧照画出、控件照出现，等用户点播放键。
+     */
+    fun autoplay(): Boolean = prefs.getBoolean(KEY_AUTOPLAY, true)
+
+    fun setAutoplay(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_AUTOPLAY, enabled).apply()
+    }
+
     private companion object {
         const val KEY_APP_LANGUAGE = "appLanguage"
         const val KEY_THEME_MODE = "themeMode"
@@ -137,5 +149,6 @@ class SettingsStore(context: Context) {
         const val KEY_FOLLOW_THEME_ICON = "followThemeIcon"
         const val KEY_PURE_BLACK = "pureBlack"
         const val KEY_PLAYBACK_SPEED = "playbackSpeed"
+        const val KEY_AUTOPLAY = "autoplay"
     }
 }

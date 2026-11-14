@@ -39,7 +39,7 @@
 | 厂商频道组 | `CollapsibleGroup` + `SettingsRow`：默认折叠三组（素人/无码影片/亚洲 AV），路径见 `src/constants/channel-groups.ts` | 厂商是一张三列目录网格，没有折叠分组；那份静态清单（站点改版要手工同步）也一起消失了 |
 | 长按预览 | `VideoCard` 长按 + 全屏 `Modal`：350ms 长按（带 haptic）弹静音循环预览；预览片由封面地址推导为同目录 `preview.mp4`，加载失败保留封面；松手停留，点空白/返回键关闭，短按仍进详情 | 已实现（`ui/preview/VideoPreview.kt`）：长按 500ms（`combinedClickable` 默认阈值）、全屏 `Dialog`、86% 黑幕、关闭 150ms 淡出。预览地址改为**解析卡片 HTML 的 `data-src`**，不再按封面推导——变体不同，文件名不固定 |
 | 搜索 | `SearchBox` + `SearchField`，聚焦时展示搜索历史胶囊 | M3E `SearchBar` 就地展开成全屏 `ExpandedFullScreenSearchBar` |
-| 自动播放 | 设置行 + 系统 `Switch`：默认开，关掉后打开视频保持暂停 | **恒开**，没有设置项（播放器就绪即 `playWhenReady = true`） |
+| 自动播放 | 设置行 + 系统 `Switch`：默认开，关掉后打开视频保持暂停 | 已实现（设置页「播放」分组，默认开）：关掉后播放器仍 `prepare()`，停在首帧等点播放 |
 | 视频快进退 | 播放器下方 6 个按钮（10 秒 / 1 分钟 / 10 分钟双向，36dp 高），按下态 accent 填充 + 白字 | 用 media3 `PlayerDefaults` 的中心「快退 / 播放暂停 / 快进」官方按钮，不再自绘一排 |
 | 倍速设置 | 底部条「倍速」按钮 + `Sheet`：0.75–2x，选中的**存进偏好并对所有视频生效** | 底部小胶囊 + `DropdownMenu`，0.5–2x；**只作用于本次播放**，换视频回到 1x |
 | 播放器控件 | 自建覆盖层 + 全屏 `Modal`：播放/暂停常驻底部条左侧；进度条单击/拖动、连击快进退（N 击 = N-1 次）；单击只显隐控件；快进退用居中圆角提示 700ms 后消失；控件 150ms 淡入淡出；全屏锁横屏 | media3 官方槽位 + 右侧倍速/全屏两颗 `OverlayChip`；单击只显隐控件，**没有双击快进退** |
