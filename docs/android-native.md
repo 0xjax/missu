@@ -513,6 +513,13 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
     浅色主题**什么都不注入**——页面本来就是浅色皮肤，落在浅色容器上正好。
   - 已离线验证（Chrome 无头 + 真 DOM fixture）：解包成功（body/h1 → `#f2f2f2`、链接 → `#82b6ff`，重复调用不重复注入）；
     样式迟到的竞态也覆盖了（先返回 0、样式到了再解包能抓到）。
+  - **挑战页的文案语言由 `Accept-Language` 决定，不是我们维护的**（2026-11-15 06:56 实测）：
+    WebView 自己发的是 `en-US,en`（引擎/系统决定），OkHttp 那边写死 `zh-CN` —— 两个客户端对同一站点
+    报不同语言。现在两处都改成由内容语言派生（`SourceConfig.acceptLanguage()`），
+    同一出口下 `zh-CN` 会拿到中文挑战页（`请稍候…`）、`en-US` 拿到英文（`Just a moment...`）。
+    所以「中文界面显示中文挑战页」不需要翻译维护，跟着这个头走就自动成立。
+    WARNING: `loadUrl(url, extraHeaders)` 的额外头只保证作用于**主文档**，子资源不保证——
+    挑战页文案在主文档里，够用。
   - **仍不完美**：Turnstile 勾选框是**跨域 iframe**，主题由 CF 页面决定，我们改不到——深色主题下它会是一块浅色小部件
     （05:02 / 06:11 两张现场图都能看到）。要连它一起变深，只能让引擎的 `prefers-color-scheme` 变 true，那条路上面已证伪。
   NOTE: 它的主题确实写在 iframe 的 URL 里（实测在无头 Chrome 上抓到
@@ -557,6 +564,15 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
   WebView 里通过后显示的就是**真实页面**（所以看起来"直接跳过了"），随后 `cf_clearance` 落进共享 Cookie、
   浮层自动消失、**重试原请求**（不是拿验证页的 HTML 当结果）。
   判读"真的通过"看三处：① 浮层自己消失；② 之后原请求返回了内容；③ `app_webview/Default/Cookies` 里出现 `cf_clearance`。
+- **两个未处理的指纹矛盾（2026-11-15 06:56 实测，改之前先想清楚）**：
+  - **UA 与 UA-CH 打架**：`SourceConfig.DEFAULT_USER_AGENT` 把 UA 钉在 `Chrome/131.0.0.0`，
+    而引擎是 157、请求头里 `Sec-Ch-Ua: "Android WebView";v="157"`。站点看到的是「UA 说 131、
+    客户端提示说 157」——典型的可疑客户端特征，可能是被挑战频率偏高的原因之一。
+    WARNING: 改 UA 会作废现有 `cf_clearance`（CF 把 clearance 绑在 UA 上），要改得单独决策。
+  - **`X-Requested-With: app.missu`**：WebView 实际发出的头里有它，而我们代码只给 OkHttp 设过
+    `XMLHttpRequest`，**没给 WebView 设过**，来源未查明（怀疑是 vivo 的 WebView 加的）。同样是非标准信号。
+  - 验证方法（不用等挑战）：预览通道加载 `https://httpbin.org/headers`，截图就能看到真实请求头——
+    `adb shell am start -n app.missu/.MainActivity --es challenge_preview https://httpbin.org/headers`。
 - **`cf_clearance` 还在 ≠ 不会再被挑战**：2026-11-14/15 的几次触发都发生在 cookie 有效期内（实测该 cookie 的 `expires_utc`
   到 2027-11-14，约一年），说明站点会**主动作废**它——挑战出现频率与 cookie 过期无关，别按"过期时间"做任何优化。
 - **不要试图按需制造挑战（2026-11-15 全部试过，都不可靠）**：触发与否由站点按「出口 IP + 指纹 + 当时的风险分」

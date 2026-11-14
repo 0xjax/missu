@@ -553,7 +553,9 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
                                     }
                                 }
                                 webView.set(this)
-                                loadUrl(targetUrl)
+                                // NOTE: WebView 自己发的 `Accept-Language` 是 `en-US,en`（实测），
+                                // 与 OkHttp、与界面语言都不一致——显式覆盖成同一份派生值（见 SourceConfig.acceptLanguage）。
+                                loadUrl(targetUrl, mapOf("Accept-Language" to SourceConfig.acceptLanguage()))
                             }
                         },
                         onRelease = { view ->
