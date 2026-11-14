@@ -23,7 +23,6 @@ local.properties
 *.orig.*
 *.tmp
 *.temp
-.tmp-*
 *.log
 logs/
 
