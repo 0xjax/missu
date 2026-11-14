@@ -62,6 +62,20 @@ class ListSortParseTest {
         assertEquals(VideoListOptions.Sort.MONTHLY_VIEWS, HomeParser.parseListSort(html))
     }
 
+    /**
+     * 筛选生效时站点把 `sort=` 排到第二个参数、并用 `&amp;` 转义（2026-11-15 实测，
+     * `/cn/today-hot?filters=chinese-subtitle`）。第一版正则只认 `?sort=` / `&sort=`，
+     * 于是「一加筛选，排序名就退回默认」——真机踩到。
+     */
+    @Test
+    fun findsTheValueWhenAnotherParameterComesFirst() {
+        val filtered = zhItems.map { it.replace("?sort=", "?filters=chinese-subtitle&amp;sort=") }
+        assertEquals(
+            VideoListOptions.Sort.TODAY_VIEWS,
+            HomeParser.parseListSort(page("排序: 今日浏览数", filtered)),
+        )
+    }
+
     @Test
     fun returnsNullWhenLabelIsUnknown() {
         assertNull(HomeParser.parseListSort(page("排序: 不存在的档", zhItems)))
