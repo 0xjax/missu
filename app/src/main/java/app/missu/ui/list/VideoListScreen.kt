@@ -73,6 +73,45 @@ fun VideoListScreen(
     Column(modifier.fillMaxSize()) {
         PageTopBar(title = title, onBack = onBack)
 
+        VideoListContent(
+            state = state,
+            sort = sort,
+            filter = filter,
+            detectedSort = detectedSort,
+            sorts = sorts,
+            filters = filters,
+            onSortChange = onSortChange,
+            onFilterChange = onFilterChange,
+            onRetry = onRetry,
+            onLoadMore = onLoadMore,
+            onOpen = onOpen,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+/**
+ * 完整面的内容：一行口径 + 列表本体，**不带顶栏**。
+ *
+ * NOTE: 列表页把它放在 `PageTopBar` 下面；发现页的「热门」页签直接把它当页签内容（页签本身就是
+ * 一面列表，没有自己的顶栏）。共用一处定义，口径行的档位、文案与「换口径不换结构」才能永远一致。
+ */
+@Composable
+fun VideoListContent(
+    state: VideoListUiState,
+    sort: VideoListOptions.Sort?,
+    filter: VideoListOptions.Filter?,
+    detectedSort: VideoListOptions.Sort?,
+    sorts: List<VideoListOptions.Sort>,
+    filters: List<VideoListOptions.Filter>,
+    onSortChange: (VideoListOptions.Sort?) -> Unit,
+    onFilterChange: (VideoListOptions.Filter?) -> Unit,
+    onRetry: () -> Unit,
+    onLoadMore: () -> Unit,
+    onOpen: (id: String, thumbnail: String?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier) {
         ListControls(
             sort = sort,
             filter = filter,
@@ -88,7 +127,7 @@ fun VideoListScreen(
             onRetry = onRetry,
             onLoadMore = onLoadMore,
             onOpen = onOpen,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.weight(1f),
         )
     }
 }
@@ -97,7 +136,7 @@ fun VideoListScreen(
  * 口径行：左边是排序（当前值 + 下拉菜单），右边是过滤（一排单选 chip，可横向滚动）。
  *
  * NOTE: 排序档位有 7 档 + 「默认」，平铺会把页头撑死，所以用菜单；≤3 档的平铺形态见发现页
- * 「热门」页签的三档周期组（同一个 ToggleButton 家族）。触发器只显示当前值，不加「排序」前缀。
+ * 「女优」页签的三档排序组（同一个 ToggleButton 家族）。触发器只显示当前值，不加「排序」前缀。
  * NOTE: 过滤是**互斥单选**（站点的多值过滤实测不可靠，见 [VideoListOptions]），所以用
  * `FilterChip` 的选中态表达，而不是多选勾选。
  */
@@ -168,7 +207,7 @@ private fun ListControls(
  * 列表内容本体：三态 + 网格 + 分页，**不带顶栏**。
  *
  * NOTE: 抽出来是因为「发现页 · 热门」要把同一面内容嵌进页签里，而列表页要在它上面加一条
- * 带返回键的顶栏与一行口径。两边必须共用，否则分页去重、空态文案这些细节会各写一份、慢慢走偏。
+ * 顶栏。两边必须共用，否则分页去重、空态文案这些细节会各写一份、慢慢走偏。
  */
 @Composable
 fun VideoListBody(

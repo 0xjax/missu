@@ -167,12 +167,8 @@
     <string name="discover_section_makers">メーカー</string>
     <string name="discover_section_hot">人気</string>
 
-    <!-- 人気（3 つの期間はいずれもサイトが直接返す一覧ページ） -->
-    <string name="hot_today">今日の人気</string>
     <string name="discover_section_channels">チャンネル</string>
     <string name="discover_channels_live">ライブ</string>
-    <string name="hot_weekly">今週の人気</string>
-    <string name="hot_monthly">今月の人気</string>
 
     <!-- 女優の並び替えと絞り込み（値は :core、文言はここ） -->
     <string name="sort_videos">作品数</string>

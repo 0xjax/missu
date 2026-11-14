@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.missu.data.api.ActressFilterOptions
 import app.missu.data.api.MissavApi
-import app.missu.data.api.VideoListOptions
 import app.missu.R
 import app.missu.data.model.DirectoryItem
 import app.missu.data.model.DirectoryList
@@ -38,24 +37,14 @@ enum class DiscoverTab(val kind: String, @param:StringRes val labelRes: Int) {
 }
 
 /**
- * 热门的三个周期。
+ * 「热门」页签的列表路径。
  *
- * NOTE: 站点把「今日 / 本周 / 本月热门」做成了三个 path，但那三页就是**同一面列表**换了
+ * NOTE: 站点把「今日 / 本周 / 本月热门」做成三个 vanity path，但那三页就是**同一面列表**换了
  * `?sort=`：实测 `/today-hot?sort=weekly_views` 与 `/weekly-hot`、`?sort=monthly_views` 与
- * `/monthly-hot`，第 1、2 页的条目 id 完全一致。所以这里只留一个 path + 三个排序取值，
- * 三个入口不再各建一条数据源。
+ * `/monthly-hot`，第 1、2 页的条目 id 完全一致。所以这里只留一个 path——三档周期不是三个独立入口，
+ * 而是这面列表的三个排序取值，与该页另外 4 档排序、3 档过滤**共用同一套口径**（[app.missu.ui.list.VideoListQuery]）。
  */
-enum class HotPeriod(@param:StringRes val labelRes: Int, val sort: VideoListOptions.Sort) {
-    TODAY(R.string.hot_today, VideoListOptions.Sort.TODAY_VIEWS),
-    WEEKLY(R.string.hot_weekly, VideoListOptions.Sort.WEEKLY_VIEWS),
-    MONTHLY(R.string.hot_monthly, VideoListOptions.Sort.MONTHLY_VIEWS),
-    ;
-
-    companion object {
-        /** 三个周期共用的列表路径。 */
-        const val PATH = "/today-hot"
-    }
-}
+internal const val HOT_PATH = "/today-hot"
 
 /**
  * 「类型」索引漏列、但站点确实当成类型的那个页面。

@@ -61,6 +61,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.missu.R
 import app.missu.data.api.ActressFilterOptions
+import app.missu.data.api.VideoListOptions
 import app.missu.data.model.DirectoryItem
 import app.missu.data.model.NavGroup
 import app.missu.data.model.NavItem
@@ -69,7 +70,7 @@ import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadMoreFooter
 import app.missu.ui.components.LoadingHint
 import app.missu.ui.common.text
-import app.missu.ui.list.VideoListBody
+import app.missu.ui.list.VideoListContent
 import app.missu.ui.list.VideoListUiState
 import coil3.compose.AsyncImage
 
@@ -86,7 +87,9 @@ fun DiscoverScreen(
     sort: String,
     filters: Map<String, String>,
     refreshingKinds: Set<String>,
-    hotPeriod: HotPeriod,
+    hotSort: VideoListOptions.Sort?,
+    hotFilter: VideoListOptions.Filter?,
+    hotDetectedSort: VideoListOptions.Sort?,
     hotState: VideoListUiState,
     channels: ChannelsUiState,
     onLoad: (String) -> Unit,
@@ -94,7 +97,8 @@ fun DiscoverScreen(
     onRefresh: (String) -> Unit,
     onChannelsLoad: () -> Unit,
     onChannelsRetry: () -> Unit,
-    onHotPeriodChange: (HotPeriod) -> Unit,
+    onHotSortChange: (VideoListOptions.Sort?) -> Unit,
+    onHotFilterChange: (VideoListOptions.Filter?) -> Unit,
     onHotLoadMore: () -> Unit,
     onHotRetry: () -> Unit,
     onOpen: (path: String, title: String) -> Unit,
@@ -176,13 +180,21 @@ fun DiscoverScreen(
         }
 
         if (tab == DiscoverTab.HOT) {
-            HotContent(
-                period = hotPeriod,
+            // NOTE: 热门就是 `/today-hot` 这面列表本身——今日 / 本周 / 本月只是它的三个排序取值，
+            // 所以这里不另造一套「周期」结构，直接用列表页那一行口径（排序菜单 + 过滤 chip）。
+            VideoListContent(
                 state = hotState,
-                onPeriodChange = onHotPeriodChange,
+                sort = hotSort,
+                filter = hotFilter,
+                detectedSort = hotDetectedSort,
+                sorts = VideoListOptions.Sort.entries,
+                filters = VideoListOptions.Filter.entries,
+                onSortChange = onHotSortChange,
+                onFilterChange = onHotFilterChange,
                 onRetry = onHotRetry,
                 onLoadMore = onHotLoadMore,
                 onOpen = onOpenVideo,
+                modifier = Modifier.fillMaxSize(),
             )
         } else if (tab == DiscoverTab.CHANNELS) {
             ChannelsContent(state = channels, onRetry = onChannelsRetry, onOpen = onOpen)
@@ -249,54 +261,6 @@ fun DiscoverScreen(
                 onDismiss = { filterSheetOpen = false },
             )
         }
-    }
-}
-
-/**
- * 热门：一面视频列表 + 三档周期。
- *
- * NOTE: 三档是同一面内容的三个 path（站点把今日 / 本周 / 本月做成三个普通列表页），
- * 所以换周期只是换数据源，页面结构不变——用的还是女优排序那一套连通 `ToggleButton` 组，
- * 两个页签因此长得一样：**页签选实体，页签内部的组选口径**。
- */
-@Composable
-private fun HotContent(
-    period: HotPeriod,
-    state: VideoListUiState,
-    onPeriodChange: (HotPeriod) -> Unit,
-    onRetry: () -> Unit,
-    onLoadMore: () -> Unit,
-    onOpen: (id: String, thumbnail: String?) -> Unit,
-) {
-    Column(Modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
-        ) {
-            val lastIndex = HotPeriod.entries.lastIndex
-            HotPeriod.entries.forEachIndexed { index, option ->
-                ToggleButton(
-                    checked = option == period,
-                    onCheckedChange = { onPeriodChange(option) },
-                    shapes = when {
-                        index == 0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-                        index == lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
-                        else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
-                    },
-                    modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
-                ) {
-                    Text(stringResource(option.labelRes), maxLines = 1, softWrap = false)
-                }
-            }
-        }
-
-        VideoListBody(
-            state = state,
-            onRetry = onRetry,
-            onLoadMore = onLoadMore,
-            onOpen = onOpen,
-            modifier = Modifier.weight(1f),
-        )
     }
 }
 
