@@ -2,6 +2,8 @@
 
 package app.missu.ui.detail
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,8 +15,10 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.foundation.clickable
@@ -29,12 +33,16 @@ import androidx.compose.material3.SplitButtonDefaults
 import androidx.compose.material3.SplitButtonLayout
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
@@ -45,10 +53,10 @@ import app.missu.data.model.VideoPlaylist
 import app.missu.ui.player.ExoVideoPlayer
 import app.missu.ui.player.FullscreenEffect
 import app.missu.ui.components.ErrorHint
-import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.PageTopBar
 import app.missu.ui.components.videoHero
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.delay
 
 @Composable
 fun DetailScreen(
@@ -74,9 +82,9 @@ fun DetailScreen(
     FullscreenEffect(fullscreen)
 
     val detail = (state as? DetailUiState.Content)?.detail
-    // NOTE: 封面优先用详情页的 og:image，解析没回来时退回卡片带过来的那张；两者通常是同一张图，
-    // 所以共享容器长到位时画面不会变。
-    val poster = detail?.thumbnailUrl ?: posterUrl
+    // NOTE: 卡片带过来的那张优先，而不是详情页的 og:image。理由有两个：它和卡片上看到的
+    // 是同一张（容器长到位时画面不会变），而且它已经在 Coil 的内存缓存里（不会从纯色淡入）。
+    val poster = posterUrl ?: detail?.thumbnailUrl
 
     Column(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         if (!fullscreen) {
@@ -95,7 +103,9 @@ fun DetailScreen(
 
         if (!fullscreen) {
             when (state) {
-                DetailUiState.Loading -> LoadingHint()
+                // NOTE: 加载态不在正文里放转圈——进度统一收在播放器框里（封面 + 延迟出现的
+                // LoadingIndicator），否则页面上会同时有两个"正在加载"。
+                DetailUiState.Loading -> Unit
 
                 is DetailUiState.Error -> ErrorHint(state.message, onRetry)
 
@@ -114,11 +124,24 @@ fun DetailScreen(
     }
 }
 
+/** 视频出画时封面淡出的时长；与控件出现是同一段，看起来像「画面显影」。 */
+private const val POSTER_FADE_MS = 200
+
+/** 转圈延迟出现的时长：快的时候（内存缓存 / 秒开）不该闪一下转圈。 */
+private const val PROGRESS_DELAY_MS = 600L
+
 /**
  * 播放器框——同时是卡片封面的**共享容器**（container transform 的落点）。
  *
- * NOTE: 它必须在首帧就存在，Loading / Error 也不例外：点卡片时共享元素要有另一侧可长进去，
- * 否则动画直接跳过。解析播放地址的那几百毫秒里，这里铺的是封面而不是黑框。
+ * 这里也是「静帧 → 动态画面」的接缝，三件事必须按顺序发生，否则接缝会露出来：
+ * 1. 容器长大到位时，里面还是**同一张封面**（卡片那张，从内存缓存来）；
+ * 2. 视频第一帧真正出画之前，封面一直在；中途容器里不会空一下，也不会先出现控件；
+ * 3. 第一帧出画 → 封面 200ms 淡出（画面在下面显影），控件同时出现，之后 3 秒无操作自动隐藏。
+ *
+ * NOTE: 封面画在播放器**之上**（含控件层之上），所以过渡只能是「封面淡出露出画面」，
+ * 而不可能是「画面替换封面」那种硬切。
+ * NOTE: 转圈延迟 600ms 才出现——秒开时不该闪一下。
+ * NOTE: 它必须在首帧就存在，Loading / Error 也不例外：点卡片时共享元素要有另一侧可长进去。
  * NOTE: 播放器本身固定在这一格（不进 LazyColumn），切全屏只是换尺寸、不会离开组合，
  * ExoPlayer 实例与播放进度都能保住。
  */
@@ -135,6 +158,26 @@ private fun DetailHero(
     val detail = (state as? DetailUiState.Content)?.detail
     val playbackUrl = detail?.playbackUrl
 
+    // NOTE: 换一集（playbackUrl 变）就重置，否则新视频会继承上一集的"已出画"状态。
+    var firstFrame by remember(playbackUrl) { mutableStateOf(false) }
+    val posterAlpha by animateFloatAsState(
+        targetValue = if (firstFrame) 0f else 1f,
+        animationSpec = tween(durationMillis = POSTER_FADE_MS),
+        label = "posterFade",
+    )
+
+    // 还在等：要么详情没回来，要么播放地址有了但视频还没出画。
+    val pending = detail == null || (playbackUrl != null && !firstFrame)
+    var showProgress by remember { mutableStateOf(false) }
+    LaunchedEffect(pending) {
+        if (!pending) {
+            showProgress = false
+            return@LaunchedEffect
+        }
+        delay(PROGRESS_DELAY_MS)
+        showProgress = true
+    }
+
     Box(
         modifier = (if (fullscreen) {
             Modifier.fillMaxSize()
@@ -145,15 +188,6 @@ private fun DetailHero(
             .background(MaterialTheme.colorScheme.surfaceContainerHigh),
         contentAlignment = Alignment.Center,
     ) {
-        if (poster != null) {
-            AsyncImage(
-                model = poster,
-                contentDescription = detail?.title,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
-
         if (playbackUrl != null) {
             ExoVideoPlayer(
                 url = playbackUrl,
@@ -162,8 +196,34 @@ private fun DetailHero(
                 onToggleFullscreen = onToggleFullscreen,
                 initialPositionMs = startPositionMs,
                 onPositionReport = onPositionReport,
+                onFirstFrameRendered = { firstFrame = true },
             )
-        } else if (detail != null) {
+        }
+
+        // 封面盖在播放器之上：出画前它是容器内容，出画时它淡出。
+        if (poster != null && posterAlpha > 0.01f) {
+            AsyncImage(
+                model = poster,
+                contentDescription = detail?.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().alpha(posterAlpha),
+            )
+        }
+
+        if (showProgress) {
+            // NOTE: 压在照片上必须自带底衬，否则浅色封面上的转圈会看不清。
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(Color(0x66000000)),
+                contentAlignment = Alignment.Center,
+            ) {
+                LoadingIndicator(modifier = Modifier.size(32.dp), color = Color.White)
+            }
+        }
+
+        if (playbackUrl == null && detail != null) {
             // 详情拿到了但站点没给 m3u8：压在封面上说一句，否则用户只看到一张静止的封面。
             Text(
                 text = "暂时无法提取播放地址",
