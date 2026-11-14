@@ -79,6 +79,11 @@
     <string name="player_fullscreen">全屏</string>
     <string name="player_exit_fullscreen">退出全屏</string>
 
+    <!-- 卡片长按预览 -->
+    <string name="preview_open">预览</string>
+    <string name="preview_close">关闭预览</string>
+    <string name="preview_close_hint">点击空白处关闭</string>
+
     <!-- 片单 -->
     <string name="playlists_title">我的片单</string>
     <string name="playlists_empty_title">还没有片单</string>

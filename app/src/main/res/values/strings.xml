@@ -85,6 +85,11 @@
     <string name="player_fullscreen">Fullscreen</string>
     <string name="player_exit_fullscreen">Exit fullscreen</string>
 
+    <!-- 卡片长按预览 -->
+    <string name="preview_open">Preview</string>
+    <string name="preview_close">Close preview</string>
+    <string name="preview_close_hint">Tap outside to close</string>
+
     <!-- 片单 -->
     <string name="playlists_title">Playlists</string>
     <string name="playlists_empty_title">No playlists yet</string>

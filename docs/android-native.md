@@ -445,7 +445,7 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
 - **`FAIL_ON_PROJECT_REPOS` 冲突** → 本机 `GRADLE_USER_HOME/init.d/mirrors.gradle` 会注入阿里云镜像，`settings.gradle.kts` 不能设那个模式（镜像已同时写进工程，换机器也能用）。
 - **AGP 9 内置 Kotlin** → 再加 `org.jetbrains.kotlin.android` 会直接报错。
 - **compileSdk 必须是 37 + `compileSdkMinor = 1`** → `compose-bom-alpha:2026.11.00`（Compose 1.13-rc）要求 ≥ 37.1；只装 37.0 会解析失败。
-- **`scripts/build.ps1` 必须是 UTF-8 带 BOM** → Windows PowerShell 5.1 对无 BOM 的 UTF-8 按 ANSI 解码，中文全角字符会吞掉行尾换行，把下一行代码并进注释（曾导致 `JAVA_HOME` 从未生效）。**用工具/AI 改这个文件后一定要重新写回 BOM**（`[System.Text.UTF8Encoding]::new($true)`），否则一改就坏。
+- **`scripts/build.ps1` 必须是 UTF-8 带 BOM** → Windows PowerShell 5.1 对无 BOM 的 UTF-8 按 ANSI 解码，中文全角字符会吞掉行尾换行，把下一行代码并进注释（曾导致 `JAVA_HOME` 从未生效）。**用工具/AI 改这个文件后一定要重新写回 BOM**（`[System.Text.UTF8Encoding]::new($true)`），否则一改就坏。同一条坑对**任何**含中文的源文件都成立：2026-11-14 用 `Get-Content -Raw` + `File.WriteAllText` 给 `DetailScreen.kt` 补 BOM，整份中文注释变成乱码，且一个替换字符吞掉换行、把 `//` 注释与下一行的 `videoId` 参数并成一行，编译报的是「`DetailScreen` 没有 `videoId` 参数」。**补 BOM 要按字节前置 `EF BB BF`，不要过文本 cmdlet。**
 - **Gradle daemon 占住 stdout** → 自动化采集输出时加 `MISSU_NO_DAEMON=1`，否则管道永远等不到 EOF。
 - **Windows 11 Smart App Control 会拦新 exe，且报错像是杀毒软件**：`VerifiedAndReputablePolicyState = 1` 时，没有 Microsoft 信誉背书的新二进制一律被拦，
   提示是「应用程序控制策略阻止了文件」。本机表现：cmdline-tools 23.0 的 `android.exe`（Google 有效签名）跑不起来，
@@ -551,6 +551,13 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
   必须挂在 `TextureView.setOnTouchListener` 上。
 - **弹层不能放在会被自动隐藏的控件树里**：倍速菜单挂在控件层内时，3 秒自动隐藏会把整棵树销毁，
   菜单一闪就关。菜单本体要由播放器持有，并在菜单展开期间暂停自动隐藏。
+- **「等首帧再创建 view」是死锁**：长按预览第一版写成 `if (ready) AndroidView(...)`，`ready` 等
+  `onRenderedFirstFrame`，而首帧要等一个 surface —— 没有 view 就没有首帧，没有首帧就永远不建 view。
+  表现是浮层里一直停在封面上，logcat 只有一句 `ExoPlayerImpl: Init`，没有任何错误。正确做法：view
+  一直在、先 `alpha(0f)`，首帧到了再 `alpha(1f)`（封面垫在下面，所以透明期看到的仍是封面）。
+- **数据源工厂只写一次**：详情播放器与长按预览共用 `ui/player/MediaSource.kt` 的 `mediaDataSourceFactory()`
+  ——`Referer` / `User-Agent` / OkHttp 这三件事缺一不可（预览片在站点自己的 CDN 上，同样被拒）。
+  两个播放器各自拼一份配置，就会出现「详情能放、预览 403」这种只在一处复现的问题。
 
 **调试**
 

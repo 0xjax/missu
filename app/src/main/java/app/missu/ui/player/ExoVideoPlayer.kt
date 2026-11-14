@@ -24,16 +24,11 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.compose.material3.PlayerDefaults
-import app.missu.data.api.AndroidCookieJar
-import app.missu.data.api.SourceConfig
 import app.missu.data.store.SettingsStore
-import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.delay
-import okhttp3.OkHttpClient
 
 private const val TAG = "MissavPlayer"
 private const val AUTO_HIDE_MS = 3_000L
@@ -87,20 +82,8 @@ fun ExoVideoPlayer(
     var ready by remember(url) { mutableStateOf(false) }
 
     val player = remember {
-        val callFactory = OkHttpClient.Builder()
-            .cookieJar(AndroidCookieJar())
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(20, TimeUnit.SECONDS)
-            .build()
-        val httpFactory = OkHttpDataSource.Factory(callFactory)
-            .setDefaultRequestProperties(
-                mapOf(
-                    "Referer" to SourceConfig.BASE_URL + "/",
-                    "User-Agent" to SourceConfig.DEFAULT_USER_AGENT,
-                ),
-            )
         ExoPlayer.Builder(context)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(httpFactory))
+            .setMediaSourceFactory(DefaultMediaSourceFactory(mediaDataSourceFactory()))
             .setSeekBackIncrementMs(SEEK_STEP_MS)
             .setSeekForwardIncrementMs(SEEK_STEP_MS)
             .build()

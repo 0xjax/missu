@@ -1,7 +1,7 @@
 package app.missu.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -21,9 +21,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.missu.R
 import app.missu.data.model.VideoSummary
+import app.missu.ui.preview.LocalVideoPreview
 import coil3.compose.AsyncImage
 
 private val SubtitleBadge = Color(0xD9991B1B)
@@ -32,14 +35,38 @@ private val OtherBadge = Color(0xD91F2937)
 
 /**
  * 首页、列表、收藏与搜索页共用的视频卡片：16:9 封面 + 时长 + 语义角标 + 两行标题。
+ * 长按出预览浮层——只有卡片自带 `previewUrl` 时才有，整理模式下由调用方关掉。
  *
  * NOTE: 封面圆角与占位色改取 M3E 的形状/颜色 token（`shapes.medium` + `surfaceContainerHigh`），
  * 不再写死 10dp 与 `#212225`——这两处以前在换主题时不会跟着变，和四周的官方组件对不齐。
  * NOTE: 角标是压在封面上的语义色（字幕红 / 无码蓝），不属于主题色板，保持写死。
  */
 @Composable
-fun VideoGridCard(video: VideoSummary, onClick: () -> Unit) {
-    Column(modifier = Modifier.clickable(onClick = onClick)) {
+fun VideoGridCard(
+    video: VideoSummary,
+    onClick: () -> Unit,
+    // NOTE: 整理模式下卡片是「选中/取消」，长按再弹预览会和选择手势打架，由调用方关掉。
+    previewOnLongPress: Boolean = true,
+) {
+    val preview = LocalVideoPreview.current
+
+    // NOTE: 长按的触觉由 `combinedClickable` 自己发（Android 16 上实测一次长按 = 一次
+    // `HapticFeedbackConstants.LONG_PRESS`，`dumpsys vibrator_manager` 里一条 HEAVY_CLICK），
+    // 这里不要再补一次——补了就是两下。
+    val openPreview: (() -> Unit)? = if (previewOnLongPress && preview != null && video.previewUrl != null) {
+        { preview.open(video) }
+    } else {
+        null
+    }
+    val longPressLabel = if (openPreview != null) stringResource(R.string.preview_open) else null
+
+    Column(
+        modifier = Modifier.combinedClickable(
+            onClick = onClick,
+            onLongClickLabel = longPressLabel,
+            onLongClick = openPreview,
+        ),
+    ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()

@@ -79,6 +79,11 @@
     <string name="player_fullscreen">全画面</string>
     <string name="player_exit_fullscreen">全画面を終了</string>
 
+    <!-- カード長押しプレビュー -->
+    <string name="preview_open">プレビュー</string>
+    <string name="preview_close">プレビューを閉じる</string>
+    <string name="preview_close_hint">外側をタップして閉じる</string>
+
     <!-- プレイリスト -->
     <string name="playlists_title">プレイリスト</string>
     <string name="playlists_empty_title">プレイリストがありません</string>
