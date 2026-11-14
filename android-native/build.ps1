@@ -11,11 +11,16 @@ param([string]$Task = "assembleDebug")
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-# JDK：优先用独立 JDK，路径**故意不带版本号**（D:\Android\jdk）——升级 JDK 时原地替换内容即可，脚本不用改。
-# 版本记录在该目录下的 MISSU-JDK-VERSION.txt。找不到才回落到 AS 自带 JBR。
+# JDK：目录名带版本号（D:\Android\jdk-21），但脚本**自动发现**——升级时解压出 jdk-25 即可，
+# 这里会挑 D:\Android 下 major 版本最高的 jdk-N，无需改脚本。找不到才回落到 AS 自带 JBR。
 # NOTE: 历史 JDK 17（D:\Android\jdk-17）曾被安全软件按可执行文件拦截；换 JDK 后要确认其 java.exe 能正常跑。
 # SDK：全局安装位置，与 AS 的 Android SDK Location 及 local.properties 的 sdk.dir 一致。
-$jdkCandidates = @('D:\Android\jdk', 'C:\Program Files\Android\Android Studio\jbr')
+$jdkCandidates = @(
+    Get-ChildItem 'D:\Android' -Directory -Filter 'jdk*' -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match '^jdk-(\d+)$' -and (Test-Path (Join-Path $_.FullName 'bin\java.exe')) } |
+        Sort-Object -Property @{ Expression = { [int]([regex]::Match($_.Name, '\d+$').Value) }; Descending = $true } |
+        ForEach-Object { $_.FullName }
+) + @('C:\Program Files\Android\Android Studio\jbr')
 $jdk = $jdkCandidates | Where-Object { Test-Path (Join-Path $_ 'bin\java.exe') } | Select-Object -First 1
 if (-not $jdk) { throw "找不到可用的 JDK，尝试过：$($jdkCandidates -join ' / ')" }
 $env:JAVA_HOME = $jdk
