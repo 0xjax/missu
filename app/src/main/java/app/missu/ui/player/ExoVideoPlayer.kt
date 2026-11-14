@@ -126,13 +126,16 @@ fun ExoVideoPlayer(
         }
     }
 
+    // NOTE: 自动播放关掉时仍然 `prepare()`——首帧会画出来、控件也会出现，只是停在暂停态，
+    // 用户点一下播放键就接着走。不要在这里跳过 prepare：那样连首帧都没有，只剩一张封面。
+    val autoplay = remember { settings.autoplay() }
     LaunchedEffect(url) {
         errorMessage = null
         player.setMediaItem(MediaItem.fromUri(url))
         player.prepare()
         // 继续播放：接着上次的位置。
         if (initialPositionMs > 0) player.seekTo(initialPositionMs)
-        player.playWhenReady = true
+        player.playWhenReady = autoplay
     }
 
     LaunchedEffect(player) {

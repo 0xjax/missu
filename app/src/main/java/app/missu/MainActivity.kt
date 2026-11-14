@@ -476,17 +476,25 @@ private fun MissuApp(
                 )
             }
             composable("settings") {
+                // NOTE: 自动播放只有播放器和这一行用到，不必像主题那样提到根部；进入设置页时
+                // 从偏好读一次，改完立即写回（播放器下次创建时自然读到新值）。
+                var autoplay by remember { mutableStateOf(settings.autoplay()) }
                 SettingsScreen(
                     appLanguage = appLanguage,
                     themeMode = themeMode,
                     colorSource = colorSource,
                     followThemeIcon = followThemeIcon,
                     pureBlack = pureBlack,
+                    autoplay = autoplay,
                     onAppLanguageChange = onAppLanguageChange,
                     onThemeModeChange = onThemeModeChange,
                     onColorSourceChange = onColorSourceChange,
                     onFollowThemeIconChange = onFollowThemeIconChange,
                     onPureBlackChange = onPureBlackChange,
+                    onAutoplayChange = { enabled ->
+                        settings.setAutoplay(enabled)
+                        autoplay = enabled
+                    },
                     onBack = { navController.popBackStack() },
                 )
             }

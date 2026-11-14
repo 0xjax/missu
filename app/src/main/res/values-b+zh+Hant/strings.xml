@@ -145,6 +145,11 @@
     <string name="settings_pure_black">純黑背景</string>
     <string name="settings_pure_black_note">僅深色模式生效。純黑更省電，但分組容器的層級會被壓平</string>
     <string name="settings_language">語言</string>
+
+    <!-- 播放 -->
+    <string name="settings_playback">播放</string>
+    <string name="settings_autoplay">自動播放</string>
+    <string name="settings_autoplay_note">關掉後開啟影片會停在第一幀，按播放鍵才開始</string>
     <string name="settings_language_system">跟隨系統</string>
     <string name="settings_language_note">同時決定介面語言與從站點取回的內容語言。「跟隨系統」時，介面會退回英文（該語言尚未翻譯），內容仍照系統語言取。</string>
 
