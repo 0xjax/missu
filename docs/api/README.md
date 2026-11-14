@@ -36,8 +36,9 @@ bun scripts/har-to-openapi.js \
   - 删除表单在「修改片单」页 `GET /{lang}/playlists/{id}/edit` 里，形如 `<form action="/cn/playlists/{id}" method="post"><input name="_method" value="delete"><input name="_token">`，原样提交；片单详情页本身没有删除入口。
 - `/` 和 `/new` 会重定向到带动态 `dm` 前缀的页面；客户端应使用稳定入口并跟随重定向。
 - 列表和搜索使用从 1 开始的 `page` 查询参数。
-- **时间周期热度是 URL，不是参数**：今日 / 本周 / 本月热门分别是 `/today-hot`、`/weekly-hot`、`/monthly-hot`（站点首页导航直出这三个链接，带 `dm{N}` 前缀）。三者是同一面列表模板，所以「换周期」= 换 path。同理**女优月榜是独立页面** `/actresses/ranking`（导航标签形如「女优排行 NOV 2026」），不吃 `/actresses` 的 `sort` / `height` / `cup` / `age` / `debut` 参数——把它当 `sort=ranking` 发出去只会 404 或返回没有排序的目录。
-- **列表页只有排序，没有筛选**：任意列表页（`/new`、`/today-hot`、`/siro`、`/genres/VR` …）都带 `sort=released_at / published_at / saved / today_views / weekly_views / monthly_views`，但**没有任何筛选表单**（`height` / `cup` / `age` / `debut` 只在 `/actresses` 生效，且页面已不再提供入口链接）。
+- **时间周期热度是同一面列表的三个别名**：`/today-hot`、`/weekly-hot`、`/monthly-hot` 分别等于 `/today-hot?sort=today_views|weekly_views|monthly_views`（第 1、2 页条目 id 实测完全一致，月榜同验）。客户端只要记一个 path + 排序取值即可。同理**女优月榜是独立页面** `/actresses/ranking`（导航标签形如「女优排行 NOV 2026」），不吃 `/actresses` 的 `sort` / `height` / `cup` / `age` / `debut` 参数——把它当 `sort=ranking` 发出去只会 404 或返回没有排序的目录。
+- **列表页有两个口径，都是 query 参数**：`?sort=`（7 个取值：`released_at` / `published_at` / `saved` / `today_views` / `weekly_views` / `monthly_views` / `views`）与 `?filters=`（3 个取值：`individual` / `multiple` / `chinese-subtitle`）。**不传 = 站点默认序 / 不过滤**；默认序既不是 `published_at` 也不是 `released_at`，别拿某个值去「还原默认」。**`filters` 只可靠单选**：同时传两个（重复参数或逗号）时结果与只传 `chinese-subtitle` 一致，既非并集也非交集。
+- **判断两个入口是不是同一集合要比条目 id，不要比页面字节数**：同一面列表的 `hreflang` / `canonical` 与排序菜单标记不同，长度能差 3–4KB，条目却一模一样。
 - **`/genres` 索引里没有 VR**：实测 36 项/页、翻到第 2 页也没有，但 `/genres/VR` 是**正常类型页**（有片、有排序）。导航里的 VR 是单独一项，别指望从类型索引里解析出来。
 - **频道来自首页导航**：素人 / 无码影片 / 亚洲 AV 三组频道（`/siro`、`/fc2`、`/madou` …）以及直播（`/klive`、`/clive`）都只在首页 HTML 的可折叠导航里列出，**没有接口**。导航是 Alpine 两段式：标题 `<a href="#" @click.prevent="showCollapse = … 'key' …">`，项目在紧跟的 `x-show="showCollapse === 'key'"` 的 `<span>` 里；同一份导航会出现两次（桌面 + 移动），解析后要去重。直播两页是**正常视频列表**（12 条/页、带预览片），不是外部直播站。
 - 详情页通过内联打包脚本初始化 HLS 播放器，播放地址来自外部媒体主机；不得把临时 URL 写成固定接口。
