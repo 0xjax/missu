@@ -136,7 +136,7 @@ $sm = "$sdk\cmdline-tools\latest\bin\sdkmanager.bat"
 & $sm --sdk_root=$sdk "platform-tools" "platforms;android-37.0" "build-tools;37.0.0"
 ```
 
-只要这三个包（本机实测装的就是它们，另有一个 `build-tools;36.0.0` 是历史残留、不是必需）：
+只要这三个包（本机现在装的**就只有**这三个，历史上多出来的 `build-tools;36.0.0` 已卸掉）：
 
 | 包 | 本机版本 | 用途 |
 |---|---|---|
@@ -145,6 +145,18 @@ $sm = "$sdk\cmdline-tools\latest\bin\sdkmanager.bat"
 | `build-tools;37.0.0` | 37.0.0 | aapt2 / d8 / zipalign |
 
 **不要装**：NDK、CMake、LLDB、emulator、system-image、旧 API（见下方「精简安装」）。
+
+**SDK 目录里每一项是什么**（回答「哪些能删」）：
+
+| 路径 | 要否 | 说明 |
+|---|---|---|
+| `platforms\android-37.0` | **必需** | `compileSdk = 37` 的编译目标，AGP 直接读它 |
+| `build-tools\37.0.0` | **必需** | aapt2 / d8 / zipalign；AGP 按 compileSdk 选版本 |
+| `platform-tools` | **必需** | `adb`（也用于安装/调试） |
+| `licenses` | **必需** | 8 个 42 字节的授权哈希；删了 AGP/sdkmanager 会认为许可未接受 |
+| `cmdline-tools` | 装包时才用 | 构建不需要它；`sdkmanager` 在这里 |
+| `.knownPackages` | 可删 | 包清单缓存，下次跑 sdkmanager 自动重建 |
+| `.temp` | 可删 | sdkmanager 的临时目录，同样是自建 |
 
 **3. 环境变量（用户级，一次性）**
 
@@ -157,14 +169,15 @@ $sm = "$sdk\cmdline-tools\latest\bin\sdkmanager.bat"
 
 **5. 验证**：`cd android-native; .\build.ps1 install` → `BUILD SUCCESSFUL` + App 装到手机。
 
-> WARNING: **本机目前跑的是 cmdline-tools 19.0**（旧布局，会警告「only understands SDK XML versions up to 3 but
-> version 4 was encountered」）。最新的 **23.0** 已下载并放在 `D:\Android\Sdk\cmdline-tools\v23.0-blocked`，
-> 但 23.0 把 `sdkmanager` 标记为弃用、实际转调新的原生 `android.exe`，而那个 exe 被卡巴斯基的
-> **应用程序控制**拦截（`Unable to load native library: 应用程序控制策略阻止了文件 (Android CLI)`），
-> 所以在放行之前 23.0 不可用。
+> WARNING: **本机目前跑的还是 cmdline-tools 19.0**（旧布局，会警告「only understands SDK XML versions up to 3 but
+> version 4 was encountered」）。最新的 **23.0** 已下载，暂存在 `D:\Android\Sdk\cmdline-tools\v23.0-blocked`，
+> 但 23.0 把 `sdkmanager` 改成转调新的原生 `android.exe`，而那个 exe 被卡巴斯基的
+> **应用程序控制**拒绝加载（`Unable to load native library: 应用程序控制策略阻止了文件`）。
 
-> 放行后（Kaspersky → 设置 → 排除项/受信任应用程序 → 加 `D:\Android\Sdk` 或该目录下的 `android.exe`），
-> 把 `v23.0-blocked` 改名成 `latest` 即可；届时新命令是 `android sdk`：
+> **注意**：在卡巴斯基里把 `D:\Android\Sdk` 加进「排除项」**不够**——排除项管的是文件扫描，
+> 拦它的是「应用程序控制」。要在 **设置 → 安全 → 入侵防御 → 管理应用程序** 里把 `android.exe`（显示名 Android CLI）
+> 设为**受信任**，或临时关掉应用程序控制。放行后把 `v23.0-blocked` 改名成 `latest`，
+> 新命令是 `android sdk`：
 
 ```powershell
 & 'D:\Android\Sdk\cmdline-tools\latest\bin\android.exe' sdk list
