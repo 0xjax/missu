@@ -118,6 +118,8 @@
 
 `MotionScheme.expressive()` 管的是官方组件内部动效，页面转场它不管——两层的时长与曲线得各自定，不能指望前者给后者提供节奏。实现层的坑（组合期约束、`isCurrent` 判离开、`remember` 的 key 不能是派生值）记在 `docs/android-native.md`「已知坑」，不在这里重复。
 
+触觉反馈只有一种用法：**确认状态改变**——收藏、进入/退出整理模式这类切换，语义用 M3 的 `ToggleOn` / `ToggleOff`。导航、滚动、播放器控件显隐都不加：它们本来就有即时的视觉反馈，再叠一层触觉只剩噪音。这类切换的共同点是「按下去之后，界面要么要等一次网络，要么在屏幕另一处才变」，触觉补的正是那段空档。API 34 以下的机器没有 `TOGGLE_ON` / `TOGGLE_OFF` 这两个系统通道，`performHapticFeedback` 会被系统直接忽略（静默失效）——不降级成 `LongPress`，那是长按的语义。
+
 ## Design Tokens
 
 - **圆角**：只用 `MaterialTheme.shapes`（M3E 八档）。封面/缩略图 `medium`(12dp)、分组容器 `largeIncreased`(20dp)、资料卡 `extraLarge`(28dp)、角标 `extraSmall`(4dp)
