@@ -102,4 +102,5 @@ cd android-native
 - 原生工程：`cd android-native; .\build.ps1`（或 `install`）必须 `BUILD SUCCESSFUL`；这是唯一的验收命令。
 - legacy Expo 代码不做验证（不再构建）；`bun check`（bun 原生检查器）只在需要检查 legacy TS 时用。
 - 构建环境的已知坑（`native-platform.dll`、`%TEMP%` 拒写、JVM 被按程序拦截、PS 5.1 需要 BOM）见 `android-native/README.md` 的「已知坑」。
+- **升级 SDK / JDK 等环境依赖前，先查 Android CLI 最新情况**：Google 正在把 `sdkmanager` 迁到原生的 `android sdk`，新版 bundle 自带的 JRE 可能未签名，而本机 Windows 11 Smart App Control 处于强制模式（`VerifiedAndReputablePolicyState = 1`）会拒绝加载未签名代码。按 `android-native/README.md`「升级 SDK 环境依赖前」的检查清单确认后再动，并把结论写回那里。
 - After structural changes, update stale descriptions in AGENTS.md / DESIGN.md / android-native/README.md proactively.

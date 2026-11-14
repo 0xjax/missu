@@ -198,6 +198,35 @@ $sm = 'D:\Android\Sdk\cmdline-tools\latest\bin\sdkmanager.bat'
 >
 > 真要用新版 CLI 的三条路（都不推荐）：① 关 Smart App Control（注册表 + 重启，削弱系统防护）；② 用 WSL2/Docker 里的 Linux 版
 > cmdline-tools（本机未装 WSL）；③ 把 bundle 里的未签名 jre 换成签名 JDK（未验证，且每次 CLI 更新都要重做）。
+### 升级 SDK 环境依赖前，先查 Android CLI 的最新情况
+
+Google 正在把 cmdline-tools 从「Java 版 sdkmanager」迁到「原生 Android CLI（`android sdk`）」，
+本机就是因为新版只带**未签名的自带 JRE** 而卡在 Smart App Control 上。所以每次要升级 SDK 环境依赖时，按顺序确认：
+
+```powershell
+# 1) 官方仓库里 cmdline-tools 当前最新构建号（换掉 URL 里的版本号即可下载）
+$xml = (Invoke-WebRequest 'https://dl.google.com/android/repository/repository2-3.xml' -UseBasicParsing).Content
+[regex]::Matches($xml, 'commandlinetools-win-(\d+)_latest\.zip') | ForEach-Object { $_.Groups[1].Value } |
+  Sort-Object { [long]$_ } -Descending | Select-Object -First 1
+
+# 2) 本机 Smart App Control 状态（1=强制，会拦未签名代码）
+(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\CI\Policy').VerifiedAndReputablePolicyState
+
+# 3) 新版 zip 里是否还有 Java 版 sdkmanager（有 sdklib jar = 有纯 Java 退路）
+Get-ChildItem <解压目录>\lib -Filter 'sdklib*.jar'
+```
+
+判断口径：
+
+| 情况 | 结论 |
+|---|---|
+| zip 里 `bin\sdkmanager.bat` 仍调用 `com.android.sdklib...`，且 `lib` 有 `sdklib*.jar` | 可用，直接升级（走签名 JDK，SAC 不拦） |
+| 只剩 `android.exe` + `lib` 无 sdklib jar | 要先跑一次，然后验它下载的 `%ANDROID_USER_HOME%\cli\bundles\<hash>\jre\bin\server\jvm.dll` 的签名 |
+| 那个 `jvm.dll` 是 `NotSigned` 且 SAC=1 | **升级会失败**，留在 19.0，并把结论记到下方「已知坑」 |
+
+> 官方参考：[sdkmanager 文档（含废弃说明与 `android sdk` 用法）](https://developer.android.google.cn/tools/sdkmanager)、
+> [Android CLI 下载页](https://developer.android.com/tools/agents)。
+> NOTE: 日常其实不需要手动升级：**AGP 会在构建时用签名 JDK 自动补装缺失的 SDK 包**（本项目的 `build-tools;36.0.0` 就是它自动装的）。
 
 **本机现状**：`D:\Android\jdk-21`（Temurin 21.0.13）已装好并被 `build.ps1` 自动选中；AS 已卸载（回收 3.3 GB）；`assembleDebug` / `installDebug` / `:core:test` 在无 AS 的状态下全部实测通过。
 
