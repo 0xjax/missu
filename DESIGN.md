@@ -1,6 +1,6 @@
 # Impeccable Design Context
 
-> **实现目标已变更（2026-11）**：现役实现是 **Kotlin + Jetpack Compose**（`android-native/`）。本文的设计原则、控件规格、已知限制继续有效；「组件框架」「Technical Stack」两节描述的是 legacy Expo 实现，只作参照与迁移输入。
+> **实现目标已变更（2026-11）**：现役实现是 **Kotlin + Jetpack Compose**（仓库根；Gradle 根 = 仓库根，`legacy/expo/` 是归档的旧实现）。本文的设计原则、控件规格、已知限制继续有效；「组件框架」「Technical Stack」两节描述的是 legacy Expo 实现，只作参照与迁移输入。
 
 ## Users
 
@@ -138,7 +138,7 @@
 
 ## Technical Stack
 
-**现役（Kotlin 原生，`android-native/`）**
+**现役（Kotlin 原生，仓库根）**
 
 - Kotlin 2.4.21 + Jetpack Compose（BOM **alpha 2026.11.00** → material3 1.5.0-rc01）+ Material 3 **Expressive**；AGP 9.5.1 / Gradle 9.6.0
 - 单 Activity + Navigation Compose；界面一律自己写 Compose，不引第三方 UI 组件库
