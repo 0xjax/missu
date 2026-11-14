@@ -3,6 +3,7 @@ package app.missu.data.api
 import app.missu.data.model.AccountUser
 import app.missu.data.model.DirectoryList
 import app.missu.data.model.HomeSection
+import app.missu.data.model.NavGroup
 import app.missu.data.model.PlaylistDetail
 import app.missu.data.model.PlaylistSummary
 import app.missu.data.model.VideoDetail
@@ -39,6 +40,14 @@ class MissavApi(
 
     /** 首页板块。站点直出 HTML，直接 Jsoup 解析，不需要 WebView。 */
     suspend fun getHome(): List<HomeSection> = withChallengeRetry { HomeParser.parseHome(client.fetchHtml("/")) }
+
+    /**
+     * 站点导航里的分组入口（「频道」页签的数据源）。
+     *
+     * NOTE: 与 [getHome] 是同一份首页 HTML，只是解析另一段；站点没有独立的导航接口。
+     * 分组与条目都由站点给，我们不维护频道清单——它的编辑菜单变了就自动跟上。
+     */
+    suspend fun getNavGroups(): List<NavGroup> = withChallengeRetry { HomeParser.parseNav(client.fetchHtml("/")) }
 
     /**
      * 详情页。播放地址从内联打包脚本里解出来（见 [app.missu.data.parse.DetailParser.extractPlaybackUrl]）。

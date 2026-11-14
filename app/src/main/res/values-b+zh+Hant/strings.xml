@@ -161,6 +161,8 @@
 
     <!-- 熱門（三個週期都是站點直出的列表頁） -->
     <string name="hot_today">今日熱門</string>
+    <string name="discover_section_channels">頻道</string>
+    <string name="discover_channels_live">直播</string>
     <string name="hot_weekly">本週熱門</string>
     <string name="hot_monthly">本月熱門</string>
 

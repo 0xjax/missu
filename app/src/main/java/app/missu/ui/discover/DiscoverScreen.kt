@@ -25,10 +25,12 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.toShape
@@ -60,6 +62,8 @@ import androidx.compose.ui.unit.dp
 import app.missu.R
 import app.missu.data.api.ActressFilterOptions
 import app.missu.data.model.DirectoryItem
+import app.missu.data.model.NavGroup
+import app.missu.data.model.NavItem
 import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadMoreFooter
@@ -84,9 +88,12 @@ fun DiscoverScreen(
     refreshingKinds: Set<String>,
     hotPeriod: HotPeriod,
     hotState: VideoListUiState,
+    channels: ChannelsUiState,
     onLoad: (String) -> Unit,
     onLoadMore: (String) -> Unit,
     onRefresh: (String) -> Unit,
+    onChannelsLoad: () -> Unit,
+    onChannelsRetry: () -> Unit,
     onHotPeriodChange: (HotPeriod) -> Unit,
     onHotLoadMore: () -> Unit,
     onHotRetry: () -> Unit,
@@ -104,7 +111,7 @@ fun DiscoverScreen(
 
     Column(modifier.fillMaxSize()) {
 
-        // NOTE: 用 M3E 的 PrimaryTabRow（基线 TabRow 已废弃）；一级分类只有三项，等宽排布。
+        // NOTE: 用 M3E 的 PrimaryTabRow（基线 TabRow 已废弃）；五个页签等宽排布。
         PrimaryTabRow(selectedTabIndex = tabIndex) {
             tabs.forEachIndexed { index, item ->
                 Tab(
@@ -115,9 +122,12 @@ fun DiscoverScreen(
             }
         }
 
-        // 切到某个目录时才去拉它，省一次请求。「热门」不是目录，没有请求。
+        // 切到某个页签时才去拉它，省请求：目录各自一次；频道是第一次进来时拉一次首页导航。
         LaunchedEffect(tab.kind) {
-            if (tab.isDirectory && states[tab.kind] == null) onLoad(tab.kind)
+            when {
+                tab == DiscoverTab.CHANNELS -> if (channels is ChannelsUiState.Loading) onChannelsLoad()
+                tab.isDirectory -> if (states[tab.kind] == null) onLoad(tab.kind)
+            }
         }
 
         // 排序与筛选只有女优目录有（站点对类型目录不提供 sort / 筛选参数）。
@@ -174,6 +184,8 @@ fun DiscoverScreen(
                 onLoadMore = onHotLoadMore,
                 onOpen = onOpenVideo,
             )
+        } else if (tab == DiscoverTab.CHANNELS) {
+            ChannelsContent(state = channels, onRetry = onChannelsRetry, onOpen = onOpen)
         } else when (val state = states[tab.kind]) {
             null, DirectoryUiState.Loading -> LoadingHint()
 
@@ -193,6 +205,14 @@ fun DiscoverScreen(
             ) {
                 // NOTE: 女优带头像走双列卡片，类型/厂商没有头像图，走三列文字块——两者都是一屏多放 60% 的密度。
                 val actresses = tab == DiscoverTab.ACTRESSES
+                // NOTE: 站点的 `/genres` 索引里没有 VR（实测翻到第 2 页也没有），但 `/genres/VR`
+                // 是正常类型页。按「它是类型」补一格，而不是给它另开一个维度。
+                val gridItems = if (tab == DiscoverTab.GENRES) {
+                    listOf(DiscoverPins.vrGenre) +
+                        state.items.filterNot { it.path == DiscoverPins.vrGenre.path }
+                } else {
+                    state.items
+                }
                 LazyVerticalGrid(
                     modifier = Modifier.fillMaxSize(),
                     columns = GridCells.Fixed(if (actresses) 2 else 3),
@@ -200,7 +220,7 @@ fun DiscoverScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(if (actresses) 4.dp else 8.dp),
                 ) {
-                    items(items = state.items, key = { it.path }) { item ->
+                    items(items = gridItems, key = { it.path }) { item ->
                         if (actresses) {
                             ActressCell(item = item, onClick = { onOpen(item.path, item.name) })
                         } else {
@@ -277,6 +297,100 @@ private fun HotContent(
             onOpen = onOpen,
             modifier = Modifier.weight(1f),
         )
+    }
+}
+
+/**
+ * 「频道」页签：站点导航里的策展列表（素人 / 无码影片 / 亚洲 AV …）。
+ *
+ * NOTE: 分组是**排版**，不是层级——所有行平铺在同一页、没有可折叠的第二级。所以站点把
+ * 「韩国直播」塞进「亚洲 AV」组这件事，不会在我们这里多冒出一层结构；界面上直播单独成组
+ * （见 [splitLiveGroup]）。
+ */
+@Composable
+private fun ChannelsContent(
+    state: ChannelsUiState,
+    onRetry: () -> Unit,
+    onOpen: (path: String, title: String) -> Unit,
+) {
+    when (state) {
+        ChannelsUiState.Loading -> LoadingHint()
+
+        ChannelsUiState.Empty -> EmptyHint(
+            icon = Icons.AutoMirrored.Filled.List,
+            title = stringResource(R.string.list_empty_title),
+        )
+
+        is ChannelsUiState.Error -> ErrorHint(state.message.text(), onRetry)
+
+        is ChannelsUiState.Content -> {
+            val liveTitle = stringResource(R.string.discover_channels_live)
+            val groups = remember(state.groups, liveTitle) { splitLiveGroup(state.groups, liveTitle) }
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                groups.forEach { group ->
+                    item(key = "group-${group.title}") {
+                        Text(
+                            text = group.title,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
+                        )
+                    }
+                    group.items.forEach { navItem ->
+                        item(key = "${group.title}-${navItem.path}") {
+                            ChannelRow(
+                                name = navItem.name,
+                                onClick = { onOpen(navItem.path, navItem.name) },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 把直播两项从站点分组里摘出来、单独成组。
+ *
+ * NOTE: 站点把 `韩国直播 / 中国直播` 放在「亚洲 AV」组里——那是编辑排版。性质上它们是另一类
+ * 列表（直播合集，不是片商频道），混在片商堆里读起来像同一类东西。
+ */
+private fun splitLiveGroup(groups: List<NavGroup>, liveTitle: String): List<NavGroup> {
+    val live = mutableListOf<NavItem>()
+    val kept = groups.mapNotNull { group ->
+        val rest = group.items.filterNot { item ->
+            (item.path in ChannelRules.livePaths).also { isLive -> if (isLive) live += item }
+        }
+        if (rest.isEmpty()) null else group.copy(items = rest)
+    }
+    return if (live.isEmpty()) kept else kept + NavGroup(title = liveTitle, items = live)
+}
+
+/** 频道页签里的一行。NOTE: `Surface(onClick)` 自带容器色、圆角、涟漪与整行可点的无障碍语义。 */
+@Composable
+private fun ChannelRow(name: String, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text = name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 

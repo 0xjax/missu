@@ -8,6 +8,7 @@ import app.missu.data.api.MissavApi
 import app.missu.R
 import app.missu.data.model.DirectoryItem
 import app.missu.data.model.DirectoryList
+import app.missu.data.model.NavGroup
 import app.missu.ui.common.UiMessage
 import app.missu.ui.common.toUiMessage
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,20 +18,22 @@ import kotlinx.coroutines.launch
 
 /**
  * 发现页的页签。`kind` 只对**目录**有意义（它同时是路径段与解析时用来筛链接的关键词）；
- * 「热门」不是目录（它是一面视频列表，数据由 `VideoListViewModel` 按周期取），所以不取数。
+ * 「热门」与「频道」不取数，数据分别来自视频列表与站点导航。
  *
  * NOTE: 顺序就是页签顺序：**热门在第一位**。三个目录都要求用户先有一个名字（女优 / 题材 / 厂牌）
- * 才来点，只有热门不要求任何意图——它是这个页面唯一能当入口的页签。
+ * 才来点，只有热门不要求任何意图——它是这个页面唯一能当入口的页签。频道放最后：它是一张
+ * 「站点还有哪些策展列表」的索引，不是日常路径。
  */
 enum class DiscoverTab(val kind: String, @param:StringRes val labelRes: Int) {
     HOT("hot", R.string.discover_section_hot),
     ACTRESSES("actresses", R.string.discover_section_actresses),
     GENRES("genres", R.string.discover_section_genres),
     MAKERS("makers", R.string.discover_section_makers),
+    CHANNELS("channels", R.string.discover_section_channels),
     ;
 
-    /** 需要向后端取数的页签。「热门」由自己的列表状态负责，不走目录那套。 */
-    val isDirectory: Boolean get() = this != HOT
+    /** 需要向后端取目录的页签。热门与频道各有自己的数据源。 */
+    val isDirectory: Boolean get() = this == ACTRESSES || this == GENRES || this == MAKERS
 }
 
 /**
@@ -44,6 +47,49 @@ enum class HotPeriod(val path: String, @param:StringRes val labelRes: Int) {
     TODAY("/today-hot", R.string.hot_today),
     WEEKLY("/weekly-hot", R.string.hot_weekly),
     MONTHLY("/monthly-hot", R.string.hot_monthly),
+}
+
+/**
+ * 「类型」索引漏列、但站点确实当成类型的那个页面。
+ *
+ * NOTE: 站点 `/genres` 索引分页里没有 VR（实测 36 项/页、翻到第 2 页也没有），但 `/genres/VR`
+ * 是正常列表页（有 VR 片、有排序）。所以按「它是类型」补一格，而不是给它开一个新维度。
+ * 「VR」是国际通用缩写，四种语言都不翻译。
+ */
+object DiscoverPins {
+    val vrGenre = DirectoryItem(id = "/genres/VR", path = "/genres/VR", name = "VR")
+}
+
+/**
+ * 「频道」页签的编排规则。
+ *
+ * WARNING: 这些是**我们的信息架构**，不是站点的。站点的导航是编辑菜单（可折叠分组），
+ * 把它 1:1 复刻会得到「亚洲 AV 里混着直播、且比观看日本 AV 多一层」的怪结构。这里的规则是：
+ * 分组只当排版标题、不嵌套；站点菜单里已经由页签覆盖的东西不再出现。
+ */
+internal object ChannelRules {
+
+    /** 已经作为页签/入口暴露的路径：从频道里剔掉，否则同一个目的地在两处出现。 */
+    val exposedPaths = setOf(
+        "/new", "/release", "/uncensored-leak",
+        "/actresses", "/actresses/ranking",
+        "/genres", DiscoverPins.vrGenre.path, "/makers",
+        HotPeriod.TODAY.path, HotPeriod.WEEKLY.path, HotPeriod.MONTHLY.path,
+    )
+
+    /** 属于「我的」或非列表页：它们不是频道（按路径判，不看标题，换语言也不会失效）。 */
+    val notChannels = listOf("/saved", "/playlists", "/history", "/vip")
+
+    /** 直播：站点把它们塞在「亚洲 AV」组里，性质上却是另一类列表，界面上单独成组。 */
+    val livePaths = setOf("/klive", "/clive")
+}
+
+/** 站点导航解析出来的频道分组。[Loading] 表示还没拉过。 */
+sealed interface ChannelsUiState {
+    data object Loading : ChannelsUiState
+    data object Empty : ChannelsUiState
+    data class Error(val message: UiMessage) : ChannelsUiState
+    data class Content(val groups: List<NavGroup>) : ChannelsUiState
 }
 
 sealed interface DirectoryUiState {
@@ -74,6 +120,10 @@ class DiscoverViewModel(private val api: MissavApi) : ViewModel() {
     /** 正在下拉刷新的目录（同一时间只有一个页签可见）。 */
     private val _refreshing = MutableStateFlow<Set<String>>(emptySet())
     val refreshing: StateFlow<Set<String>> = _refreshing.asStateFlow()
+
+    private val _channels = MutableStateFlow<ChannelsUiState>(ChannelsUiState.Loading)
+    val channels: StateFlow<ChannelsUiState> = _channels.asStateFlow()
+    private var channelsRequested = false
 
     /**
      * 取一页目录。三个调用点共用，避免把「女优有两条取数路径」这件事抄三遍。
@@ -111,6 +161,36 @@ class DiscoverViewModel(private val api: MissavApi) : ViewModel() {
             )
         }
     }
+
+    /**
+     * 拉「频道」页签。只在第一次进这个页签时拉一次首页 HTML，之后靠内存里的结果。
+     *
+     * NOTE: 站点没有导航接口，导航就在首页 HTML 里；与首页板块共用同一个 URL，但不共用请求
+     * （两个页签的生命周期不同，缓存一份 HTML 只会让两边都要失效逻辑）。
+     */
+    fun loadChannels(force: Boolean = false) {
+        if (channelsRequested && !force) return
+        channelsRequested = true
+        _channels.value = ChannelsUiState.Loading
+        viewModelScope.launch {
+            _channels.value = try {
+                val groups = toChannels(api.getNavGroups())
+                if (groups.isEmpty()) ChannelsUiState.Empty else ChannelsUiState.Content(groups)
+            } catch (error: Exception) {
+                ChannelsUiState.Error(error.toUiMessage())
+            }
+        }
+    }
+
+    /** 站点导航 → 频道分组：剔掉已有入口与「我的」，丢掉空分组。 */
+    private fun toChannels(groups: List<NavGroup>): List<NavGroup> =
+        groups.mapNotNull { group ->
+            val items = group.items.filterNot { item ->
+                item.path in ChannelRules.exposedPaths ||
+                    ChannelRules.notChannels.any { item.path == it || item.path.startsWith("$it/") }
+            }
+            if (items.isEmpty()) null else group.copy(items = items)
+        }
 
     /**
      * 下拉刷新某个目录：从第一页重拉，但**不**把状态打回 Loading——
