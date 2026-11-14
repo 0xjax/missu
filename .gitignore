@@ -1,71 +1,38 @@
-﻿# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+# 仓库根 = Gradle 工程根。这里只放 native 与全仓库通用的规则；
+# 归档 Expo 工程自己的忽略规则在 legacy/expo/.gitignore。
 
-# dependencies
-node_modules/
-
-# Expo
-.expo/
-dist/
-web-build/
-expo-env.d.ts
-
-# Native
-.kotlin/
-*.orig.*
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
-# 鏋勫缓浜х墿锛欰PK 璧?GitHub Release 闄勪欢锛屼笉杩涗粨搴?*.apk
-
-# Metro
-.metro-health-check*
-
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
-
-# macOS
-.DS_Store
-*.pem
-
-# local env files
-.env*
-!.env.example
-
-# typescript
-*.tsbuildinfo
-
-# logs
-logs/
-*.log
-
-# temporary files
-*.tmp
-*.temp
-.tmp-*
-
-# testing
-coverage/
-
-# local development
-.local/
-*.local.*
-*.local.json
-.worktrees/
-
-example
-
-# generated native folders
-/ios
-/android
-
-# Gradle / Kotlin 构建产物（仓库根就是 Gradle 工程根）
+# Gradle / Kotlin 构建产物
 build/
 .gradle/
 .kotlin/
 local.properties
 .idea/
 *.iml
+
+# 签名与产物
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.apk
+*.pem
+
+# 系统与编辑器的杂物
+.DS_Store
+*.orig.*
+*.tmp
+*.temp
+.tmp-*
+*.log
+logs/
+
+# 本地开发
+.local/
+*.local.*
+*.local.json
+.worktrees/
+
+# 环境变量
+.env*
+!.env.example
