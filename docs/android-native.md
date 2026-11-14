@@ -524,11 +524,29 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
   最多白等约 30 秒（60 次轮询）后给「取消」，不会破坏数据。
 - **`cf_clearance` 还在 ≠ 不会再被挑战**：2026-11-14/15 的几次触发都发生在 cookie 有效期内（实测该 cookie 的 `expires_utc`
   到 2027-11-14，约一年），说明站点会**主动作废**它——挑战出现频率与 cookie 过期无关，别按"过期时间"做任何优化。
-- **要手动验证这条链路**：先 `am force-stop`，只删这一条 cookie ——
-  `run-as app.missu /system/bin/sqlite3 app_webview/Default/Cookies` 执行
-  `delete from cookies where name='cf_clearance';`。会话 cookie（`missav_session` / `remember_web_*`）保持不动，
-  用户不会掉登录。**但删了也不一定触发**：2026-11-15 00:14 实测风险低时，没有 clearance 的请求直接被放行、
-  也不会补发该 cookie；反之塞一个假的 `cf_clearance` 同样不触发。挑战是否发生由站点按 IP/指纹判定，**无法按需制造**。
+- **不要试图按需制造挑战（2026-11-15 全部试过，都不可靠）**：触发与否由站点按「出口 IP + 指纹 + 当时的风险分」
+  实时判定，客户端没有开关。四次尝试的实测结果：
+
+  | 手段 | 结果 |
+  | --- | --- |
+  | 删 `cf_clearance` 后冷启动（先后 3 次） | 只有 05:18 那次进了浮层；另两次无反应 |
+  | 连 `__cf_bm` / `_cfuvid` 一起删 | 无反应——**那一刻 missav.ai 一个 CF cookie 都没有，站点照样放行** |
+  | 把 UA 换成旧浏览器（Chrome/70） | 无反应，首页照常 |
+  | 换代理节点 / 关 Clash 直连 | 前者无反应；后者报「网络连接中断」 |
+
+  「删 cookie」的真实作用是**拿掉免检通行证**：站点当刻若在检查非浏览器客户端，OkHttp 才会被 403；
+  站点不检查时删了也白删。所以它是必要非充分条件，不能当触发器用。
+  WARNING: 关掉 Clash 直连那次失败是 **Clash 的 fake-ip DNS 缓存**（域名已解析成 `198.18.x.x`，Clash 一停就不可达），
+  不是没网。真要重试这条杠杆，必须停 Clash 后**等 30–60 秒让 DNS 缓存过期**（或切飞行模式，但那会断 adb）再冷启动。
+- **验收方式：等自然触发，用钩子判读**。日常使用（尤其是退出再登录这类操作）本来就会不定期撞上，
+  触发后 `adb pull /sdcard/Android/data/app.missu/files/challenge/` 就能判读：
+  ① `page=<标题>|dark=…`——标题是 `Just a moment` 说明确实是挑战页；② 有没有 `finish passed=true`；
+  ③ `page-*.html` 用来验证「代取的 HTML 能不能被解析器吃下去」。
+  判读重点：静默期（`alpha=0`）里 Turnstile 是否照常跑通——若出现浮层但勾选框不响应，就是 Chromium 对不可见窗口的处理差异，
+  退路是把 `1473ec1` 一条 revert 掉（退回「先显示、再快速关闭」）。
+- **手动删 cookie 只用于排障，不要当测试手段**：先 `am force-stop`，再
+  `run-as app.missu /system/bin/sqlite3 app_webview/Default/Cookies` 执行 `delete from cookies where name='cf_clearance';`。
+  会话 cookie（`missav_session` / `remember_web_*`）不要动，否则会退出登录。
 - **验证浮层里的文案必须自带语言 context**：`Dialog` 会用自己的窗口 context 重新起一段组合，根部的
   `LocalContext` / `LocalConfiguration` / `LocalResources` 覆写在里面**不生效**（实测：界面简体中文，浮层显示
   `Verification` / `Waiting for the site…`）。做法是在进 `Dialog` 之前把三个 local 取出来，再用
