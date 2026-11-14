@@ -361,17 +361,22 @@ fixture 都是**真机抓的真实页面**（`home-cn.html` / `detail.html` / `s
 
 **adb 只有一份**：在 SDK 里（`D:\Android\Sdk\platform-tools\adb.exe`），用户级 `ADB` 与 `ANDROID_HOME` 都指向 SDK。
 
-**adb server 起不来，报 `cannot open ...\Temp\adb.log: Permission denied`** —— 这是**卡巴斯基只拦 `adb.exe` 这个程序**，不是目录权限、不是 DSH 的子进程策略（2026-11-14 实测）：
+**adb server 起不来，报 `cannot open ...\Temp\adb.log: Permission denied`** —— 原因是 **Windows 完整性级别（Mandatory Integrity Control），不是杀软**（2026-11-14 定案）：
 
-| 实验 | 结果 |
-|---|---|
-| 同一 shell 往 `%TEMP%` 写文件 | 成功（文件 ACL 正常、无占用） |
-| `adb start-server`，`TMP=%TEMP%` / `C:\Users\user\adb-tmp` / `D:\adb-tmp` | 全部 `Permission denied` |
-| `adb start-server`，`TMP=D:\missu\.tmp-gradle` | 成功（工作区在杀软排除列表里） |
-| 把 `cmd.exe` 复制进 `platform-tools` 再往 `%TEMP%` 写 | 成功 → 不是目录问题，是 adb 这个可执行文件被判受限 |
-| 用 WMI（父进程不是 DSH）起 adb | 仍然失败 → 不是 DSH 的信任规则覆盖不到的问题 |
+- `adb.exe` 以 **Low IL** 运行（同一个 shell 里 `cmd /c whoami /groups` 是 **Medium**）；
+- `%TEMP%` 是 Medium 标签，Low 写 Medium 属于 **write-up，一律拒绝**，所以连空文件都创建不出来；
+- `D:\missu` 之所以能写，是因为 `scripts/fix-workspace-acl.ps1` 把整个工作区打成了 **Low** 标签（不是"杀软排除列表"）。
 
-两个解法：① 在卡巴斯基「受信任的应用程序」里**再添加一条 `D:\Android\Sdk\platform-tools\adb.exe`**（勾选项与 DSH 那条相同），之后 adb 用系统 `%TEMP%` 即可，任何临时目录覆盖都能删掉；② 暂时把 `TMP/TEMP` 指到工作区内任意目录再 `adb start-server`（server 起来后所有 adb 客户端命令都正常，不需要再带环境变量）。
+判定实验（都对得上）：`%TEMP%`、`C:\Users\user\Documents`、`D:\adb-tmp` 全部拒绝；`icacls <dir> /setintegritylevel L` 之后同一个目录立刻可写。所以早前「卡巴斯基拦 adb」的结论是误判，给 adb 加杀软例外没有效果。谁把 adb 降成 Low 没有继续追（杀软的应用控制规则最可疑），但不影响修法。
+
+**修法（一次性，普通权限，不需要临时目录）**：在系统临时目录里预建这个日志文件并打 Low 标签——Low 写 Low 是允许的：
+
+```powershell
+New-Item -ItemType File -Force "$env:TEMP\adb.log" | Out-Null
+icacls "$env:TEMP\adb.log" /setintegritylevel L
+```
+
+之后 `adb start-server` 直接用系统 `%TEMP%`，`TMP/TEMP` 不需要任何覆盖。**注意**：`%TEMP%\adb.log` 被清理掉（磁盘清理、Storage Sense）后 adb 会再次报同样的错，重跑上面两行即可。
 
 **构建环境**
 
