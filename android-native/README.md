@@ -157,10 +157,19 @@ $sm = "$sdk\cmdline-tools\latest\bin\sdkmanager.bat"
 
 **5. 验证**：`cd android-native; .\build.ps1 install` → `BUILD SUCCESSFUL` + App 装到手机。
 
-> WARNING: `cmdline-tools` 自身也有版本要求。本机这份是 19.0（旧布局 `cmdline-tools\bin`），列包时会警告
-> 「only understands SDK XML versions up to 3 but version 4 was encountered」——它认不全 API 37 的新包。
-> 新机器请直接装**最新** cmdline-tools 到 `cmdline-tools\latest`；要在这台机器上继续装新 SDK 包，也先升级它。
-反过来，如果保留 AS：它约 3.3 GB，好处是 IDE（跳转/调试/Layout Inspector/Profiler）；坏处只有一个——同步时容易把 NDK / system-image 自动拉回来（见下面的设置项）。
+> WARNING: **本机目前跑的是 cmdline-tools 19.0**（旧布局，会警告「only understands SDK XML versions up to 3 but
+> version 4 was encountered」）。最新的 **23.0** 已下载并放在 `D:\Android\Sdk\cmdline-tools\v23.0-blocked`，
+> 但 23.0 把 `sdkmanager` 标记为弃用、实际转调新的原生 `android.exe`，而那个 exe 被卡巴斯基的
+> **应用程序控制**拦截（`Unable to load native library: 应用程序控制策略阻止了文件 (Android CLI)`），
+> 所以在放行之前 23.0 不可用。
+
+> 放行后（Kaspersky → 设置 → 排除项/受信任应用程序 → 加 `D:\Android\Sdk` 或该目录下的 `android.exe`），
+> 把 `v23.0-blocked` 改名成 `latest` 即可；届时新命令是 `android sdk`：
+
+```powershell
+& 'D:\Android\Sdk\cmdline-tools\latest\bin\android.exe' sdk list
+& 'D:\Android\Sdk\cmdline-tools\latest\bin\android.exe' sdk install platform-tools platforms;android-37.0 build-tools;37.0.0
+```
 
 **本机现状**：`D:\Android\jdk-21`（Temurin 21.0.13）已装好并被 `build.ps1` 自动选中；AS 已卸载（回收 3.3 GB）；`assembleDebug` / `installDebug` / `:core:test` 在无 AS 的状态下全部实测通过。
 
@@ -293,6 +302,9 @@ fixture 都是**真机抓的真实页面**（`home-cn.html` / `detail.html` / `s
 - **compileSdk 必须 37** → Compose BOM 2026.09 的 AndroidX 组件要求 ≥ 37。
 - **`build.ps1` 必须是 UTF-8 带 BOM** → Windows PowerShell 5.1 对无 BOM 的 UTF-8 按 ANSI 解码，中文全角字符会吞掉行尾换行，把下一行代码并进注释（曾导致 `JAVA_HOME` 从未生效）。**用工具/AI 改这个文件后一定要重新写回 BOM**（`[System.Text.UTF8Encoding]::new($true)`），否则一改就坏。
 - **Gradle daemon 占住 stdout** → 自动化采集输出时加 `MISSU_NO_DAEMON=1`，否则管道永远等不到 EOF。
+- **新版 cmdline-tools 的 `android.exe` 被应用程序控制拦截**：23.0 起 `sdkmanager` 只是转调原生 `android.exe`，
+  被拦时连 `sdkmanager` 都不可用（报 `Unable to load native library ... 应用程序控制策略阻止了文件`）。
+  要么放行该 exe/目录，要么继续用旧的纯 Java 版 19.0。
 - **KDoc 里不能出现 `/*` 序列**（例如写 `` `/api/playlists/*` ``）：Kotlin 支持嵌套块注释，这会开启一个
   新注释，把后面的代码整段吃掉，最后在**文件末尾**报 `Syntax error`——错误位置和真正原因完全无关，很难查。
   注释里引用路径通配时写 `…` 或 `/api/playlists/all` 代替。
