@@ -62,3 +62,29 @@ fun videoListPath(
     val separator = if (path.contains('?')) '&' else '?'
     return path + separator + params.joinToString("&")
 }
+
+/**
+ * 「同类实体列表」的路径前缀：第二段是实体名的那几种。
+ *
+ * NOTE: 只有实测过「整类同默认序」的才放进来——女优 / 类型 / 厂商各自整类一致（2026-11-15 真机
+ * 取页头：`/actresses/波多野結衣`、`/actresses/大槻ひびき`、`/genres/VR`、`/genres/高清`、
+ * `/makers/S1`、`/makers/SOD` 全是「发行日期」）。频道、板块、热门这些单段路径没验过一致，
+ * 不进这里（各自按完整路径）。
+ */
+private val ENTITY_LIST_KINDS = setOf("actresses", "genres", "makers")
+
+/**
+ * 「站点默认排序」的缓存组：同一类的列表共用一个学习结果。
+ *
+ * 站点把当前排序直出在列表页头部，只有解析响应才知道是哪一档；而排序控件在响应之前就要画出来。
+ * 同一路径的这一档稳定，**同类的实体列表之间也一致**，所以缓存按「类」而不是按完整路径——
+ * 女优成千上万个，逐个学一遍等于每进一个女优页都先闪一次「默认」。
+ *
+ * 归一化走 [SourceConfig.contentPath]（剥掉 `/dmNNN` 与语言段），所以首页「更多」那种 `/cn/new`
+ * 与 `/new` 算同一个列表。
+ */
+fun videoListSortGroup(path: String): String {
+    val normalized = SourceConfig.contentPath(path.substringBefore('?'))
+    val segments = normalized.split('/').filter { it.isNotEmpty() }
+    return if (segments.size == 2 && segments[0] in ENTITY_LIST_KINDS) "/${segments[0]}/…" else normalized
+}

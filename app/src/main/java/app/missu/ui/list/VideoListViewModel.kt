@@ -55,8 +55,8 @@ class VideoListViewModel(
      *
      * NOTE: 不拿它去补发 `?sort=`——`/new` 实测「不传参数」的顺序不等于任何取值，补发会换掉数据。
      * 站点也没有「默认」这一档，所以界面用这个值代替原来那个多余的「默认」项。
-     * NOTE: 初值取 [ListSortStore] 里学到的该路径默认序，**不能留到响应回来才填**——排序控件在
-     * 响应之前就画出来了，留空会先写「默认」再跳成实际项（每进一次同一列表都闪一下）。
+     * NOTE: 初值取 [ListSortStore] 里学到的该类列表的默认序，**不能留到响应回来才填**——排序控件
+     * 在响应之前就画出来了，留空会先写「默认」再跳成实际项（每进一次同类列表都闪一下）。
      */
     private val _detectedSort = MutableStateFlow(sortStore.get(query.path))
     val detectedSort: StateFlow<VideoListOptions.Sort?> = _detectedSort.asStateFlow()
@@ -68,7 +68,8 @@ class VideoListViewModel(
                 val page = fetch(1)
                 _detectedSort.value = page.sort
                 // 只学「不传 ?sort=」的那一面：带排序的响应声明的是我们点的那一档，不是该页默认序。
-                if (query.sort == null) sortStore.put(query.path, page.sort)
+                // 解析失败（page.sort == null）不写：缓存组是同类列表共享的，清掉会让整类退回「默认」。
+                if (query.sort == null) page.sort?.let { sortStore.put(query.path, it) }
                 if (page.videos.isEmpty()) {
                     VideoListUiState.Empty
                 } else {
