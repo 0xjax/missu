@@ -65,6 +65,11 @@ class SearchViewModel(
         _recent.value = emptyList()
     }
 
+    /** 退出搜索、回到首页内容。 */
+    fun clear() {
+        _state.value = SearchUiState.Idle
+    }
+
     /** 追加下一页；失败只把 loadingMore 复位并保留已加载结果，不整页报错。 */
     fun loadMore() {
         val current = _state.value as? SearchUiState.Content ?: return

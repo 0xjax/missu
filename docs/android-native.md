@@ -28,7 +28,7 @@
 - ✅ **我的片单操作**：`FloatingActionButtonMenu` 收纳「新建片单 / 刷新列表」，替代原来的顶栏「新建」按钮（M3E 里主操作用 FAB）
 - ✅ **详情页动作条**：底部 `FlexibleBottomAppBar` + `SplitButtonLayout`（左半「收藏/已收藏」、右半「加入片单」），内容区不再被一行按钮打断
 - ✅ **片单整理入口**：右下角 `ToggleFloatingActionButton`（编辑图标 ⇄ ×）；进整理模式后「取消选择 / 完成」走 `AppBarRow` 溢出容器（放不下自动收进菜单）
-- ✅ **搜索栏**：M3E slot + `SearchBarState` —— 折叠态是页面顶部一条，点输入框自动展开成全屏 `ExpandedFullScreenSearchBar`，展开态里放最近搜索；IME 动作是「搜索」
+- ✅ **搜索栏**：M3E slot + `SearchBarState`，**就地展开**——首页顶部直接是这条真 `SearchBar`，点一下在当前页展开成全屏 `ExpandedFullScreenSearchBar`（放最近搜索），提交后同一屏收成带返回箭头的折叠态显示结果。搜索不再是独立路由：之前首页那只 44dp/10dp 圆角的假框跳到一个 56dp 胶囊的搜索页，是"割裂感"的来源
 - ✅ **新建片单**：站点只有 Blade 表单（`/playlists/create`），先 GET 读 `_token` 与字段名再 urlencoded POST；实测建出 `test` 后列表自动刷新
 - ✅ **编辑 / 删除片单**：详情页页头「编辑」→ 改名/描述/公开 + 删除（二次确认）；实测改名 `test→test2`、删除后列表只剩 `精选`
 - ✅ **M3E 主题与组件**：`MaterialExpressiveTheme` + `MotionScheme.expressive()`；二级页统一 `PageTopBar`（up 图标 + Tooltip）；底栏换 `ShortNavigationBar`；转圈换 `LoadingIndicator`；首页第一个板块用 `HorizontalMultiBrowseCarousel` 当推荐位；首页/发现支持下拉刷新（`PullToRefreshBox`）；女优排序换连通 `ToggleButton` 组（`SegmentedButton` 在 M3E 已退役）
