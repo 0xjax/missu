@@ -117,9 +117,17 @@ class ChallengeState : ChallengeHandler {
         private set
 
     /** [path] 是触发挑战的站点相对路径；浮层加载它，浏览器要是直接拿到了页面就能把 HTML 带回。 */
-    class Request(val path: String, val deferred: CompletableDeferred<ChallengeResult>)
+    class Request(
+        val path: String,
+        val deferred: CompletableDeferred<ChallengeResult>,
+        /** 非空 = 预览：直接加载这个 URL（本地 fixture 或抓下来的真挑战页），不判通过、不碰网络。 */
+        val previewUrl: String? = null,
+    )
 
     override suspend fun verify(path: String): ChallengeResult {
+        // NOTE: 预览占着浮层时不让真实验证抢槽位——否则预览会被应用的请求顶掉，
+        // 而且被取消的那次请求会在界面上冒出一句「Job was cancelled」（只在 debuggable 构建里发生）。
+        if (current?.previewUrl != null) return ChallengeResult(passed = false, html = null)
         // NOTE: 同一时刻只服务一个验证。后到的把前一个判成取消——让它挂在那里等更糟。
         current?.deferred?.cancel()
         val request = Request(path, CompletableDeferred())
@@ -129,6 +137,17 @@ class ChallengeState : ChallengeHandler {
         } finally {
             if (current === request) current = null
         }
+    }
+
+    /**
+     * 把浮层抬起来展示 [url]，**不触发任何真实请求**（只用于预览配色与三种状态）。
+     *
+     * 调用方必须是 debuggable 构建（见 `MainActivity` 里的 `challenge_preview` 入口）；
+     * 关掉浮层的唯一方式是「取消」或返回键。
+     */
+    fun preview(url: String) {
+        current?.deferred?.cancel()
+        current = Request(path = "", CompletableDeferred(), previewUrl = url)
     }
 
     /** 由浮层在判定通过或用户取消时调用。重复调用是空操作（[CompletableDeferred] 只认第一次）。 */
@@ -316,6 +335,8 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
             withContext(Dispatchers.IO) { ChallengeDiagnostics.save(context, frame, tag) }
         }
     }
+    // 预览时加载的是本地 fixture（或抓下来的真挑战页），其余情况都是站点的真实路径。
+    val targetUrl = request.previewUrl ?: SourceConfig.localizedUrl(request.path)
     val surfaceLow = MaterialTheme.colorScheme.surfaceContainerLow
     // 页面自己不带背景（实测 html/body 的 background 都是 rgba(0,0,0,0)），底色由这层给；
     // 明暗再通过 `color-scheme` 交回浏览器的默认值（见 applyColorScheme）。
@@ -396,15 +417,21 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
             // NOTE: 只看 cookie 会误判——cookie 可能由别的出口 IP 签发、或刚被站点作废，
             // 此时页面还停在挑战页，照读 HTML 会把挑战页当结果。所以标题必须一起看。
             val clearance = CookieManager.getInstance()
-                .getCookie(view.url ?: SourceConfig.localizedUrl(request.path))
+                .getCookie(view.url ?: targetUrl)
                 ?.contains("cf_clearance") == true
             val challengePage = pageTitle.contains(CHALLENGE_TITLE, ignoreCase = true)
-            val onTarget = samePath(view.url.orEmpty(), SourceConfig.localizedUrl(request.path))
+            val onTarget = samePath(view.url.orEmpty(), targetUrl)
             // 真挑战页才显形；其余情况（浏览器直接拿到了目标页）全程不显示任何东西。
             if (challengePage || attempts >= REVEAL_AFTER_ATTEMPTS) revealed = true
             // 深色主题 + 挑战页：CF 的深色样式可能晚于 onPageFinished 注入，没抓到就每轮补一次。
             if (challengePage && darkTheme && themeRules.get() <= 0) {
                 applyPageTheme(view, darkTheme) { n -> themeRules.set(n) }
+            }
+            // 预览：页面是本地 fixture，永远等不到 clearance，也不该自己关掉——只做样式注入与取证。
+            if (request.previewUrl != null) {
+                status = context.getString(R.string.challenge_waiting)
+                delay(POLL_MS)
+                continue
             }
             when {
                 // 首选结局：clearance 到手，交给 OkHttp 重试，之后所有请求都通。
@@ -469,6 +496,9 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
                                 settings.javaScriptEnabled = true
                                 settings.domStorageEnabled = true
                                 settings.userAgentString = SourceConfig.DEFAULT_USER_AGENT
+                                // NOTE: 预览要加载 file:// 的 fixture（或 adb push 进来的真挑战页），
+                                // 而 targetSdk 30+ 默认禁止 file 访问——只在 debuggable 构建里放开。
+                                if (ChallengeDiagnostics.enabled(ctx)) settings.allowFileAccess = true
                                 setBackgroundColor(surfaceLow.toArgb())
 
                                 CookieManager.getInstance().setAcceptCookie(true)
@@ -502,7 +532,7 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
                                     }
                                 }
                                 webView.set(this)
-                                loadUrl(SourceConfig.localizedUrl(request.path))
+                                loadUrl(targetUrl)
                             }
                         },
                         onRelease = { view ->

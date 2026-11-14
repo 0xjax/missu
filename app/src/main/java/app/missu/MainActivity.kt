@@ -79,6 +79,8 @@ import app.missu.data.store.HistoryStore
 import app.missu.data.store.SearchHistoryStore
 import app.missu.data.store.SettingsStore
 import app.missu.data.store.ThemeMode
+import android.app.Activity
+import app.missu.ui.challenge.ChallengeDiagnostics
 import app.missu.ui.challenge.ChallengeOverlayHost
 import app.missu.ui.challenge.ChallengeState
 import app.missu.ui.history.HistoryScreen
@@ -175,6 +177,16 @@ private fun MissuRoot() {
     // NOTE: 人机验证的宿主同样挂在根部（理由同上）。它也是 Dialog，所以验证期间能盖住底栏与系统栏；
     // 而且它就在主题与语言覆写之内，不需要自己再解析一遍明暗/色板/界面语言。
     val challengeState = remember { ChallengeState() }
+    // NOTE: 仅 debuggable 构建的预览入口——不触发真实请求就能把防护层抬起来，用来在明暗/色板组合下看效果：
+    // `adb shell am force-stop app.missu && adb shell am start -n app.missu/.MainActivity \
+    //      --es challenge_preview file:///android_asset/challenge-preview.html\#widget`
+    // 真实挑战何时出现由站点决定、造不出来（见 docs/android-native.md），所以留这条可控的预览通道。
+    LaunchedEffect(challengeState) {
+        if (!ChallengeDiagnostics.enabled(context)) return@LaunchedEffect
+        val activity = context as? Activity ?: return@LaunchedEffect
+        val url = activity.intent?.getStringExtra("challenge_preview") ?: return@LaunchedEffect
+        challengeState.preview(url)
+    }
     var appLanguage by remember { mutableStateOf(settings.appLanguage()) }
     var themeMode by remember { mutableStateOf(settings.themeMode()) }
     var colorSource by remember { mutableStateOf(settings.colorSource()) }
