@@ -39,7 +39,7 @@
 | activity / navigation / lifecycle-vm | 1.13.0 / 2.10.2 / 2.11.0 (compose 版) | |
 | compileSdk | **37**（+ `compileSdkMinor = 0`） | 新 AndroidX 要求 ≥ 37 |
 | targetSdk / minSdk | 36 / 26 | 编译用新 API、运行时行为按 36 走 |
-| JDK | **独立 Temurin 21**（`D:\Android\jdk`）+ 回落 AS 自带 JBR | 路径**故意不带版本号**：升级 JDK = 原地替换该目录内容，`build.ps1` 不用改；版本记在 `MISSU-JDK-VERSION.txt`。找不到才用 AS 的 `jbr`。两者都实测可构建 |
+| JDK | **独立 Temurin 21**（`D:\Android\jdk-21`）+ 回落 AS 自带 JBR | 目录名带版本；`build.ps1` **自动发现** `D:\Android\jdk-*` 并取 major 最高者，升级只需解压出 `jdk-25`，脚本不用改。版本信息见目录内 `MISSU-JDK-VERSION.txt` |
 | Android SDK | API 37.0 + Build-Tools 37 + Platform-Tools | `D:\Android\Sdk` |
 | Android Studio | **2026.2.2**（build `AI-262.10968.63.2622.16840690`，数据目录 `AndroidStudio2026.2.2`） | 只需它自带的 JDK；不需要单独装 JDK |
 
@@ -96,7 +96,7 @@ cd D:\missu\android-native
 
 | 变量 | 值 | 为什么 |
 |---|---|---|
-| `JAVA_HOME` | 先 `D:\Android\jdk`，没有则 AS 的 `jbr` | 独立 JDK 让构建不依赖 AS；两个路径都实测可构建 |
+| `JAVA_HOME` | 自动选 `D:\Android\jdk-N`（N 最大），没有则 AS 的 `jbr` | 独立 JDK 让构建不依赖 AS；两条路都实测可构建 |
 | `ANDROID_HOME` / `ANDROID_SDK_ROOT` | `D:\Android\Sdk` | 与 `local.properties` 的 `sdk.dir` 一致 |
 | `ANDROID_USER_HOME` | `.local/android-home` | `~/.android` 被拒写 |
 | `TMP` / `TEMP` | `.tmp-gradle` | `%TEMP%` 拒写，`generateDebugGlobalSynthetics` 会 `AccessDeniedException` |
@@ -110,13 +110,13 @@ cd D:\missu\android-native
 
 所以完全可以不装 AS，前提是：
 
-1. 装一个独立 JDK 21+（Temurin / Corretto 都行），把 `build.ps1` 里的 `JAVA_HOME` 指过去；**建议放在不带版本号的稳定路径**（如 `D:\Android\jdk`），升级时原地替换，脚本永不需改；
+1. 装一个独立 JDK 21+（Temurin / Corretto 都行），把 `build.ps1` 里的 `JAVA_HOME` 指过去；放在 `D:\Android\jdk-<major>` 这类带版本的目录里（`build.ps1` 会自动挑最高版本，升级不影响脚本）；
 2. **该 JDK 的 `java.exe` 必须被安全软件放行**——本机踩过：`D:\Android\jdk-17\bin\java.exe` 能读不能写、而 AS 的 JBR 正常，是卡巴斯基按可执行文件的拦截，不是 JDK 版本问题；
 3. SDK 组件用 `sdkmanager` 装（在 `D:\Android\Sdk\cmdline-tools\bin` 下），不需要 AS 的图形界面。
 
 反过来，如果保留 AS：它约 3.3 GB，好处是 IDE（跳转/调试/Layout Inspector/Profiler）；坏处只有一个——同步时容易把 NDK / system-image 自动拉回来（见下面的设置项）。
 
-**本机现状**：`D:\Android\jdk`（Temurin 21.0.13）已装好并被 `build.ps1` 优先采用，`assembleDebug` / `installDebug` / `:core:test` 都实测通过。所以 AS 现在**只剩 IDE 作用**，卸载后可回收约 3.3 GB。
+**本机现状**：`D:\Android\jdk-21`（Temurin 21.0.13）已装好并被 `build.ps1` 自动选中，`assembleDebug` / `installDebug` / `:core:test` 都实测通过。所以 AS 现在**只剩 IDE 作用**，卸载后可回收约 3.3 GB。
 
 ## Android Studio 设置（一次性）
 
