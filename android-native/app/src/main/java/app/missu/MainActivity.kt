@@ -226,8 +226,6 @@ private fun MissuApp() {
                 val states by viewModel.states.collectAsState()
                 val sort by viewModel.sort.collectAsState()
                 val filters by viewModel.filters.collectAsState()
-                // NOTE: 每次回到发现页都重读历史，搜索完返回就能看到新词。
-                val recentSearches = remember(backStackEntry) { searchHistory.recent() }
 
                 DiscoverScreen(
                     states = states,
@@ -237,11 +235,6 @@ private fun MissuApp() {
                     onLoadMore = viewModel::loadMore,
                     onOpen = { path, title ->
                         navController.navigate("list?p=${Uri.encode(path)}&t=${Uri.encode(title)}")
-                    },
-                    recentSearches = recentSearches,
-                    onSearchEntry = { navController.navigate("search") },
-                    onRecentSearch = { keyword ->
-                        navController.navigate("search?q=" + Uri.encode(keyword))
                     },
                     onSortChange = viewModel::setSort,
                     onFilterChange = viewModel::setFilter,
