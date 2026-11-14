@@ -19,8 +19,8 @@ sealed interface PlaylistDetailUiState {
     data class Content(
         val name: String,
         val videos: List<VideoSummary>,
-        /** 正在移除的影片 id；非空时同一时间不再接受新的移除。 */
-        val removingId: String? = null,
+        /** 正在移除的影片 id 集合；非空时不再接受新的移除。 */
+        val removingIds: Set<String> = emptySet(),
     ) : PlaylistDetailUiState
 }
 
@@ -53,29 +53,37 @@ class PlaylistDetailViewModel(
     }
 
     /**
-     * 从当前片单里移除一部影片。
-     * NOTE: 走站点片单详情页自己的 `DELETE /api/playlists/{片单id}/{影片id}`（见
-     * [MissavApi.removePlaylistItem]），不需要详情页面板那条要 `key` 的入口。
-     * 成功后只删本地这一条，不整页重拉：站点自己的实现也是直接隐藏卡片。
+     * 从当前片单里批量移除影片（整理模式选中的那几条）。
+     * NOTE: 站点只有单条 `DELETE /api/playlists/{片单id}/{影片id}`，没有批量接口，所以这里串行发；
+     * 单条失败不中断，成功的照样从列表里去掉，最后把失败条数报出来。
+     * NOTE: 成功后只删本地这几条，不整页重拉：站点自己的实现也是直接隐藏卡片。
      */
-    fun remove(videoId: String) {
+    fun removeAll(videoIds: List<String>) {
         val content = _state.value as? PlaylistDetailUiState.Content ?: return
-        if (content.removingId != null) return
+        if (content.removingIds.isNotEmpty() || videoIds.isEmpty()) return
 
         _message.value = null
-        _state.value = content.copy(removingId = videoId)
+        _state.value = content.copy(removingIds = videoIds.toSet())
         viewModelScope.launch {
-            try {
-                api.removePlaylistItem(id, videoId)
-                val rest = content.videos.filterNot { it.id == videoId }
-                _state.value = if (rest.isEmpty()) {
-                    PlaylistDetailUiState.Empty
-                } else {
-                    content.copy(videos = rest, removingId = null)
+            val failed = mutableListOf<String>()
+            for (videoId in videoIds) {
+                try {
+                    api.removePlaylistItem(id, videoId)
+                } catch (error: Exception) {
+                    failed += videoId
+                    if (failed.size == 1) _message.value = describe(error)
                 }
-            } catch (error: Exception) {
-                _state.value = content.copy(removingId = null)
-                _message.value = describe(error)
+            }
+
+            val removed = videoIds.toSet() - failed.toSet()
+            val rest = content.videos.filterNot { it.id in removed }
+            _state.value = if (rest.isEmpty()) {
+                PlaylistDetailUiState.Empty
+            } else {
+                content.copy(videos = rest, removingIds = emptySet())
+            }
+            if (failed.isNotEmpty()) {
+                _message.value = "有 ${failed.size} 部没移除成功，可以再试一次"
             }
         }
     }
