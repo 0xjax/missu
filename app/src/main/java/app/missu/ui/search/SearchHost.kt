@@ -63,7 +63,7 @@ fun SearchHost(
     state: SearchUiState,
     onSearch: (String) -> Unit,
     onLoadMore: () -> Unit,
-    onOpen: (String) -> Unit,
+    onOpen: (id: String, thumbnail: String?) -> Unit,
     onClear: () -> Unit,
     recent: List<String> = emptyList(),
     onClearHistory: () -> Unit = {},
@@ -142,7 +142,7 @@ fun SearchBody(
     keyword: String,
     onRetry: (String) -> Unit,
     onLoadMore: () -> Unit,
-    onOpen: (String) -> Unit,
+    onOpen: (id: String, thumbnail: String?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     PageStateTransition(state = state, modifier = modifier.fillMaxSize()) { current ->
@@ -220,7 +220,11 @@ private fun Hint(text: String) {
 }
 
 @Composable
-private fun Results(state: SearchUiState.Content, onLoadMore: () -> Unit, onOpen: (String) -> Unit) {
+private fun Results(
+    state: SearchUiState.Content,
+    onLoadMore: () -> Unit,
+    onOpen: (id: String, thumbnail: String?) -> Unit,
+) {
     LazyVerticalGrid(
         modifier = Modifier.fillMaxSize(),
         columns = GridCells.Fixed(2),
@@ -237,7 +241,7 @@ private fun Results(state: SearchUiState.Content, onLoadMore: () -> Unit, onOpen
         }
 
         items(items = state.videos, key = { it.id + it.pageUrl }) { video ->
-            VideoGridCard(video = video, onClick = { onOpen(video.id) })
+            VideoGridCard(video = video, onClick = { onOpen(video.id, video.thumbnailUrl) })
         }
 
         if (state.nextPage != null) {

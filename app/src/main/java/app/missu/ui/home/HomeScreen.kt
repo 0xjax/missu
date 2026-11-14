@@ -42,6 +42,7 @@ import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.PageStateTransition
 import app.missu.ui.components.VideoGridCard
+import app.missu.ui.components.videoHero
 import coil3.compose.AsyncImage
 
 /**
@@ -58,7 +59,7 @@ fun HomeScreen(
     refreshing: Boolean,
     onRefresh: () -> Unit,
     onRetry: () -> Unit,
-    onOpen: (String) -> Unit,
+    onOpen: (id: String, thumbnail: String?) -> Unit,
     onOpenList: (path: String, title: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -92,7 +93,7 @@ private fun HomeContent(
     sections: List<HomeSection>,
     refreshing: Boolean,
     onRefresh: () -> Unit,
-    onOpen: (String) -> Unit,
+    onOpen: (id: String, thumbnail: String?) -> Unit,
     onOpenList: (path: String, title: String) -> Unit,
     modifier: Modifier,
 ) {
@@ -143,7 +144,7 @@ private fun HomeContent(
                         items = section.videos.take(SECTION_PREVIEW),
                         key = { video -> "${section.id}-${video.id}" },
                     ) { video ->
-                        VideoGridCard(video = video, onClick = { onOpen(video.id) })
+                        VideoGridCard(video = video, onClick = { onOpen(video.id, video.thumbnailUrl) })
                     }
                 }
             }
@@ -159,7 +160,7 @@ private fun HomeContent(
  * 固定宽高比的卡片会被拉伸变形。
  */
 @Composable
-private fun RecommendedCarousel(videos: List<VideoSummary>, onOpen: (String) -> Unit) {
+private fun RecommendedCarousel(videos: List<VideoSummary>, onOpen: (id: String, thumbnail: String?) -> Unit) {
     if (videos.isEmpty()) return
     // NOTE: itemCount 是 lambda（延迟读，避免每帧重组），preferredItemWidth 才是大项宽度上限。
     val state = rememberCarouselState(itemCount = { videos.size })
@@ -174,9 +175,10 @@ private fun RecommendedCarousel(videos: List<VideoSummary>, onOpen: (String) -> 
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .videoHero(video.id, MaterialTheme.shapes.large)
                 .clip(MaterialTheme.shapes.large)
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                .clickable { onOpen(video.id) },
+                .clickable { onOpen(video.id, video.thumbnailUrl) },
         ) {
             AsyncImage(
                 model = video.thumbnailUrl,

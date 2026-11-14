@@ -69,7 +69,7 @@ fun PlaylistDetailScreen(
     state: PlaylistDetailUiState,
     message: String?,
     onRetry: () -> Unit,
-    onOpen: (String) -> Unit,
+    onOpen: (id: String, thumbnail: String?) -> Unit,
     onBack: () -> Unit,
     onEdit: () -> Unit = {},
     onRemove: (List<String>) -> Unit = {},
@@ -158,7 +158,7 @@ fun PlaylistDetailScreen(
                         Box {
                             VideoGridCard(
                                 video = video,
-                                onClick = { if (managing) toggle() else onOpen(video.id) },
+                                onClick = { if (managing) toggle() else onOpen(video.id, video.thumbnailUrl) },
                             )
                             if (managing) {
                                 SelectionBadge(

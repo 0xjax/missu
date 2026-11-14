@@ -36,6 +36,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import app.missu.data.model.DetailInfoRow
 import app.missu.data.model.VideoDetail
@@ -45,6 +47,8 @@ import app.missu.ui.player.FullscreenEffect
 import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.PageTopBar
+import app.missu.ui.components.videoHero
+import coil3.compose.AsyncImage
 
 @Composable
 fun DetailScreen(
@@ -52,6 +56,10 @@ fun DetailScreen(
     onRetry: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    // NOTE: 共享容器的 key 与卡片一侧一致（路由里的 id），详情数据还没回来时也拿得到。
+    videoId: String = "",
+    // NOTE: 卡片封面。详情解析出来之前先用它铺满播放器框——点卡片时那个框就是从这里长过来的。
+    posterUrl: String? = null,
     message: String? = null,
     onToggleSaved: () -> Unit = {},
     startPositionMs: Long = 0L,
@@ -65,78 +73,126 @@ fun DetailScreen(
     var fullscreen by rememberSaveable { mutableStateOf(false) }
     FullscreenEffect(fullscreen)
 
+    val detail = (state as? DetailUiState.Content)?.detail
+    // NOTE: 封面优先用详情页的 og:image，解析没回来时退回卡片带过来的那张；两者通常是同一张图，
+    // 所以共享容器长到位时画面不会变。
+    val poster = detail?.thumbnailUrl ?: posterUrl
+
     Column(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         if (!fullscreen) {
             PageTopBar(title = "", onBack = onBack)
         }
 
-        when (state) {
-            DetailUiState.Loading -> LoadingHint()
+        DetailHero(
+            state = state,
+            poster = poster,
+            heroKey = videoId.ifEmpty { detail?.id.orEmpty() },
+            fullscreen = fullscreen,
+            startPositionMs = startPositionMs,
+            onPositionReport = onPositionReport,
+            onToggleFullscreen = { fullscreen = !fullscreen },
+        )
 
-            is DetailUiState.Error -> ErrorHint(state.message, onRetry)
+        if (!fullscreen) {
+            when (state) {
+                DetailUiState.Loading -> LoadingHint()
 
-            is DetailUiState.Content -> DetailContent(
-                detail = state.detail,
-                message = message,
-                onToggleSaved = onToggleSaved,
-                startPositionMs = startPositionMs,
+                is DetailUiState.Error -> ErrorHint(state.message, onRetry)
+
+                is DetailUiState.Content -> DetailBody(
+                    detail = state.detail,
+                    message = message,
+                    onToggleSaved = onToggleSaved,
+                    playlists = playlists,
+                    onOpenPlaylists = onOpenPlaylists,
+                    onClosePlaylists = onClosePlaylists,
+                    onTogglePlaylist = onTogglePlaylist,
+                    onOpenPath = onOpenPath,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 播放器框——同时是卡片封面的**共享容器**（container transform 的落点）。
+ *
+ * NOTE: 它必须在首帧就存在，Loading / Error 也不例外：点卡片时共享元素要有另一侧可长进去，
+ * 否则动画直接跳过。解析播放地址的那几百毫秒里，这里铺的是封面而不是黑框。
+ * NOTE: 播放器本身固定在这一格（不进 LazyColumn），切全屏只是换尺寸、不会离开组合，
+ * ExoPlayer 实例与播放进度都能保住。
+ */
+@Composable
+private fun DetailHero(
+    state: DetailUiState,
+    poster: String?,
+    heroKey: String,
+    fullscreen: Boolean,
+    startPositionMs: Long,
+    onPositionReport: (Long) -> Unit,
+    onToggleFullscreen: () -> Unit,
+) {
+    val detail = (state as? DetailUiState.Content)?.detail
+    val playbackUrl = detail?.playbackUrl
+
+    Box(
+        modifier = (if (fullscreen) {
+            Modifier.fillMaxSize()
+        } else {
+            Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+        })
+            .videoHero(heroKey, RectangleShape)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (poster != null) {
+            AsyncImage(
+                model = poster,
+                contentDescription = detail?.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+
+        if (playbackUrl != null) {
+            ExoVideoPlayer(
+                url = playbackUrl,
+                modifier = Modifier.fillMaxSize(),
+                isFullscreen = fullscreen,
+                onToggleFullscreen = onToggleFullscreen,
+                initialPositionMs = startPositionMs,
                 onPositionReport = onPositionReport,
-                playlists = playlists,
-                onOpenPlaylists = onOpenPlaylists,
-                onClosePlaylists = onClosePlaylists,
-                onTogglePlaylist = onTogglePlaylist,
-                onOpenPath = onOpenPath,
-                fullscreen = fullscreen,
-                onToggleFullscreen = { fullscreen = !fullscreen },
+            )
+        } else if (detail != null) {
+            // 详情拿到了但站点没给 m3u8：压在封面上说一句，否则用户只看到一张静止的封面。
+            Text(
+                text = "暂时无法提取播放地址",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White,
+                modifier = Modifier
+                    .background(Color(0xCC000000), MaterialTheme.shapes.small)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
             )
         }
     }
 }
 
 /**
- * 播放器固定放在 Column 的第一格：切全屏时只是换尺寸，**不会离开 composition**，
- * 所以 ExoPlayer 实例和播放进度都能保住（放进 LazyColumn 里就会被回收重建）。
+ * 播放器下面的一切：标题 / 信息行 / 简介，以及底部的收藏与片单动作。
+ *
+ * NOTE: 播放器不在这里——它由 [DetailHero] 固定在页首，本函数只负责剩余内容。
  */
 @Composable
-private fun ColumnScope.DetailContent(
+private fun ColumnScope.DetailBody(
     detail: VideoDetail,
     message: String?,
     onToggleSaved: () -> Unit,
-    startPositionMs: Long,
-    onPositionReport: (Long) -> Unit,
     playlists: PlaylistUiState,
     onOpenPlaylists: () -> Unit,
     onClosePlaylists: () -> Unit,
     onTogglePlaylist: (VideoPlaylist) -> Unit,
     onOpenPath: (path: String, title: String) -> Unit,
-    fullscreen: Boolean,
-    onToggleFullscreen: () -> Unit,
 ) {
-    val playbackUrl = detail.playbackUrl
-    if (playbackUrl != null) {
-        ExoVideoPlayer(
-            url = playbackUrl,
-            modifier = if (fullscreen) {
-                Modifier.fillMaxSize()
-            } else {
-                Modifier.fillMaxWidth().aspectRatio(16f / 9f)
-            },
-            isFullscreen = fullscreen,
-            onToggleFullscreen = onToggleFullscreen,
-            initialPositionMs = startPositionMs,
-            onPositionReport = onPositionReport,
-        )
-    } else if (!fullscreen) {
-        Box(
-            modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text("暂时无法提取播放地址", style = MaterialTheme.typography.bodyMedium)
-        }
-    }
-
-    if (fullscreen) return
-
     LazyColumn(
         modifier = Modifier.weight(1f),
         contentPadding = PaddingValues(bottom = 32.dp),

@@ -44,6 +44,9 @@ fun VideoGridCard(video: VideoSummary, onClick: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(16f / 9f)
+                // NOTE: 封面就是详情页播放器框的共享容器——点卡片时它自己长成播放器，
+                // 所以共享 bounds 挂在这一层，而不是整张卡片上（文字不参与这次转场）。
+                .videoHero(video.id, MaterialTheme.shapes.medium)
                 .clip(MaterialTheme.shapes.medium)
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh),
         ) {

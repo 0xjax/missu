@@ -431,6 +431,12 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
   会变成"每加一个页面都要记得加"，而且极易漏。需要贴边的页面单独 opt-out。
 - **列表页的空/错状态要区分**：网络上失败不能显示成"内容为空"，否则用户以为数据丢了。
 - **整屏页面的转场不能用 alpha**：交叉淡入 = 两页文字叠在一起；顺序淡出再淡入 = 中间整屏空底色（"闪一下"）。用 shared axis 整幅横滑（两页全程不透明），方向按底栏顺序定。选型判据见 `.agents/skills/md3e` 的运动系统（有无持续容器 → container transform / shared axis / fade through / fade）。
+  **例外是卡片 → 详情**：那里有持续容器（封面 → 播放器框），所以走 container transform + fade through（`ui/components/HeroMotion.kt`），页面横滑只在其余路由用。
+- **共享元素的三个硬条件**（缺一个就静默不播，看起来像"没做"）：
+  ① 两个页面在转场期间必须同时在组合里——导航转场的时长不能是 0，否则退场页立刻被移除；
+  ② 共享元素动画的时长必须**等于**导航转场时长（容器用 `tween` 而不是空间 spring），否则转场结束时动画会被硬切成终点；
+  ③ 目标一侧的元素必须在**首帧**就存在（详情页 Loading 时也要有那个框），所以封面靠路由参数 `detail/{id}?img=` 传过去，等详情数据回来再换。
+- **共享元素覆盖层默认按父布局裁剪**（`ParentClip`）：卡片那一格会把长大的元素切掉，必须显式给 `clipInOverlayDuringTransition = OverlayClip(shape)`。作用域用 `CompositionLocal` 传（`LocalSharedTransitionScope` + 目的地自己的 `AnimatedVisibilityScope`），不要一路加参数。
 - **窗口底色必须跟主题同步**：`res/values/themes.xml` 的 `windowBackground` 是静态值，浅色下任何透明帧都会露黑；`MainActivity.onCreate` 先按持久化主题设一次，`MissuTheme` 里继续同步。
 - **页签级 ViewModel 放 Activity 作用域**：放在 `composable()` 里会随页签销毁，切回来变成「新建 VM → Loading → 重新请求」——用户看到先一帧旧画面再转圈。同理，`LaunchedEffect(语言)` 这类重载不要放在目的地里，否则每次切回都触发。
 
