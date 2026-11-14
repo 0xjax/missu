@@ -78,6 +78,9 @@ import app.missu.ui.search.SearchHost
 import app.missu.ui.search.SearchUiState
 import app.missu.ui.search.SearchViewModel
 import app.missu.ui.theme.MissuTheme
+import coil3.ImageLoader
+import coil3.compose.setSingletonImageLoaderFactory
+import coil3.request.crossfade
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -95,6 +98,12 @@ class MainActivity : ComponentActivity() {
  */
 @Composable
 private fun MissuRoot() {
+    // NOTE: 缩略图淡入。不设的话 Coil 的默认行为是「解码完成瞬间替换」——卡片会从一层纯色
+    // 忽然跳成图片；开启 crossfade 后是渐显，卡片底色（surfaceContainerHigh）始终垫在下面。
+    setSingletonImageLoaderFactory { context ->
+        ImageLoader.Builder(context).crossfade(true).build()
+    }
+
     val context = LocalContext.current
     val settings = remember { SettingsStore(context.applicationContext).also { it.applyStoredLanguage() } }
     var themeMode by remember { mutableStateOf(settings.themeMode()) }
