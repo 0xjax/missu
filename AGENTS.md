@@ -75,7 +75,7 @@
 - 仅适配 Android；iOS / Web 不是交付目标。
 - Comment tags: `CRITICAL` = errors/crashes/data-loss; `WARNING` = risks/edge cases/side effects; `TODO` = incomplete work/tech debt; `NOTE` = non-obvious design decisions.
 - Round to business precision before float compare/accumulate/chain; NEVER raw `==` on floats.
-- **界面文案一律走 `res/values/strings.xml`**（英文是 base，中文 `values-zh/`、日文 `values-ja/`），不写死在 Compose 里；`:core` 没有资源系统，只放**值**、文案在 app 侧组合；ViewModel 状态里放 `UiMessage`（类型 + 参数），不存拼好的字符串。语言是**一个**设置项（界面 + 站点内容同轴），见 `docs/android-native.md`「多语言」。
+- **界面文案一律走 `res/values/strings.xml`**（英文是 base，中文 `values-zh/`、繁體 `values-b+zh+Hant/`、日文 `values-ja/`），不写死在 Compose 里；`:core` 没有资源系统，只放**值**、文案在 app 侧组合；ViewModel 状态里放 `UiMessage`（类型 + 参数），不存拼好的字符串。语言是**一个**设置项（界面 + 站点内容同轴），见 `docs/android-native.md`「多语言」。
 - 代码注释用中文；提交信息用英文并遵循 Conventional Commits。
 - Kotlin 侧包名 `app.missu`，源码在 `app/src/main/java/app/missu/`。
 

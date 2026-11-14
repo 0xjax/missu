@@ -426,7 +426,8 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
 
 **多语言（i18n）**
 
-- **英文是 base**（`res/values/`），中文 `values-zh/`、日文 `values-ja/`。没匹配的语言自动回退英文——「自动检测系统语言 + 回退英语」不用写代码，是资源机制的默认行为。
+- **英文是 base**（`res/values/`），简体 `values-zh/`、繁體 `values-b+zh+Hant/`（BCP-47 script 限定符，zh-TW/HK/MO 都命中）、日文 `values-ja/`。没匹配的语言自动回退英文——「自动检测系统语言 + 回退英语」不用写代码，是资源机制的默认行为。
+- **繁體用 `b+zh+Hant` 而不是 `values-zh-rTW`**：后者只命中台湾，香港/澳门会掉回简体。条款文案按台湾用语（設定 / 登入 / 影片 / 片單 / 儲存 / 桌布 / 網路）。
 - **一个设置项同时决定界面与内容语言**（`AppLanguage` + `uiLocale()` / `contentLanguage()`）。别拆成两个开关：详情页的信息行标签是站点按内容语言返回的，拆开会得到「中文界面 + 英文标签」的混排。选项只列**有 UI 翻译**的语言。
 - **`:core` 不放界面文案**（纯 JVM 没有资源系统）：筛选项的**值**留在 `ActressFilterOptions`，文案在 app 侧按 `section.key` 组合（`optionLabel()`）；异常消息只当类型用，界面文案由 `UiMessage` 映射。
 - **ViewModel 不存拼好的文案**：状态里放 `UiMessage`（类型 + 参数），显示时 `@Composable UiMessage.text()` 取字符串。否则切换语言后，屏幕上留着的还是旧语言的字符串。
