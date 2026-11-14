@@ -181,7 +181,9 @@ $sm = "$sdk\cmdline-tools\latest\bin\sdkmanager.bat"
 >
 > 常见误判：以为要放行杀毒软件。**在卡巴斯基里加受信任应用程序/排除项对这条完全无效**（实测：受信任列表里能看到 `android.exe` 已启用，照样被拦）。
 >
-> 关闭 Smart App Control 是**不可逆**的（关掉后只能重装/重置 Windows 才能再打开），为升级一个装包工具不值得。
+> 本机的实际情况：Windows 安全中心里「评估 / 关闭」两个选项**都是灰的**——SAC 处于「打开」后 UI 不允许再切回，
+> 想改只能用注册表 `HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy\VerifiedAndReputablePolicyState = 0` 并重启（会削弱系统防护，
+> 为一个装包工具不值得）。**所以本机接受现实：用 19.0。**
 > 因此本机保持 **19.0**：纯 Java，用 `java.exe` 跑，不受 SAC 影响。它的局限只是看不懂 API 37 的 v4 XML 元数据
 > （列全量包时会警告），但**列已装、装卸指定版本的包都实测可用**：
 
