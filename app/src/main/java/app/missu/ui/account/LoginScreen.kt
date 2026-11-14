@@ -2,7 +2,6 @@
 
 package app.missu.ui.account
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -10,15 +9,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,6 +34,12 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import app.missu.ui.components.PageTopBar
 
+/**
+ * 登录页：站点账号的邮箱 + 密码。
+ *
+ * NOTE: 主行动做成整宽按钮——登录是这一页唯一要做的事，不需要和别的控件抢注意力；
+ * 加载中把「登录」换成 M3E 的 LoadingIndicator（用 onPrimary 色，否则粉色转圈压在粉色按钮上会看不见）。
+ */
 @Composable
 fun LoginScreen(
     state: LoginUiState,
@@ -54,8 +61,19 @@ fun LoginScreen(
     Column(modifier.fillMaxSize()) {
         PageTopBar(title = "登录 Missu", onBack = onBack)
 
-        Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp),
+        ) {
             Spacer(Modifier.height(8.dp))
+            Text(
+                text = "使用站点账号登录，收藏与片单会在网页端与 App 之间保持同步。",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(24.dp))
 
             OutlinedTextField(
                 value = email,
@@ -96,17 +114,23 @@ fun LoginScreen(
                 )
             }
 
-            Spacer(Modifier.height(20.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Button(onClick = { submit() }, enabled = !loading) {
+            Spacer(Modifier.height(28.dp))
+            Button(
+                onClick = { submit() },
+                enabled = !loading,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (loading) {
+                        LoadingIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                        Spacer(Modifier.width(10.dp))
+                    }
                     Text(if (loading) "登录中…" else "登录")
                 }
-                if (loading) {
-                    Spacer(Modifier.width(12.dp))
-                    LoadingIndicator()
-                }
             }
-
 
             Spacer(Modifier.height(16.dp))
             Text(
@@ -114,6 +138,7 @@ fun LoginScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Spacer(Modifier.height(24.dp))
         }
     }
 }

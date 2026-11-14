@@ -11,9 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -21,14 +19,13 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AppBarRow
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.HorizontalFloatingToolbar
@@ -51,6 +48,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.missu.ui.components.EmptyHint
+import app.missu.ui.components.ErrorHint
+import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.PageTopBar
 import app.missu.ui.components.VideoGridCard
 
@@ -121,13 +121,15 @@ fun PlaylistDetailScreen(
             }
 
             when (state) {
-                PlaylistDetailUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    LoadingIndicator()
-                }
+                PlaylistDetailUiState.Loading -> LoadingHint()
 
-                PlaylistDetailUiState.Empty -> CenteredHint("这个片单还是空的")
+                PlaylistDetailUiState.Empty -> EmptyHint(
+                    icon = Icons.AutoMirrored.Filled.List,
+                    title = "这个片单还是空的",
+                    subtitle = "在详情页点「加入片单」，影片就会出现在这里",
+                )
 
-                is PlaylistDetailUiState.Error -> CenteredHint(state.message, onRetry)
+                is PlaylistDetailUiState.Error -> ErrorHint(state.message, onRetry)
 
                 is PlaylistDetailUiState.Content -> LazyVerticalGrid(
                     modifier = Modifier.fillMaxSize(),
@@ -283,23 +285,6 @@ private fun SelectionBadge(
                     .clip(CircleShape)
                     .background(Color(0x33FFFFFF)),
             )
-        }
-    }
-}
-
-@Composable
-private fun CenteredHint(text: String, onRetry: (() -> Unit)? = null) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (onRetry != null) {
-                Spacer(Modifier.height(12.dp))
-                Button(onClick = onRetry) { Text("重试") }
-            }
         }
     }
 }

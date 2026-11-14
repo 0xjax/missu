@@ -3,6 +3,7 @@
 package app.missu.ui.playlists
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,19 +16,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonMenu
 import androidx.compose.material3.FloatingActionButtonMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -37,9 +41,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.missu.data.model.PlaylistSummary
+import app.missu.ui.components.EmptyHint
+import app.missu.ui.components.ErrorHint
+import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.PageTopBar
 
 @Composable
@@ -73,20 +81,20 @@ fun PlaylistsScreen(
         // weight(1f) 让它占满余下高度，底栏与顶栏各司其职。
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (state) {
-                PlaylistsUiState.Loading -> Box(
-                    Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    LoadingIndicator()
-                }
+                PlaylistsUiState.Loading -> LoadingHint()
 
-                PlaylistsUiState.Empty -> CenteredHint("还没有片单")
+                PlaylistsUiState.Empty -> EmptyHint(
+                    icon = Icons.AutoMirrored.Filled.List,
+                    title = "还没有片单",
+                    subtitle = "用右下角的按钮新建第一个片单",
+                )
 
-                is PlaylistsUiState.Error -> CenteredHint(state.message, onRetry)
+                is PlaylistsUiState.Error -> ErrorHint(state.message, onRetry)
 
                 is PlaylistsUiState.Content -> LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = 8.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(items = state.playlists, key = { it.path }) { playlist ->
                         PlaylistRow(playlist = playlist, onClick = { onOpen(playlist) })
@@ -159,10 +167,16 @@ private fun CreateDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(16.dp))
+                // NOTE: 二元开关用 Switch（M3E：多选/确认才用 Checkbox，设置项用 Switch），
+                // 和「编辑片单」页的「公开片单」保持一致。
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = isPublic, onCheckedChange = { isPublic = it })
-                    Text("公开片单", modifier = Modifier.padding(start = 8.dp))
+                    Text(
+                        text = "公开片单",
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Switch(checked = isPublic, onCheckedChange = { isPublic = it })
                 }
                 message?.let {
                     Spacer(Modifier.height(8.dp))
@@ -179,44 +193,46 @@ private fun CreateDialog(
     )
 }
 
+/**
+ * 一行片单：名字 + 「公开性 · 更新时间」+ 右箭头。
+ *
+ * NOTE: 每行包一张 `surfaceContainerLow` 的圆角面（M3E 的列表项容器），而不是裸文本堆叠——
+ * 片单数量少、行高不齐，容器能把每一行的点击范围画出来。
+ */
 @Composable
 private fun PlaylistRow(playlist: PlaylistSummary, onClick: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-    ) {
-        Text(
-            text = playlist.name,
-            style = MaterialTheme.typography.bodyLarge,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        // NOTE: owner 一定是自己（这是「我的片单」），不显示以免噪音。
-        val meta = listOfNotNull(playlist.visibility, playlist.updatedAt?.let { "更新 $it" })
-        if (meta.isNotEmpty()) {
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = meta.joinToString(" · "),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+    // NOTE: owner 一定是自己（这是「我的片单」），不显示以免噪音。
+    val meta = listOfNotNull(playlist.visibility, playlist.updatedAt?.let { "更新 $it" }).joinToString(" · ")
+    val supporting: (@Composable () -> Unit)? = if (meta.isEmpty()) {
+        null
+    } else {
+        { Text(text = meta, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
     }
-}
 
-@Composable
-private fun CenteredHint(text: String, onRetry: (() -> Unit)? = null) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Surface(
+        shape = MaterialTheme.shapes.largeIncreased,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        ListItem(
+            modifier = Modifier.clickable(onClick = onClick),
+            // NOTE: 列表项默认容器色取主题的 surface（纯黑），会盖掉分组容器的底色。
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+            supportingContent = supporting,
+            trailingContent = {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            },
+        ) {
             Text(
-                text = text,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = playlist.name,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
-            if (onRetry != null) {
-                Spacer(Modifier.height(12.dp))
-                Button(onClick = onRetry) { Text("重试") }
-            }
         }
     }
 }
