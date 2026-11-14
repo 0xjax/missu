@@ -1,6 +1,7 @@
 package app.missu.data.parse
 
 import app.missu.data.api.SourceConfig
+import app.missu.data.api.VideoListOptions
 import app.missu.data.model.HomeSection
 import app.missu.data.model.NavGroup
 import app.missu.data.model.NavItem
@@ -30,6 +31,12 @@ object HomeParser {
     private val DM_PREFIX = Regex("^dm\\d+$")
     private val COLLAPSE_KEY = Regex("""showCollapse\s*===\s*'([^']+)'""")
     private val BASE_HOST = java.net.URI(SourceConfig.BASE_URL).host
+
+    /** 头部「排序: X」那行文本（X 是站点当前排序的显示名）。 */
+    private val SORT_HEADER = Regex(""">([^<>]{1,40})</span>\s*<svg[^>]*showDropdown !== 'sort'""")
+
+    /** 排序下拉里的一项：`<a href="…?sort=value" …>显示名</a>`。 */
+    private val SORT_ITEM = Regex("""<a\s[^>]*?href="([^"]*[?&]sort=([a-z_]+)[^"]*)"[^>]*>\s*([^<>]{1,24}?)\s*</a>""")
 
     fun parseHome(html: String): List<HomeSection> {
         val doc = Jsoup.parse(html, SourceConfig.BASE_URL)
@@ -67,7 +74,36 @@ object HomeParser {
             val href = anchor.absUrl("href").ifEmpty { anchor.attr("href") }
             pageParam(href) == next.toString()
         }
-        return VideoList(videos = parseVideoCards(doc), nextPage = if (hasNext) next else null)
+        return VideoList(
+            videos = parseVideoCards(doc),
+            nextPage = if (hasNext) next else null,
+            sort = parseListSort(html),
+        )
+    }
+
+    /**
+     * 站点自己在列表页头部声明的「当前排序」。
+     *
+     * 结构（列表页 HTML）：头部是一行 `<span>排序: 发行日期</span><svg x-show="showDropdown !== 'sort'">…`，
+     * 紧跟的下拉里是 7 个 `<a href="…?sort=value">显示名</a>`。所以只要**拿显示名去匹配那个 href**，
+     * 就能得到取值——显示名随内容语言变化，取值不变，我们不需要认识任何语言，也不需要猜。
+     *
+     * NOTE: 站点没有独立的「默认」项，它总把某个具体排序显示成当前项（`/siro` 是「发行日期」）。
+     * 所以客户端不需要造一个「默认」档，只要把站点声明的这一项显示成选中即可。
+     * 解析失败（站点改结构）返回 null，调用方回落到「不传参数」并显示「默认」。
+     */
+    fun parseListSort(html: String): VideoListOptions.Sort? {
+        val header = SORT_HEADER.find(html)?.groupValues?.get(1)?.trim() ?: return null
+        // 「排序: 发行日期」——前缀文案随语言变，所以只取最后一个分隔符后面的显示名。
+        val label = header.substringAfterLast(':').substringAfterLast('：').trim().ifEmpty { header }
+        val blockStart = html.indexOf("showDropdown === 'sort'").takeIf { it >= 0 } ?: return null
+        val block = html.substring(blockStart, minOf(blockStart + 8_000, html.length))
+        val value = SORT_ITEM.findAll(block)
+            .firstOrNull { it.groupValues[3].trim() == label }
+            ?.groupValues
+            ?.get(2)
+            ?: return null
+        return VideoListOptions.Sort.entries.firstOrNull { it.value == value }
     }
 
     private fun pageParam(href: String): String? {

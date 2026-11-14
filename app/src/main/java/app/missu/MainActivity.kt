@@ -563,6 +563,7 @@ private fun MissuApp(
                     factory = factory { VideoListViewModel(api, query) },
                 )
                 val state by viewModel.state.collectAsState()
+                val detectedSort by viewModel.detectedSort.collectAsState()
                 LaunchedEffect(query) {
                     if (state is VideoListUiState.Loading) viewModel.load()
                 }
@@ -573,6 +574,7 @@ private fun MissuApp(
                         state = state,
                         sort = sort,
                         filter = filter,
+                        detectedSort = detectedSort,
                         sorts = VideoListOptions.Sort.entries,
                         filters = VideoListOptions.Filter.entries,
                         onSortChange = { sort = it },

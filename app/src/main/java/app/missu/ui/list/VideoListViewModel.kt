@@ -48,11 +48,21 @@ class VideoListViewModel(
     private val _state = MutableStateFlow<VideoListUiState>(VideoListUiState.Loading)
     val state: StateFlow<VideoListUiState> = _state.asStateFlow()
 
+    /**
+     * 站点自己声明的当前排序（页面头部那行「排序: X」）。只用于**显示**成选中项。
+     *
+     * NOTE: 不拿它去补发 `?sort=`——`/new` 实测「不传参数」的顺序不等于任何取值，补发会换掉数据。
+     * 站点也没有「默认」这一档，所以界面用这个值代替原来那个多余的「默认」项。
+     */
+    private val _detectedSort = MutableStateFlow<VideoListOptions.Sort?>(null)
+    val detectedSort: StateFlow<VideoListOptions.Sort?> = _detectedSort.asStateFlow()
+
     fun load() {
         viewModelScope.launch {
             _state.value = VideoListUiState.Loading
             _state.value = try {
                 val page = fetch(1)
+                _detectedSort.value = page.sort
                 if (page.videos.isEmpty()) {
                     VideoListUiState.Empty
                 } else {
