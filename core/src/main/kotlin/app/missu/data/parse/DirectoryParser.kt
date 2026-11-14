@@ -37,9 +37,21 @@ object DirectoryParser {
             if (name.isEmpty()) continue
 
             val parentText = anchor.parent()?.text()?.trim()?.replace(WHITESPACE, " ").orEmpty()
-            val subtitle = raw.removePrefix(name).trim()
+            val tail = raw.removePrefix(name).trim()
                 .ifEmpty { parentText.replace(raw, "").trim() }
-                .ifEmpty { null }
+            // NOTE: 一段文本拆两行。女优页的条数就写在名字后面（`cut` 能圈到「5714 条影片」，但它自带
+            // 前导空格，所以要取 `cut.value` 的 trim 值，不能拿剩下的字符串再匹配一次）。
+            // 类型/厂商的条数在**父元素**里（锚文本只有名字），旧实现靠 subtitle 的 parentText 兜底，
+            // 这里同样兜底到 countText——否则这些格子会只剩名字。
+            val countText: String?
+            val debutText: String?
+            if (cut != null) {
+                countText = cut.value.trim().ifEmpty { null }
+                debutText = raw.substring(cut.range.last + 1).trim().ifEmpty { null }
+            } else {
+                countText = tail.ifEmpty { null }
+                debutText = null
+            }
 
             val card = anchor.parent()?.parent()
             val image = card?.selectFirst("img")
@@ -50,7 +62,14 @@ object DirectoryParser {
             // NOTE: 无头像的条目用「首字占位块」，会先命中一个单字链接；同路径取名字最长的那条。
             val existing = byPath[path]
             if (existing == null || name.length > existing.name.length) {
-                byPath[path] = DirectoryItem(id = path, path = path, name = name, subtitle = subtitle, imageUrl = imageUrl)
+                byPath[path] = DirectoryItem(
+                    id = path,
+                    path = path,
+                    name = name,
+                    countText = countText,
+                    debutText = debutText,
+                    imageUrl = imageUrl,
+                )
             }
         }
 

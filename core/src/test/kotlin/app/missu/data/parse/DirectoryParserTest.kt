@@ -46,7 +46,9 @@ class DirectoryParserTest {
 
         val names = result.items.map { it.name }
         assertEquals(listOf("波多野结衣", "大槻响", "未"), names)
-        assertEquals("5714 条影片 2008 出道", result.items[0].subtitle)
+        // 「5714 条影片 2008 出道」在解析层就拆成条数与出道两段：UI 要分两行排。
+        assertEquals("5714 条影片", result.items[0].countText)
+        assertEquals("2008 出道", result.items[0].debutText)
         assertEquals(2, result.nextPage)
     }
 
@@ -54,6 +56,26 @@ class DirectoryParserTest {
     fun keepsImageAbsoluteForProtocolRelativeUrl() {
         val result = DirectoryParser.parse(actresses, "actresses", page = 1)
         assertEquals("https://fourhoi.com/actress/hatano.jpg", result.items[0].imageUrl)
+    }
+
+    @Test
+    fun fallsBackToParentTextWhenCountSitsOutsideTheAnchor() {
+        // 真实结构：类型/厂商的锚文本只有名字，条数在父元素里（真机实测「高清 / 292596 条影片」）。
+        // 这条路径曾经因为只认锚文本而让三列格子只剩名字，必须锁住。
+        val html = """
+            <html><body>
+              <div class="card">
+                <a class="text-nord13" href="/cn/genres/高清">高清</a>
+                <span>292596 条影片</span>
+              </div>
+            </body></html>
+        """.trimIndent()
+
+        val result = DirectoryParser.parse(html, "genres", page = 1)
+
+        assertEquals("高清", result.items[0].name)
+        assertEquals("292596 条影片", result.items[0].countText)
+        assertEquals(null, result.items[0].debutText)
     }
 
     @Test
@@ -107,7 +129,7 @@ class DirectoryParserTest {
 
         val result = DirectoryParser.parse(html, "makers", page = 1)
         println("makers=${result.items.size}")
-        result.items.take(3).forEach { println("  ${it.path} | ${it.name} | ${it.subtitle}") }
+        result.items.take(3).forEach { println("  ${it.path} | ${it.name} | ${it.countText} | ${it.debutText}") }
 
         assertTrue("厂商目录应有多个条目", result.items.size >= 10)
         assertTrue("路径必须是 /makers/{名}", result.items.all { it.path.startsWith("/makers/") })
