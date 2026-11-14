@@ -26,8 +26,7 @@
 - ✅ **我的片单**：`/playlists` 列表（名字 · 可见性 · 更新时间）+ 片单详情网格；真实页面 fixture 测试锁住解析规则
 - ✅ **新建片单**：站点只有 Blade 表单（`/playlists/create`），先 GET 读 `_token` 与字段名再 urlencoded POST；实测建出 `test` 后列表自动刷新
 - ✅ **编辑 / 删除片单**：详情页页头「编辑」→ 改名/描述/公开 + 删除（二次确认）；实测改名 `test→test2`、删除后列表只剩 `精选`
-- ⬜ 详情 / 播放 / 搜索 / 登录
-- ⬜ 发现 / 片单 / 收藏 / 历史 / 设置
+
 
 ## 版本矩阵（实测钉死）
 
@@ -40,10 +39,42 @@
 | activity / navigation / lifecycle-vm | 1.13.0 / 2.10.2 / 2.11.0 (compose 版) | |
 | compileSdk | **37**（+ `compileSdkMinor = 0`） | 新 AndroidX 要求 ≥ 37 |
 | targetSdk / minSdk | 36 / 26 | 编译用新 API、运行时行为按 36 走 |
-| JDK | **Android Studio 自带 JBR 21** | `C:\Program Files\Android\Android Studio\jbr`（`D:\Android\jdk-17` 被卡巴斯基按程序拦截，见已知坑） |
+| JDK | **Android Studio 自带 JBR（当前 JDK 25）** | `C:\Program Files\Android\Android Studio\jbr`（`D:\Android\jdk-17` 被卡巴斯基按程序拦截，见已知坑） |
 | Android SDK | API 37.0 + Build-Tools 37 + Platform-Tools | `D:\Android\Sdk` |
+| Android Studio | **2026.2.2**（build `AI-262.10968.63.2622.16840690`，数据目录 `AndroidStudio2026.2.2`） | 只需它自带的 JDK；不需要单独装 JDK |
 
 **SDK 与 JDK 是全局安装物**，不在项目里；项目只通过 `local.properties`（`sdk.dir=D:/Android/Sdk`，已 gitignore）和 `build.ps1` 引用它们。
+
+## 依赖清单
+
+`:core`（纯 JVM，只有这些）：
+
+| 依赖 | 版本 | 声明 | 用途 |
+|---|---|---|---|
+| OkHttp | 5.5.1 | `api` | 取数；`api` 是因为 `:app` 的 `AndroidCookieJar` 要实现 `okhttp3.CookieJar` |
+| kotlinx-coroutines-core | 1.11.0 | `api` | 挂起函数；同样被 `:app` 直接使用 |
+| Jsoup | 1.24.1 | `implementation` | HTML 解析（只在 core 内部用，app 不声明） |
+| kotlinx-serialization-json | 1.13.0 | `implementation` | 站点 JSON 接口；纯 JVM 实现，不依赖 Android 的 `org.json` |
+| JUnit | 4.13.2 | `testImplementation` | 离线测试 |
+
+`:app`（Android）：
+
+| 依赖 | 版本 | 用途 |
+|---|---|---|
+| Compose BOM | 2026.09.00 | 统一 Compose 版本 |
+| material3 / ui / ui-tooling-preview / debug ui-tooling | 由 BOM 决定 | UI |
+| material-icons-core | 由 BOM 决定 | 底部导航 4 个图标（不引 `icons-extended`，体积大） |
+| activity-compose | 1.13.0 | `setContent` / `enableEdgeToEdge` |
+| lifecycle-viewmodel-compose | 2.11.0 | `viewModel()` |
+| navigation-compose | 2.10.2 | `NavHost` 单 Activity 路由 |
+| media3-exoplayer + media3-exoplayer-hls | 1.11.1 | 播放；HLS 必须单独加（见已知坑） |
+| media3-ui-compose-material3 | 1.11.1 | 官方 Material3 播放器控件（`PlayerDefaults`） |
+| media3-datasource-okhttp | 1.11.1 | ExoPlayer 走 OkHttp（默认 HttpURLConnection 被媒体主机 403） |
+| Coil 3（coil-compose + coil-network-okhttp） | 3.6.3 | 封面图 |
+| coroutines-android | 1.11.0 | 主线程调度 |
+| OkHttp | 5.5.1 | 显式列出便于阅读（`:core` 已 `api` 暴露） |
+
+**镜像**：`settings.gradle.kts` 里把阿里云（gradle-plugin / google / central / public）放在 `google()`、`mavenCentral()` 之前，换机器也能用；Gradle 发行包走腾讯镜像（`gradle-wrapper.properties`）。本机 `GRADLE_USER_HOME/init.d/mirrors.gradle` 还会注入一次阿里云镜像，所以 `dependencyResolutionManagement` **不能**设 `FAIL_ON_PROJECT_REPOS`。
 
 ## 构建
 
@@ -56,14 +87,19 @@ cd D:\missu\android-native
 
 自动化场景（需要采集输出）加环境变量 `MISSU_NO_DAEMON=1`：**Gradle daemon 会一直占着 stdout，管道等不到 EOF，命令看起来"卡死"**——构建其实早就结束了。
 
-`build.ps1` 里固定了 5 个环境变量：
+- **首次**构建要下载 Gradle 9.6.0（腾讯镜像）+ 全部依赖（阿里云），冷启动约几分钟；之后增量约 10–30 秒。
+- `build.ps1` **不跑测试**：测试用 `.\gradlew.bat :core:test`（见「测试」）。
+
+`build.ps1` 里固定了这些环境变量（**每次构建都自动设，不依赖系统环境**）：
 
 | 变量 | 值 | 为什么 |
 |---|---|---|
-| `JAVA_HOME` | `C:\Program Files\Android\Android Studio\jbr` | 自带 JBR 21；另一个 JDK 17 被安全软件按程序拦截 |
-| `ANDROID_HOME` | `D:\Android\Sdk` | 与 `local.properties` 一致 |
+| `JAVA_HOME` | `C:\Program Files\Android\Android Studio\jbr` | 自带 JBR（当前 JDK 25）；另一个 JDK 17 被安全软件按程序拦截 |
+| `ANDROID_HOME` / `ANDROID_SDK_ROOT` | `D:\Android\Sdk` | 与 `local.properties` 的 `sdk.dir` 一致 |
 | `ANDROID_USER_HOME` | `.local/android-home` | `~/.android` 被拒写 |
 | `TMP` / `TEMP` | `.tmp-gradle` | `%TEMP%` 拒写，`generateDebugGlobalSynthetics` 会 `AccessDeniedException` |
+
+**只在本地、不进 Git 的东西**（`.gitignore` 已覆盖）：`local.properties`（sdk.dir）、`.local/`（android-home、截图、诊断输出）、`.tmp-gradle/`（构建临时目录）、`**/build/`、`.gradle/`、`.kotlin/`、`.idea/`。换机器时这些都要重新生成本地副本。
 
 ## Android Studio 设置（一次性）
 
@@ -71,7 +107,24 @@ cd D:\missu\android-native
 2. Settings → Languages & Frameworks → **Android SDK** → Android SDK Location = `D:\Android\Sdk`
    - 只应有：Android API 37.0、Build-Tools 37、Platform-Tools
    - 不要装 NDK、CMake、system-image、Emulator、旧 API（本工程无原生代码，只跑真机）
-3. Gradle 相关不用改：缓存走标准位置 `%USERPROFILE%\.gradle`，JDK 用 AS 自带的 JBR（构建脚本里也是它）
+3. **Gradle JDK**：Settings → Build, Execution, Deployment → Build Tools → Gradle → **Gradle JDK = Embedded JDK**（即 AS 自带 JBR）。不要指向 `D:\Android\jdk-17`（已删）。
+4. 缓存走标准位置 `%USERPROFILE%\.gradle`，不要自定义 Gradle 主目录。
+5. **关掉「自动下载缺失的 SDK 组件」**（Settings → Build Tools → Gradle → 关闭 "Auto-install missing components"，或至少别在有 NDK/Emulator 的勾选下同步），
+   否则打开工程时 AS 会自动拉回 NDK / system-image（各 1–2 GB）。
+
+### 精简安装（省空间，实测）
+
+本工程**没有一行原生代码**，所以这些东西全都不需要：
+
+| 组件 | 为什么不要 |
+|---|---|
+| NDK（~2.2 GB） | 无 C/C++ 代码 |
+| CMake / LLDB | 同上 |
+| Emulator + system-image（每个 1–2 GB） | 只跑真机 |
+| 旧 API level（< 37） | `compileSdk = 37` 固定 |
+| 重复的 Android SDK 副本 | SDK Manager 里只能有一个 location（`D:\Android\Sdk`） |
+
+清理时顺便删：Studio 安装包（~1.5 GB）、`%USERPROFILE%\.gradle\wrapper\dists` 里的旧 Gradle（~150 MB）、旧 JDK（~300 MB）、legacy Expo 的 `android/`（~1 GB）与 `node_modules`。实测累计回收约 **10 GB**（其中 NDK/CMake/重复 SDK 约 5.6 GB）。
 
 ## 模块结构
 
@@ -81,19 +134,22 @@ core/          纯 JVM 库（非 UI 层）——**不许出现 android.* / andro
     api/    SourceConfig（语言前缀 /dm 前缀）、MissavClient（OkHttp + 挑战翻译 + JSON 请求）、
             MissavApi（getHome / getVideoDetail / searchVideos / getSaved / getVideos /
             getDirectory / login / 收藏 / 片单）、ContentLanguages、CredentialsProvider、Errors
-    model/  VideoSummary · HomeSection · VideoDetail · VideoList · DirectoryList ·
-            VideoPlaylist · AccountUser · DetailInfoRow
-    parse/  HomeParser · DetailParser（含 Dean Edwards 解包）· DirectoryParser · ApiJson
-  src/test/  20 个离线测试 + 真实页面 fixture（home-cn.html / detail.html / search.html）
+    model/  VideoSummary · HomeSection · VideoDetail · VideoList · DirectoryList · DirectoryItem ·
+            PlaylistSummary · PlaylistDetail · VideoPlaylist · AccountUser · DetailInfoRow ·
+            FilterOption · FilterSection
+    parse/  HomeParser · DetailParser（含 Dean Edwards 解包）· DirectoryParser · ApiJson ·
+            PlaylistParser（片单列表/详情）· PlaylistFormParser（新建/修改页表单）
+  src/test/  29 个离线测试 + 7 份真实页面 fixture
 
 app/           Android 应用（UI + 平台适配）
   src/main/java/app/missu/
     MainActivity.kt        壳层：Scaffold + 底部导航 + NavHost（所有路由集中在这里）
-    ui/home · ui/detail · ui/player · ui/search · ui/discover · ui/saved ·
+    ui/home · ui/detail · ui/player · ui/search · ui/discover · ui/saved · ui/playlists ·
     ui/history · ui/settings · ui/account · ui/list · ui/components · ui/theme · ui/challenge
     data/api/              AndroidCookieJar（CookieManager 适配）· ChallengeHost · AndroidApi
     data/store/            ProfileStore（邮箱）· CredentialStore（Keystore 加密的账号密码）·
-                           SettingsStore（内容语言）· HistoryStore（观看进度）
+                           SettingsStore（内容语言）· HistoryStore（观看进度）·
+                           SearchHistoryStore（最近搜索）
 ```
 
 **边界规则**：`:app` 依赖 `:core`，反向禁止。取数、解析、模型都只在 `:core`，因此它们能在纯 JVM 上跑测试，将来也能被服务端复用。
@@ -119,13 +175,13 @@ app/           Android 应用（UI + 平台适配）
 
 - 首页 4 板块、详情（信息行里带路径的值可点进列表）、播放（全屏 / 倍速 / ±10 秒 / 进度，Material3 控件）
 - 搜索（分页）、收藏 + 收藏列表、片单成员、观看历史 + 继续播放、设置 + 7 种内容语言
-- 底部导航：首页 / 发现（女优 · 类型目录）/ 搜索 / 我的
+- 底部导航：首页 / 发现（女优 · 类型 · 厂商）/ 我的；片单支持列表、详情、成员勾选、新建、编辑（含删除）
 
 ## 测试
 
 ```powershell
 cd android-native
-.\gradlew.bat :core:test      # 20 个测试，全部离线
+.\gradlew.bat :core:test      # 29 个离线测试（另有 2 个联网测试默认跳过）
 ```
 
 | 测试 | 覆盖 |
@@ -133,8 +189,12 @@ cd android-native
 | `HomeParserTest` / `HomeFixtureTest` | 合成用例 + 真实首页 fixture（4 板块 56 条） |
 | `DetailFixtureTest` | 真实详情页：标题、8 行信息、`internalId`、打包脚本解出的 m3u8 |
 | `SearchFixtureTest` | 真实搜索页：12 条 + `nextPage` 信号 |
-| `DirectoryParserTest` | 计数后缀跨语言切分、占位链接去重、`/ranking` 排除 |
+| `DirectoryParserTest` | 计数后缀跨语言切分、占位链接去重、`/ranking` 排除、真实厂商页（含 `/dmNNN` 前缀归一化） |
+| `PlaylistParserTest` | 真实 `/playlists` 页：路径/名字/可见性/更新时间切分 |
+| `PlaylistFormParserTest` | 真实新建页与修改页：更新表单（无 `_method`）与删除表单（`_method=delete`）的字段读取，**不打印 token** |
 | `ApiJsonTest` | 收藏状态与片单 JSON 的字段缺失/类型异常兜底 |
+
+fixture 都是**真机抓的真实页面**（`home-cn.html` / `detail.html` / `search.html` / `playlists.html` / `playlist-create.html` / `playlist-edit.html` / `directory-makers.html`）。
 
 联网测试默认跳过，加 `MISSU_LIVE=1` 才会跑（`LiveHomeTest` / `LiveDiagnosticsTest`）。
 
@@ -155,7 +215,7 @@ cd android-native
 **构建环境**
 
 - **JVM 写某个目录被拒，但 PowerShell 能写** → 这是安全软件按**可执行文件**拦截，不是文件权限。
-  实测：AS 自带 JBR 21 能写 `D:\gradle-home`，`D:\Android\jdk-17` 的 java 被拒，同一文件、同一用户。
+  实测：AS 自带 JBR 能写 `D:\gradle-home`，`D:\Android\jdk-17` 的 java 被拒，同一文件、同一用户。
   所以构建 JDK 固定用 JBR；`D:\Android\jdk-17` 已闲置。
 - **`native-platform.dll` 加载失败**（历史问题）→ 当时把 `GRADLE_USER_HOME` 挪出了用户目录；现在标准位置
   `%USERPROFILE%\.gradle` 实测可用（缓存已迁回，约 4.6 GB），不要再自定义 Gradle 主目录。

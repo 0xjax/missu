@@ -1,4 +1,4 @@
-﻿# 构建 missu 原生工程：把需要的环境变量一次配好，避免每次重新推导。
+# 构建 missu 原生工程：把需要的环境变量一次配好，避免每次重新推导。
 # 用法：  .\build.ps1            （只构建 debug APK）
 #         .\build.ps1 install    （构建 + 装到已连接的设备）
 #         .\build.ps1 release    （构建 release APK，沿用 debug 签名）
@@ -11,7 +11,7 @@ param([string]$Task = "assembleDebug")
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-# JDK：用 Android Studio 自带的 JBR（21）。构建路径里的另一个 JDK 17 被安全软件按程序拦截，不可用。
+# JDK：用 Android Studio 自带的 JBR（本机 AS 2026.2.2 内置 JDK 25）。构建路径里的另一个 JDK 17 被安全软件按程序拦截，不可用。
 # SDK：全局安装位置，与 AS 的 Android SDK Location 及 local.properties 的 sdk.dir 一致。
 $env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
 $env:ANDROID_HOME = 'D:\Android\Sdk'
