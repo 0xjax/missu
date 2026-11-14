@@ -23,12 +23,14 @@ adb --version
 
 注意 PowerShell 默认不从**当前目录**加载命令：在 `platform-tools` 目录里仍要写 `.\adb`；PATH 只让它在其它目录可用。这里改的是**用户级** PATH，不是系统级。
 
-**已知坑**：如果 adb server 起不来并报 `cannot open ...\Temp\adb.log: Permission denied`，那是安全软件拒写 `%TEMP%`。把临时目录指到可写位置再起 server：
+**已知坑**：如果 adb server 起不来并报 `cannot open ...\Temp\adb.log: Permission denied`，那是卡巴斯基只拦 `adb.exe` 这个程序（不是目录权限，也不是 DSH 子进程策略——诊断过程见 `docs/android-native.md` 的「已知坑」）。彻底解法是在杀软「受信任的应用程序」里给 `adb.exe` 加一条；临时办法是把临时目录指到工作区内再起 server：
 
 ```powershell
 $env:TMP='D:\missu\.tmp-gradle'; $env:TEMP=$env:TMP
 D:\Android\Sdk\platform-tools\adb.exe start-server
 ```
+
+server 起来之后，后续所有 `adb` 命令（含 `gradlew :app:installDebug`）都不需要再带这两个环境变量。
 
 ## 无线配对与连接
 
@@ -113,7 +115,7 @@ adb shell am start -n app.missu/.MainActivity
 
 - 增量构建通常 10–30 秒；**没有 Fast Refresh**，改完必须重新编译装机才能看到效果。
 - 自动化采集输出时设 `MISSU_NO_DAEMON=1`，否则 Gradle daemon 会占着 stdout，管道等不到 EOF（命令看起来"卡死"，其实构建早已结束）。
-- `scripts/build.ps1` 里固定了 `JAVA_HOME`、`ANDROID_HOME`、`ANDROID_USER_HOME`、`TMP/TEMP`；这些不是可选项，原因见 `docs/android-native.md` 的「已知坑」。
+- `scripts/build.ps1` 里固定了 `JAVA_HOME`、`ANDROID_HOME`、`ANDROID_USER_HOME`；这些不是可选项，原因见 `docs/android-native.md` 的「已知坑」。（`TMP/TEMP` 已不再覆盖。）
 
 独立 release 包：
 

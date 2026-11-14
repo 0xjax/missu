@@ -105,9 +105,11 @@ cd D:\missu
 | `JAVA_HOME` | 自动选 `D:\Android\jdk-N`（N 最大） | 独立 JDK；AS 已卸载，构建不依赖它（脚本仍保留 AS `jbr` 作为回落，装回 AS 时可用） |
 | `ANDROID_HOME` / `ANDROID_SDK_ROOT` | `D:\Android\Sdk` | 与 `local.properties` 的 `sdk.dir` 一致 |
 | `ANDROID_USER_HOME` | `.local/android-home` | `~/.android` 被拒写 |
-| `TMP` / `TEMP` | `.tmp-gradle` | `%TEMP%` 拒写，`generateDebugGlobalSynthetics` 会 `AccessDeniedException` |
+| `ANDROID_USER_HOME` | `.local/android-home` | `~/.android` 被拒写 |
 
-**只在本地、不进 Git 的东西**（`.gitignore` 已覆盖）：`local.properties`（sdk.dir）、`.local/`（android-home、截图、诊断输出）、`.tmp-gradle/`（构建临时目录）、`**/build/`、`.gradle/`、`.kotlin/`、`.idea/`。换机器时这些都要重新生成本地副本。
+`TMP` / `TEMP` **不再覆盖**。2026-11-14 实测：`gradlew :app:assembleDebug --rerun-tasks --no-build-cache` 在系统默认 `%TEMP%` 下 `BUILD SUCCESSFUL`，Gradle 不需要工作区临时目录。唯一还需要可写临时目录的是 `adb server`（见「已知坑」）。
+
+**只在本地、不进 Git 的东西**（`.gitignore` 已覆盖）：`local.properties`（sdk.dir）、`.local/`（android-home、截图、诊断输出）、`**/build/`、`.gradle/`、`.kotlin/`、`.idea/`。换机器时这些都要重新生成本地副本。
 
 ## 构建不依赖 Android Studio
 
@@ -357,7 +359,19 @@ fixture 都是**真机抓的真实页面**（`home-cn.html` / `detail.html` / `s
 
 ## 已知坑（都踩过并已解决）
 
-**adb 只有一份**：在 SDK 里（`D:\Android\Sdk\platform-tools\adb.exe`），用户级 `ADB` 与 `ANDROID_HOME` 都指向 SDK。若 server 起不来并报 `cannot open ...\Temp\adb.log: Permission denied`，是安全软件拒写 `%TEMP%`：把 `TMP/TEMP` 指到 `.tmp-gradle` 后执行 `adb start-server`。
+**adb 只有一份**：在 SDK 里（`D:\Android\Sdk\platform-tools\adb.exe`），用户级 `ADB` 与 `ANDROID_HOME` 都指向 SDK。
+
+**adb server 起不来，报 `cannot open ...\Temp\adb.log: Permission denied`** —— 这是**卡巴斯基只拦 `adb.exe` 这个程序**，不是目录权限、不是 DSH 的子进程策略（2026-11-14 实测）：
+
+| 实验 | 结果 |
+|---|---|
+| 同一 shell 往 `%TEMP%` 写文件 | 成功（文件 ACL 正常、无占用） |
+| `adb start-server`，`TMP=%TEMP%` / `C:\Users\user\adb-tmp` / `D:\adb-tmp` | 全部 `Permission denied` |
+| `adb start-server`，`TMP=D:\missu\.tmp-gradle` | 成功（工作区在杀软排除列表里） |
+| 把 `cmd.exe` 复制进 `platform-tools` 再往 `%TEMP%` 写 | 成功 → 不是目录问题，是 adb 这个可执行文件被判受限 |
+| 用 WMI（父进程不是 DSH）起 adb | 仍然失败 → 不是 DSH 的信任规则覆盖不到的问题 |
+
+两个解法：① 在卡巴斯基「受信任的应用程序」里**再添加一条 `D:\Android\Sdk\platform-tools\adb.exe`**（勾选项与 DSH 那条相同），之后 adb 用系统 `%TEMP%` 即可，任何临时目录覆盖都能删掉；② 暂时把 `TMP/TEMP` 指到工作区内任意目录再 `adb start-server`（server 起来后所有 adb 客户端命令都正常，不需要再带环境变量）。
 
 **构建环境**
 
@@ -366,7 +380,7 @@ fixture 都是**真机抓的真实页面**（`home-cn.html` / `detail.html` / `s
   现在构建用独立 Temurin（`D:\Android\jdk-21`），写入正常；换任何 JDK 前都先验证它的 `java.exe` 能正常跑。
 - **`native-platform.dll` 加载失败**（历史问题）→ 当时把 `GRADLE_USER_HOME` 挪出了用户目录；现在标准位置
   `%USERPROFILE%\.gradle` 实测可用（缓存已迁回，约 4.6 GB），不要再自定义 Gradle 主目录。
-- **`AccessDeniedException: %TEMP%\global_synthetics_*`** → `TMP`/`TEMP` 指到 `.tmp-gradle`。
+- **`AccessDeniedException: %TEMP%\global_synthetics_*`**（历史问题）→ 当时把 `TMP`/`TEMP` 指到 `.tmp-gradle`；2026-11-14 用默认 `%TEMP%` 全量重建通过，已不需要，`scripts/build.ps1` 里的覆盖也删了。
 - **`FAIL_ON_PROJECT_REPOS` 冲突** → 本机 `GRADLE_USER_HOME/init.d/mirrors.gradle` 会注入阿里云镜像，`settings.gradle.kts` 不能设那个模式（镜像已同时写进工程，换机器也能用）。
 - **AGP 9 内置 Kotlin** → 再加 `org.jetbrains.kotlin.android` 会直接报错。
 - **compileSdk 必须是 37 + `compileSdkMinor = 1`** → `compose-bom-alpha:2026.11.00`（Compose 1.13-rc）要求 ≥ 37.1；只装 37.0 会解析失败。
