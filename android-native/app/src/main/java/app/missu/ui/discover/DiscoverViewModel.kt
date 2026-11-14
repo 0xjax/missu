@@ -43,6 +43,10 @@ class DiscoverViewModel(private val api: MissavApi) : ViewModel() {
     private val _filters = MutableStateFlow<Map<String, String>>(emptyMap())
     val filters: StateFlow<Map<String, String>> = _filters.asStateFlow()
 
+    /** 正在下拉刷新的目录（同一时间只有一个页签可见）。 */
+    private val _refreshing = MutableStateFlow<Set<String>>(emptySet())
+    val refreshing: StateFlow<Set<String>> = _refreshing.asStateFlow()
+
     fun load(kind: String) {
         if (_states.value[kind] is DirectoryUiState.Loading) return
         update(kind, DirectoryUiState.Loading)
@@ -64,6 +68,38 @@ class DiscoverViewModel(private val api: MissavApi) : ViewModel() {
                     DirectoryUiState.Error(describe(error))
                 },
             )
+        }
+    }
+
+    /**
+     * 下拉刷新某个目录：从第一页重拉，但**不**把状态打回 Loading——
+     * 列表留在原地，只有顶部的 M3E 指示器在转。失败时保留旧列表。
+     */
+    fun refresh(kind: String) {
+        if (kind in _refreshing.value) return
+        _refreshing.value = _refreshing.value + kind
+        viewModelScope.launch {
+            try {
+                val page = if (kind == DiscoverTab.ACTRESSES.kind) {
+                    api.getActresses(sort = _sort.value, filters = _filters.value)
+                } else {
+                    api.getDirectory(kind)
+                }
+                update(
+                    kind,
+                    if (page.items.isEmpty()) {
+                        DirectoryUiState.Empty
+                    } else {
+                        DirectoryUiState.Content(page.items, page.nextPage)
+                    },
+                )
+            } catch (error: Exception) {
+                if (_states.value[kind] !is DirectoryUiState.Content) {
+                    update(kind, DirectoryUiState.Error(describe(error)))
+                }
+            } finally {
+                _refreshing.value = _refreshing.value - kind
+            }
         }
     }
 

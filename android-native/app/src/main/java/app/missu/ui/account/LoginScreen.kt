@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package app.missu.ui.account
 
 import androidx.compose.foundation.layout.Arrangement
@@ -12,7 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -29,6 +31,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import app.missu.ui.components.PageTopBar
 
 @Composable
 fun LoginScreen(
@@ -49,16 +52,10 @@ fun LoginScreen(
     }
 
     Column(modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(onClick = onBack) { Text("← 返回") }
-        }
+        PageTopBar(title = "登录 Missu", onBack = onBack)
 
         Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
-            Text("登录 Missu", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(8.dp))
 
             OutlinedTextField(
                 value = email,
@@ -106,7 +103,7 @@ fun LoginScreen(
                 }
                 if (loading) {
                     Spacer(Modifier.width(12.dp))
-                    CircularProgressIndicator()
+                    LoadingIndicator()
                 }
             }
 

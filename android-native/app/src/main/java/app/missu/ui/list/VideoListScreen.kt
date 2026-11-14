@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package app.missu.ui.list
 
 import androidx.compose.foundation.layout.Arrangement
@@ -15,7 +17,7 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -25,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.missu.ui.components.VideoGridCard
+import app.missu.ui.components.PageTopBar
 
 @Composable
 fun VideoListScreen(
@@ -37,23 +40,11 @@ fun VideoListScreen(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(onClick = onBack) { Text("← 返回") }
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 4.dp),
-            )
-        }
+        PageTopBar(title = title, onBack = onBack)
 
         when (state) {
             VideoListUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+                LoadingIndicator()
             }
 
             VideoListUiState.Empty -> CenteredHint("这里还没有内容")
@@ -78,7 +69,7 @@ fun VideoListScreen(
                             contentAlignment = Alignment.Center,
                         ) {
                             if (state.loadingMore) {
-                                CircularProgressIndicator()
+                                LoadingIndicator()
                             } else {
                                 Button(onClick = onLoadMore) { Text("加载更多") }
                             }

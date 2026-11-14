@@ -23,6 +23,10 @@ class HomeViewModel(private val api: MissavApi) : ViewModel() {
     private val _state = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
     val state: StateFlow<HomeUiState> = _state.asStateFlow()
 
+    /** 下拉刷新中（内容留在原地，只转顶部指示器）。 */
+    private val _refreshing = MutableStateFlow(false)
+    val refreshing: StateFlow<Boolean> = _refreshing.asStateFlow()
+
     fun load() {
         viewModelScope.launch {
             _state.value = HomeUiState.Loading
@@ -31,6 +35,26 @@ class HomeViewModel(private val api: MissavApi) : ViewModel() {
                 if (sections.isEmpty()) HomeUiState.Empty else HomeUiState.Content(sections)
             } catch (error: Exception) {
                 HomeUiState.Error(describe(error))
+            }
+        }
+    }
+
+    /**
+     * 下拉刷新：不把页面打回 Loading（否则列表会闪一下变空）。
+     * NOTE: 失败时只有在「本来就没有内容」的情况下才切错误页，否则保留旧内容——
+     * 刷一下就把已经看到的列表清掉是最烦的。
+     */
+    fun refresh() {
+        if (_refreshing.value) return
+        viewModelScope.launch {
+            _refreshing.value = true
+            try {
+                val sections = api.getHome()
+                _state.value = if (sections.isEmpty()) HomeUiState.Empty else HomeUiState.Content(sections)
+            } catch (error: Exception) {
+                if (_state.value !is HomeUiState.Content) _state.value = HomeUiState.Error(describe(error))
+            } finally {
+                _refreshing.value = false
             }
         }
     }

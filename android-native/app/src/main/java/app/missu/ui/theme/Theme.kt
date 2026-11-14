@@ -1,6 +1,7 @@
 package app.missu.ui.theme
 
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MaterialExpressiveTheme
+import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -19,8 +20,19 @@ private val MissuDarkColors = darkColorScheme(
     surfaceVariant = SurfaceVariant,
 )
 
-/** 全局主题：深色是事实上的主体验（夜间使用为主）。 */
+/**
+ * 全局主题：深色是事实上的主体验（夜间使用为主）。
+ *
+ * NOTE: 用 [MaterialExpressiveTheme] 而不是 [androidx.compose.material3.MaterialTheme]——
+ * 它多的是把 [MotionScheme.expressive] 装进 CompositionLocal，让官方组件的
+ * 展开/按压/过渡走 M3E 的 spatial 动效曲线；颜色仍由下面的 colorScheme 决定。
+ * WARNING: 换主题会改变所有官方组件的默认形状与动效，改完必须逐页真机复查。
+ */
 @Composable
 fun MissuTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = MissuDarkColors, content = content)
+    MaterialExpressiveTheme(
+        colorScheme = MissuDarkColors,
+        motionScheme = MotionScheme.expressive(),
+        content = content,
+    )
 }

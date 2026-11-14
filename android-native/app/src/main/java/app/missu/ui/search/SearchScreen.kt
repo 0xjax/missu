@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package app.missu.ui.search
 
 import androidx.compose.foundation.layout.Arrangement
@@ -18,7 +20,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -94,7 +96,7 @@ fun SearchScreen(
                 onSearch = submit,
             )
             SearchUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+                LoadingIndicator()
             }
             SearchUiState.Empty -> Hint("没有找到结果")
             is SearchUiState.Error -> Hint(current.message)
@@ -179,7 +181,7 @@ private fun Results(state: SearchUiState.Content, onLoadMore: () -> Unit, onOpen
             item(key = "more", span = { GridItemSpan(maxLineSpan) }) {
                 Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
                     if (state.loadingMore) {
-                        CircularProgressIndicator()
+                        LoadingIndicator()
                     } else {
                         Button(onClick = onLoadMore) { Text("加载更多") }
                     }

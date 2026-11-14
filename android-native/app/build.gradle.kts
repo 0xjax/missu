@@ -5,10 +5,11 @@ plugins {
 
 android {
     namespace = "app.missu"
-    // NOTE: Compose BOM 2026.09 的 AndroidX 组件要求 compileSdk >= 37；本机装的是 37.0（小版本命名）。
+    // NOTE: Compose BOM alpha 2026.11 带 Compose 1.13-rc01 + material3 1.5.0-rc01（全套 M3E），
+    // 它要求 compileSdk >= 37.1；本机装的是 37.1（小版本命名）。
     // targetSdk 仍保持 36——编译用新 API、运行时行为按 36 走，两者可以分开。
     compileSdk = 37
-    compileSdkMinor = 0
+    compileSdkMinor = 1
 
     defaultConfig {
         applicationId = "app.missu"
@@ -39,7 +40,11 @@ android {
 dependencies {
     implementation(project(":core"))
 
-    implementation(platform("androidx.compose:compose-bom:2026.09.00"))
+    // NOTE: 用 alpha BOM 而不是 2026.09.00：全套 M3E 组件（FloatingToolbar / ButtonGroup /
+    // LoadingIndicator / 柔性顶栏）只在 material3 1.5.0 线；1.4.0 稳定线只有「部分 Expressive」。
+    // WARNING: 这是预发布栈（Compose 1.13-rc01 + material3 1.5.0-rc01），升级需按 README 的
+    // 「升级 SDK 环境依赖前」清单复核，并逐页真机复查。
+    implementation(platform("androidx.compose:compose-bom-alpha:2026.11.00"))
     implementation("androidx.compose.material3:material3")
     // 底部导航的图标（Home / List / Search / Person）来自 icons-core，避免引入 extended 的体积。
     implementation("androidx.compose.material:material-icons-core")

@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package app.missu.ui.discover
 
 import androidx.compose.foundation.background
@@ -21,15 +23,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -41,6 +46,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.missu.data.api.ActressFilterOptions
@@ -53,8 +61,10 @@ fun DiscoverScreen(
     states: Map<String, DirectoryUiState>,
     sort: String,
     filters: Map<String, String>,
+    refreshingKinds: Set<String>,
     onLoad: (String) -> Unit,
     onLoadMore: (String) -> Unit,
+    onRefresh: (String) -> Unit,
     onOpen: (path: String, title: String) -> Unit,
     onSortChange: (String) -> Unit,
     onFilterChange: (key: String, value: String?) -> Unit,
@@ -90,15 +100,28 @@ fun DiscoverScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                ActressFilterOptions.sorts.forEach { option ->
-                    FilterChip(
-                        selected = sort == option.value,
-                        onClick = { onSortChange(option.value) },
-                        label = { Text(option.label) },
-                    )
+                // NOTE: 排序是「单选且必选」，按 M3E 用连通 ToggleButton 组（SegmentedButton 已退役），
+                // 首尾用 connected*ButtonShapes 咬合，语义标成 RadioButton。
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+                ) {
+                    ActressFilterOptions.sorts.forEachIndexed { index, option ->
+                        ToggleButton(
+                            checked = sort == option.value,
+                            onCheckedChange = { onSortChange(option.value) },
+                            shapes = when {
+                                index == 0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                index == ActressFilterOptions.sorts.lastIndex ->
+                                    ButtonGroupDefaults.connectedTrailingButtonShapes()
+                                else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                            },
+                            modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
+                        ) {
+                            Text(option.label, maxLines = 1, softWrap = false)
+                        }
+                    }
                 }
-
-                Spacer(Modifier.weight(1f))
 
                 if (filters.isNotEmpty()) {
                     TextButton(onClick = onResetFilters) { Text("清除") }
@@ -113,31 +136,39 @@ fun DiscoverScreen(
 
         when (val state = states[tab.kind]) {
             null, DirectoryUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+                LoadingIndicator()
             }
 
             DirectoryUiState.Empty -> CenteredHint("这里还没有内容")
 
             is DirectoryUiState.Error -> CenteredHint(state.message) { onLoad(tab.kind) }
 
-            is DirectoryUiState.Content -> LazyColumn(
+            // NOTE: 下拉刷新只包住有内容的这一支：Loading / Empty / Error 三支本来就有自己的重试入口，
+            // 给不可滚动的空态套下手势没有意义。
+            is DirectoryUiState.Content -> PullToRefreshBox(
+                isRefreshing = tab.kind in refreshingKinds,
+                onRefresh = { onRefresh(tab.kind) },
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(vertical = 8.dp),
             ) {
-                items(items = state.items, key = { it.path }) { item ->
-                    DirectoryRow(item = item, onClick = { onOpen(item.path, item.name) })
-                }
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(vertical = 8.dp),
+                ) {
+                    items(items = state.items, key = { it.path }) { item ->
+                        DirectoryRow(item = item, onClick = { onOpen(item.path, item.name) })
+                    }
 
-                if (state.nextPage != null) {
-                    item(key = "more-${tab.kind}") {
-                        Box(
-                            Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            if (state.loadingMore) {
-                                CircularProgressIndicator()
-                            } else {
-                                Button(onClick = { onLoadMore(tab.kind) }) { Text("加载更多") }
+                    if (state.nextPage != null) {
+                        item(key = "more-${tab.kind}") {
+                            Box(
+                                Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                if (state.loadingMore) {
+                                    LoadingIndicator()
+                                } else {
+                                    Button(onClick = { onLoadMore(tab.kind) }) { Text("加载更多") }
+                                }
                             }
                         }
                     }

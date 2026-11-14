@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package app.missu.ui.playlists
 
 import androidx.compose.foundation.background
@@ -19,7 +21,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.missu.data.model.VideoSummary
 import app.missu.ui.components.VideoGridCard
+import app.missu.ui.components.PageTopBar
 
 /**
  * 片单详情：标题 + 影片网格，页头「整理」打开后才在卡片上显示「移除」。
@@ -70,26 +73,18 @@ fun PlaylistDetailScreen(
     if (content == null && managing) managing = false
 
     Column(modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(onClick = onBack) { Text("← 返回") }
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 4.dp),
-            )
-            Spacer(Modifier.weight(1f))
-            if (content != null) {
-                TextButton(onClick = { managing = !managing }) {
-                    Text(if (managing) "完成" else "整理")
+        PageTopBar(
+            title = title,
+            onBack = onBack,
+            actions = {
+                if (content != null) {
+                    TextButton(onClick = { managing = !managing }) {
+                        Text(if (managing) "完成" else "整理")
+                    }
                 }
-            }
-            TextButton(onClick = onEdit) { Text("编辑") }
-        }
+                TextButton(onClick = onEdit) { Text("编辑") }
+            },
+        )
 
         message?.let {
             Text(
@@ -102,7 +97,7 @@ fun PlaylistDetailScreen(
 
         when (state) {
             PlaylistDetailUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+                LoadingIndicator()
             }
 
             PlaylistDetailUiState.Empty -> CenteredHint("这个片单还是空的")
@@ -170,9 +165,9 @@ private fun RemoveButton(removing: Boolean, onClick: () -> Unit, modifier: Modif
         contentAlignment = Alignment.Center,
     ) {
         if (removing) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(14.dp),
-                strokeWidth = 2.dp,
+            // NOTE: 这么小的尺寸下用 LoadingIndicator（M3E 的多边形转圈），不需要再给 strokeWidth。
+            LoadingIndicator(
+                modifier = Modifier.size(16.dp),
                 color = Color.White,
             )
         } else {

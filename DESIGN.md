@@ -83,6 +83,11 @@
 | 详情信息块 | 详情页内联行 | 8 行（发行日期/番号/标题/女优/类型/系列/发行商/标籤），文案随内容语言变化不硬编码；标签 `textSecondary` 与值同行，可点击值用 accent 色跳 `/latest?source=path`。不用下划线：Android 嵌套 `Text` 的下划线会错位成漂浮短线 |
 | 详情页片单 | 收藏旁「片单」按钮 + `Sheet` | 打开时 `GET /api/playlists/{dvdId}`；点行或勾选框乐观切换再 `POST /api/playlists/add\|remove`；超过 6 行面板内滚动；「新建片单」就地展开单行输入框，提交后重新拉列表；未登录先跳登录 |
 | 删除片单 | 片单详情页页头「编辑」→ 编辑页内「删除片单」 | 系统 `Alert` 二次确认（destructive）；确认后提交站点「修改片单」页里的删除表单（`_method=delete` + `_token`），成功后返回列表；列表页不放破坏性入口（滑动露出删除这类方案同理不采用）。改名/描述/公开与删除同在这一个编辑页，站点上它们本就是同一张表单 |
+| 二级页顶栏 | `TopAppBar` + `PageTopBar` | up 图标 + 标题 + 动作槽；返回图标挂 `PlainTooltip`；容器色取 `background`（默认 surface 在纯黑底上会露灰边） |
+| 底部导航 | `ShortNavigationBar` | 3 个目的地，用 `ShortNavigationBarItem`；指示器是药丸形。`NavigationBar` 属 M3 基线，M3E 目标下不再用 |
+| 首页推荐位 | `HorizontalMultiBrowseCarousel` | 只给第一个板块做轮播（大项 + 中项 + 小项随滚动变形吸附，这是 M3E carousel 的核心行为，别关）；其余板块保持网格，全轮播会让首页变横向长龙 |
+| 下拉刷新 | `PullToRefreshBox` | 首页与发现页（发现页只包住有内容的支）；刷新时内容留在原地、只有顶部指示器转；失败保留旧列表 |
+| 排序切换 | `ToggleButton` 连通组 | 女优排序（影片 / 出道）；首尾 `connected*ButtonShapes()` 咬合，语义 `Role.RadioButton`；`SegmentedButton` 已退役 |
 | 片单内移除影片 | 页头「整理」/「完成」二态 → 卡片右上角圆点「×」 + `Alert` | 移除入口不常驻（会压封面、易误触）：进整理模式才显示自绘 26dp 半透明圆点（Compose 触控区撑到 48dp），同模式下点卡片不再进详情；二次确认后 `DELETE /api/playlists/{片单id}/{影片id}`，成功只从本地列表删这一条（删空转空态），不做滑动删除、不藏进长按。入口取名「整理」以区别于右侧「编辑」（改片单名/删片单） |
 | 女优筛选 | `Sheet` + 手风琴 + `Pill` | 4 个维度各占一行，行内显示当前值，点行展开该维度的胶囊网格；选中即生效并收起。出道年份有 26 个选项，四列同时铺开会撑爆面板 |
 | 搜索 | `SearchBox` + `SearchField` | 列表页与首页共用；聚焦时展示搜索历史胶囊 |
