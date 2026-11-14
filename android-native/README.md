@@ -148,7 +148,7 @@ $sm = "$sdk\cmdline-tools\latest\bin\sdkmanager.bat"
 |---|---|---|
 | `platform-tools` | 37.0.1 | `adb` |
 | `platforms;android-37.1` | rev 1 | `compileSdk = 37` + `compileSdkMinor = 1` 的编译目标 |
-| `build-tools;36.0.0` | 36.0.0 | aapt2 / d8 / zipalign；**AGP 9.5.1 不写 `buildToolsVersion` 时的默认值** |
+| `build-tools;36.0.0` | 36.0.0 | aapt2 / d8 / zipalign；**AGP 9.5.1 不写 `buildToolsVersion` 时的默认值**（依据：`builder-9.5.1.jar` 里 `com.android.builder.core.ToolsRevisionUtils` 的静态初始化加载字面量 `36.0.0`） |
 
 > `platforms;android-37.0` 已在升到 37.1 后卸载（`sdkmanager --uninstall "platforms;android-37.0"`），
 > 本机现在只装 **37.1 一个平台**。删掉它就少一份不会被引用的 copy。
