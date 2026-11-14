@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.foundation.clickable
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FlexibleBottomAppBar
 import androidx.compose.material3.Icon
@@ -211,7 +212,7 @@ private fun DetailHero(
         }
 
         if (showProgress) {
-            // NOTE: 压在照片上必须自带底衬，否则浅色封面上的转圈会看不清。
+            // NOTE: 压在照片上必须自带底衬，否则浅色封面上的指示器会看不清。
             Box(
                 modifier = Modifier
                     .size(56.dp)
@@ -219,7 +220,14 @@ private fun DetailHero(
                     .background(Color(0x66000000)),
                 contentAlignment = Alignment.Center,
             ) {
-                LoadingIndicator(modifier = Modifier.size(32.dp), color = Color.White)
+                // NOTE: 这里刻意**不用**页面级的 `LoadingIndicator`。视频缓冲和「页面在取数」是
+                // 两种等待：一个是媒体流在续，一个是界面在等数据。形状家族不同（波浪环 vs 形变团块）
+                // 才能一眼分清——同一个团块出现在两个地方，只会让人觉得"整个 App 都在转"。
+                CircularWavyProgressIndicator(
+                    modifier = Modifier.size(36.dp),
+                    color = Color.White,
+                    trackColor = Color(0x40FFFFFF),
+                )
             }
         }
 

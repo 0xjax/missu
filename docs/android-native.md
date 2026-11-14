@@ -437,7 +437,8 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
   ② 共享元素动画的时长必须**等于**导航转场时长（容器用 `tween` 而不是空间 spring），否则转场结束时动画会被硬切成终点；
   ③ 目标一侧的元素必须在**首帧**就存在（详情页 Loading 时也要有那个框），所以封面靠路由参数 `detail/{id}?img=` 传过去，等详情数据回来再换。
 - **共享元素覆盖层默认按父布局裁剪**（`ParentClip`）：卡片那一格会把长大的元素切掉，必须显式给 `clipInOverlayDuringTransition = OverlayClip(shape)`。作用域用 `CompositionLocal` 传（`LocalSharedTransitionScope` + 目的地自己的 `AnimatedVisibilityScope`），不要一路加参数。
-- **静帧转动态画面的接缝**：容器长大到位时视频通常还没出画，所以**封面要留到 `Player.Listener.onRenderedFirstFrame`**才撤（提前撤就是"封面突然消失 + 黑框"），控件也只在出画后才显示（`PlayerOverlay(visible = ready && controlsVisible)`）——加载中把进度条和播放键摆出来，等于在还没东西可控的时候先给一堆控件。撤回用封面 200ms 淡出（封面画在播放器之上，所以是"画面显影"而不是"画面替换封面"）。等待中的转圈延迟 600ms 出现，秒开时不闪。
+- **静帧转动态画面的接缝**：容器长大到位时视频通常还没出画，所以**封面要留到 `Player.Listener.onRenderedFirstFrame`**才撤（提前撤就是"封面突然消失 + 黑框"），控件也只在出画后才显示（`PlayerOverlay(visible = ready && controlsVisible)`）——加载中把进度条和播放键摆出来，等于在还没东西可控的时候先给一堆控件。撤回用封面 200ms 淡出（封面画在播放器之上，所以是"画面显影"而不是"画面替换封面"）。等待中的指示器延迟 600ms 出现，秒开时不闪。
+- **两种等待要用两套指示器**：页面取数用 `LoadingIndicator`（形变团块），视频缓冲用 `CircularWavyProgressIndicator`（波浪环）。官方选择表只按"等待时长 + 能否算进度"分，但同一屏上两种等待混用同一个团块，看起来就像"整个 App 都在转"；形状家族是成本最低的场景区分手段。
 - **窗口底色必须跟主题同步**：`res/values/themes.xml` 的 `windowBackground` 是静态值，浅色下任何透明帧都会露黑；`MainActivity.onCreate` 先按持久化主题设一次，`MissuTheme` 里继续同步。
 - **页签级 ViewModel 放 Activity 作用域**：放在 `composable()` 里会随页签销毁，切回来变成「新建 VM → Loading → 重新请求」——用户看到先一帧旧画面再转圈。同理，`LaunchedEffect(语言)` 这类重载不要放在目的地里，否则每次切回都触发。
 
