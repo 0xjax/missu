@@ -76,6 +76,7 @@ import app.missu.data.store.CredentialStore
 import app.missu.data.store.ColorSource
 import app.missu.data.store.ProfileStore
 import app.missu.data.store.HistoryStore
+import app.missu.data.store.ListSortStore
 import app.missu.data.store.SearchHistoryStore
 import app.missu.data.store.SettingsStore
 import app.missu.data.store.ThemeMode
@@ -321,6 +322,9 @@ private fun MissuApp(
     // NOTE: 语言已经在 MissuRoot 里装进 SourceConfig 了，这里只是拿内容语言做重载的 key。
     val historyStore = remember { HistoryStore(context.applicationContext) }
     val searchHistory = remember { SearchHistoryStore(context.applicationContext) }
+    // NOTE: 列表的「站点默认排序」按路径学一次，之后每次进同一列表的首帧就能直接写成实际项——
+    // 不学的话排序芯片每进一次都先显示「默认」再跳（见 ListSortStore）。
+    val listSortStore = remember { ListSortStore(context.applicationContext) }
     // NOTE: 页签级的 ViewModel 必须提到 Activity 作用域。放在 composable("home") 里的话，
     // 切走页签时目的地被销毁、ViewModel 一并清掉，切回来就是「新建 VM → Loading → 重新请求」：
     // 用户看到的是先一帧旧画面、再一个转圈，正是"闪一下/像缓存"的来源。提到这里后切页签是纯粹的视图切换。
@@ -477,7 +481,7 @@ private fun MissuApp(
                 }
                 val hotViewModel: VideoListViewModel = viewModel(
                     key = "hot-${hotQuery.cacheKey}",
-                    factory = factory { VideoListViewModel(api, hotQuery) },
+                    factory = factory { VideoListViewModel(api, hotQuery, listSortStore) },
                 )
                 val hotState by hotViewModel.state.collectAsState()
                 val hotDetectedSort by hotViewModel.detectedSort.collectAsState()
@@ -587,7 +591,7 @@ private fun MissuApp(
                 val query = remember(path, sort, filter) { VideoListQuery(path, sort = sort, filter = filter) }
                 val viewModel: VideoListViewModel = viewModel(
                     key = "list-${query.cacheKey}",
-                    factory = factory { VideoListViewModel(api, query) },
+                    factory = factory { VideoListViewModel(api, query, listSortStore) },
                 )
                 val state by viewModel.state.collectAsState()
                 val detectedSort by viewModel.detectedSort.collectAsState()
