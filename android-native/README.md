@@ -46,7 +46,7 @@
 | compileSdk | **37 + `compileSdkMinor = 1`** | Compose 1.13-rc 要求 ≥ 37.1；新 AndroidX 要求 ≥ 37 |
 | targetSdk / minSdk | 36 / 26 | 编译用新 API、运行时行为按 36 走 |
 | JDK | **独立 Temurin 21**（`D:\Android\jdk-21`）+ 回落 AS 自带 JBR | 目录名带版本；`build.ps1` **自动发现** `D:\Android\jdk-*` 并取 major 最高者，升级只需解压出 `jdk-25`，脚本不用改。版本信息见目录内 `MISSU-JDK-VERSION.txt` |
-| Android SDK | API **37.1** + **Build-Tools 36.0.0** + Platform-Tools 37.0.1 | `D:\Android\Sdk`（AGP 9.5.1 默认用 build-tools 36，与 compileSdk 37.1 无关；37.0 与 37.1 两个平台可以共存） |
+| Android SDK | API **37.1** + **Build-Tools 36.0.0** + Platform-Tools 37.0.1 | `D:\Android\Sdk`（AGP 9.5.1 默认用 build-tools 36，与 compileSdk 37.1 无关；37.0 已卸载，只留 37.1 一个平台） |
 | Android Studio | **已卸载**（曾用 2026.2.2 / `AI-262.10968.63.2622.16840690`） | **构建不需要它**：JDK、SDK、Gradle wrapper 都是独立的。装它只是为了 IDE，不装也能构建、装机、跑测试 |
 
 **SDK 与 JDK 是全局安装物**，不在项目里；项目只通过 `local.properties`（`sdk.dir=D:/Android/Sdk`，已 gitignore）和 `build.ps1` 引用它们。
@@ -150,8 +150,8 @@ $sm = "$sdk\cmdline-tools\latest\bin\sdkmanager.bat"
 | `platforms;android-37.1` | rev 1 | `compileSdk = 37` + `compileSdkMinor = 1` 的编译目标 |
 | `build-tools;36.0.0` | 36.0.0 | aapt2 / d8 / zipalign；**AGP 9.5.1 不写 `buildToolsVersion` 时的默认值** |
 
-> `platforms;android-37.0` 是升到 37.1 之前的旧目标，**现在已不被任何构建引用**，可删
-> （`sdkmanager --uninstall "platforms;android-37.0"`）。删不删都不影响构建。
+> `platforms;android-37.0` 已在升到 37.1 后卸载（`sdkmanager --uninstall "platforms;android-37.0"`），
+> 本机现在只装 **37.1 一个平台**。删掉它就少一份不会被引用的 copy。
 
 **不要装**：NDK、CMake、LLDB、emulator、system-image、旧 API（见下方「精简安装」）。
 
@@ -243,7 +243,7 @@ Get-ChildItem <解压目录>\lib -Filter 'sdklib*.jar'
 
 1. **Open** → 选 `D:\missu\android-native`（不要选父目录 `D:\missu`，那是 Expo 工程）。
 2. Settings → Languages & Frameworks → **Android SDK** → Android SDK Location = `D:\Android\Sdk`
-   - 只应有：Android API 37.1（37.0 可删）、Build-Tools 36、Platform-Tools
+   - 只应有：Android API 37.1（37.0 已卸载）、Build-Tools 36、Platform-Tools
    - 不要装 NDK、CMake、system-image、Emulator、旧 API（本工程无原生代码，只跑真机）
 3. **Gradle JDK**：仍用 **Embedded JDK**（AS 自带的）即可——它与 `build.ps1` 用的不是同一个 JDK，不影响命令行构建；也可以指到 `D:\Android\jdk-21` 保持一致。
 4. 缓存走标准位置 `%USERPROFILE%\.gradle`，不要自定义 Gradle 主目录。
@@ -408,7 +408,7 @@ fixture 都是**真机抓的真实页面**（`home-cn.html` / `detail.html` / `s
 - **全套 M3E 只在 1.5.0 线**：稳定线 material3 1.4.0 只剩主题 + 动效 + `ShortNavigationBar`；`FloatingToolbar` /
   `ButtonGroup` / `LoadingIndicator` / `ToggleButton` / 柔性顶栏都要 1.5。换 BOM 时先看 `.agents/skills/md3e/references/version-baseline.md`。
 - **`compose-bom-alpha:2026.11.00` 要求 `compileSdk ≥ 37.1`**：只装 `android-37.0` 会在解析依赖时失败，
-  两个平台可以共存（`sdkmanager "platforms;android-37.1"`）。
+  装 37.1 后可以把 37.0 卸掉（`sdkmanager --uninstall "platforms;android-37.0"`），本机已这么做。
 - **实验 API 逐文件 opt-in**：`LoadingIndicator` 是 `@ExperimentalMaterial3ExpressiveApi`，`TopAppBar`/`Tooltip` 是
   `@ExperimentalMaterial3Api`；用文件级 `@file:OptIn(...)`，别在每处调用点写。
 - **Carousel 的真实签名和网上示例不一样**：`rememberCarouselState(itemCount = { … })`（**lambda**，不是 Int），
