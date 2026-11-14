@@ -23,7 +23,10 @@ object DirectoryParser {
 
         for (anchor in doc.select("a.text-nord13[href]")) {
             val href = anchor.absUrl("href").ifEmpty { anchor.attr("href") }
-            val path = runCatching { URI(href).path }.getOrNull() ?: continue
+            // NOTE: 站点会给链接加 /dmNNN 与语言前缀（如 /dm825/cn/makers/Moody's），
+            // 必须先归一化再判断与存储，否则 id/路径会带着这些临时前缀（实测厂商页全是这种链接）。
+            val pathname = runCatching { URI(href).path }.getOrNull() ?: continue
+            val path = SourceConfig.contentPath(pathname)
             if (!path.contains(marker) || path.endsWith("/ranking")) continue
 
             val raw = anchor.text().trim().replace(WHITESPACE, " ")

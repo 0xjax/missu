@@ -98,4 +98,19 @@ class DirectoryParserTest {
         val names = DirectoryParser.parse(html, "actresses", page = 1).items.map { it.name }
         assertEquals(listOf("Aoi", "葵", "Aoi"), names)
     }
+    @Test
+    fun parsesRealMakersDirectory() {
+        // fixture 是真机抓的 /cn/makers（200，37 个条目）——证明厂商是真实存在的可浏览维度。
+        val html = javaClass.classLoader!!.getResourceAsStream("directory-makers.html")!!
+            .bufferedReader(Charsets.UTF_8)
+            .use { it.readText() }
+
+        val result = DirectoryParser.parse(html, "makers", page = 1)
+        println("makers=${result.items.size}")
+        result.items.take(3).forEach { println("  ${it.path} | ${it.name} | ${it.subtitle}") }
+
+        assertTrue("厂商目录应有多个条目", result.items.size >= 10)
+        assertTrue("路径必须是 /makers/{名}", result.items.all { it.path.startsWith("/makers/") })
+        assertTrue("名字不能为空", result.items.all { it.name.isNotBlank() })
+    }
 }
