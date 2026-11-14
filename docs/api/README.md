@@ -37,6 +37,9 @@ bun scripts/har-to-openapi.js \
 - `/` 和 `/new` 会重定向到带动态 `dm` 前缀的页面；客户端应使用稳定入口并跟随重定向。
 - 列表和搜索使用从 1 开始的 `page` 查询参数。
 - **时间周期热度是 URL，不是参数**：今日 / 本周 / 本月热门分别是 `/today-hot`、`/weekly-hot`、`/monthly-hot`（站点首页导航直出这三个链接，带 `dm{N}` 前缀）。三者是同一面列表模板，所以「换周期」= 换 path。同理**女优月榜是独立页面** `/actresses/ranking`（导航标签形如「女优排行 NOV 2026」），不吃 `/actresses` 的 `sort` / `height` / `cup` / `age` / `debut` 参数——把它当 `sort=ranking` 发出去只会 404 或返回没有排序的目录。
+- **列表页只有排序，没有筛选**：任意列表页（`/new`、`/today-hot`、`/siro`、`/genres/VR` …）都带 `sort=released_at / published_at / saved / today_views / weekly_views / monthly_views`，但**没有任何筛选表单**（`height` / `cup` / `age` / `debut` 只在 `/actresses` 生效，且页面已不再提供入口链接）。
+- **`/genres` 索引里没有 VR**：实测 36 项/页、翻到第 2 页也没有，但 `/genres/VR` 是**正常类型页**（有片、有排序）。导航里的 VR 是单独一项，别指望从类型索引里解析出来。
+- **频道来自首页导航**：素人 / 无码影片 / 亚洲 AV 三组频道（`/siro`、`/fc2`、`/madou` …）以及直播（`/klive`、`/clive`）都只在首页 HTML 的可折叠导航里列出，**没有接口**。导航是 Alpine 两段式：标题 `<a href="#" @click.prevent="showCollapse = … 'key' …">`，项目在紧跟的 `x-show="showCollapse === 'key'"` 的 `<span>` 里；同一份导航会出现两次（桌面 + 移动），解析后要去重。直播两页是**正常视频列表**（12 条/页、带预览片），不是外部直播站。
 - 详情页通过内联打包脚本初始化 HLS 播放器，播放地址来自外部媒体主机；不得把临时 URL 写成固定接口。
 - 首页、列表、搜索的卡片自带静音预览片：卡片 HTML 里直出 `<video class="preview" data-src="https://fourhoi.com/{变体路径}/preview.mp4">`（`muted`/`loop`，桌面端移入鼠标时替换封面）。**取这个 `data-src` 原样使用，不要用封面地址替换文件名推导**——路径里的「变体路径」是卡片自己的（同一番号的中文字幕 / 无码流出各有自己的预览轨），首尾模板页（首页头图、详情页）只有 Vue 的 `:data-src` 绑定、取不到值，缺片时回退封面。
 - Cloudflare 挑战会对任意路径出现（含登录）。客户端通过 WebView 让用户显式完成验证，`cf_clearance` 与 RN fetch 共享 CookieManager；验证后自动重试原请求。

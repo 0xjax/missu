@@ -436,6 +436,7 @@ private fun MissuApp(
                 val sort by viewModel.sort.collectAsState()
                 val filters by viewModel.filters.collectAsState()
                 val refreshingKinds by viewModel.refreshing.collectAsState()
+                val channels by viewModel.channels.collectAsState()
 
                 // NOTE: 热门三档是同一面内容的三个 path，所以按 path 建 VM：换档 = 换数据源，
                 // 切回来那份也已经缓存着（ViewModelStore 里各存一份，不会重新转圈）。
@@ -457,9 +458,12 @@ private fun MissuApp(
                     refreshingKinds = refreshingKinds,
                     hotPeriod = hotPeriod,
                     hotState = hotState,
+                    channels = channels,
                     onLoad = viewModel::load,
                     onLoadMore = viewModel::loadMore,
                     onRefresh = viewModel::refresh,
+                    onChannelsLoad = { viewModel.loadChannels() },
+                    onChannelsRetry = { viewModel.loadChannels(force = true) },
                     onHotPeriodChange = { hotPeriod = it },
                     onHotLoadMore = hotViewModel::loadMore,
                     onHotRetry = hotViewModel::load,

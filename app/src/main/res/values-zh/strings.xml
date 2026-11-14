@@ -157,6 +157,8 @@
 
     <!-- 热门（三个周期都是站点直出的列表页） -->
     <string name="hot_today">今日热门</string>
+    <string name="discover_section_channels">频道</string>
+    <string name="discover_channels_live">直播</string>
     <string name="hot_weekly">本周热门</string>
     <string name="hot_monthly">本月热门</string>
 

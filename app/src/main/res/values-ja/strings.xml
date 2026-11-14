@@ -157,6 +157,8 @@
 
     <!-- 人気（3 つの期間はいずれもサイトが直接返す一覧ページ） -->
     <string name="hot_today">今日の人気</string>
+    <string name="discover_section_channels">チャンネル</string>
+    <string name="discover_channels_live">ライブ</string>
     <string name="hot_weekly">今週の人気</string>
     <string name="hot_monthly">今月の人気</string>
 

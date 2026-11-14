@@ -2,6 +2,8 @@ package app.missu.data.parse
 
 import app.missu.data.api.SourceConfig
 import app.missu.data.model.HomeSection
+import app.missu.data.model.NavGroup
+import app.missu.data.model.NavItem
 import app.missu.data.model.VideoList
 import app.missu.data.model.VideoSummary
 import org.jsoup.Jsoup
@@ -26,6 +28,8 @@ object HomeParser {
     )
     private val DURATION = Regex("^\\d+:\\d{2}(:\\d{2})?$")
     private val DM_PREFIX = Regex("^dm\\d+$")
+    private val COLLAPSE_KEY = Regex("""showCollapse\s*===\s*'([^']+)'""")
+    private val BASE_HOST = java.net.URI(SourceConfig.BASE_URL).host
 
     fun parseHome(html: String): List<HomeSection> {
         val doc = Jsoup.parse(html, SourceConfig.BASE_URL)
@@ -69,6 +73,42 @@ object HomeParser {
     private fun pageParam(href: String): String? {
         val query = runCatching { java.net.URI(resolve(href)).rawQuery }.getOrNull() ?: return null
         return query.split('&').firstOrNull { it.startsWith("page=") }?.substringAfter("page=")
+    }
+
+    /**
+     * 站点导航里的可折叠分组（素人 / 无码影片 / 亚洲 AV …），用于「频道」页签。
+     *
+     * 结构（首页 HTML，Alpine.js）：分组标题是 `<a href="#" @click.prevent="showCollapse = … 'key' …">`
+     * 里唯一的 `<span>`；紧跟其后那个 `x-show="showCollapse === 'key'"` 的 `<span>` 才是它的项目。
+     * 同一份导航在页面里出现两次（桌面 + 移动），所以按「项目路径序列」去重。
+     *
+     * NOTE: 只用结构与路径，不看分组标题文案——标题随内容语言变化，拿它做判据会在换语言时全崩。
+     * NOTE: 返回**全部**分组（含「观看日本 AV」「我的收藏」这些）；哪些算频道由 `:app` 侧按路径过滤。
+     */
+    fun parseNav(html: String): List<NavGroup> {
+        val doc = Jsoup.parse(html, SourceConfig.BASE_URL)
+
+        return doc.select("a").mapNotNull { header ->
+            if (header.attr("href") != "#") return@mapNotNull null
+            val key = COLLAPSE_KEY.find(header.attr("@click.prevent"))?.groupValues?.get(1)
+                ?: return@mapNotNull null
+            val title = header.selectFirst("span")?.text()?.trim().orEmpty()
+            if (title.isEmpty()) return@mapNotNull null
+            val panel = header.nextElementSibling() ?: return@mapNotNull null
+            if (!panel.attr("x-show").contains("showCollapse === '$key'")) return@mapNotNull null
+
+            val items = panel.select("a[href]").mapNotNull { anchor ->
+                val href = anchor.absUrl("href").ifEmpty { anchor.attr("href") }
+                val name = anchor.text().trim()
+                if (name.isEmpty() || href.isEmpty() || href.startsWith("#")) return@mapNotNull null
+                // 外链（页脚那堆 bit.ly / 友站）不是站内频道。
+                val host = runCatching { java.net.URI(href).host }.getOrNull() ?: return@mapNotNull null
+                if (host != BASE_HOST) return@mapNotNull null
+                NavItem(name = name, path = SourceConfig.contentPath(pathnameOf(href)))
+            }.distinctBy { it.path }
+
+            if (items.isEmpty()) null else NavGroup(title = title, items = items)
+        }.distinctBy { group -> group.items.map { it.path } }
     }
 
     fun parseVideoCards(root: Element): List<VideoSummary> =
