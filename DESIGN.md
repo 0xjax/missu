@@ -211,7 +211,7 @@
 - `ko / ms / th` 只在站点菜单中确认存在，Cloudflare 拦截导致尚未拿到 200 实测
 - 「随机」板块在非中文语言下没有「更多」链接，可能不显示
 - 图标换色只覆盖「读启动组件 `ActivityInfo`」的地方（桌面、启动画面、概览）；「设置 → 应用信息」「权限弹窗」「分享面板」读 `<application android:icon>`，永远是品牌粉。另外用户开了「主题化图标」（Android 13+）时系统会按壁纸色给图标上色，Android 16 QPR 2 起对没提供 monochrome 层的应用也会自动上色——**色板颜色可能被系统覆盖**，这是机制的边界不是 bug
-- 人机验证走 WebView + 共享 Cookie；若 Cloudflare 进一步按 TLS 指纹拒绝，验证后仍可能 403（备选是让 WebView 代取 HTML，未做）
+- 人机验证走 WebView + 共享 Cookie；判定只认 CF 自己的信号（`cf-mitigated: challenge` 头 / 挑战页标题），浮层里再按 `window._cf_chl_opt` 标记确认是不是挑战页（标题会被本地化，不能只靠它）；若 Cloudflare 按 TLS 指纹拒绝，验证后仍可能 403——那时由 WebView 代取 HTML 交回请求（已实现）
 - 登录前必须清空 Cookie 罐：带旧会话/Cloudflare Cookie 时 `/api/login` 返回 401；清空后登录响应写入新会话
 - 登录态失效只认「受保护页面被 302 回首页」：看 `response.url` / WebView 回传的最终地址。不能用「页面里有没有 `/logout`」判断——挑战页、502 页、精简布局的表单页都没有它，会把有效会话误判成失效并主动登出
 - 站点所有页面都内嵌 `#login_email` 登录弹窗，因此也不能靠「有没有登录表单」判断登录态

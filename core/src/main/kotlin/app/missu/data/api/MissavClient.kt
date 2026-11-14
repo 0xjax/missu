@@ -56,9 +56,11 @@ class MissavClient(
 
         client.newCall(request).execute().use { response ->
             val body = response.body.string()
-            // NOTE: 与 legacy 一致——403、cf-mitigated 头、挑战页标题，三者任一即判定为人机验证。
-            if (response.code == 403 ||
-                response.header("cf-mitigated") == "challenge" ||
+            // NOTE: 只认两个真信号：`cf-mitigated: challenge` 头、挑战页自己的标题正则。
+            // **裸 403 不算**——权限、风控、CF 的 block 也都是 403，抬浮层只会白等最多 60 秒；
+            // 而实测真实挑战这两样都在（2026-11-15 06:11 的客户端请求与 PC 侧抓包一致），
+            // 裸 403 从未单独起过作用（见 docs/android-native.md「人机验证」）。
+            if (response.header("cf-mitigated") == "challenge" ||
                 CHALLENGE_TITLE.containsMatchIn(body)
             ) {
                 throw ChallengeException()
@@ -104,8 +106,8 @@ class MissavClient(
 
         client.newCall(builder.build()).execute().use { response ->
             val text = response.body.string()
-            if (response.code == 403 ||
-                response.header("cf-mitigated") == "challenge" ||
+            // NOTE: 同上——裸 403 不算挑战，只有 CF 自己的信号才算。
+            if (response.header("cf-mitigated") == "challenge" ||
                 CHALLENGE_TITLE.containsMatchIn(text)
             ) {
                 throw ChallengeException()
@@ -142,7 +144,8 @@ class MissavClient(
 
         client.newCall(request).execute().use { response ->
             val text = response.body.string()
-            if (response.code == 403 || response.header("cf-mitigated") == "challenge" ||
+            // NOTE: 同上——裸 403 不算挑战，只有 CF 自己的信号才算。
+            if (response.header("cf-mitigated") == "challenge" ||
                 CHALLENGE_TITLE.containsMatchIn(text)
             ) {
                 throw ChallengeException()

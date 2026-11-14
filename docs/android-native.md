@@ -515,6 +515,9 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
     样式迟到的竞态也覆盖了（先返回 0、样式到了再解包能抓到）。
   - **仍不完美**：Turnstile 勾选框是**跨域 iframe**，主题由 CF 页面决定，我们改不到——深色主题下它会是一块浅色小部件
     （05:02 / 06:11 两张现场图都能看到）。要连它一起变深，只能让引擎的 `prefers-color-scheme` 变 true，那条路上面已证伪。
+  NOTE: 它的主题确实写在 iframe 的 URL 里（实测在无头 Chrome 上抓到
+  `…/turnstile/f/av0/rch/…/dark/fbE/new/normal?lang=auto`），也就是说 CF **会**渲染深色小部件——
+  只是它按页面的 `prefers-color-scheme` 取 `dark|light`，而我们的 WebView 恒报 light。
 - **浮层先隐形，确认是真挑战页才淡入**（2026-11-15 05:52 实测）：以前是「先弹出、再发现浏览器没被挑战、然后快速关掉」，
   正常首页上也会闪一下防护层，观感是错的。现在窗口照常存在（Chromium 才认为它可见、挑战才跑得起来），但内容 `alpha = 0`：
   轮询读到标题不是 `Just a moment` 就直接走「代取 HTML」并在**用户什么都没看到**的情况下收工；
@@ -528,20 +531,32 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
   adb pull /sdcard/Android/data/app.missu/files/challenge/   # events.log + PNG，只留最近 12 张
   ```
 
-  事件：`shown path=…` / `page={"t":…,"d":…,"bg":…,"fg":…} url=…` / `finish passed=… attempts=… in …ms html=…` /
+  事件：`shown path=…` / `page={"t":…,"c":…,"r":…,"d":…,"bg":…,"fg":…} url=…` /
+  `finish passed=… attempts=… in …ms html=…` /
   `cancelled …`。`page` 里的 `t` 是标题（分辨挑战页与真页面）、`d` 是 `prefers-color-scheme`、`bg`/`fg` 是 `body` 的计算色
   （判读「页面为什么读不清」的直接证据）。
   截图：抬起后 0.4s、`onPageFinished` 时、结束时各一张；`page` 那张是判读「挑战页有没有真的渲染出来」的关键。
   挑战页的 DOM 会另存一份 `challenge-*.html`（每个请求只存一次）——不必再等一次现场就能看 CF 怎么写页面、
   Turnstile 带什么参数。
   **NOTE**：vivo 的 logcat 会把 URL 打成 `****`，完整 URL 只在 `events.log` 里——判读以文件为准。
-- **「看到的是正常页面」不等于误触发**：判定条件是 `403 | cf-mitigated: challenge | 挑战页标题`（三者任一），
-  命中后 `withChallengeRetry` 用 `handler.verify(/)` 抬起浮层，WebView 里通过后显示的就是**真实页面**
-  （所以看起来"直接跳过了"），随后 `cf_clearance` 落进共享 Cookie、浮层自动消失、**重试原请求**
-  （不是拿验证页的 HTML 当结果）。
+- **两层判定（2026-11-15 06:52 收紧，都基于真机/真响应实测）**：
+  - **层 1，`:core` 判"这个响应是不是挑战"**：只认 CF 自己的两个信号——`cf-mitigated: challenge` 头、
+    正文里的挑战页标题正则。**裸 `403` 不再算挑战**（权限/风控/CF 的 block 也都是 403，抬一次浮层只会白等最多 60 秒）；
+    真实挑战这两样一直都在（客户端 06:11 与 PC 侧抓包一致），裸 403 从未单独起过作用。
+  - **层 2，`:app` 判"浮层里这一页是不是挑战页"**：`window._cf_chl_opt` 标记 **或** 标题匹配，任一即算。
+    标记优先——因为**标题会被本地化**：同一站点，我们的 WebView 收到 `Just a moment...`，
+    无头 Chrome 收到的是 `请稍候…`（06:52 实测）。旧代码只认英文，遇到后者会把挑战页当正常页、
+    把它的 HTML 交回请求（05:02 那次 `html=44698` 就是这种翻版）。
+  - `!challengePage` 时浮层 alpha 恒为 0，正常首页即使被抬了浮层也什么都不显示，随后几秒静默收工。
+  - **只用 `_cf_chl_opt` 一个标记**，两个方向都验过：
+    正样本＝抓下来的英文 403 正文、以及无头 Chrome 上那张中文挑战页（`请稍候…`）；
+    负样本＝**真机 WebView 里的站点正常页**（`t="MissAV | 免费高清AV在线看"`、`c=false`）、`example.com`、预览 fixture。
+    没有再加「资源里出现 `/cdn-cgi/challenge-platform`」这条：它覆盖的资源面比一个标记宽，
+    CF 正常页面是否也拉那套脚本我们**没验过**——已验证足够的信号不替换成面更大、未验证的信号。
+- **「看到的是正常页面」不等于误触发**：命中后 `withChallengeRetry` 用 `handler.verify(/)` 抬起浮层，
+  WebView 里通过后显示的就是**真实页面**（所以看起来"直接跳过了"），随后 `cf_clearance` 落进共享 Cookie、
+  浮层自动消失、**重试原请求**（不是拿验证页的 HTML 当结果）。
   判读"真的通过"看三处：① 浮层自己消失；② 之后原请求返回了内容；③ `app_webview/Default/Cookies` 里出现 `cf_clearance`。
-  真正会误判的只有一种情况：**非挑战原因的 403**（例如权限/风控）也会抬一次浮层，
-  最多白等约 30 秒（60 次轮询）后给「取消」，不会破坏数据。
 - **`cf_clearance` 还在 ≠ 不会再被挑战**：2026-11-14/15 的几次触发都发生在 cookie 有效期内（实测该 cookie 的 `expires_utc`
   到 2027-11-14，约一年），说明站点会**主动作废**它——挑战出现频率与 cookie 过期无关，别按"过期时间"做任何优化。
 - **不要试图按需制造挑战（2026-11-15 全部试过，都不可靠）**：触发与否由站点按「出口 IP + 指纹 + 当时的风险分」
@@ -560,7 +575,7 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
   不是没网。真要重试这条杠杆，必须停 Clash 后**等 30–60 秒让 DNS 缓存过期**（或切飞行模式，但那会断 adb）再冷启动。
 - **验收方式：等自然触发，用钩子判读**。日常使用（尤其是退出再登录这类操作）本来就会不定期撞上，
   触发后 `adb pull /sdcard/Android/data/app.missu/files/challenge/` 就能判读：
-  ① `page={"t":…}` 里的标题是 `Just a moment` 说明确实是挑战页；② 有没有 `finish passed=true`；
+  ① `page={"c":true}` 是挑战页的标记（`t` 只作辅助——它可能是中文）；② 有没有 `finish passed=true`；
   ③ `page-*.html` 用来验证「代取的 HTML 能不能被解析器吃下去」；
   ④ `page={"d":…,"bg":…,"fg":…}`——深色主题下要看到 `bg` 是透明的、`fg` 是浅色（`applyPageTheme` 生效的证据）；
   `challenge-*.html` 则是挑战页自己的 DOM（每个请求只存一次）。
