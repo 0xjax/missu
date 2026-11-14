@@ -410,9 +410,12 @@ fixture 都是**真机抓的真实页面**（`home-cn.html` / `detail.html` / `s
 - **片单有两种移除入口，别混用**：详情页面板是 `POST /api/playlists/remove`（body 要 `{dvdId, key}`，
   `key` 就是片单 id）；片单详情页是 `DELETE /api/playlists/{片单id}/{影片id}`（页面内联脚本
   `deletePlaylistItem()` 里的原始调用）。片单页只有片单 id，走前者需要先查一次 `key`，没必要。
-- **Cloudflare 目前只在 PC 上触发**：PC 的 JVM 请求被 403 挑战（`cf-mitigated: challenge`），而真机上的
-  OkHttp 直接放行。所以 `ChallengeActivity` 是兜底链路、**尚未被真实触发验证过**；若哪天手机端也被挑战，
-  这是唯一出路——`cf_clearance` 必须让 OkHttp 与 WebView 共用系统 `CookieManager`（已打通）。
+- **Cloudflare 挑战会真的落在手机上，且链路已验证可用**（2026-11-14 真机实测）：冷启动加载首页时被 403 挑战，
+  App 自动跳到 `ChallengeActivity` 打开验证页（logcat 可证：`MainActivity` 起来后 1.3 s 就 `Displayed
+  app.missu/.ui.challenge.ChallengeActivity`），页内状态文案依次是「等待站点放行…（第 N 次检查）」「验证通过，
+  正在读取页面…」，通过后自动返回首页继续加载，**全程无需用户手动操作**（只在 40 次轮询仍不通时给「取消」）。
+  PC 的 JVM 请求同样会被挑战（`cf-mitigated: challenge`），所以这条链路不是"未验证的兜底"：
+  改任何 Cookie 相关代码都必须保证 OkHttp 与 WebView 共用系统 `CookieManager`，否则验证过了仍然 403。
 
 **UI 与交互**
 
