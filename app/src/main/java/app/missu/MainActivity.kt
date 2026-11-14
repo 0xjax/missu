@@ -4,6 +4,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,6 +40,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.NavHost
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
@@ -205,10 +211,43 @@ private fun MissuApp(
             }
         },
     ) { innerPadding ->
+        val tabRoutes = topLevels.map { it.route }.toSet()
         NavHost(
             navController = navController,
             startDestination = "home",
             modifier = Modifier.padding(innerPadding),
+            // NOTE: 转场按「有没有层级关系」分两种，默认那种两边**同时**淡入淡出（700ms）会让退出中的
+            // 旧页面盖在新页面上，看起来就是残影。
+            //  · 底栏页签之间是平级：fade through（旧 90ms 淡出、新延迟 90ms 再 210ms 淡入），两段不重叠；
+            //  · 推进/返回有层级：整页横滑（全程不透明，同样不叠影），并给出方向感。
+            enterTransition = {
+                if (isTabSwitch(initialState, targetState, tabRoutes)) {
+                    fadeIn(animationSpec = tween(durationMillis = 210, delayMillis = 90))
+                } else {
+                    slideInHorizontally(animationSpec = tween(durationMillis = 300)) { it / 4 }
+                }
+            },
+            exitTransition = {
+                if (isTabSwitch(initialState, targetState, tabRoutes)) {
+                    fadeOut(animationSpec = tween(durationMillis = 90))
+                } else {
+                    slideOutHorizontally(animationSpec = tween(durationMillis = 300)) { -it / 4 }
+                }
+            },
+            popEnterTransition = {
+                if (isTabSwitch(initialState, targetState, tabRoutes)) {
+                    fadeIn(animationSpec = tween(durationMillis = 210, delayMillis = 90))
+                } else {
+                    slideInHorizontally(animationSpec = tween(durationMillis = 300)) { -it / 4 }
+                }
+            },
+            popExitTransition = {
+                if (isTabSwitch(initialState, targetState, tabRoutes)) {
+                    fadeOut(animationSpec = tween(durationMillis = 90))
+                } else {
+                    slideOutHorizontally(animationSpec = tween(durationMillis = 300)) { it / 4 }
+                }
+            },
         ) {
             composable("home") {
                 val viewModel: HomeViewModel = viewModel(factory = factory { HomeViewModel(api) })
@@ -494,6 +533,18 @@ private val topLevels = listOf(
     TopLevel("discover", "发现", Icons.AutoMirrored.Filled.List),
     TopLevel("account", "我的", Icons.Filled.Person),
 )
+
+/**
+ * 两个目的地都是底栏一级页 → 这次切换是「平级」的。
+ *
+ * NOTE: 平级切换只做淡入淡出（fade through），不做横滑：页签之间没有先后关系，滑动会暗示层级。
+ * 推进到详情/列表这类有层级的跳转才用横滑，顺带给出方向感。
+ */
+private fun isTabSwitch(
+    initial: NavBackStackEntry,
+    target: NavBackStackEntry,
+    tabRoutes: Set<String>,
+): Boolean = initial.destination.route in tabRoutes && target.destination.route in tabRoutes
 
 private inline fun <reified T : ViewModel> factory(crossinline create: () -> T): ViewModelProvider.Factory =
     object : ViewModelProvider.Factory {
