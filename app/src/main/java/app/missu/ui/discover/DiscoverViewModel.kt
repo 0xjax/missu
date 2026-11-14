@@ -1,4 +1,4 @@
-﻿package app.missu.ui.discover
+package app.missu.ui.discover
 
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
@@ -121,7 +121,10 @@ class DiscoverViewModel(private val api: MissavApi) : ViewModel() {
                         api.getDirectory(kind, next)
                     }
                     current.copy(
-                        items = current.items + page.items,
+                        // CRITICAL: 必须按 `path` 去重再拼。站点的分页会重叠（下一页开头又出现上一页的条目），
+                    // 而列表的 key 就是 path——重复 key 会让 LazyVerticalGrid 直接抛
+                    // `Key "…" was already used` 崩溃（真机踩过：/actresses/柊もみじ）。
+                    items = (current.items + page.items).distinctBy { it.path },
                         nextPage = page.nextPage,
                         loadingMore = false,
                     )

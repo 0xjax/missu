@@ -1,4 +1,4 @@
-﻿package app.missu.ui.playlists
+package app.missu.ui.playlists
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -39,7 +39,8 @@ class PlaylistsViewModel(private val api: MissavApi) : ViewModel() {
                 if (playlists.isEmpty()) {
                     PlaylistsUiState.Empty
                 } else {
-                    PlaylistsUiState.Content(playlists)
+                    // CRITICAL: 列表 key 是 path，重复会让 LazyVerticalGrid 抛重复 key 崩溃（站点可能重复列出同一个片单）。
+                    PlaylistsUiState.Content(playlists.distinctBy { it.path })
                 }
             } catch (error: Exception) {
                 PlaylistsUiState.Error(error.toUiMessage())
