@@ -40,6 +40,7 @@ import app.missu.data.model.VideoSummary
 import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadingHint
+import app.missu.ui.components.PageStateTransition
 import app.missu.ui.components.VideoGridCard
 import coil3.compose.AsyncImage
 
@@ -61,26 +62,28 @@ fun HomeScreen(
     onOpenList: (path: String, title: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    when (state) {
-        HomeUiState.Loading -> LoadingHint(modifier)
+    // NOTE: 用 fade through 交接状态，避免「转圈一消失、整页内容啪地出现」的硬切。
+    PageStateTransition(state = state, modifier = modifier.fillMaxSize()) { current ->
+        when (current) {
+            HomeUiState.Loading -> LoadingHint()
 
-        HomeUiState.Empty -> EmptyHint(
-            icon = Icons.Filled.Home,
-            title = "首页没有内容",
-            subtitle = "站点这次没有返回任何板块，下拉或稍后重试",
-            modifier = modifier,
-        )
+            HomeUiState.Empty -> EmptyHint(
+                icon = Icons.Filled.Home,
+                title = "首页没有内容",
+                subtitle = "站点这次没有返回任何板块，下拉或稍后重试",
+            )
 
-        is HomeUiState.Error -> ErrorHint(state.message, onRetry, modifier)
+            is HomeUiState.Error -> ErrorHint(current.message, onRetry)
 
-        is HomeUiState.Content -> HomeContent(
-            sections = state.sections,
-            refreshing = refreshing,
-            onRefresh = onRefresh,
-            onOpen = onOpen,
-            onOpenList = onOpenList,
-            modifier = modifier,
-        )
+            is HomeUiState.Content -> HomeContent(
+                sections = current.sections,
+                refreshing = refreshing,
+                onRefresh = onRefresh,
+                onOpen = onOpen,
+                onOpenList = onOpenList,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
     }
 }
 

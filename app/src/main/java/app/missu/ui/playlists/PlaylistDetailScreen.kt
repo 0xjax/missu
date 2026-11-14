@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadingHint
+import app.missu.ui.components.PageStateTransition
 import app.missu.ui.components.PageTopBar
 import app.missu.ui.components.VideoGridCard
 
@@ -120,18 +121,19 @@ fun PlaylistDetailScreen(
                 )
             }
 
-            when (state) {
-                PlaylistDetailUiState.Loading -> LoadingHint()
+            PageStateTransition(state = state, modifier = Modifier.fillMaxSize()) { current ->
+                when (current) {
+                    PlaylistDetailUiState.Loading -> LoadingHint()
 
-                PlaylistDetailUiState.Empty -> EmptyHint(
-                    icon = Icons.AutoMirrored.Filled.List,
-                    title = "这个片单还是空的",
-                    subtitle = "在详情页点「加入片单」，影片就会出现在这里",
-                )
+                    PlaylistDetailUiState.Empty -> EmptyHint(
+                        icon = Icons.AutoMirrored.Filled.List,
+                        title = "这个片单还是空的",
+                        subtitle = "在详情页点「加入片单」，影片就会出现在这里",
+                    )
 
-                is PlaylistDetailUiState.Error -> ErrorHint(state.message, onRetry)
+                    is PlaylistDetailUiState.Error -> ErrorHint(current.message, onRetry)
 
-                is PlaylistDetailUiState.Content -> LazyVerticalGrid(
+                    is PlaylistDetailUiState.Content -> LazyVerticalGrid(
                     modifier = Modifier.fillMaxSize(),
                     columns = GridCells.Fixed(2),
                     // NOTE: 整理模式下底部要给浮动工具栏留出空间，否则最后一行被它压住。
@@ -145,7 +147,7 @@ fun PlaylistDetailScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    items(items = state.videos, key = { it.id + it.pageUrl }) { video ->
+                    items(items = current.videos, key = { it.id + it.pageUrl }) { video ->
                         val toggle = {
                             selected = if (video.id in selected) {
                                 selected - video.id
@@ -170,6 +172,7 @@ fun PlaylistDetailScreen(
                     }
                 }
             }
+        }
         }
 
         if (managing && content != null) {

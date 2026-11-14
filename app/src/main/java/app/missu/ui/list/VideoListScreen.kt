@@ -20,6 +20,7 @@ import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadMoreFooter
 import app.missu.ui.components.LoadingHint
+import app.missu.ui.components.PageStateTransition
 import app.missu.ui.components.PageTopBar
 import app.missu.ui.components.VideoGridCard
 
@@ -36,34 +37,36 @@ fun VideoListScreen(
     Column(modifier.fillMaxSize()) {
         PageTopBar(title = title, onBack = onBack)
 
-        when (state) {
-            VideoListUiState.Loading -> LoadingHint()
+        PageStateTransition(state = state, modifier = Modifier.fillMaxSize()) { current ->
+            when (current) {
+                VideoListUiState.Loading -> LoadingHint()
 
-            VideoListUiState.Empty -> EmptyHint(
-                icon = Icons.AutoMirrored.Filled.List,
-                title = "这里还没有内容",
-            )
+                VideoListUiState.Empty -> EmptyHint(
+                    icon = Icons.AutoMirrored.Filled.List,
+                    title = "这里还没有内容",
+                )
 
-            is VideoListUiState.Error -> ErrorHint(state.message, onRetry)
+                is VideoListUiState.Error -> ErrorHint(current.message, onRetry)
 
-            is VideoListUiState.Content -> LazyVerticalGrid(
-                modifier = Modifier.fillMaxSize(),
-                columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 32.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                items(items = state.videos, key = { it.id + it.pageUrl }) { video ->
-                    VideoGridCard(video = video, onClick = { onOpen(video.id) })
-                }
+                is VideoListUiState.Content -> LazyVerticalGrid(
+                    modifier = Modifier.fillMaxSize(),
+                    columns = GridCells.Fixed(2),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 32.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    items(items = current.videos, key = { it.id + it.pageUrl }) { video ->
+                        VideoGridCard(video = video, onClick = { onOpen(video.id) })
+                    }
 
-                if (state.nextPage != null) {
-                    item(key = "more", span = { GridItemSpan(maxLineSpan) }) {
-                        LoadMoreFooter(
-                            loading = state.loadingMore,
-                            onLoadMore = onLoadMore,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
+                    if (current.nextPage != null) {
+                        item(key = "more", span = { GridItemSpan(maxLineSpan) }) {
+                            LoadMoreFooter(
+                                loading = current.loadingMore,
+                                onLoadMore = onLoadMore,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
                     }
                 }
             }

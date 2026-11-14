@@ -48,6 +48,7 @@ import app.missu.data.model.PlaylistSummary
 import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadingHint
+import app.missu.ui.components.PageStateTransition
 import app.missu.ui.components.PageTopBar
 
 @Composable
@@ -80,24 +81,26 @@ fun PlaylistsScreen(
         // NOTE: 列表区单独包一层 Box，M3E 的 FloatingActionButtonMenu 才能浮在内容上；
         // weight(1f) 让它占满余下高度，底栏与顶栏各司其职。
         Box(Modifier.weight(1f).fillMaxWidth()) {
-            when (state) {
-                PlaylistsUiState.Loading -> LoadingHint()
+            PageStateTransition(state = state, modifier = Modifier.fillMaxSize()) { current ->
+                when (current) {
+                    PlaylistsUiState.Loading -> LoadingHint()
 
-                PlaylistsUiState.Empty -> EmptyHint(
-                    icon = Icons.AutoMirrored.Filled.List,
-                    title = "还没有片单",
-                    subtitle = "用右下角的按钮新建第一个片单",
-                )
+                    PlaylistsUiState.Empty -> EmptyHint(
+                        icon = Icons.AutoMirrored.Filled.List,
+                        title = "还没有片单",
+                        subtitle = "用右下角的按钮新建第一个片单",
+                    )
 
-                is PlaylistsUiState.Error -> ErrorHint(state.message, onRetry)
+                    is PlaylistsUiState.Error -> ErrorHint(current.message, onRetry)
 
-                is PlaylistsUiState.Content -> LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    items(items = state.playlists, key = { it.path }) { playlist ->
-                        PlaylistRow(playlist = playlist, onClick = { onOpen(playlist) })
+                    is PlaylistsUiState.Content -> LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(items = current.playlists, key = { it.path }) { playlist ->
+                            PlaylistRow(playlist = playlist, onClick = { onOpen(playlist) })
+                        }
                     }
                 }
             }
