@@ -4,8 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -188,6 +189,17 @@ private fun MissuApp(
     val historyStore = remember { HistoryStore(context.applicationContext) }
     val searchHistory = remember { SearchHistoryStore(context.applicationContext) }
     var language by remember { mutableStateOf(settings.language()) }
+    // NOTE: 页签级的 ViewModel 必须提到 Activity 作用域。放在 composable("home") 里的话，
+    // 切走页签时目的地被销毁、ViewModel 一并清掉，切回来就是「新建 VM → Loading → 重新请求」：
+    // 用户看到的是先一帧旧画面、再一个转圈，正是"闪一下/像缓存"的来源。提到这里后切页签是纯粹的视图切换。
+    val homeViewModel: HomeViewModel = viewModel(factory = factory { HomeViewModel(api) })
+    val discoverViewModel: DiscoverViewModel = viewModel(factory = factory { DiscoverViewModel(api) })
+    val searchViewModel: SearchViewModel = viewModel(factory = factory { SearchViewModel(api, searchHistory) })
+
+    // NOTE: 语言变了才重拉首页。这个 effect 放在这里（一直处于组合中）而不是 home 目的地里：
+    // 放在目的地里的话，每次切回页签都会重新启动 effect → load() → 打回 Loading → 转圈，
+    // 也就是「先闪一帧旧画面再加载」的另一半原因。
+    LaunchedEffect(language) { homeViewModel.load() }
     val authState by auth.state.collectAsState()
     val loginState by auth.loginState.collectAsState()
     // 底部导航只在四个一级页面显示；详情/列表/收藏等二级页面全屏展示。
@@ -227,34 +239,41 @@ private fun MissuApp(
             }
         },
     ) { innerPadding ->
+        val tabOrder = topLevels.map { it.route }
         NavHost(
             navController = navController,
             startDestination = "home",
             modifier = Modifier.padding(innerPadding),
-            // NOTE: 导航转场全部关掉。之前试过 fade through 与「按层级分转场」，真机抓帧都能看到
-            // 两页内容叠加或整屏空白的那一帧——因为这两类页面都是整屏内容，任何 alpha 过渡都会
-            // 让旧页在新页上留一帧残影，观感就是「闪一下、亮度不一致」。页面自身的三态交接
-            // （PageStateTransition）仍在，那是在同一页内部做的，不会暴露上一层。
-            enterTransition = { EnterTransition.None },
-            exitTransition = { ExitTransition.None },
-            popEnterTransition = { EnterTransition.None },
-            popExitTransition = { ExitTransition.None },
+            // NOTE: 整幅横滑（1:1 位移），像 ViewPager2 那样「两页接成一张长纸」前后推。
+            // 为什么是它：alpha 过渡在整屏内容上必然出问题——交叉淡入 = 两页文字叠在一起，
+            // 顺序淡出再淡入 = 中间整屏是空底色（"闪一下"）；而横滑**两页全程不透明**，
+            // 每一帧都是两块实心画面在拼，不存在叠加，也不暴露窗口底色。
+            // 方向：页签按底栏顺序比较（首页→发现→我的 是前进），其它路由（详情/列表）前进即右进左出。
+            enterTransition = {
+                val forward = isForward(initialState, targetState, tabOrder)
+                slideInHorizontally(animationSpec = tween(durationMillis = 280)) { if (forward) it else -it }
+            },
+            exitTransition = {
+                val forward = isForward(initialState, targetState, tabOrder)
+                slideOutHorizontally(animationSpec = tween(durationMillis = 280)) { if (forward) -it else it }
+            },
+            popEnterTransition = {
+                slideInHorizontally(animationSpec = tween(durationMillis = 280)) { -it }
+            },
+            popExitTransition = {
+                slideOutHorizontally(animationSpec = tween(durationMillis = 280)) { it }
+            },
         ) {
             composable("home") {
-                val viewModel: HomeViewModel = viewModel(factory = factory { HomeViewModel(api) })
+                val viewModel = homeViewModel
                 val state by viewModel.state.collectAsState()
                 val refreshing by viewModel.refreshing.collectAsState()
                 // NOTE: 搜索不再是独立页面——它和首页同属一个目的地，栏在顶部就地展开。
                 // 页面切换会让输入框换一份样式、键盘重启一次，那是"割裂感"的来源。
-                val searchViewModel: SearchViewModel = viewModel(
-                    factory = factory { SearchViewModel(api, searchHistory) },
-                )
                 val searchState by searchViewModel.state.collectAsState()
                 val recent by searchViewModel.recent.collectAsState()
-                LaunchedEffect(Unit) { viewModel.load() }
-
-                // 语言变了就重新拉首页（请求 URL 跟着语言变），其余页面下次进入时自然用新语言。
-                LaunchedEffect(language) { viewModel.load() }
+                // NOTE: 用 loadIfNeeded 而不是 load：切回页签时不要把已有内容打回 Loading。
+                LaunchedEffect(Unit) { viewModel.loadIfNeeded() }
 
                 SearchHost(
                     state = searchState,
@@ -289,7 +308,7 @@ private fun MissuApp(
             }
 
             composable("discover") {
-                val viewModel: DiscoverViewModel = viewModel(factory = factory { DiscoverViewModel(api) })
+                val viewModel = discoverViewModel
                 val states by viewModel.states.collectAsState()
                 val sort by viewModel.sort.collectAsState()
                 val filters by viewModel.filters.collectAsState()
@@ -525,8 +544,23 @@ private val topLevels = listOf(
     TopLevel("account", "我的", Icons.Filled.Person),
 )
 
-private inline fun <reified T : ViewModel> factory(crossinline create: () -> T): ViewModelProvider.Factory =
-    object : ViewModelProvider.Factory {
+/**
+ * 这次导航是不是「前进」。
+ *
+ * NOTE: 两个目的地都是底栏一级页时按底栏顺序比较（首页 → 发现 → 我的 为前进）；
+ * 其它跳转（进详情 / 列表 / 设置）一律算前进，返回由 popEnter/popExit 单独给反向。
+ */
+private fun isForward(
+    initial: NavBackStackEntry,
+    target: NavBackStackEntry,
+    tabOrder: List<String>,
+): Boolean {
+    val from = tabOrder.indexOf(initial.destination.route)
+    val to = tabOrder.indexOf(target.destination.route)
+    return if (from >= 0 && to >= 0) to > from else true
+}
+
+private inline fun <reified T : ViewModel> factory(crossinline create: () -> T): ViewModelProvider.Factory =    object : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <VM : ViewModel> create(modelClass: Class<VM>): VM = create() as VM
     }
