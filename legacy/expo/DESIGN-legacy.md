@@ -35,7 +35,7 @@
 |---|---|---|
 | 底部导航 | `expo-router/js-tabs` 的 `Tabs`：纯 RN 栏，3 项固定（首页/发现/我的），配色只来自 theme | `ShortNavigationBar`（M3E） |
 | 页头 | `TabHeader` 自绘：每个 tab 页自己画大标题，不用原生 Stack header | `PageTopBar`；首页顶部直接是 `SearchBar`，不另画大标题 |
-| 频道 / 周期 / 筛选 / 排序 | `ChoiceMenuBar` + `Menu`：40dp 触发器 + 自绘浮层，选中项只改文字颜色 | **周期已做**：发现页「热门」页签 → 今日/本周/本月（这三个就是站点直出的列表页，复用 `/list` 路由）。**频道没做**（22 个落点与厂商三列目录重叠）。排序是连通 `ToggleButton`，筛选是 `ModalBottomSheet` + `FilterChip` |
+| 频道 / 周期 / 筛选 / 排序 | `ChoiceMenuBar` + `Menu`：40dp 触发器 + 自绘浮层，选中项只改文字颜色 | **周期已做，且升为发现页第一个页签**：今日 / 本周 / 本月三档就是同一面视频列表的三个 path，页签内用连通 `ToggleButton` 切换。**女优排行也做了**，但不再占独立页签——它被收进「女优」页签的排序组第三档（站点那个页面是 `/actresses/ranking`，独立路径、不吃筛选）。**频道没做**（22 个落点与厂商三列目录重叠）。排序是连通 `ToggleButton`，筛选是 `ModalBottomSheet` + `FilterChip` |
 | 厂商频道组 | `CollapsibleGroup` + `SettingsRow`：默认折叠三组（素人/无码影片/亚洲 AV），路径见 `src/constants/channel-groups.ts` | 厂商是一张三列目录网格，没有折叠分组；那份静态清单（站点改版要手工同步）也一起消失了 |
 | 长按预览 | `VideoCard` 长按 + 全屏 `Modal`：350ms 长按（带 haptic）弹静音循环预览；预览片由封面地址推导为同目录 `preview.mp4`，加载失败保留封面；松手停留，点空白/返回键关闭，短按仍进详情 | 已实现（`ui/preview/VideoPreview.kt`）：长按 500ms（`combinedClickable` 默认阈值）、全屏 `Dialog`、86% 黑幕、关闭 150ms 淡出。预览地址改为**解析卡片 HTML 的 `data-src`**，不再按封面推导——变体不同，文件名不固定 |
 | 搜索 | `SearchBox` + `SearchField`，聚焦时展示搜索历史胶囊 | M3E `SearchBar` 就地展开成全屏 `ExpandedFullScreenSearchBar` |

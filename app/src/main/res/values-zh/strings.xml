@@ -163,6 +163,7 @@
     <!-- 女优排序与筛选（选项值在 :core，文案在这里） -->
     <string name="sort_videos">影片</string>
     <string name="sort_debut">出道</string>
+    <string name="sort_ranking">本月排行</string>
     <string name="filter_height">身高</string>
     <string name="filter_cup">罩杯</string>
     <string name="filter_age">年龄</string>

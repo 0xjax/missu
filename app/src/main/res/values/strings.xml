@@ -170,6 +170,7 @@
     <!-- 女优排序与筛选（选项值在 :core，文案在这里） -->
     <string name="sort_videos">Videos</string>
     <string name="sort_debut">Debut</string>
+    <string name="sort_ranking">Monthly ranking</string>
     <string name="filter_height">Height</string>
     <string name="filter_cup">Cup</string>
     <string name="filter_age">Age</string>

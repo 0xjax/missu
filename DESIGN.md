@@ -65,8 +65,8 @@
 | 底部导航 | `ShortNavigationBar` | 3 个目的地，用 `ShortNavigationBarItem`；指示器是药丸形。`NavigationBar` 属 M3 基线，M3E 目标下不再用 |
 | 首页板块 | 板块网格（每板块**上限 6 条**）+ 标题行「更多」 | 站点每个板块直出 16 条上下，全铺出来首页实测 64 张卡 = 32 行（约 6000dp）；现在首页只当预览，非轮播板块 `take(6)`（2 列 × 3 行），标题行右侧「更多」→ 复用已有 `/list` 分页页。轮播板块（第一个）不受限，它高度固定 |
 | 个人中心（我的） | `ListItem` 分组容器 + 资料卡 | 资料卡 `extraLarge` 圆角 + `surfaceContainerHigh`，首字母头像取 `primary`；四个入口装在 `surfaceContainerLow`（`largeIncreased` 圆角）里，行间分隔线从图标位之后开始；「退出登录」单独一张容器并挂 `error` 色，破坏性动作不与普通入口同层。**未登录时**空态只占中间那块，「设置」入口仍留在底部同一套分组容器里——主题 / 语言 / 播放设置与账号无关，没有登录也必须够得到 |
-| 一级分类（发现页） | `PrimaryTabRow` | 四项等宽（女优/类型/厂商/热门）；基线 `TabRow` 已废弃；发现页**不放搜索入口**（搜索的唯一入口是首页顶部的 `SearchBar`），搜索不单独占页签 |
-| 热门周期（发现页） | 「热门」页签 + 三行入口 | 今日 / 本周 / 本月热门——它们是站点首页导航直出的三个**普通列表页**（`/today-hot`、`/weekly-hot`、`/monthly-hot`，证据在 fixture `home-cn.html`），所以直接复用现成的 `/list` 路由：没有新路由、没有新解析器、页签本身也不发请求，只摆三行。频道组（素人 / 无码 / 亚洲 AV 共 22 个落点）暂时不做——与厂商三列目录功能重叠 |
+| 一级分类（发现页） | `PrimaryTabRow` | 四项等宽，**热门在第一位**且是默认页签：三个目录（女优 / 类型 / 厂商）都要求用户先有一个名字才来点，只有热门不要求任何意图，所以它是这个页面唯一的「入口型」页签。基线 `TabRow` 已废弃；发现页**不放搜索入口**（搜索的唯一入口是首页顶部的 `SearchBar`），搜索不单独占页签 |
+| 热门周期（发现页） | 「热门」页签 = 一面视频列表 + 三档周期 | 三档是**同一面内容的三个 path**（`/today-hot`、`/weekly-hot`、`/monthly-hot`——站点把周期做成 URL 而不是 query 参数，fixture `home-cn.html` 可证），所以换档只换数据源、不换页面结构：上面一排连通 `ToggleButton`（`Role.RadioButton`，与女优排序同一套语言），下面复用列表页的 `VideoListBody`（三态、分页、按 key 去重都只有一份实现）。每档各建一个 `VideoListViewModel`（`key` 带 path），切回已加载过的档位不再转圈。频道组（素人 / 无码 / 亚洲 AV 共 22 个落点）暂时不做——与厂商三列目录功能重叠 |
 | 目录栅格（发现页） | `LazyVerticalGrid` | 女优双列卡片（48dp 圆角头像 + 名字 + 条数 + 出道两行）；类型/厂商三列卡片（`surfaceContainer` 圆角面，名称两行 + 条数压底）。单列时右侧有约 160dp 空白，双/三列后一屏条目数从 9.5 提到 16–24 |
 | 无头像占位 | `MaterialShapes.Cookie9Sided` + 三档容器色 | 站点上刚出道的新人常没有头像图。占位不做「灰圈 + 中性首字」（读起来像加载失败），改成 M3E 多边形 + 首字，颜色按条目 id 哈希在 primary/secondary/tertiary 容器里取一档：同一人每次都一样（不闪），不同条目之间有细微差异。形状固定、只变颜色，避免整列花掉 |
 | 视频卡封面角标 | `VideoGridCard` | 左下变体标签（中文字幕 / 无码影片），右下时长；标签取自卡片 HTML，不新增请求 |
@@ -77,7 +77,7 @@
 | 二级页顶栏 | `TopAppBar` + `PageTopBar` | up 图标 + 标题 + 动作槽；返回图标挂 `PlainTooltip`；容器色取 `background`（默认 surface 在纯黑底上会露灰边）；`onBack` 可空——「我的」这类一级页签只借它放标题，不伪造返回键 |
 | 首页推荐位 | `HorizontalMultiBrowseCarousel` | 只给第一个板块做轮播（大项 + 中项 + 小项随滚动变形吸附，这是 M3E carousel 的核心行为，别关）；其余板块保持网格，全轮播会让首页变横向长龙 |
 | 下拉刷新 | `PullToRefreshBox` | 首页与发现页（发现页只包住有内容的支）；刷新时内容留在原地、只有顶部指示器转；失败保留旧列表 |
-| 排序切换 | `ToggleButton` 连通组 | 女优排序（影片 / 出道）；首尾 `connected*ButtonShapes()` 咬合，语义 `Role.RadioButton`；`SegmentedButton` 已退役 |
+| 排序切换 | `ToggleButton` 连通组 | 女优排序（影片 / 出道 / **本月排行**）；首尾 `connected*ButtonShapes()` 咬合，语义 `Role.RadioButton`；`SegmentedButton` 已退役。第三档不是 `?sort=` 取值——站点把月榜做成独立页面 `/actresses/ranking`（现行标题「女优排行 NOV 2026」），而那一页不吃 height/cup/age/debut，所以选中它时「筛选」与「清空」都藏起来（留着就会得到点完没反应的胶囊） |
 | 详情页动作条 | `FlexibleBottomAppBar` + `SplitButtonLayout` | 左半是主操作「收藏 / 已收藏」，右半「+」打开加入片单面板；动作常驻底部，不再插在正文中间 |
 | 搜索栏 | M3E `SearchBar`（slot + `SearchBarState`），**就地展开** | 首页顶部直接是这条真 `SearchBar`（56dp 胶囊 + 搜索图标），点一下在当前页展开成全屏 `ExpandedFullScreenSearchBar`，提交后同一屏收成带返回箭头的折叠态显示结果——搜索不再是独立路由，没有页面切换、没有键盘重启、输入框不会换样式 |
 | 我的片单操作 | `FloatingActionButtonMenu` | 右下 FAB 展开「新建片单 / 刷新列表」；FAB 与菜单项容器色显式取 `primary`（默认 `primaryContainer` 是紫色，与粉色 accent 不搭）；主操作不再占顶栏动作位 |
