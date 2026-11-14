@@ -404,7 +404,7 @@ private fun MissuApp(
                 // NOTE: 用 loadIfNeeded 而不是 load：切回页签时不要把已有内容打回 Loading。
                 LaunchedEffect(Unit) { viewModel.loadIfNeeded() }
 
-                ProvideHeroVisibility(this) {
+                ProvideHeroVisibility(this, namespace = "home") {
                     SearchHost(
                         state = searchState,
                         recent = recent,
@@ -567,7 +567,7 @@ private fun MissuApp(
                     if (state is VideoListUiState.Loading) viewModel.load()
                 }
 
-                ProvideHeroVisibility(this) {
+                ProvideHeroVisibility(this, namespace = "list") {
                     VideoListScreen(
                         title = title,
                         state = state,
@@ -591,7 +591,7 @@ private fun MissuApp(
                 val entries by viewModel.entries.collectAsState()
                 LaunchedEffect(Unit) { viewModel.load() }
 
-                ProvideHeroVisibility(this) {
+                ProvideHeroVisibility(this, namespace = "history") {
                     HistoryScreen(
                         entries = entries,
                         onOpen = ::openDetail,
@@ -635,7 +635,7 @@ private fun MissuApp(
                 val message by viewModel.message.collectAsState()
                 LaunchedEffect(id) { viewModel.load() }
 
-                ProvideHeroVisibility(this) {
+                ProvideHeroVisibility(this, namespace = "playlist") {
                     PlaylistDetailScreen(
                         fallbackTitle = fallbackTitle,
                         state = state,
@@ -680,7 +680,7 @@ private fun MissuApp(
                 val state by viewModel.state.collectAsState()
                 LaunchedEffect(Unit) { viewModel.load() }
 
-                ProvideHeroVisibility(this) {
+                ProvideHeroVisibility(this, namespace = "saved") {
                     SavedScreen(
                         state = state,
                         onRetry = viewModel::load,
@@ -711,7 +711,16 @@ private fun MissuApp(
                 val playlists by viewModel.playlists.collectAsState()
                 LaunchedEffect(id) { viewModel.load() }
 
-                ProvideHeroVisibility(this) {
+                // NOTE: 共享元素的命名空间取「来源目的地的路由名」——详情页只和真正被点的那张卡片
+                // 配对。首页预览与完整列表里都有同一批影片，不分区的话它们之间也会互相配对，
+                // 转场时只有两边都有的那几张封面在飞、其余跟着页面横滑（实测）。
+                val heroSource = navController.previousBackStackEntry?.destination?.route
+                    ?.substringBefore('?')
+                    ?.substringBefore('/')
+                    ?.ifEmpty { "home" }
+                    ?: "home"
+
+                ProvideHeroVisibility(this, namespace = heroSource) {
                     DetailScreen(
                         state = state,
                         onRetry = viewModel::load,

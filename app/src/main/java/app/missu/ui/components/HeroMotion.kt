@@ -45,6 +45,16 @@ object HeroMotion {
 val LocalSharedTransitionScope = compositionLocalOf<SharedTransitionScope?> { null }
 val LocalNavAnimatedVisibilityScope = compositionLocalOf<AnimatedVisibilityScope?> { null }
 
+/**
+ * 共享元素的**命名空间**：卡片只和「自己这个来源目的地」配对。
+ *
+ * NOTE: 共享元素是按 key 配对的，而首页预览、完整列表、收藏、历史里都有同一批影片卡片。
+ * 不分区的话，**首页 ↔ 完整页**之间也会互相配对——转场时那几张两边都有的封面会自己飞，
+ * 其余卡片跟着页面横滑，出现「只有前 6 个在动」的参差效果（实测）。
+ * 详情页会用「来源目的地的路由名」当命名空间，所以它只和真正被点的那张卡片配对。
+ */
+val LocalHeroNamespace = compositionLocalOf { "app" }
+
 /** 详情页淡入：延迟到旧页淡出之后才开始，避免两层内容叠在一起。 */
 fun heroEnter(): EnterTransition =
     fadeIn(tween(durationMillis = HeroMotion.FADE_IN_MS, delayMillis = HeroMotion.FADE_OUT_MS))
@@ -57,10 +67,19 @@ fun heroExit(): ExitTransition = fadeOut(tween(durationMillis = HeroMotion.FADE_
  *
  * NOTE: `composable("detail/{id}") { }` 的 receiver 本身就是这个作用域，包一层只是为了让
  * 页面内容不必知道转场的存在——卡片和详情页只认「id 相同的那个容器」。
+ * NOTE: [namespace] 用来把配对范围限定在「同一个来源目的地」内（见 [LocalHeroNamespace]）。
  */
 @Composable
-fun ProvideHeroVisibility(scope: AnimatedVisibilityScope, content: @Composable () -> Unit) {
-    CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides scope, content = content)
+fun ProvideHeroVisibility(
+    scope: AnimatedVisibilityScope,
+    namespace: String = "app",
+    content: @Composable () -> Unit,
+) {
+    CompositionLocalProvider(
+        LocalNavAnimatedVisibilityScope provides scope,
+        LocalHeroNamespace provides namespace,
+        content = content,
+    )
 }
 
 /**
@@ -79,10 +98,11 @@ fun ProvideHeroVisibility(scope: AnimatedVisibilityScope, content: @Composable (
 fun Modifier.videoHero(key: String, shape: Shape): Modifier {
     val shared = LocalSharedTransitionScope.current ?: return this
     val visibility = LocalNavAnimatedVisibilityScope.current ?: return this
+    val namespace = LocalHeroNamespace.current
     if (key.isEmpty()) return this
     return with(shared) {
         this@videoHero.sharedBounds(
-            sharedContentState = rememberSharedContentState(key = "hero-video-$key"),
+            sharedContentState = rememberSharedContentState(key = "hero-video-$namespace-$key"),
             animatedVisibilityScope = visibility,
             resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
             boundsTransform = { _, _ -> tween(durationMillis = HeroMotion.TOTAL_MS) },
