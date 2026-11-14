@@ -24,7 +24,7 @@
 - ✅ **女优筛选与排序**：身高 12 档 / 罩杯 A–Q / 年龄 6 档 / 出道年份（N 年以前），排序 `影片 / 出道`（实测 161–165cm 与按出道年排序都生效）
 - ✅ **搜索历史**：成功搜索后记入本地（上限 20，重复置顶），空输入时展示为可点胶囊，可清空
 - ✅ **我的片单**：`/playlists` 列表（名字 · 可见性 · 更新时间）+ 片单详情网格；真实页面 fixture 测试锁住解析规则
-- ✅ **片单内移除影片（批量）**：页头「整理」进入多选 → M3E `HorizontalFloatingToolbar` 里「全选 / 移出 N 部」（动作是连体 `ButtonGroup`，窄屏自动收进溢出菜单）→ 二次确认 → 逐条 `DELETE /api/playlists/{片单id}/{影片id}`；实测 8→7 条且重进仍是 7 条（服务端生效），批量路径弹窗计数正确
+- ✅ **片单内移除影片（批量）**：右下角「整理」`ToggleFloatingActionButton` 进入多选 → M3E `HorizontalFloatingToolbar` 里「全选 / 移出 N 部」（连体 `ButtonGroup`），少见动作「取消选择 / 完成」放进 `AppBarRow` 溢出容器 → 二次确认 → 逐条 `DELETE /api/playlists/{片单id}/{影片id}`；实测 8→7 条且重进仍是 7 条（服务端生效），批量弹窗计数正确
 - ✅ **我的片单操作**：`FloatingActionButtonMenu` 收纳「新建片单 / 刷新列表」，替代原来的顶栏「新建」按钮（M3E 里主操作用 FAB）
 - ✅ **详情页动作条**：底部 `FlexibleBottomAppBar` + `SplitButtonLayout`（左半「收藏/已收藏」、右半「加入片单」），内容区不再被一行按钮打断
 - ✅ **片单整理入口**：右下角 `ToggleFloatingActionButton`（编辑图标 ⇄ ×）；进整理模式后「取消选择 / 完成」走 `AppBarRow` 溢出容器（放不下自动收进菜单）
@@ -111,7 +111,7 @@ cd D:\missu\android-native
 
 ## 构建不依赖 Android Studio
 
-命令行构建只需要三样东西：**JDK 21+**、**Android SDK**（`platform-tools` + `platforms/android-37.0` + `build-tools/37.0.0`）、以及项目自带的 **Gradle wrapper**（首次构建自动下载）。
+命令行构建只需要三样东西：**JDK 21+**、**Android SDK**（`platform-tools` + `platforms/android-37.1` + `build-tools/36.0.0`）、以及项目自带的 **Gradle wrapper**（首次构建自动下载）。
 `Android Studio` 只是 IDE。**本机已卸载 AS**：JDK 用 `D:\Android\jdk-21`，SDK 组件用 `sdkmanager`（`D:\Android\Sdk\cmdline-tools\bin`）装，`licenses` 也是独立目录——卸载后 `assembleDebug` / `installDebug` / `:core:test` 全部实测通过。
 
 ### 从零装环境（无 AS，就是本机现在的样子）
@@ -139,16 +139,19 @@ $sdk = 'D:\Android\Sdk'
 $env:JAVA_HOME = 'D:\Android\jdk-21'          # sdkmanager 也要 JDK
 $sm = "$sdk\cmdline-tools\latest\bin\sdkmanager.bat"
 & $sm --sdk_root=$sdk --licenses                  # 全部 y
-& $sm --sdk_root=$sdk "platform-tools" "platforms;android-37.0" "build-tools;36.0.0"
+& $sm --sdk_root=$sdk "platform-tools" "platforms;android-37.1" "build-tools;36.0.0"
 ```
 
-只要这三个包（本机现在装的**就只有**这三个；注意 **build-tools 是 36.0.0**，不是 37——这是实测结论）：
+只要这三个包（注意 **API 是 37.1**、**build-tools 是 36.0.0**，两者都是实测结论：Compose 1.13-rc 要求 compileSdk ≥ 37.1，而 AGP 9.5.1 默认只用 build-tools 36）：
 
 | 包 | 本机版本 | 用途 |
 |---|---|---|
 | `platform-tools` | 37.0.1 | `adb` |
-| `platforms;android-37.0` | rev 2 | `compileSdk = 37` 的编译目标 |
+| `platforms;android-37.1` | rev 1 | `compileSdk = 37` + `compileSdkMinor = 1` 的编译目标 |
 | `build-tools;36.0.0` | 36.0.0 | aapt2 / d8 / zipalign；**AGP 9.5.1 不写 `buildToolsVersion` 时的默认值** |
+
+> `platforms;android-37.0` 是升到 37.1 之前的旧目标，**现在已不被任何构建引用**，可删
+> （`sdkmanager --uninstall "platforms;android-37.0"`）。删不删都不影响构建。
 
 **不要装**：NDK、CMake、LLDB、emulator、system-image、旧 API（见下方「精简安装」）。
 
@@ -156,7 +159,7 @@ $sm = "$sdk\cmdline-tools\latest\bin\sdkmanager.bat"
 
 | 路径 | 要否 | 谁创建的 | 说明 |
 |---|---|---|---|
-| `platforms\android-37.0` | **必需** | `sdkmanager install "platforms;android-37.0"` | `compileSdk = 37` 的编译目标，AGP 直接读它 |
+| `platforms\android-37.1` | **必需** | `sdkmanager install "platforms;android-37.1"` | `compileSdk = 37` + `compileSdkMinor = 1` 的编译目标，AGP 直接读它 |
 | `build-tools\36.0.0` | **必需** | `sdkmanager install "build-tools;36.0.0"`（或 AGP 构建时自动装） | aapt2 / d8 / zipalign；AGP 9.5.1 默认选 36.0.0（删了它构建时会**自动装回**） |
 | `platform-tools` | **必需** | `sdkmanager install platform-tools` | `adb`（也用于安装/调试） |
 | `licenses` | **必需** | `sdkmanager --licenses`（或 AGP 首次构建时自动接受） | 8 个 42 字节的授权哈希；删了 AGP/sdkmanager 会认为许可未接受 |
@@ -240,7 +243,7 @@ Get-ChildItem <解压目录>\lib -Filter 'sdklib*.jar'
 
 1. **Open** → 选 `D:\missu\android-native`（不要选父目录 `D:\missu`，那是 Expo 工程）。
 2. Settings → Languages & Frameworks → **Android SDK** → Android SDK Location = `D:\Android\Sdk`
-   - 只应有：Android API 37.0、Build-Tools 37、Platform-Tools
+   - 只应有：Android API 37.1（37.0 可删）、Build-Tools 36、Platform-Tools
    - 不要装 NDK、CMake、system-image、Emulator、旧 API（本工程无原生代码，只跑真机）
 3. **Gradle JDK**：仍用 **Embedded JDK**（AS 自带的）即可——它与 `build.ps1` 用的不是同一个 JDK，不影响命令行构建；也可以指到 `D:\Android\jdk-21` 保持一致。
 4. 缓存走标准位置 `%USERPROFILE%\.gradle`，不要自定义 Gradle 主目录。
@@ -362,7 +365,7 @@ fixture 都是**真机抓的真实页面**（`home-cn.html` / `detail.html` / `s
 - **`AccessDeniedException: %TEMP%\global_synthetics_*`** → `TMP`/`TEMP` 指到 `.tmp-gradle`。
 - **`FAIL_ON_PROJECT_REPOS` 冲突** → 本机 `GRADLE_USER_HOME/init.d/mirrors.gradle` 会注入阿里云镜像，`settings.gradle.kts` 不能设那个模式（镜像已同时写进工程，换机器也能用）。
 - **AGP 9 内置 Kotlin** → 再加 `org.jetbrains.kotlin.android` 会直接报错。
-- **compileSdk 必须 37** → Compose BOM 2026.09 的 AndroidX 组件要求 ≥ 37。
+- **compileSdk 必须是 37 + `compileSdkMinor = 1`** → `compose-bom-alpha:2026.11.00`（Compose 1.13-rc）要求 ≥ 37.1；只装 37.0 会解析失败。
 - **`build.ps1` 必须是 UTF-8 带 BOM** → Windows PowerShell 5.1 对无 BOM 的 UTF-8 按 ANSI 解码，中文全角字符会吞掉行尾换行，把下一行代码并进注释（曾导致 `JAVA_HOME` 从未生效）。**用工具/AI 改这个文件后一定要重新写回 BOM**（`[System.Text.UTF8Encoding]::new($true)`），否则一改就坏。
 - **Gradle daemon 占住 stdout** → 自动化采集输出时加 `MISSU_NO_DAEMON=1`，否则管道永远等不到 EOF。
 - **Windows 11 Smart App Control 会拦新 exe，且报错像是杀毒软件**：`VerifiedAndReputablePolicyState = 1` 时，没有 Microsoft 信誉背书的新二进制一律被拦，
@@ -395,7 +398,7 @@ fixture 都是**真机抓的真实页面**（`home-cn.html` / `detail.html` / `s
 
 **UI 与交互**
 
-- **底部栏高度**：M3 `NavigationBar` 自己处理窗口 inset，外面不要再加一次 `insets.bottom`，否则底栏高度翻倍（Expo 版踩过）。
+- **底部栏高度**：`ShortNavigationBar` 自己处理窗口 inset，外面不要再加一次 `insets.bottom`，否则底栏高度翻倍（Expo 版踩过）。
 - **系统栏内边距只在壳层处理一次**（`Scaffold` + `WindowInsets.safeDrawing`）；页面里各自加 `statusBarsPadding`
   会变成"每加一个页面都要记得加"，而且极易漏。需要贴边的页面单独 opt-out。
 - **列表页的空/错状态要区分**：网络上失败不能显示成"内容为空"，否则用户以为数据丢了。

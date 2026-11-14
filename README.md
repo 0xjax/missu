@@ -31,7 +31,7 @@ docs/android-debugging.md   真机调试：无线 ADB、截图、日志、卡巴
 
 | 件 | 位置 |
 |---|---|
-| Android SDK | `D:\Android\Sdk`（API 37.0 + Build-Tools 37 + Platform-Tools） |
+| Android SDK | `D:\Android\Sdk`（API 37.1 + Build-Tools 36 + Platform-Tools） |
 | JDK | `D:\Android\jdk-21`（Temurin 21，免安装；AS 已卸载） |
 | Gradle | wrapper 9.6.0（发行包走腾讯镜像），缓存 `%USERPROFILE%\.gradle` |
 | adb | `D:\Android\Sdk\platform-tools\adb.exe`（在 SDK 里，只有一份；用户级 PATH 已包含该目录） |

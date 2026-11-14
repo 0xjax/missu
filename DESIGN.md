@@ -140,7 +140,7 @@
 
 **现役（Kotlin 原生，`android-native/`）**
 
-- Kotlin 2.4.21 + Jetpack Compose（BOM 2026.09.00）+ Material 3；AGP 9.5.1 / Gradle 9.6.0
+- Kotlin 2.4.21 + Jetpack Compose（BOM **alpha 2026.11.00** → material3 1.5.0-rc01）+ Material 3 **Expressive**；AGP 9.5.1 / Gradle 9.6.0
 - 单 Activity + Navigation Compose；界面一律自己写 Compose，不引第三方 UI 组件库
 - 数据层：OkHttp + Jsoup（对应 legacy 的 `fetch` + `node-html-parser`）
 - 存储：DataStore（对应 legacy 的 `expo-sqlite/kv-store`）
