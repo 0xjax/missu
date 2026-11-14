@@ -73,7 +73,9 @@ import app.missu.ui.playlists.PlaylistsScreen
 import app.missu.ui.playlists.PlaylistsViewModel
 import app.missu.ui.saved.SavedScreen
 import app.missu.ui.saved.SavedViewModel
-import app.missu.ui.search.SearchScreen
+import app.missu.ui.search.SearchBody
+import app.missu.ui.search.SearchHost
+import app.missu.ui.search.SearchUiState
 import app.missu.ui.search.SearchViewModel
 import app.missu.ui.theme.MissuTheme
 
@@ -203,19 +205,45 @@ private fun MissuApp(
                 val viewModel: HomeViewModel = viewModel(factory = factory { HomeViewModel(api) })
                 val state by viewModel.state.collectAsState()
                 val refreshing by viewModel.refreshing.collectAsState()
+                // NOTE: 搜索不再是独立页面——它和首页同属一个目的地，栏在顶部就地展开。
+                // 页面切换会让输入框换一份样式、键盘重启一次，那是"割裂感"的来源。
+                val searchViewModel: SearchViewModel = viewModel(
+                    factory = factory { SearchViewModel(api, searchHistory) },
+                )
+                val searchState by searchViewModel.state.collectAsState()
+                val recent by searchViewModel.recent.collectAsState()
                 LaunchedEffect(Unit) { viewModel.load() }
 
                 // 语言变了就重新拉首页（请求 URL 跟着语言变），其余页面下次进入时自然用新语言。
                 LaunchedEffect(language) { viewModel.load() }
 
-                HomeScreen(
-                    state = state,
-                    refreshing = refreshing,
-                    onRefresh = viewModel::refresh,
-                    onRetry = viewModel::load,
+                SearchHost(
+                    state = searchState,
+                    recent = recent,
+                    onSearch = searchViewModel::search,
+                    onLoadMore = searchViewModel::loadMore,
                     onOpen = { id -> navController.navigate("detail/$id") },
-                    onSearch = { navController.navigate("search") },
-                )
+                    onClearHistory = searchViewModel::clearHistory,
+                    onClear = searchViewModel::clear,
+                ) {
+                    if (searchState is SearchUiState.Idle) {
+                        HomeScreen(
+                            state = state,
+                            refreshing = refreshing,
+                            onRefresh = viewModel::refresh,
+                            onRetry = viewModel::load,
+                            onOpen = { id -> navController.navigate("detail/$id") },
+                        )
+                    } else {
+                        SearchBody(
+                            state = searchState,
+                            keyword = (searchState as? SearchUiState.Content)?.keyword.orEmpty(),
+                            onRetry = searchViewModel::search,
+                            onLoadMore = searchViewModel::loadMore,
+                            onOpen = { id -> navController.navigate("detail/$id") },
+                        )
+                    }
+                }
             }
 
             composable("discover") {
@@ -241,27 +269,6 @@ private fun MissuApp(
                     onResetFilters = viewModel::resetFilters,
                 )
             }
-            composable(
-                route = "search?q={q}",
-                arguments = listOf(navArgument("q") { defaultValue = "" }),
-            ) { entry ->
-                val initialKeyword = Uri.decode(entry.arguments?.getString("q").orEmpty())
-                val viewModel: SearchViewModel = viewModel(factory = factory { SearchViewModel(api, searchHistory) })
-                val state by viewModel.state.collectAsState()
-                val recent by viewModel.recent.collectAsState()
-
-                SearchScreen(
-                    state = state,
-                    onSearch = viewModel::search,
-                    onLoadMore = viewModel::loadMore,
-                    onOpen = { id -> navController.navigate("detail/$id") },
-                    onBack = { navController.popBackStack() },
-                    recent = recent,
-                    onClearHistory = viewModel::clearHistory,
-                    initialKeyword = initialKeyword,
-                )
-            }
-
             composable("account") {
                 AccountScreen(
                     state = authState,

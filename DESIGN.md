@@ -82,7 +82,7 @@
 | 下拉刷新 | `PullToRefreshBox` | 首页与发现页（发现页只包住有内容的支）；刷新时内容留在原地、只有顶部指示器转；失败保留旧列表 |
 | 排序切换 | `ToggleButton` 连通组 | 女优排序（影片 / 出道）；首尾 `connected*ButtonShapes()` 咬合，语义 `Role.RadioButton`；`SegmentedButton` 已退役 |
 | 详情页动作条 | `FlexibleBottomAppBar` + `SplitButtonLayout` | 左半是主操作「收藏 / 已收藏」，右半「+」打开加入片单面板；动作常驻底部，不再插在正文中间 |
-| 搜索栏 | M3E `SearchBar`（slot + `SearchBarState`） | 折叠态在页面顶部，点输入框自动展开成全屏 `ExpandedFullScreenSearchBar`；展开态里是最近搜索胶囊；提交后自动收起到结果列表 |
+| 搜索栏 | M3E `SearchBar`（slot + `SearchBarState`），**就地展开** | 首页顶部直接是这条真 `SearchBar`（56dp 胶囊 + 搜索图标），点一下在当前页展开成全屏 `ExpandedFullScreenSearchBar`，提交后同一屏收成带返回箭头的折叠态显示结果——搜索不再是独立路由，没有页面切换、没有键盘重启、输入框不会换样式 |
 | 我的片单操作 | `FloatingActionButtonMenu` | 右下 FAB 展开「新建片单 / 刷新列表」；FAB 与菜单项容器色显式取 `primary`（默认 `primaryContainer` 是紫色，与粉色 accent 不搭）；主操作不再占顶栏动作位 |
 | 片单内移除影片 | 右下 `ToggleFloatingActionButton` + `HorizontalFloatingToolbar` | 未整理时只有一个「整理」FAB（编辑图标，点开 morph）；整理模式里点卡片是选中/取消（不进详情），浮条里是连体 `ButtonGroup`「全选 / 移出 N 部」，少见动作「取消选择 / 完成」放进 `AppBarRow` 溢出容器；二次确认后逐条 `DELETE /api/playlists/{片单id}/{影片id}`，成功只删本地这几条（删空转空态） |
 | 页面三态 | `LoadingIndicator` / `EmptyHint` / `ErrorHint` | 统一在 `ui/components/PageStates.kt`：空态 = 降对比度图标 + 标题 + 说明 + 可选 `FilledTonalButton`；错误态必须可重试（M3E 要求），不做「错误但没有出路」的页面 |

@@ -5,6 +5,7 @@ package app.missu.ui.search
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -33,7 +34,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberSearchBarState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,35 +46,33 @@ import app.missu.ui.components.VideoGridCard
 import kotlinx.coroutines.launch
 
 /**
- * 搜索页：M3E 的 slot + `SearchBarState` 搜索栏。
+ * 搜索宿主：**一个** `SearchBar` 就地展开，而不是「首页假框 → 跳搜索页」。
  *
- * NOTE: 折叠态是页面顶部的一条 `SearchBar`，展开态是独立的 `ExpandedFullScreenSearchBar` 浮层；
- * 输入框获得焦点会自动展开，所以不需要手动调 `animateToExpanded()`。
- * NOTE: `SearchBarState` 的 `animateToExpanded/Collapsed` 都是 suspend，只能放进 `scope.launch`。
+ * NOTE: M3 的搜索模式是同一个栏展开成全屏搜索视图。之前首页那只"输入框"其实是个 `Box`（44dp / 10dp 圆角 /
+ * 无图标），搜索页才是真 `SearchBar`（56dp / 胶囊 / 带搜索图标），四项几何全不一样，切换时必然割裂。
+ * 现在首页直接把这里吐出的折叠态当入口：点一下就在当前页展开，提交后结果出现在同一屏，
+ * 栏收回去、不再有页面切换，键盘也不会重启。
+ * NOTE: 展开/收起都是 suspend（`SearchBarState.animateToExpanded/Collapsed`），只能放进 `scope.launch`。
+ * NOTE: 触摸模式下输入框获得焦点会自动展开，不需要手动调 `animateToExpanded()`。
+ *
+ * @param content 栏下面的内容：搜索态为 Idle 时由调用方放首页内容，否则放 [SearchBody]。
  */
 @Composable
-fun SearchScreen(
+fun SearchHost(
     state: SearchUiState,
     onSearch: (String) -> Unit,
     onLoadMore: () -> Unit,
     onOpen: (String) -> Unit,
-    onBack: () -> Unit,
+    onClear: () -> Unit,
     recent: List<String> = emptyList(),
     onClearHistory: () -> Unit = {},
-    initialKeyword: String = "",
     modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     val searchBarState = rememberSearchBarState()
     val textFieldState = rememberTextFieldState()
     val scope = rememberCoroutineScope()
-
-    // 从发现页/历史胶囊带关键词进来时直接搜（只跑一次）。
-    LaunchedEffect(initialKeyword) {
-        if (initialKeyword.isNotBlank()) {
-            textFieldState.edit { replace(0, length, initialKeyword) }
-            onSearch(initialKeyword)
-        }
-    }
+    val searching = state !is SearchUiState.Idle
 
     // NOTE: foundation 1.13 的 TextFieldState 只有 edit { }（没有 setTextAndPlaceCursorAtEnd/clearText）。
     fun submit(keyword: String) {
@@ -88,6 +86,12 @@ fun SearchScreen(
         submit(keyword)
     }
 
+    fun exit() {
+        textFieldState.edit { replace(0, length, "") }
+        scope.launch { searchBarState.animateToCollapsed() }
+        onClear()
+    }
+
     val inputField = @Composable {
         SearchBarDefaults.InputField(
             textFieldState = textFieldState,
@@ -95,8 +99,14 @@ fun SearchScreen(
             onSearch = { submit(textFieldState.text.toString().trim()) },
             placeholder = { Text("搜索番号、女优、关键词") },
             leadingIcon = {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                // NOTE: 只有出结果之后才给「返回首页内容」的出口；Idle 时左侧就是一个纯搜索图标，
+                // 别做成按钮——否则它会把「点一下就展开」的整块命中区截走一块。
+                if (searching) {
+                    IconButton(onClick = { exit() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "退出搜索")
+                    }
+                } else {
+                    Icon(Icons.Filled.Search, contentDescription = null)
                 }
             },
             trailingIcon = {
@@ -111,13 +121,32 @@ fun SearchScreen(
 
     Column(modifier.fillMaxSize()) {
         SearchBar(state = searchBarState, inputField = inputField)
+        content()
+    }
 
-        when (val current = state) {
-            SearchUiState.Idle -> RecentSearches(
-                keywords = recent,
-                onPick = { pick(it) },
-                onClear = onClearHistory,
-            )
+    // 展开态：全屏浮层里放最近搜索。
+    ExpandedFullScreenSearchBar(state = searchBarState, inputField = inputField) {
+        RecentSearches(
+            keywords = recent,
+            onPick = { pick(it) },
+            onClear = onClearHistory,
+        )
+    }
+}
+
+/** 搜索结果区（Idle 不在这里渲染——那是首页内容的地盘）。 */
+@Composable
+fun SearchBody(
+    state: SearchUiState,
+    keyword: String,
+    onRetry: (String) -> Unit,
+    onLoadMore: () -> Unit,
+    onOpen: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier.fillMaxSize()) {
+        when (state) {
+            SearchUiState.Idle -> Unit
 
             SearchUiState.Loading -> LoadingHint()
 
@@ -128,25 +157,16 @@ fun SearchScreen(
             )
 
             is SearchUiState.Error -> ErrorHint(
-                message = current.message,
-                onRetry = { submit(textFieldState.text.toString().trim()) },
+                message = state.message,
+                onRetry = { onRetry(keyword) },
             )
 
             is SearchUiState.Content -> Results(
-                state = current,
+                state = state,
                 onLoadMore = onLoadMore,
                 onOpen = onOpen,
             )
         }
-    }
-
-    // 展开态：全屏浮层里放最近搜索。
-    ExpandedFullScreenSearchBar(state = searchBarState, inputField = inputField) {
-        RecentSearches(
-            keywords = recent,
-            onPick = { pick(it) },
-            onClear = onClearHistory,
-        )
     }
 }
 

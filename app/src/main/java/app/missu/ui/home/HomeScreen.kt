@@ -17,7 +17,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.MaterialTheme
@@ -50,7 +49,6 @@ fun HomeScreen(
     onRefresh: () -> Unit,
     onRetry: () -> Unit,
     onOpen: (String) -> Unit,
-    onSearch: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when (state) {
@@ -70,7 +68,6 @@ fun HomeScreen(
             refreshing = refreshing,
             onRefresh = onRefresh,
             onOpen = onOpen,
-            onSearch = onSearch,
             modifier = modifier,
         )
     }
@@ -82,7 +79,6 @@ private fun HomeContent(
     refreshing: Boolean,
     onRefresh: () -> Unit,
     onOpen: (String) -> Unit,
-    onSearch: () -> Unit,
     modifier: Modifier,
 ) {
     PullToRefreshBox(
@@ -97,29 +93,8 @@ private fun HomeContent(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            item(key = "search-entry", span = { GridItemSpan(maxLineSpan) }) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    // NOTE: 搜索入口先做成一个只读的"输入框"，点开进独立搜索页；真正输入在那边。
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(10.dp))
-                            .clickable(onClick = onSearch)
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
-                    ) {
-                        Text(
-                            text = "搜索番号、女优、关键词",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
-
+            // NOTE: 搜索入口不在这里——它由 SearchHost 在页面顶部渲染成真正的 `SearchBar`，
+            // 点一下就地展开。之前这里是个 44dp / 10dp 圆角的假框，跟搜索页的 56dp 胶囊对不上。
             sections.forEachIndexed { index, section ->
                 item(key = "header-${section.id}", span = { GridItemSpan(maxLineSpan) }) {
                     Text(
