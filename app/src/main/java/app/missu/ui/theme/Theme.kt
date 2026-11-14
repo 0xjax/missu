@@ -51,9 +51,12 @@ private val MissuDarkColors = darkColorScheme(
     onError = Color(0xFF680113),
     errorContainer = Color(0xFF92031E),
     onErrorContainer = Color(0xFFFEDAD7),
-    background = Color(0xFF000000),
+    background = Color(0xFF191112),
     onBackground = Color(0xFFEBE0E1),
-    surface = Color(0xFF000000),
+    // NOTE: 深色底色取 M3 的 neutral tone 6，不是纯黑。纯黑是 MD2 之前就明确不建议的：
+    // OLED 上黑底与亮像素相邻会有拖影，纯黑底也留不出「更亮的容器」这一档层级。
+    // 想省电的人可以在设置里切「纯黑背景」，见 [MissuDarkColorsPureBlack]。
+    surface = Color(0xFF191112),
     onSurface = Color(0xFFEBE0E1),
     surfaceVariant = Color(0xFF544245),
     onSurfaceVariant = Color(0xFFD7C1C4),
@@ -65,13 +68,30 @@ private val MissuDarkColors = darkColorScheme(
     scrim = Color(0xFF000000),
     surfaceBright = Color(0xFF403738),
     surfaceDim = Color(0xFF191112),
-    // NOTE: 五档容器色必须显式给。把 surface 设成纯黑后，官方从 surface 推导的容器色会塌到黑色，
-    // 「分组容器 / 卡片」这类 M3E 布局会整个消失（只剩分隔线）。这里按 M3 的 N 系列音调给出梯度。
+    // NOTE: 五档容器色必须显式给。只给 surface 时官方从它推导的容器色会和底色几乎重合，
+    // 「分组容器 / 卡片」这类 M3E 布局会把层级丢掉。这里按 M3 的 N 系列音调给出梯度。
     surfaceContainerLowest = Color(0xFF160B0D),
-    surfaceContainerLow = Color(0xFF1D1617),
+    surfaceContainerLow = Color(0xFF211A1B),
     surfaceContainer = Color(0xFF251E1F),
     surfaceContainerHigh = Color(0xFF302829),
     surfaceContainerHighest = Color(0xFF3B3334),
+)
+
+/**
+ * 深色 +「纯黑背景」。
+ *
+ * NOTE: 只换表面那几档，强调色不动。纯黑会把容器梯度整体压暗两档，否则容器和底色差太小。
+ * 这是设置里的显式选择；默认走 [MissuDarkColors]（tone 6 底），符合 M3 的深色规范。
+ */
+private val MissuDarkColorsPureBlack = MissuDarkColors.copy(
+    background = Color(0xFF000000),
+    surface = Color(0xFF000000),
+    surfaceDim = Color(0xFF0E0E10),
+    surfaceContainerLowest = Color(0xFF0A0A0C),
+    surfaceContainerLow = Color(0xFF17171A),
+    surfaceContainer = Color(0xFF1D1D21),
+    surfaceContainerHigh = Color(0xFF242428),
+    surfaceContainerHighest = Color(0xFF2C2C31),
 )
 
 /** 浅色色板：同一色相、按 M3 的 tone 40/90 取，白字压在 primary 上 6.5:1。 */
@@ -127,12 +147,14 @@ private val MissuLightColors = lightColorScheme(
 fun MissuTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,
+    pureBlack: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val context = LocalContext.current
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        darkTheme && pureBlack -> MissuDarkColorsPureBlack
         darkTheme -> MissuDarkColors
         else -> MissuLightColors
     }

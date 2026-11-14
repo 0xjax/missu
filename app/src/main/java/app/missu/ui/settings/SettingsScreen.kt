@@ -41,9 +41,11 @@ fun SettingsScreen(
     language: String,
     themeMode: ThemeMode,
     dynamicColor: Boolean,
+    pureBlack: Boolean,
     onLanguageChange: (String) -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
+    onPureBlackChange: (Boolean) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -113,6 +115,28 @@ fun SettingsScreen(
                     },
                 ) {
                     Text(text = "动态取色", style = MaterialTheme.typography.bodyLarge)
+                }
+                RowDivider()
+                // NOTE: 纯黑是省电偏好，不是默认值——M3 深色规范用 tone 6 的近黑底，容器才有台阶可踩。
+                ListItem(
+                    modifier = Modifier.selectable(
+                        selected = pureBlack,
+                        role = Role.Switch,
+                        onClick = { onPureBlackChange(!pureBlack) },
+                    ),
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    supportingContent = {
+                        Text(
+                            text = "仅深色模式生效。纯黑更省电，但分组容器的层级会被压平",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    trailingContent = {
+                        Switch(checked = pureBlack, onCheckedChange = onPureBlackChange)
+                    },
+                ) {
+                    Text(text = "纯黑背景", style = MaterialTheme.typography.bodyLarge)
                 }
             }
 

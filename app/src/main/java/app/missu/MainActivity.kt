@@ -97,18 +97,20 @@ private fun MissuRoot() {
     val settings = remember { SettingsStore(context.applicationContext).also { it.applyStoredLanguage() } }
     var themeMode by remember { mutableStateOf(settings.themeMode()) }
     var dynamicColor by remember { mutableStateOf(settings.dynamicColor()) }
+    var pureBlack by remember { mutableStateOf(settings.pureBlack()) }
     val darkTheme = when (themeMode) {
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
     }
 
-    MissuTheme(darkTheme = darkTheme, dynamicColor = dynamicColor) {
+    MissuTheme(darkTheme = darkTheme, dynamicColor = dynamicColor, pureBlack = pureBlack) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             MissuApp(
                 settings = settings,
                 themeMode = themeMode,
                 dynamicColor = dynamicColor,
+                pureBlack = pureBlack,
                 onThemeModeChange = { mode ->
                     settings.setThemeMode(mode)
                     themeMode = mode
@@ -116,6 +118,10 @@ private fun MissuRoot() {
                 onDynamicColorChange = { enabled ->
                     settings.setDynamicColor(enabled)
                     dynamicColor = enabled
+                },
+                onPureBlackChange = { enabled ->
+                    settings.setPureBlack(enabled)
+                    pureBlack = enabled
                 },
             )
         }
@@ -134,8 +140,10 @@ private fun MissuApp(
     settings: SettingsStore,
     themeMode: ThemeMode,
     dynamicColor: Boolean,
+    pureBlack: Boolean,
     onThemeModeChange: (ThemeMode) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
+    onPureBlackChange: (Boolean) -> Unit,
 ) {
     val navController = rememberNavController()
     val api = rememberApi()
@@ -284,12 +292,14 @@ private fun MissuApp(
                     language = language,
                     themeMode = themeMode,
                     dynamicColor = dynamicColor,
+                    pureBlack = pureBlack,
                     onLanguageChange = { value ->
                         settings.setLanguage(value)
                         language = value
                     },
                     onThemeModeChange = onThemeModeChange,
                     onDynamicColorChange = onDynamicColorChange,
+                    onPureBlackChange = onPureBlackChange,
                     onBack = { navController.popBackStack() },
                 )
             }

@@ -56,10 +56,23 @@ class SettingsStore(context: Context) {
         prefs.edit().putBoolean(KEY_DYNAMIC_COLOR, enabled).apply()
     }
 
+    /**
+     * 深色模式下是否用纯黑背景。
+     *
+     * NOTE: 默认关。M3 的深色规范底色是 tone 6（接近深灰）而不是纯黑：OLED 上黑底与亮像素相邻会拖影，
+     * 纯黑也留不出「更亮的容器」这一档层级。纯黑只作为省电偏好保留。
+     */
+    fun pureBlack(): Boolean = prefs.getBoolean(KEY_PURE_BLACK, false)
+
+    fun setPureBlack(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_PURE_BLACK, enabled).apply()
+    }
+
     private companion object {
         const val KEY_LANGUAGE = "language"
         const val KEY_THEME_MODE = "themeMode"
         const val KEY_DYNAMIC_COLOR = "dynamicColor"
+        const val KEY_PURE_BLACK = "pureBlack"
         const val DEFAULT_LANGUAGE = "cn"
     }
 }
