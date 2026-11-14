@@ -6,6 +6,13 @@ data class VideoSummary(
     val title: String,
     val pageUrl: String,
     val thumbnailUrl: String? = null,
+    /**
+     * 卡片自带的静音预览片（mp4）。
+     *
+     * NOTE: 站点在桌面端把鼠标移入卡片时就是拿它换掉封面的，HTML 里直出 `data-src`；我们没有
+     * 拼 URL 也没有额外请求。列表页模板渲染出来的卡片没有这个属性，所以允许为空。
+     */
+    val previewUrl: String? = null,
     val duration: String? = null,
     val badges: List<String> = emptyList(),
 )

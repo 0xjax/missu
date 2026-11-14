@@ -92,6 +92,17 @@ object HomeParser {
             val rawImage = image.attr("data-src").takeIf { it.isNotEmpty() } ?: image.attr("src")
             val thumbnailUrl = rawImage?.takeIf { it.isNotEmpty() && !it.startsWith("data:") }?.let { absolute(it) }
 
+            // NOTE: 卡片同时直出一段静音预览片（`<video class="preview" data-src="…/preview.mp4">`），
+            // 站点在桌面端移入鼠标时就是拿它换掉封面。我们原样取这个值，不按番号拼 URL——
+            // 变体（中文字幕 / 无码流出）各有自己的预览轨。
+            // WARNING: Vue 模板里是 `:data-src` 绑定属性（详情页、首页头图），取不到值；`javascript:;`
+            // 这类占位也在这里滤掉，宁可没有预览，也不要让播放器去加载一个假地址。
+            val rawPreview = thumbnail.selectFirst("video.preview")?.attr("data-src").orEmpty()
+            val previewUrl = rawPreview
+                .takeIf { it.isNotEmpty() }
+                ?.let { absolute(it) }
+                ?.takeIf { it.startsWith("https://") || it.startsWith("http://") }
+
             val spans = thumbnail.select("span").map { span ->
                 Triple(span.className(), span.text().trim(), span)
             }
@@ -110,6 +121,7 @@ object HomeParser {
                 title = title,
                 pageUrl = absolute(pageUrl),
                 thumbnailUrl = thumbnailUrl,
+                previewUrl = previewUrl,
                 duration = duration,
                 badges = badges,
             )
