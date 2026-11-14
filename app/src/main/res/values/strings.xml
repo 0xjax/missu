@@ -209,5 +209,5 @@
     <string name="challenge_opening">Opening the site…</string>
     <string name="challenge_passed">Verified, reading the page…</string>
     <string name="challenge_waiting">Waiting for the site…</string>
-    <string name="challenge_blocked">Still blocked (checked %1$d times). Tap Cancel and try again.</string>
+    <string name="challenge_blocked">The site is still checking. Tap Cancel and try again, or switch network.</string>
 </resources>
