@@ -33,10 +33,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.missu.data.model.HomeSection
 import app.missu.data.model.VideoSummary
+import app.missu.R
+import app.missu.ui.common.text
 import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadingHint
@@ -70,11 +73,11 @@ fun HomeScreen(
 
             HomeUiState.Empty -> EmptyHint(
                 icon = Icons.Filled.Home,
-                title = "首页没有内容",
-                subtitle = "站点这次没有返回任何板块，下拉或稍后重试",
+                title = stringResource(R.string.home_empty_title),
+                subtitle = stringResource(R.string.home_empty_subtitle),
             )
 
-            is HomeUiState.Error -> ErrorHint(current.message, onRetry)
+            is HomeUiState.Error -> ErrorHint(current.message.text(), onRetry)
 
             is HomeUiState.Content -> HomeContent(
                 sections = current.sections,
@@ -127,7 +130,7 @@ private fun HomeContent(
                         // 不这么做的话：首页实测 64 张卡片 = 32 行，要翻约 6000dp 才看得到最后一个板块。
                         section.morePath?.let { path ->
                             TextButton(onClick = { onOpenList(path, section.title) }) {
-                                Text("更多")
+                                Text(stringResource(R.string.home_more))
                             }
                         }
                     }

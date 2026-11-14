@@ -1,4 +1,4 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+﻿@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
 
 package app.missu.ui.account
 
@@ -28,10 +28,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import app.missu.R
+import app.missu.ui.common.text
 import app.missu.ui.components.PageTopBar
 
 /**
@@ -59,7 +62,7 @@ fun LoginScreen(
     }
 
     Column(modifier.fillMaxSize()) {
-        PageTopBar(title = "登录 Missu", onBack = onBack)
+        PageTopBar(title = stringResource(R.string.login_title), onBack = onBack)
 
         Column(
             modifier = Modifier
@@ -69,7 +72,7 @@ fun LoginScreen(
         ) {
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "使用站点账号登录，收藏与片单会在网页端与 App 之间保持同步。",
+                text = stringResource(R.string.login_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -79,7 +82,7 @@ fun LoginScreen(
                 value = email,
                 onValueChange = { email = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("邮箱") },
+                label = { Text(stringResource(R.string.login_email)) },
                 singleLine = true,
                 enabled = !loading,
                 keyboardOptions = KeyboardOptions(
@@ -93,7 +96,7 @@ fun LoginScreen(
                 value = password,
                 onValueChange = { password = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("密码") },
+                label = { Text(stringResource(R.string.login_password)) },
                 singleLine = true,
                 enabled = !loading,
                 visualTransformation = PasswordVisualTransformation(),
@@ -108,7 +111,7 @@ fun LoginScreen(
             (state as? LoginUiState.Error)?.let { error ->
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    text = error.message,
+                    text = error.message.text(),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -128,13 +131,13 @@ fun LoginScreen(
                         )
                         Spacer(Modifier.width(10.dp))
                     }
-                    Text(if (loading) "登录中…" else "登录")
+                    Text(if (loading) stringResource(R.string.login_submitting) else stringResource(R.string.login_submit))
                 }
             }
 
             Spacer(Modifier.height(16.dp))
             Text(
-                text = "登录前会先清空 Cookie 罐——站点拒绝带旧会话的登录请求。",
+                text = stringResource(R.string.login_cookie_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

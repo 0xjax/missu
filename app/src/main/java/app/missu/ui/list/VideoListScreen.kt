@@ -15,7 +15,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import app.missu.R
+import app.missu.ui.common.text
 import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadMoreFooter
@@ -43,10 +46,10 @@ fun VideoListScreen(
 
                 VideoListUiState.Empty -> EmptyHint(
                     icon = Icons.AutoMirrored.Filled.List,
-                    title = "这里还没有内容",
+                    title = stringResource(R.string.list_empty_title),
                 )
 
-                is VideoListUiState.Error -> ErrorHint(current.message, onRetry)
+                is VideoListUiState.Error -> ErrorHint(current.message.text(), onRetry)
 
                 is VideoListUiState.Content -> LazyVerticalGrid(
                     modifier = Modifier.fillMaxSize(),

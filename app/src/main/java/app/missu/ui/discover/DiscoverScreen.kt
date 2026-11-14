@@ -51,17 +51,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.missu.R
 import app.missu.data.api.ActressFilterOptions
 import app.missu.data.model.DirectoryItem
 import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadMoreFooter
 import app.missu.ui.components.LoadingHint
+import app.missu.ui.common.text
 import coil3.compose.AsyncImage
 
 /**
@@ -99,7 +102,7 @@ fun DiscoverScreen(
                 Tab(
                     selected = index == tabIndex,
                     onClick = { tabIndex = index },
-                    text = { Text(item.label) },
+                    text = { Text(stringResource(item.labelRes)) },
                 )
             }
         }
@@ -134,18 +137,18 @@ fun DiscoverScreen(
                             },
                             modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
                         ) {
-                            Text(option.label, maxLines = 1, softWrap = false)
+                            Text(sortLabel(option.value), maxLines = 1, softWrap = false)
                         }
                     }
                 }
 
                 if (filters.isNotEmpty()) {
-                    TextButton(onClick = onResetFilters) { Text("清除") }
+                    TextButton(onClick = onResetFilters) { Text(stringResource(R.string.discover_clear)) }
                 }
                 FilterChip(
                     selected = filters.isNotEmpty(),
                     onClick = { filterSheetOpen = true },
-                    label = { Text(if (filters.isEmpty()) "筛选" else "筛选 (${filters.size})") },
+                    label = { Text(if (filters.isEmpty()) stringResource(R.string.discover_filter) else stringResource(R.string.discover_filter_count, filters.size)) },
                 )
             }
         }
@@ -155,10 +158,10 @@ fun DiscoverScreen(
 
             DirectoryUiState.Empty -> EmptyHint(
                 icon = Icons.AutoMirrored.Filled.List,
-                title = "这里还没有内容",
+                title = stringResource(R.string.list_empty_title),
             )
 
-            is DirectoryUiState.Error -> ErrorHint(state.message, onRetry = { onLoad(tab.kind) })
+            is DirectoryUiState.Error -> ErrorHint(state.message.text(), onRetry = { onLoad(tab.kind) })
 
             // NOTE: 下拉刷新只包住有内容的这一支：Loading / Empty / Error 三支本来就有自己的重试入口，
             // 给不可滚动的空态套下手势没有意义。
@@ -221,16 +224,16 @@ private fun FilterSheet(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("筛选女优", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.discover_filter_title), style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.weight(1f))
-            TextButton(onClick = onDismiss) { Text("完成") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_done)) }
         }
 
         LazyColumn(modifier = Modifier.fillMaxWidth().height(520.dp)) {
             ActressFilterOptions.sections.forEach { section ->
                 item(key = "title-${section.key}") {
                     Text(
-                        text = section.title,
+                        text = sectionTitle(section.key),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(start = 24.dp, top = 16.dp, bottom = 8.dp),
@@ -249,7 +252,7 @@ private fun FilterSheet(
                                     val next = if (filters[section.key] == option.value) null else option.value
                                     onFilterChange(section.key, next)
                                 },
-                                label = { Text(option.label) },
+                                label = { Text(optionLabel(section.key, option.value)) },
                             )
                         }
                     }
@@ -378,5 +381,34 @@ private fun DirectoryTextCell(item: DirectoryItem, onClick: () -> Unit) {
                 )
             }
         }
+    }
+}
+
+// NOTE: 筛选选项的**值**在 `:core`（纯 JVM 没有资源系统），文案在这里拼：
+// 罩杯和出道年份要带单位，身高/年龄本身是中性格式，不需要翻译。
+@Composable
+private fun sortLabel(value: String): String = when (value) {
+    "debut" -> stringResource(R.string.sort_debut)
+    else -> stringResource(R.string.sort_videos)
+}
+
+@Composable
+private fun sectionTitle(key: String): String = when (key) {
+    "height" -> stringResource(R.string.filter_height)
+    "cup" -> stringResource(R.string.filter_cup)
+    "age" -> stringResource(R.string.filter_age)
+    else -> stringResource(R.string.filter_debut)
+}
+
+@Composable
+private fun optionLabel(sectionKey: String, value: String): String = when (sectionKey) {
+    "cup" -> stringResource(R.string.filter_cup_value, value)
+    "debut" -> stringResource(R.string.filter_debut_value, value.toIntOrNull() ?: 0)
+    "height" -> value.replace("-", " - ") + "cm"
+    // 年龄：站点的区间语义（首个 "< 20"、末个 "> 60"），其余原样展示。
+    else -> when (value) {
+        "0-20" -> "< 20"
+        "60-99" -> "> 60"
+        else -> value.replace("-", " - ")
     }
 }

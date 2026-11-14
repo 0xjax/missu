@@ -25,10 +25,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.material3.PlayerDefaults
+import app.missu.R
 
 /**
  * 播放器控件层：中心「快退 / 播放暂停 / 快进」+ 底部进度条，来自官方 Material3 组件
@@ -77,7 +79,7 @@ fun PlayerOverlay(
                         OverlayChip(text = formatSpeed(speed), onClick = onSpeedClick)
                         Spacer(Modifier.width(4.dp))
                         OverlayChip(
-                            text = if (isFullscreen) "退出全屏" else "全屏",
+                            text = if (isFullscreen) stringResource(R.string.player_exit_fullscreen) else stringResource(R.string.player_fullscreen),
                             onClick = onToggleFullscreen,
                         )
                     }

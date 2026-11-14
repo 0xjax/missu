@@ -36,7 +36,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import app.missu.R
 import app.missu.data.model.AccountUser
 import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.LoadingHint
@@ -62,16 +64,16 @@ fun AccountScreen(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxSize()) {
-        PageTopBar(title = "我的")
+        PageTopBar(title = stringResource(R.string.account_title))
 
         when (state) {
             AuthUiState.Checking -> LoadingHint()
 
             AuthUiState.LoggedOut -> EmptyHint(
                 icon = Icons.Filled.AccountCircle,
-                title = "未登录",
-                subtitle = "登录后可以收藏影片、管理片单，并同步观看历史",
-                actionLabel = "去登录",
+                title = stringResource(R.string.account_logged_out_title),
+                subtitle = stringResource(R.string.account_logged_out_subtitle),
+                actionLabel = stringResource(R.string.account_go_login),
                 onAction = onLogin,
             )
 
@@ -84,13 +86,13 @@ fun AccountScreen(
                 Spacer(Modifier.height(16.dp))
 
                 MenuGroup {
-                    MenuRow(Icons.Filled.Favorite, "我的收藏", onSaved)
+                    MenuRow(Icons.Filled.Favorite, stringResource(R.string.account_saved), onSaved)
                     RowDivider()
-                    MenuRow(Icons.AutoMirrored.Filled.List, "我的片单", onPlaylists)
+                    MenuRow(Icons.AutoMirrored.Filled.List, stringResource(R.string.account_playlists), onPlaylists)
                     RowDivider()
-                    MenuRow(Icons.Filled.DateRange, "观看历史", onHistory)
+                    MenuRow(Icons.Filled.DateRange, stringResource(R.string.account_history), onHistory)
                     RowDivider()
-                    MenuRow(Icons.Filled.Settings, "设置", onSettings)
+                    MenuRow(Icons.Filled.Settings, stringResource(R.string.account_settings), onSettings)
                 }
 
                 Spacer(Modifier.height(12.dp))
@@ -98,7 +100,7 @@ fun AccountScreen(
                 MenuGroup {
                     MenuRow(
                         icon = Icons.AutoMirrored.Filled.ExitToApp,
-                        label = "退出登录",
+                        label = stringResource(R.string.account_logout),
                         onClick = onLogout,
                         destructive = true,
                     )
@@ -113,7 +115,7 @@ fun AccountScreen(
 /** 资料卡：账号首字母头像 + 昵称 + 邮箱。 */
 @Composable
 private fun ProfileCard(user: AccountUser) {
-    val name = user.username ?: "已登录"
+    val name = user.username ?: stringResource(R.string.account_logged_in)
     val initial = (user.username ?: user.email).trim().take(1).uppercase().ifEmpty { "?" }
 
     Surface(

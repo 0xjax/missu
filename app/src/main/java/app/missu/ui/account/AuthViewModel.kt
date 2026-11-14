@@ -1,15 +1,14 @@
-package app.missu.ui.account
+﻿package app.missu.ui.account
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.missu.data.api.ChallengeException
-import app.missu.data.api.HttpStatusException
-import app.missu.data.api.InvalidCredentialsException
 import app.missu.data.api.MissavApi
 import app.missu.data.model.AccountUser
 import app.missu.data.store.CredentialStore
 import app.missu.data.store.ProfileStore
+import app.missu.ui.common.UiMessage
+import app.missu.ui.common.toUiMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,7 +23,7 @@ sealed interface AuthUiState {
 sealed interface LoginUiState {
     data object Idle : LoginUiState
     data object Loading : LoginUiState
-    data class Error(val message: String) : LoginUiState
+    data class Error(val message: UiMessage) : LoginUiState
 }
 
 /**
@@ -80,7 +79,7 @@ class AuthViewModel(
                 _loginState.value = LoginUiState.Idle
                 onSuccess()
             } catch (error: Exception) {
-                _loginState.value = LoginUiState.Error(describe(error))
+                _loginState.value = LoginUiState.Error(error.toUiMessage())
             }
         }
     }
@@ -103,11 +102,4 @@ class AuthViewModel(
         const val TAG = "MissavAuth"
     }
 
-    private fun describe(error: Exception): String = when (error) {
-        is InvalidCredentialsException -> "邮箱或密码错误"
-        is ChallengeException -> "站点要求人机验证，请重试"
-        is HttpStatusException -> "登录失败（HTTP ${error.status}）"
-        is java.io.IOException -> "网络连接中断，请重试"
-        else -> error.message ?: error::class.simpleName ?: "登录失败"
-    }
 }

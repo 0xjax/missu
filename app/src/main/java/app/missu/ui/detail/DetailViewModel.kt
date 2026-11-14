@@ -1,16 +1,15 @@
-package app.missu.ui.detail
+﻿package app.missu.ui.detail
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.missu.data.api.ChallengeException
-import app.missu.data.api.HttpStatusException
 import app.missu.data.api.MissavApi
-import app.missu.data.api.SessionExpiredException
 import app.missu.data.store.HistoryEntry
 import app.missu.data.store.HistoryStore
 import app.missu.data.model.VideoDetail
 import app.missu.data.model.VideoPlaylist
+import app.missu.ui.common.UiMessage
+import app.missu.ui.common.toUiMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,7 +19,7 @@ import kotlinx.coroutines.launch
 sealed interface PlaylistUiState {
     data object Hidden : PlaylistUiState
     data object Loading : PlaylistUiState
-    data class Error(val message: String) : PlaylistUiState
+    data class Error(val message: UiMessage) : PlaylistUiState
     data class Content(
         val items: List<VideoPlaylist>,
         val pendingKey: String? = null,
@@ -29,7 +28,7 @@ sealed interface PlaylistUiState {
 
 sealed interface DetailUiState {
     data object Loading : DetailUiState
-    data class Error(val message: String) : DetailUiState
+    data class Error(val message: UiMessage) : DetailUiState
     data class Content(val detail: VideoDetail) : DetailUiState
 }
 
@@ -52,7 +51,7 @@ class DetailViewModel(
             _playlists.value = try {
                 PlaylistUiState.Content(api.getVideoPlaylists(detail.id))
             } catch (error: Exception) {
-                PlaylistUiState.Error(describe(error))
+                PlaylistUiState.Error(error.toUiMessage())
             }
         }
     }
@@ -79,7 +78,7 @@ class DetailViewModel(
                 )
             } catch (error: Exception) {
                 _playlists.value = current.copy(pendingKey = null)
-                _message.value = describe(error)
+                _message.value = error.toUiMessage()
             }
         }
     }
@@ -103,8 +102,8 @@ class DetailViewModel(
     val state: StateFlow<DetailUiState> = _state.asStateFlow()
 
     /** 收藏等一次性操作失败的提示；成功时保持为空。 */
-    private val _message = MutableStateFlow<String?>(null)
-    val message: StateFlow<String?> = _message.asStateFlow()
+    private val _message = MutableStateFlow<UiMessage?>(null)
+    val message: StateFlow<UiMessage?> = _message.asStateFlow()
 
     fun load() {
         viewModelScope.launch {
@@ -112,7 +111,7 @@ class DetailViewModel(
             _state.value = try {
                 DetailUiState.Content(api.getVideoDetail(id))
             } catch (error: Exception) {
-                DetailUiState.Error(describe(error))
+                DetailUiState.Error(error.toUiMessage())
             }
         }
     }
@@ -126,7 +125,7 @@ class DetailViewModel(
         val content = _state.value as? DetailUiState.Content ?: return
         val internalId = content.detail.internalId
         if (internalId == null) {
-            _message.value = "没有拿到影片 ID，无法收藏"
+            _message.value = UiMessage.NoVideoId
             return
         }
 
@@ -140,19 +139,11 @@ class DetailViewModel(
                 _state.value = DetailUiState.Content(content.detail.copy(saved = target))
             } catch (error: Exception) {
                 Log.w(TAG, "toggleSaved: failed ${error::class.simpleName}: ${error.message}")
-                _message.value = describe(error)
+                _message.value = error.toUiMessage()
             }
         }
     }
 
-    private fun describe(error: Exception): String = when (error) {
-        is ChallengeException -> "站点要求人机验证，请重试"
-        is HttpStatusException -> "请求失败（HTTP ${error.status}）"
-        is SessionExpiredException -> "登录已失效，请重新登录后再收藏"
-        // NOTE: OkHttp 的连接类异常 message 是英文（"connection closed" 之类），不直接甩给用户。
-        is java.io.IOException -> "网络连接中断，请重试"
-        else -> error.message ?: error::class.simpleName ?: "未知错误"
-    }
 
     private companion object {
         // NOTE: 只记操作名与目标状态，不打印任何凭据。

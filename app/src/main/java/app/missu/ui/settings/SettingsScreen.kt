@@ -23,9 +23,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import app.missu.data.api.CONTENT_LANGUAGES
+import app.missu.R
+import app.missu.data.store.AppLanguage
 import app.missu.data.store.ThemeMode
 import app.missu.ui.components.PageTopBar
 
@@ -38,11 +40,11 @@ import app.missu.ui.components.PageTopBar
  */
 @Composable
 fun SettingsScreen(
-    language: String,
+    appLanguage: AppLanguage,
     themeMode: ThemeMode,
     dynamicColor: Boolean,
     pureBlack: Boolean,
-    onLanguageChange: (String) -> Unit,
+    onAppLanguageChange: (AppLanguage) -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
     onPureBlackChange: (Boolean) -> Unit,
@@ -50,14 +52,14 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxSize()) {
-        PageTopBar(title = "设置", onBack = onBack)
+        PageTopBar(title = stringResource(R.string.settings_title), onBack = onBack)
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
         ) {
-            SectionLabel("外观")
+            SectionLabel(stringResource(R.string.settings_appearance))
 
             SettingsGroup {
                 ThemeMode.entries.forEachIndexed { index, mode ->
@@ -98,9 +100,9 @@ fun SettingsScreen(
                     supportingContent = {
                         Text(
                             text = if (dynamicSupported) {
-                                "用系统壁纸取色；关掉时始终使用 Missu 的品牌粉"
+                                stringResource(R.string.settings_dynamic_color_note)
                             } else {
-                                "需要 Android 12 及以上"
+                                stringResource(R.string.settings_dynamic_color_unavailable)
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -114,7 +116,7 @@ fun SettingsScreen(
                         )
                     },
                 ) {
-                    Text(text = "动态取色", style = MaterialTheme.typography.bodyLarge)
+                    Text(text = stringResource(R.string.settings_dynamic_color), style = MaterialTheme.typography.bodyLarge)
                 }
                 RowDivider()
                 // NOTE: 纯黑是省电偏好，不是默认值——M3 深色规范用 tone 6 的近黑底，容器才有台阶可踩。
@@ -127,7 +129,7 @@ fun SettingsScreen(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     supportingContent = {
                         Text(
-                            text = "仅深色模式生效。纯黑更省电，但分组容器的层级会被压平",
+                            text = stringResource(R.string.settings_pure_black_note),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -136,45 +138,46 @@ fun SettingsScreen(
                         Switch(checked = pureBlack, onCheckedChange = onPureBlackChange)
                     },
                 ) {
-                    Text(text = "纯黑背景", style = MaterialTheme.typography.bodyLarge)
+                    Text(text = stringResource(R.string.settings_pure_black), style = MaterialTheme.typography.bodyLarge)
                 }
             }
 
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "Missu 的色板由品牌粉推导：深色下主色就是品牌色本身，浅色下用深一档保证白字可读。",
+                text = stringResource(R.string.settings_palette_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 24.dp),
             )
 
-            SectionLabel("内容语言")
+            SectionLabel(stringResource(R.string.settings_language))
 
-            // NOTE: 语言写进站点路径（/cn、/en…），切换后首页/搜索/详情的请求全部跟着变。
+            // NOTE: 一个设置项同时决定**界面语言与站点内容语言**。不拆成两项：详情页的信息行标签
+            // 是站点按内容语言返回的，两个轴分开就会出现「中文界面 + 英文标签」的混排。
+            // NOTE: 列表里只出现有 UI 翻译的语言；「跟随系统」时界面回退英文、内容按系统语言走。
             SettingsGroup {
-                CONTENT_LANGUAGES.forEachIndexed { index, option ->
+                AppLanguage.entries.forEachIndexed { index, option ->
                     if (index > 0) RowDivider()
-                    val selected = option.value == language
+                    val selected = option == appLanguage
                     ListItem(
                         modifier = Modifier.selectable(
                             selected = selected,
                             role = Role.RadioButton,
-                            onClick = { onLanguageChange(option.value) },
+                            onClick = { onAppLanguageChange(option) },
                         ),
-                        // NOTE: 列表项默认容器色取主题的 surface，会盖掉分组容器的底色。
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                         trailingContent = {
                             RadioButton(selected = selected, onClick = null)
                         },
                     ) {
-                        Text(text = option.label, style = MaterialTheme.typography.bodyLarge)
+                        Text(text = option.label(), style = MaterialTheme.typography.bodyLarge)
                     }
                 }
             }
 
             Spacer(Modifier.height(12.dp))
             Text(
-                text = "「繁體中文」是站点默认语言，请求不带语言前缀。",
+                text = stringResource(R.string.settings_language_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 24.dp),
@@ -184,10 +187,20 @@ fun SettingsScreen(
     }
 }
 
+@Composable
 private fun ThemeMode.label(): String = when (this) {
-    ThemeMode.SYSTEM -> "跟随系统"
-    ThemeMode.LIGHT -> "浅色"
-    ThemeMode.DARK -> "深色"
+    ThemeMode.SYSTEM -> stringResource(R.string.settings_theme_system)
+    ThemeMode.LIGHT -> stringResource(R.string.settings_theme_light)
+    ThemeMode.DARK -> stringResource(R.string.settings_theme_dark)
+}
+
+/** 语言名用**自身语言**书写（简体中文 / English / 日本語）——比翻译成当前界面语言更好认。 */
+@Composable
+private fun AppLanguage.label(): String = when (this) {
+    AppLanguage.SYSTEM -> stringResource(R.string.settings_language_system)
+    AppLanguage.ZH_HANS -> "简体中文"
+    AppLanguage.EN -> "English"
+    AppLanguage.JA -> "日本語"
 }
 
 @Composable

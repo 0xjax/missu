@@ -1,11 +1,10 @@
-package app.missu.ui.playlists
+﻿package app.missu.ui.playlists
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.missu.data.api.ChallengeException
-import app.missu.data.api.HttpStatusException
 import app.missu.data.api.MissavApi
-import app.missu.data.api.SessionExpiredException
+import app.missu.ui.common.UiMessage
+import app.missu.ui.common.toUiMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,7 +12,7 @@ import kotlinx.coroutines.launch
 
 sealed interface PlaylistEditUiState {
     data object Loading : PlaylistEditUiState
-    data class Error(val message: String) : PlaylistEditUiState
+    data class Error(val message: UiMessage) : PlaylistEditUiState
     data class Ready(
         val name: String,
         val description: String,
@@ -35,8 +34,8 @@ class PlaylistEditViewModel(
     private val _state = MutableStateFlow<PlaylistEditUiState>(PlaylistEditUiState.Loading)
     val state: StateFlow<PlaylistEditUiState> = _state.asStateFlow()
 
-    private val _message = MutableStateFlow<String?>(null)
-    val message: StateFlow<String?> = _message.asStateFlow()
+    private val _message = MutableStateFlow<UiMessage?>(null)
+    val message: StateFlow<UiMessage?> = _message.asStateFlow()
 
     private val _busy = MutableStateFlow(false)
     val busy: StateFlow<Boolean> = _busy.asStateFlow()
@@ -52,7 +51,7 @@ class PlaylistEditViewModel(
                     isPublic = page.isPublic,
                 )
             } catch (error: Exception) {
-                PlaylistEditUiState.Error(describe(error))
+                PlaylistEditUiState.Error(error.toUiMessage())
             }
         }
     }
@@ -60,7 +59,7 @@ class PlaylistEditViewModel(
     fun save(name: String, description: String, isPublic: Boolean, onDone: () -> Unit) {
         if (_busy.value) return
         if (name.isBlank()) {
-            _message.value = "片单名不能为空"
+            _message.value = UiMessage.PlaylistNameEmpty
             return
         }
         _busy.value = true
@@ -70,7 +69,7 @@ class PlaylistEditViewModel(
                 api.updatePlaylist(id, name.trim(), description.trim(), isPublic)
                 onDone()
             } catch (error: Exception) {
-                _message.value = describe(error)
+                _message.value = error.toUiMessage()
             } finally {
                 _busy.value = false
             }
@@ -86,7 +85,7 @@ class PlaylistEditViewModel(
                 api.deletePlaylist(id)
                 onDone()
             } catch (error: Exception) {
-                _message.value = describe(error)
+                _message.value = error.toUiMessage()
             } finally {
                 _busy.value = false
             }
@@ -97,11 +96,4 @@ class PlaylistEditViewModel(
         _message.value = null
     }
 
-    private fun describe(error: Exception): String = when (error) {
-        is ChallengeException -> "站点要求人机验证，请重试"
-        is HttpStatusException -> "请求失败（HTTP ${error.status}）"
-        is SessionExpiredException -> "登录已失效，请重新登录"
-        is java.io.IOException -> "网络连接中断，请重试"
-        else -> error.message ?: error::class.simpleName ?: "未知错误"
-    }
 }

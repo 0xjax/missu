@@ -28,8 +28,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.missu.R
 import app.missu.data.store.HistoryEntry
 import coil3.compose.AsyncImage
 import app.missu.ui.components.EmptyHint
@@ -46,12 +48,12 @@ fun HistoryScreen(
 ) {
     Column(modifier.fillMaxSize()) {
         PageTopBar(
-            title = "观看历史",
+            title = stringResource(R.string.history_title),
             onBack = onBack,
             actions = {
                 // NOTE: 把操作放进 actions，而不是在标题后面塞 Spacer(weight) —— 那是手搓顶栏的写法。
                 if (entries.isNotEmpty()) {
-                    TextButton(onClick = onClear) { Text("清空") }
+                    TextButton(onClick = onClear) { Text(stringResource(R.string.common_clear)) }
                 }
             },
         )
@@ -59,8 +61,8 @@ fun HistoryScreen(
         if (entries.isEmpty()) {
             EmptyHint(
                 icon = Icons.Filled.PlayArrow,
-                title = "还没有观看记录",
-                subtitle = "打开任意影片开始播放后，这里会记下看到哪一分钟",
+                title = stringResource(R.string.history_empty_title),
+                subtitle = stringResource(R.string.history_empty_subtitle),
             )
         } else {
             LazyVerticalGrid(

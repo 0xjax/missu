@@ -25,8 +25,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import app.missu.R
 import app.missu.data.api.ChallengeHost
 import app.missu.data.api.ChallengeResult
 import app.missu.data.api.SourceConfig
@@ -60,7 +63,10 @@ class ChallengeActivity : ComponentActivity() {
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 private fun ChallengeScreen(url: String, onFinish: (Boolean, String?) -> Unit) {
-    var status by remember { mutableStateOf("正在打开站点…") }
+    val context = LocalContext.current
+    val openingText = stringResource(R.string.challenge_opening)
+    val passedText = stringResource(R.string.challenge_passed)
+    var status by remember { mutableStateOf(openingText) }
     var attempts by remember { mutableIntStateOf(0) }
     var finished by remember { mutableStateOf(false) }
 
@@ -78,12 +84,12 @@ private fun ChallengeScreen(url: String, onFinish: (Boolean, String?) -> Unit) {
         when {
             cookie?.contains("cf_clearance") == true -> {
                 finished = true
-                status = "验证通过，正在读取页面…"
+                status = passedText
                 readPage(view)
             }
-            attempts >= 40 -> status = "仍未通过（已检查 $attempts 次）。可以点「取消」后重试。"
+            attempts >= 40 -> status = context.getString(R.string.challenge_blocked, attempts)
             else -> {
-                status = "等待站点放行…（第 $attempts 次检查）"
+                status = context.getString(R.string.challenge_waiting, attempts)
                 view.postDelayed({ check(view) }, 1500)
             }
         }
@@ -125,7 +131,7 @@ private fun ChallengeScreen(url: String, onFinish: (Boolean, String?) -> Unit) {
                         finished = true
                         onFinish(false, null)
                     }
-                }) { Text("取消") }
+                }) { Text(stringResource(R.string.common_cancel)) }
             }
         }
     }

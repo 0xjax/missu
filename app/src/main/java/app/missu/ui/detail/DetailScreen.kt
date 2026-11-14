@@ -1,4 +1,4 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+﻿@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
 
 package app.missu.ui.detail
 
@@ -48,7 +48,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import app.missu.R
 import app.missu.data.model.DetailInfoRow
 import app.missu.data.model.VideoDetail
 import app.missu.data.model.VideoPlaylist
@@ -56,6 +58,8 @@ import app.missu.ui.player.ExoVideoPlayer
 import app.missu.ui.player.FullscreenEffect
 import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.PageStateTransition
+import app.missu.ui.common.UiMessage
+import app.missu.ui.common.text
 import app.missu.ui.components.PageTopBar
 import app.missu.ui.components.videoHero
 import coil3.compose.AsyncImage
@@ -74,7 +78,7 @@ fun DetailScreen(
     // NOTE: 这个目的地还是不是导航栈顶。返回时它会先变 false，用来在**转场开始那一帧**
     // 把容器内容换回封面、停掉音频（比目的地被销毁早整整一个转场）。
     isCurrent: Boolean = true,
-    message: String? = null,
+    message: UiMessage? = null,
     onToggleSaved: () -> Unit = {},
     startPositionMs: Long = 0L,
     onPositionReport: (Long) -> Unit = {},
@@ -122,7 +126,7 @@ fun DetailScreen(
                     // 指示器），否则页面上会同时有两个"正在加载"。
                     DetailUiState.Loading -> Unit
 
-                    is DetailUiState.Error -> ErrorHint(current.message, onRetry)
+                    is DetailUiState.Error -> ErrorHint(current.message.text(), onRetry)
 
                     is DetailUiState.Content -> DetailBody(
                         detail = current.detail,
@@ -327,7 +331,7 @@ private fun DetailHero(
         if (playbackUrl == null && detail != null) {
             // 详情拿到了但站点没给 m3u8：压在封面上说一句，否则用户只看到一张静止的封面。
             Text(
-                text = "暂时无法提取播放地址",
+                text = stringResource(R.string.detail_no_playback),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.White,
                 modifier = Modifier
@@ -348,7 +352,7 @@ private fun DetailHero(
 @Composable
 private fun DetailBody(
     detail: VideoDetail,
-    message: String?,
+    message: UiMessage?,
     onToggleSaved: () -> Unit,
     playlists: PlaylistUiState,
     onOpenPlaylists: () -> Unit,
@@ -381,10 +385,10 @@ private fun DetailBody(
 
             // NOTE: 收藏 / 片单两个动作搬到页面底部的 FlexibleBottomAppBar 里（SplitButton：
             // 左半是主操作「收藏」，右半是「加入片单」），内容区不再被一行按钮打断。
-            message?.let { text ->
+            message?.let { notice ->
                 item(key = "message") {
                     Text(
-                        text = text,
+                        text = notice.text(),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.padding(horizontal = 16.dp),
@@ -416,12 +420,12 @@ private fun DetailBody(
                 modifier = Modifier.weight(1f),
                 leadingButton = {
                     SplitButtonDefaults.LeadingButton(onClick = onToggleSaved) {
-                        Text(if (detail.saved) "已收藏" else "收藏")
+                        Text(if (detail.saved) stringResource(R.string.detail_saved) else stringResource(R.string.detail_save))
                     }
                 },
                 trailingButton = {
                     SplitButtonDefaults.TrailingButton(onClick = onOpenPlaylists) {
-                        Icon(Icons.Filled.Add, contentDescription = "加入片单")
+                        Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.detail_add_to_playlist))
                     }
                 },
             )
@@ -444,7 +448,7 @@ private fun PlaylistSheet(
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
             Text(
-                text = "加入片单",
+                text = stringResource(R.string.detail_add_to_playlist),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
             )
@@ -457,7 +461,7 @@ private fun PlaylistSheet(
                 ) { LoadingIndicator() }
 
                 is PlaylistUiState.Error -> Text(
-                    text = state.message,
+                    text = state.message.text(),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(24.dp),
@@ -466,7 +470,7 @@ private fun PlaylistSheet(
                 is PlaylistUiState.Content -> {
                     if (state.items.isEmpty()) {
                         Text(
-                            text = "还没有片单，去网页端新建一个吧",
+                            text = stringResource(R.string.detail_no_playlists),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(24.dp),

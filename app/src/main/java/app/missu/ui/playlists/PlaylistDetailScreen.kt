@@ -45,9 +45,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import app.missu.R
+import app.missu.ui.common.UiMessage
+import app.missu.ui.common.text
 import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadingHint
@@ -67,7 +71,7 @@ import app.missu.ui.components.VideoGridCard
 fun PlaylistDetailScreen(
     fallbackTitle: String,
     state: PlaylistDetailUiState,
-    message: String?,
+    message: UiMessage?,
     onRetry: () -> Unit,
     onOpen: (id: String, thumbnail: String?) -> Unit,
     onBack: () -> Unit,
@@ -109,12 +113,12 @@ fun PlaylistDetailScreen(
                 onBack = onBack,
                 // NOTE: 「整理」不再占顶栏动作位——它是个开关，交给右下角的 ToggleFAB（M3E 里
                 // 双态操作用会 morph 的 ToggleFloatingActionButton）。顶栏只留「编辑」。
-                actions = { TextButton(onClick = onEdit) { Text("编辑") } },
+                actions = { TextButton(onClick = onEdit) { Text(stringResource(R.string.playlist_edit)) } },
             )
 
-            message?.let {
+            message?.let { notice ->
                 Text(
-                    text = it,
+                    text = notice.text(),
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(horizontal = 16.dp),
@@ -127,11 +131,11 @@ fun PlaylistDetailScreen(
 
                     PlaylistDetailUiState.Empty -> EmptyHint(
                         icon = Icons.AutoMirrored.Filled.List,
-                        title = "这个片单还是空的",
-                        subtitle = "在详情页点「加入片单」，影片就会出现在这里",
+                        title = stringResource(R.string.playlist_empty_title),
+                        subtitle = stringResource(R.string.playlist_empty_subtitle),
                     )
 
-                    is PlaylistDetailUiState.Error -> ErrorHint(current.message, onRetry)
+                    is PlaylistDetailUiState.Error -> ErrorHint(current.message.text(), onRetry)
 
                     is PlaylistDetailUiState.Content -> LazyVerticalGrid(
                     modifier = Modifier.fillMaxSize(),
@@ -176,6 +180,21 @@ fun PlaylistDetailScreen(
         }
 
         if (managing && content != null) {
+            // NOTE: `clickableItem(label = …)` 收的是普通 String，不是 @Composable 槽位，
+            // 所以文案必须在组合作用域里先取好。
+            val deselectLabel = stringResource(R.string.playlist_deselect)
+            val doneLabel = stringResource(R.string.common_done)
+            val selectAllLabel = if (allSelected) {
+                stringResource(R.string.playlist_unselect_all)
+            } else {
+                stringResource(R.string.playlist_select_all)
+            }
+            val removeLabel = if (selected.isEmpty()) {
+                stringResource(R.string.playlist_remove)
+            } else {
+                stringResource(R.string.playlist_remove_n, selected.size)
+            }
+
             HorizontalFloatingToolbar(
                 expanded = true,
                 modifier = Modifier
@@ -188,13 +207,13 @@ fun PlaylistDetailScreen(
                         clickableItem(
                             onClick = { selected = emptyList() },
                             icon = { Icon(Icons.Filled.Clear, contentDescription = null) },
-                            label = "取消选择",
+                            label = deselectLabel,
                             enabled = selected.isNotEmpty() && removing.isEmpty(),
                         )
                         clickableItem(
                             onClick = { exitManaging() },
                             icon = { Icon(Icons.Filled.Done, contentDescription = null) },
-                            label = "完成",
+                            label = doneLabel,
                         )
                     }
                 },
@@ -208,11 +227,11 @@ fun PlaylistDetailScreen(
                         onClick = {
                             selected = if (allSelected) emptyList() else content.videos.map { it.id }
                         },
-                        label = if (allSelected) "取消全选" else "全选",
+                        label = selectAllLabel,
                     )
                     clickableItem(
                         onClick = { if (selected.isNotEmpty()) pendingRemove = selected },
-                        label = if (selected.isEmpty()) "移出影片" else "移出 ${selected.size} 部",
+                        label = removeLabel,
                         enabled = selected.isNotEmpty() && removing.isEmpty(),
                     )
                 }
@@ -229,7 +248,7 @@ fun PlaylistDetailScreen(
                 ) {
                     Icon(
                         Icons.Filled.Edit,
-                        contentDescription = "整理",
+                        contentDescription = stringResource(R.string.playlist_manage),
                         tint = onFabContainer,
                     )
                 }
@@ -240,18 +259,18 @@ fun PlaylistDetailScreen(
     if (pendingRemove.isNotEmpty()) {
         AlertDialog(
             onDismissRequest = { pendingRemove = emptyList() },
-            title = { Text("移出所选影片？") },
-            text = { Text("会把选中的 ${pendingRemove.size} 部从「$title」里移除，影片本身不受影响。") },
+            title = { Text(stringResource(R.string.playlist_remove_dialog_title)) },
+            text = { Text(stringResource(R.string.playlist_remove_dialog_body, pendingRemove.size, title)) },
             confirmButton = {
                 TextButton(onClick = {
                     val ids = pendingRemove
                     pendingRemove = emptyList()
                     selected = emptyList()
                     onRemove(ids)
-                }) { Text("移除") }
+                }) { Text(stringResource(R.string.playlist_remove_action)) }
             },
             dismissButton = {
-                TextButton(onClick = { pendingRemove = emptyList() }) { Text("取消") }
+                TextButton(onClick = { pendingRemove = emptyList() }) { Text(stringResource(R.string.common_cancel)) }
             },
         )
     }
@@ -265,13 +284,14 @@ private fun SelectionBadge(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val badgeDescription = stringResource(if (selected) R.string.playlist_selected else R.string.playlist_unselected)
     Box(
         modifier = modifier
             .size(26.dp)
             .clip(CircleShape)
             .background(if (selected) MaterialTheme.colorScheme.primary else Color(0xCC000000))
             .clickable(enabled = !removing, onClick = onClick)
-            .semantics { contentDescription = if (selected) "已选中" else "未选中" },
+            .semantics { contentDescription = badgeDescription },
         contentAlignment = Alignment.Center,
     ) {
         when {

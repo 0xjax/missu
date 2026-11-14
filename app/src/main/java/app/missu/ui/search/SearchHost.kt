@@ -37,7 +37,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import app.missu.R
+import app.missu.ui.common.text
 import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadMoreFooter
@@ -98,13 +101,13 @@ fun SearchHost(
             textFieldState = textFieldState,
             searchBarState = searchBarState,
             onSearch = { submit(textFieldState.text.toString().trim()) },
-            placeholder = { Text("搜索番号、女优、关键词") },
+            placeholder = { Text(stringResource(R.string.search_placeholder)) },
             leadingIcon = {
                 // NOTE: 只有出结果之后才给「返回首页内容」的出口；Idle 时左侧就是一个纯搜索图标，
                 // 别做成按钮——否则它会把「点一下就展开」的整块命中区截走一块。
                 if (searching) {
                     IconButton(onClick = { exit() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "退出搜索")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.search_exit))
                     }
                 } else {
                     Icon(Icons.Filled.Search, contentDescription = null)
@@ -113,7 +116,7 @@ fun SearchHost(
             trailingIcon = {
                 if (textFieldState.text.isNotEmpty()) {
                     IconButton(onClick = { textFieldState.edit { replace(0, length, "") } }) {
-                        Icon(Icons.Filled.Close, contentDescription = "清空")
+                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.common_clear))
                     }
                 }
             },
@@ -153,12 +156,12 @@ fun SearchBody(
 
             SearchUiState.Empty -> EmptyHint(
                 icon = Icons.Filled.Search,
-                title = "没有找到结果",
-                subtitle = "换个番号、女优或关键词再试",
+                title = stringResource(R.string.search_empty_title),
+                subtitle = stringResource(R.string.search_empty_subtitle),
             )
 
             is SearchUiState.Error -> ErrorHint(
-                message = current.message,
+                message = current.message.text(),
                 onRetry = { onRetry(keyword) },
             )
 
@@ -179,7 +182,7 @@ private fun RecentSearches(
     onClear: () -> Unit,
 ) {
     if (keywords.isEmpty()) {
-        Hint("输入关键词后回车搜索")
+        Hint(stringResource(R.string.search_hint_idle))
         return
     }
 
@@ -189,12 +192,12 @@ private fun RecentSearches(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "最近搜索",
+                text = stringResource(R.string.search_recent),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.weight(1f))
-            TextButton(onClick = onClear) { Text("清空") }
+            TextButton(onClick = onClear) { Text(stringResource(R.string.common_clear)) }
         }
 
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -234,7 +237,7 @@ private fun Results(
     ) {
         item(key = "summary", span = { GridItemSpan(maxLineSpan) }) {
             Text(
-                text = "「${state.keyword}」共 ${state.videos.size} 条",
+                text = stringResource(R.string.search_results_count, state.keyword, state.videos.size),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
