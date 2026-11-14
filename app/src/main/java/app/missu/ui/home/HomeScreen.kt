@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.carousel.CarouselDefaults
 import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
@@ -42,6 +43,14 @@ import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.VideoGridCard
 import coil3.compose.AsyncImage
 
+/**
+ * 每个板块在首页只露出的条数（2 列 × 3 行）。
+ *
+ * NOTE: 站点每个板块给 16 条上下，全铺出来首页就是三十多行、要翻约 6000dp 才到最后一个板块。
+ * 首页只当「预览」，完整列表走板块标题行的「更多」进 `/list`（复用已有分页页）。
+ */
+private const val SECTION_PREVIEW = 6
+
 @Composable
 fun HomeScreen(
     state: HomeUiState,
@@ -49,6 +58,7 @@ fun HomeScreen(
     onRefresh: () -> Unit,
     onRetry: () -> Unit,
     onOpen: (String) -> Unit,
+    onOpenList: (path: String, title: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when (state) {
@@ -68,6 +78,7 @@ fun HomeScreen(
             refreshing = refreshing,
             onRefresh = onRefresh,
             onOpen = onOpen,
+            onOpenList = onOpenList,
             modifier = modifier,
         )
     }
@@ -79,6 +90,7 @@ private fun HomeContent(
     refreshing: Boolean,
     onRefresh: () -> Unit,
     onOpen: (String) -> Unit,
+    onOpenList: (path: String, title: String) -> Unit,
     modifier: Modifier,
 ) {
     PullToRefreshBox(
@@ -97,11 +109,24 @@ private fun HomeContent(
             // 点一下就地展开。之前这里是个 44dp / 10dp 圆角的假框，跟搜索页的 56dp 胶囊对不上。
             sections.forEachIndexed { index, section ->
                 item(key = "header-${section.id}", span = { GridItemSpan(maxLineSpan) }) {
-                    Text(
-                        text = section.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = section.title,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.weight(1f),
+                        )
+                        // NOTE: 板块默认只给一段预览，「更多」进已有的 /list 页看完整列表。
+                        // 不这么做的话：首页实测 64 张卡片 = 32 行，要翻约 6000dp 才看得到最后一个板块。
+                        section.morePath?.let { path ->
+                            TextButton(onClick = { onOpenList(path, section.title) }) {
+                                Text("更多")
+                            }
+                        }
+                    }
                 }
 
                 // NOTE: 只有第一个板块用 M3E 的 multi-browse 轮播当「推荐位」——其余板块保持网格，
@@ -112,7 +137,7 @@ private fun HomeContent(
                     }
                 } else {
                     items(
-                        items = section.videos,
+                        items = section.videos.take(SECTION_PREVIEW),
                         key = { video -> "${section.id}-${video.id}" },
                     ) { video ->
                         VideoGridCard(video = video, onClick = { onOpen(video.id) })

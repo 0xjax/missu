@@ -233,6 +233,9 @@ private fun MissuApp(
                             onRefresh = viewModel::refresh,
                             onRetry = viewModel::load,
                             onOpen = { id -> navController.navigate("detail/$id") },
+                            onOpenList = { path, title ->
+                                navController.navigate("list?p=${Uri.encode(path)}&t=${Uri.encode(title)}")
+                            },
                         )
                     } else {
                         SearchBody(
