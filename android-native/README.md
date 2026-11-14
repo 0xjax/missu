@@ -148,15 +148,17 @@ $sm = "$sdk\cmdline-tools\latest\bin\sdkmanager.bat"
 
 **SDK 目录里每一项是什么**（回答「哪些能删」）：
 
-| 路径 | 要否 | 说明 |
-|---|---|---|
-| `platforms\android-37.0` | **必需** | `compileSdk = 37` 的编译目标，AGP 直接读它 |
-| `build-tools\36.0.0` | **必需** | aapt2 / d8 / zipalign；AGP 9.5.1 默认选 36.0.0（删了它构建时会**自动装回**） |
-| `platform-tools` | **必需** | `adb`（也用于安装/调试） |
-| `licenses` | **必需** | 8 个 42 字节的授权哈希；删了 AGP/sdkmanager 会认为许可未接受 |
-| `cmdline-tools` | 装包时才用 | 构建不需要它；`sdkmanager` 在这里 |
-| `.knownPackages` | 可删 | 包清单缓存，下次跑 sdkmanager 自动重建 |
-| `.temp` | 可删 | sdkmanager 的临时目录，同样是自建 |
+| 路径 | 要否 | 谁创建的 | 说明 |
+|---|---|---|---|
+| `platforms\android-37.0` | **必需** | `sdkmanager install "platforms;android-37.0"` | `compileSdk = 37` 的编译目标，AGP 直接读它 |
+| `build-tools\36.0.0` | **必需** | `sdkmanager install "build-tools;36.0.0"`（或 AGP 构建时自动装） | aapt2 / d8 / zipalign；AGP 9.5.1 默认选 36.0.0（删了它构建时会**自动装回**） |
+| `platform-tools` | **必需** | `sdkmanager install platform-tools` | `adb`（也用于安装/调试） |
+| `licenses` | **必需** | `sdkmanager --licenses`（或 AGP 首次构建时自动接受） | 8 个 42 字节的授权哈希；删了 AGP/sdkmanager 会认为许可未接受 |
+| `cmdline-tools` | 装包时才用 | 你手动解压的官方 zip | 构建不需要它；`sdkmanager` 在这里 |
+| `.knownPackages` | 可删 | sdkmanager 自建 | 包清单缓存，下次跑 sdkmanager 自动重建 |
+| `.temp` | 可删 | sdkmanager 自建 | sdkmanager 的临时目录，同样是自建 |
+
+> 换句话说：**`platforms` 与 `licenses` 不是你手动建的**，是第一次跑 `sdkmanager --licenses` 与 `sdkmanager install ...` 时自动生成的；它们此前不存在。装第二个平台/工具时，会在这个目录里多出对应的子目录。
 
 > NOTE: **build-tools 版本与 compileSdk 无关**。本机实测：只留 `build-tools;36.0.0` 时 `.\build.ps1` 正常；把 36 删掉构建会**自动下载装回**，而把 37 删掉则毫无影响。所以 37.0.0 是多余的（省 ~137 MB）。
 
