@@ -479,6 +479,13 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
   正在读取页面…」，通过后自动返回首页继续加载，**全程无需用户手动操作**（只在 40 次轮询仍不通时给「取消」）。
   PC 的 JVM 请求同样会被挑战（`cf-mitigated: challenge`），所以这条链路不是"未验证的兜底"：
   改任何 Cookie 相关代码都必须保证 OkHttp 与 WebView 共用系统 `CookieManager`，否则验证过了仍然 403。
+- **「看到的是正常页面」不等于误触发**：判定条件是 `403 | cf-mitigated: challenge | 挑战页标题`（三者任一），
+  命中后 `withChallengeRetry` 用 `handler.verify(/)` 打开 `ChallengeActivity`，WebView 里 Cloudflare 的 JS
+  挑战通常 1–3 秒自动通过——通过后 WebView 显示的就是**真实页面**（所以看起来"直接跳过了"），随后
+  `cf_clearance` 落进共享 Cookie、Activity 自动关闭、**重试原请求**（不是拿验证页的 HTML 当结果）。
+  验证是否真的通过看两处：logcat 的 `Displayed app.missu/.ui.challenge.ChallengeActivity`，以及之后原请求
+  是否返回内容。真正会误判的只有一种情况：**非挑战原因的 403**（例如权限/风控）也会开一次验证页，
+  最多白跑一趟（40 次轮询后给「取消」），不会破坏数据。
 
 **多语言（i18n）**
 
