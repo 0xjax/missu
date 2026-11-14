@@ -53,6 +53,7 @@ import app.missu.R
 import app.missu.data.api.ChallengeHandler
 import app.missu.data.api.ChallengeResult
 import app.missu.data.api.SourceConfig
+import app.missu.ui.theme.LocalDarkTheme
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.Dispatchers
@@ -204,6 +205,22 @@ private fun samePath(actual: String, expected: String): Boolean {
     return a.replace(Regex("/dm\\d+(?=/)"), "") == b.replace(Regex("/dm\\d+(?=/)"), "")
 }
 
+/**
+ * 让页面跟随应用明暗。
+ *
+ * 实测（2026-11-15 05:35）：站点的 `html` / `body` 背景都是 `rgba(0, 0, 0, 0)`，`body` 也没有显式 `color`——
+ * 默认文字颜色由浏览器的 `color-scheme` 决定：设成 `dark` 时 `color` 变成 `rgb(255, 255, 255)`，
+ * 设成 `light` 时是 `rgb(0, 0, 0)`。所以「底色我们给 + 文字/控件颜色交给 color-scheme」就能两全：
+ * 暗色下是站点原生的深色皮肤，浅色下也不会出现「白底白字」。
+ */
+private fun applyColorScheme(view: WebView, dark: Boolean) {
+    val scheme = if (dark) "dark" else "light"
+    view.evaluateJavascript(
+        "(function(){var e=document.documentElement;if(e){e.style.colorScheme='$scheme'}})()",
+        null,
+    )
+}
+
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean, String?) -> Unit) {
@@ -221,6 +238,9 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
         }
     }
     val surfaceLow = MaterialTheme.colorScheme.surfaceContainerLow
+    // 页面自己不带背景（实测 html/body 的 background 都是 rgba(0,0,0,0)），底色由这层给；
+    // 明暗再通过 `color-scheme` 交回浏览器的默认值（见 applyColorScheme）。
+    val darkTheme = LocalDarkTheme.current
     val title = context.getString(R.string.challenge_title)
     val cancel = context.getString(R.string.common_cancel)
     val passedText = context.getString(R.string.challenge_passed)
@@ -356,7 +376,12 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
                                 CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
                                 // 挑战页里可能带链接；留住站内跳转，别把用户丢给系统浏览器。
                                 webViewClient = object : WebViewClient() {
+                                    override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
+                                        applyColorScheme(view, darkTheme)
+                                    }
+
                                     override fun onPageFinished(view: WebView, pageUrl: String) {
+                                        applyColorScheme(view, darkTheme)
                                         // 取证：标题能独立证明收到的是挑战页（Just a moment...）还是正常页；
                                         // prefers-color-scheme 是「页面为什么是亮色」的唯一直接证据（站点按它切深色变体）。
                                         view.evaluateJavascript(

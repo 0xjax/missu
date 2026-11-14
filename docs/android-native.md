@@ -490,11 +490,15 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
 - **只按 cookie 判「通过」会误判（已实测并修掉）**：那次 harness 在 10s 时塞了一个假 `cf_clearance`，旧逻辑立刻判定通过
   并去读 HTML，而页面仍停在挑战页（`html=44698` 正是挑战页本身）。真机上「cookie 还在但页面仍是挑战页」很容易发生——
   cookie 由别的出口 IP 签发、或刚被站点作废。现在判通过前会再用 `document.title` 确认页面已离开挑战页（`Just a moment` 不算过）。
-- **验证页的页面永远是亮色，这层改不动**：WebView 的 `prefers-color-scheme` 恒为 `light`——即使系统 `uiMode=0x21`（深色）
-  且应用强制深色，探针实测仍是 `false`。试过两条路都无效、已回退：① 给 WebView 传一个覆写 `uiMode` 的 context；
-  ② 引入 `androidx.webkit` 打开 `setAlgorithmicDarkeningAllowed`（页面声明了自己的配色，算法压暗不生效，白搭 +2.8MB）。
-  结论：**白色是站点自己的皮肤，不是我们的主题色**。我们自己这层是跟随主题的——截图像素实测卡片填充 `#292A2E`，
-  正是蓝色深色板的 `surfaceContainerHigh`（`#292A2D`）。要页面变暗只能注入 CSS，会破坏站点样式与勾选框对比度，不做。
+- **页面明暗由我们决定：注入 `color-scheme`**（2026-11-15 05:35 实测——这条推翻了我先前「页面恒亮、改不动」的判断）：
+  站点页面的 `html` / `body` 背景都是 `rgba(0, 0, 0, 0)`（透明），`body` 也没有显式 `color`，所以**底色一直是我们这层给的**；
+  而默认文字颜色由浏览器的 `color-scheme` 决定——探针实测：设成 `dark` 时 `body.color` 变成 `rgb(255, 255, 255)`，
+  设成 `light` 时是 `rgb(0, 0, 0)`。之前「看起来固定亮」其实是我给 WebView 垫了白底。
+  现在的做法：WebView 背景 = `surfaceContainerLow`，并在 `onPageStarted` / `onPageFinished` 注入
+  `document.documentElement.style.colorScheme = <跟随应用明暗>`。暗色下呈现站点原生的深色皮肤（深底白字），
+  浅色下是深字浅底，两种都可读；翻转只需这一行，不用注入样式表。
+  NOTE: `prefers-color-scheme` 仍然是 `false` 且改不动（覆写 WebView 的 context、`androidx.webkit` 的算法压暗都试过、已回退），
+  但它与这件事无关——站点用的是 `color-scheme` 的默认值，不是媒体查询。
 - **取证钩子（只对 debuggable 构建生效）**：浮层每次抬起都会写事件行 + 存截图，事后判读，不必守在设备边上：
 
   ```powershell

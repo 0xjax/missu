@@ -12,6 +12,8 @@ import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -36,6 +38,9 @@ internal fun resolveColorScheme(
     }
     return colorSource.staticColorScheme(darkTheme)
 }
+
+/** 当前生效的明暗（含设置里的强制浅色/深色）。WebView 的 `color-scheme` 要按它注入。 */
+val LocalDarkTheme = staticCompositionLocalOf { false }
 
 /** 页面底色。窗口底色必须跟着它走，见 [WindowBackground]。 */
 fun themeBackgroundColor(context: Context, darkTheme: Boolean, colorSource: ColorSource): Color =
@@ -81,11 +86,13 @@ fun MissuTheme(
     SystemBarAppearance(darkTheme)
     WindowBackground(colorScheme.background)
 
-    MaterialExpressiveTheme(
-        colorScheme = colorScheme,
-        motionScheme = MotionScheme.expressive(),
-        content = content,
-    )
+    CompositionLocalProvider(LocalDarkTheme provides darkTheme) {
+        MaterialExpressiveTheme(
+            colorScheme = colorScheme,
+            motionScheme = MotionScheme.expressive(),
+            content = content,
+        )
+    }
 }
 
 /**
