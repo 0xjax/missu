@@ -71,6 +71,7 @@
 | 一级分类（发现页） | `PrimaryTabRow` | 三项等宽（女优/类型/厂商）；基线 `TabRow` 已废弃；发现页**不放搜索入口**（搜索的唯一入口是首页顶部的 `SearchBox`），搜索不单独占页签 |
 | 厂商频道组 | `CollapsibleGroup` + `SettingsRow` | 默认折叠三组（素人/无码影片/亚洲 AV），路径见 `src/constants/channel-groups.ts` |
 | 目录栅格（发现页） | `LazyVerticalGrid` | 女优双列卡片（48dp 圆角头像 + 名字 + 条数 + 出道两行）；类型/厂商三列卡片（`surfaceContainer` 圆角面，名称两行 + 条数压底）。单列时右侧有约 160dp 空白，双/三列后一屏条目数从 9.5 提到 16–24 |
+| 无头像占位 | `MaterialShapes.Cookie9Sided` + 三档容器色 | 站点上刚出道的新人常没有头像图。占位不做「灰圈 + 中性首字」（读起来像加载失败），改成 M3E 多边形 + 首字，颜色按条目 id 哈希在 primary/secondary/tertiary 容器里取一档：同一人每次都一样（不闪），不同条目之间有细微差异。形状固定、只变颜色，避免整列花掉 |
 | 视频卡封面角标 | `VideoCard` | 左下变体标签（中文字幕 / 无码影片），右下时长；标签取自卡片 HTML，不新增请求 |
 | 长按预览 | `VideoCard` 长按 + 全屏 `Modal` | 350ms 长按（带 haptic）弹静音循环预览；预览片由封面地址推导为同目录 `preview.mp4`（原站卡片自带，零额外请求），加载失败保留封面；松手停留，点空白/返回键关闭，短按仍进详情 |
 | 详情信息块 | 详情页内联行 | 8 行（发行日期/番号/标题/女优/类型/系列/发行商/标籤），文案随内容语言变化不硬编码；标签 `textSecondary` 与值同行，可点击值用 accent 色跳 `/latest?source=path`。不用下划线：Android 嵌套 `Text` 的下划线会错位成漂浮短线 |
