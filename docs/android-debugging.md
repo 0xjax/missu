@@ -6,20 +6,22 @@
 
 **adb 就在 Android SDK 里**：`D:\Android\Sdk\platform-tools\adb.exe`。不要再单独解压一份 platform-tools——曾经就是 `D:\platform-tools` 与 SDK 各一份（16.7 MB 重复）。
 
-Android 插件按这个顺序解析 adb：**`ADB` 环境变量 → PATH 上的 `adb` → `ANDROID_HOME`/`ANDROID_SDK_ROOT` + `/platform-tools/adb`**。本机两项都已指向 SDK：
+Android 插件按这个顺序解析 adb：**`ADB` 环境变量 → PATH 上的 `adb` → `ANDROID_HOME`/`ANDROID_SDK_ROOT` + `/platform-tools/adb`**。本机只设这两项，都指向 SDK：
 
-| 变量（用户级） | 值 |
-|---|---|
-| `ADB` | `D:\Android\Sdk\platform-tools\adb.exe` |
-| `ANDROID_HOME` | `D:\Android\Sdk` |
+| 设置（用户级） | 值 | 作用 |
+|---|---|---|
+| **PATH** | `D:\Android\Sdk\platform-tools` | 插件按 PATH 找到 `adb`；终端里也能直接敲 `adb` |
+| `ANDROID_HOME` | `D:\Android\Sdk` | 给 Gradle/SDK 工具用，也是插件的第三级回落 |
 
-**不要再建第二份**。`D:\platform-tools` 已删除（原来是 SDK 那份的重复拷贝）。改完环境变量后，需要**重启一次宿主程序**（DSH/终端），插件才会用新值重新解析 adb；在那之前插件仍按启动时的旧 `ADB` 值找 adb，会报不可用。
+不再单独设 `ADB` 变量——PATH 已覆盖同样作用，少一个真相来源。
+
+**不要再建第二份**。`D:\platform-tools` 已删除（原来是 SDK 那份的重复拷贝）。改完后需要**重启一次宿主程序**（DSH/终端）才会生效——PATH 也是进程启动时读取的，和之前的环境变量一样，不是终端的特例。
 
 ```powershell
-D:\Android\Sdk\platform-tools\adb.exe --version
+adb --version
 ```
 
-PowerShell 默认不从当前目录加载命令，在 `platform-tools` 目录里也必须写 `.\adb`，不能只写 `adb`。本文不修改系统 PATH。
+注意 PowerShell 默认不从**当前目录**加载命令：在 `platform-tools` 目录里仍要写 `.\adb`；PATH 只让它在其它目录可用。这里改的是**用户级** PATH，不是系统级。
 
 **已知坑**：如果 adb server 起不来并报 `cannot open ...\Temp\adb.log: Permission denied`，那是安全软件拒写 `%TEMP%`。把临时目录指到可写位置再起 server：
 
