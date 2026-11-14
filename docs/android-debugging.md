@@ -2,18 +2,31 @@
 
 用 Android Platform-Tools 的 ADB 控制手机，无需完整 Android Studio。**现役应用是 Kotlin 工程（`android-native/`）**：改代码 → Gradle 编译 → `adb install` → 重启 Activity，没有 Metro 与 Fast Refresh。文末的「legacy Expo」一节只记录不再使用的旧流程与仍然成立的结论。
 
-## 安装 Platform-Tools
+## adb 在哪（只有一份）
 
-1. 下载官方 Windows 版：https://developer.android.com/tools/releases/platform-tools
-2. 解压到 `D:\platform-tools`。
-3. 打开 Windows PowerShell 5.1：
+**adb 就在 Android SDK 里**：`D:\Android\Sdk\platform-tools\adb.exe`。不要再单独解压一份 platform-tools——曾经就是 `D:\platform-tools` 与 SDK 各一份（16.7 MB 重复）。
+
+Android 插件按这个顺序解析 adb：**`ADB` 环境变量 → PATH 上的 `adb` → `ANDROID_HOME`/`ANDROID_SDK_ROOT` + `/platform-tools/adb`**。本机两项都已指向 SDK：
+
+| 变量（用户级） | 值 |
+|---|---|
+| `ADB` | `D:\Android\Sdk\platform-tools\adb.exe` |
+| `ANDROID_HOME` | `D:\Android\Sdk` |
+
+`D:\platform-tools` 现在是一个**指向 SDK 的目录联接（junction）**，只为了让设置环境变量之前启动的进程继续可用；重启 DSH/终端后可以删掉，不需要任何路径例外。
 
 ```powershell
-cd D:\platform-tools
-.\adb --version
+D:\Android\Sdk\platform-tools\adb.exe --version
 ```
 
-PowerShell 默认不从当前目录加载命令，因此在当前目录也必须写 `.\adb`，不能只写 `adb`。本文不修改系统 PATH。
+PowerShell 默认不从当前目录加载命令，在 `platform-tools` 目录里也必须写 `.\adb`，不能只写 `adb`。本文不修改系统 PATH。
+
+**已知坑**：如果 adb server 起不来并报 `cannot open ...\Temp\adb.log: Permission denied`，那是安全软件拒写 `%TEMP%`。把临时目录指到可写位置再起 server：
+
+```powershell
+$env:TMP='D:\missu\.tmp-gradle'; $env:TEMP=$env:TMP
+D:\Android\Sdk\platform-tools\adb.exe start-server
+```
 
 ## 无线配对与连接
 
