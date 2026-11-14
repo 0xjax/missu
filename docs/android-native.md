@@ -32,6 +32,7 @@
 - ✅ **新建片单**：站点只有 Blade 表单（`/playlists/create`），先 GET 读 `_token` 与字段名再 urlencoded POST；实测建出 `test` 后列表自动刷新
 - ✅ **编辑 / 删除片单**：详情页页头「编辑」→ 改名/描述/公开 + 删除（二次确认）；实测改名 `test→test2`、删除后列表只剩 `精选`
 - ✅ **M3E 主题与组件**：`MaterialExpressiveTheme` + `MotionScheme.expressive()`；二级页统一 `PageTopBar`（up 图标 + Tooltip）；底栏换 `ShortNavigationBar`；转圈换 `LoadingIndicator`；首页第一个板块用 `HorizontalMultiBrowseCarousel` 当推荐位；首页/发现支持下拉刷新（`PullToRefreshBox`）；女优排序换连通 `ToggleButton` 组（`SegmentedButton` 在 M3E 已退役）
+- ✅ **桌面图标**：五套 adaptive icon（纯色底 + 白色播放三角，共用一个前景）+ 五个 `activity-alias`；设置里「图标跟随主题色」默认关，开启后**离开应用才生效**。实测 vivo 桌面/启动动画/概览都跟着换，应用信息页保持品牌粉（机制边界，见「桌面图标」）
 
 
 ## 版本矩阵（实测钉死）
@@ -300,6 +301,47 @@ app/           Android 应用（UI + 平台适配）
 ```
 
 **边界规则**：`:app` 依赖 `:core`，反向禁止。取数、解析、模型都只在 `:core`，因此它们能在纯 JVM 上跑测试，将来也能被服务端复用。
+
+## 桌面图标
+
+设置里的「图标跟随主题色」（默认关）会让桌面图标跟当前色板换色。机制是 **五个 `activity-alias` + 五个 adaptive icon**，任意时刻只启用一个 alias。
+
+- **入口在 alias 上，不在 `MainActivity` 上**：桌面枚举的是「带 MAIN/LAUNCHER 的组件」，`<application android:icon>` 只决定读 `ApplicationInfo` 的界面（应用信息、权限弹窗、分享面板）。所以启动画面会跟着 alias 一起变（`ComponentInfo.getIconResource()` 取的就是启动组件的图标），而应用信息永远是品牌粉——这是机制边界，不是 bug。
+- **五套图标共用一个前景**：`drawable-nodpi/ic_launcher_foreground.png` 是从 legacy 的 `android-icon-foreground.png` 里裁出播放三角、放大到画布 52% 得到的（108dp 画布里 56dp，仍在 66dp 安全区内）。背景色在 `values/colors.xml`，与 `Palettes.kt` 的深色 `primary` 手工同步。
+- **不提供 monochrome 层**：图标的身分就是背景色，主题化图标会把它抹成单色；Android 16 QPR 2 起系统会强制给没有 monochrome 的应用自动上色，那是系统的选择。
+
+### CRITICAL：`getComponentEnabledSetting` 返回 DEFAULT **不等于**启用
+
+真机上踩过最坏情况——切色后**应用从桌面彻底消失**，`pm enable` 也救不回来（Shell 无权改本包组件状态），只能从应用内启动触发修复。原因：
+
+```
+getComponentEnabledSetting() 只返回「显式设置过」的状态；没设过 → COMPONENT_ENABLED_STATE_DEFAULT
+DEFAULT ≠ 已启用：这些 alias 在清单里是 android:enabled="false"，必须读 ActivityInfo.enabled
+```
+
+误把 DEFAULT 当启用，`apply()` 就会「以为目标已启用 → 跳过启用 → 把其余全部禁用」。两条硬约束因此写进代码：
+
+1. `isEnabled()` 的 DEFAULT 分支读 `pm.getActivityInfo(name, MATCH_DISABLED_COMPONENTS).enabled`（不带这个 flag 会抛 NameNotFound）；
+2. `apply()` 里「**目标没启用成功就绝不去关别的**」，直接 return false。
+
+### 切换时机与兜底
+
+- **只能在应用完全不可见之后切**：禁用「启动时经过的那个 alias」会结束它所在的 task。前台切的表现是被弹回桌面，或者正在跑的人机验证页被一起干掉。所以用 `ProcessLifecycleOwner` 的 `ON_STOP`（最后一个 Activity 停掉之后才发）触发，见 `MissuRoot`。
+- 启动时只做 `ensureOne()`：**保证至少还有一个入口**，不在前台做取舍；「多余的那个」留到下次进后台由 `apply()` 一并收拾。
+- 「跟随壁纸」没有静态图标可用（系统色是运行时算的），落到品牌粉。
+
+### 怎么验证（不靠肉眼）
+
+```powershell
+# 当前启用的是哪个入口
+adb shell dumpsys package app.missu | Select-String -Pattern 'disabledComponents|enabledComponents' -Context 0,5
+# 桌面图标颜色：截桌面图，找 180×180 的色块
+adb shell screencap -p /sdcard/home.png; adb pull /sdcard/home.png
+# 从某个 alias 冷启动（验证启动画面/启动动画用的是哪个图标）
+adb shell am start -n app.missu/.LauncherTeal
+```
+
+实测结论（vivo V2507A / Android 16）：桌面图标、启动动画、概览里的图标都跟着 alias 变；应用信息页保持品牌粉；切换后桌面立刻刷新，不需要重启桌面。**没能在这台机器上抓到 AOSP 启动画面那一帧**——OriginOS 用自己的「图标放大」动画盖住了它，而那段动画读的也是 alias 图标（已测）。另外「把图标固定到桌面」的快捷方式可能因为指向旧 alias 而失效（未实测）。
 
 ## 主题色板
 

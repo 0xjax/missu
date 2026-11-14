@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      启动器图标背景色 = 各色板的**深色 primary**，与设置页色块显示的颜色完全一致
+      （色块用的就是 staticColorScheme(darkTheme = true).primary）。
+
+      NOTE: 数值来自 scripts/gen-theme.py 生成的 Palettes.kt（BrandDark.primary 等）。
+      重新生成色板后，这里要跟着改——资源系统读不到 Kotlin 常量，只能手工同步这五个值。
+    -->
+    <color name="ic_launcher_background_brand">#D85A76</color>
+    <color name="ic_launcher_background_violet">#AF6ABE</color>
+    <color name="ic_launcher_background_blue">#5083DE</color>
+    <color name="ic_launcher_background_teal">#029584</color>
+    <color name="ic_launcher_background_amber">#B9752D</color>
+</resources>

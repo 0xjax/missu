@@ -63,10 +63,12 @@ fun SettingsScreen(
     appLanguage: AppLanguage,
     themeMode: ThemeMode,
     colorSource: ColorSource,
+    followThemeIcon: Boolean,
     pureBlack: Boolean,
     onAppLanguageChange: (AppLanguage) -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
     onColorSourceChange: (ColorSource) -> Unit,
+    onFollowThemeIconChange: (Boolean) -> Unit,
     onPureBlackChange: (Boolean) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -118,6 +120,29 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+                RowDivider()
+                // NOTE: 图标换色只能在应用进后台之后生效（前台禁用启动入口会结束当前 task），
+                // 支持文案里要写明这一点，否则用户会以为「点了没反应」。
+                ListItem(
+                    modifier = Modifier.selectable(
+                        selected = followThemeIcon,
+                        role = Role.Switch,
+                        onClick = { onFollowThemeIconChange(!followThemeIcon) },
+                    ),
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    supportingContent = {
+                        Text(
+                            text = stringResource(R.string.settings_follow_icon_note),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    trailingContent = {
+                        Switch(checked = followThemeIcon, onCheckedChange = onFollowThemeIconChange)
+                    },
+                ) {
+                    Text(text = stringResource(R.string.settings_follow_icon), style = MaterialTheme.typography.bodyLarge)
                 }
                 RowDivider()
                 // NOTE: 纯黑是省电偏好，不是默认值——M3 深色规范用 tone 6 的近黑底，容器才有台阶可踩。

@@ -81,6 +81,26 @@ class SettingsStore(context: Context) {
     }
 
     /**
+     * 桌面图标**应该**用哪个色板（实际启停由 `LauncherIcons` 做，且只在应用进后台时应用）。
+     *
+     * NOTE: 开关关着就永远是品牌粉——图标换色是「贴着边界的美化」，默认不打扰。
+     */
+    fun desiredIconSource(): ColorSource =
+        if (followThemeIcon()) colorSource() else ColorSource.BRAND
+
+    /**
+     * 桌面图标是否跟随主题色。
+     *
+     * NOTE: 默认关。切换图标只能在应用**离开前台之后**生效——禁用当前启动入口会结束它所在的 task。
+     * 另外「跟随壁纸」没有静态图标可用（系统色是运行时算的），那一档保持品牌粉。
+     */
+    fun followThemeIcon(): Boolean = prefs.getBoolean(KEY_FOLLOW_THEME_ICON, false)
+
+    fun setFollowThemeIcon(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_FOLLOW_THEME_ICON, enabled).apply()
+    }
+
+    /**
      * 深色模式下是否用纯黑背景。
      *
      * NOTE: 默认关。M3 的深色规范底色是 tone 6（接近深灰）而不是纯黑：OLED 上黑底与亮像素相邻会拖影，
@@ -98,6 +118,7 @@ class SettingsStore(context: Context) {
         // TODO: `dynamicColor` 是旧字段，只用于一次性迁移，下个版本可以删。
         const val KEY_DYNAMIC_COLOR = "dynamicColor"
         const val KEY_COLOR_SOURCE = "colorSource"
+        const val KEY_FOLLOW_THEME_ICON = "followThemeIcon"
         const val KEY_PURE_BLACK = "pureBlack"
     }
 }
