@@ -131,6 +131,8 @@
     <string name="color_source_blue">ブルー</string>
     <string name="color_source_teal">ティール</string>
     <string name="color_source_amber">アンバー</string>
+    <string name="settings_follow_icon">アイコンをテーマカラーに合わせる</string>
+    <string name="settings_follow_icon_note">アプリを離れたあとに反映されます。「壁紙に合わせる」のときはブランドピンクのままです</string>
     <string name="settings_pure_black">純黒の背景</string>
     <string name="settings_pure_black_note">ダークテーマでのみ有効になります。消費電力を抑えられますが、階層の表現は弱くなります</string>
     <string name="settings_language">言語</string>

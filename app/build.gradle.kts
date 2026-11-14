@@ -52,6 +52,9 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
+    // NOTE: ProcessLifecycleOwner 用来判断「应用已经完全不可见」——桌面图标换色只在那之后做，
+    // 在前台禁用当前启动入口会结束它所在的 task（见 LauncherIcons）。
+    implementation("androidx.lifecycle:lifecycle-process:2.11.0")
     implementation("androidx.navigation:navigation-compose:2.10.2")
 
     // 网络：:core 已用 api 暴露 okhttp/coroutines，这里显式列出便于阅读；

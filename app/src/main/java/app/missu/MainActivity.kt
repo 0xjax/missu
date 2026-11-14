@@ -32,6 +32,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -44,6 +45,9 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -102,6 +106,7 @@ import app.missu.ui.search.SearchBody
 import app.missu.ui.search.SearchHost
 import app.missu.ui.search.SearchUiState
 import app.missu.ui.search.SearchViewModel
+import app.missu.ui.theme.LauncherIcons
 import app.missu.ui.theme.MissuTheme
 import app.missu.ui.theme.themeBackgroundColor
 import coil3.ImageLoader
@@ -113,6 +118,10 @@ class MainActivity : ComponentActivity() {
         // NOTE: 窗口底色必须在第一帧之前就跟上主题。XML 里写死的是 #000000（当年只有深色），
         // 用户切到浅色后，任何透明帧都会露出纯黑 = 转场时"闪一下"。之后由 MissuTheme 持续同步。
         applyWindowBackground()
+        // NOTE: 启动时只保证「至少还有一个桌面入口」，不做换色取舍——在前台禁用我们正用着的那个
+        // 入口会结束当前 task（见 LauncherIcons 的 WARNING）。真正的换色发生在应用进后台之后。
+        val iconSettings = SettingsStore(applicationContext)
+        LauncherIcons.ensureOne(applicationContext, iconSettings.desiredIconSource())
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent { MissuRoot() }
@@ -151,6 +160,7 @@ private fun MissuRoot() {
     var appLanguage by remember { mutableStateOf(settings.appLanguage()) }
     var themeMode by remember { mutableStateOf(settings.themeMode()) }
     var colorSource by remember { mutableStateOf(settings.colorSource()) }
+    var followThemeIcon by remember { mutableStateOf(settings.followThemeIcon()) }
     var pureBlack by remember { mutableStateOf(settings.pureBlack()) }
     val darkTheme = when (themeMode) {
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
@@ -172,6 +182,20 @@ private fun MissuRoot() {
         context.createConfigurationContext(configuration)
     }
 
+    // NOTE: 桌面图标换色的唯一时机是「应用完全不可见之后」。禁用当前启动入口会结束它所在的 task，
+    // 在前台切的表现是被弹回桌面，或者正在跑的人机验证页被一起干掉。ProcessLifecycleOwner 的
+    // ON_STOP 在最后一个 Activity 停掉之后才发，正好给出这段余量。
+    val appContext = context.applicationContext
+    DisposableEffect(appContext) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) {
+                LauncherIcons.apply(appContext, settings.desiredIconSource())
+            }
+        }
+        ProcessLifecycleOwner.get().lifecycle.addObserver(observer)
+        onDispose { ProcessLifecycleOwner.get().lifecycle.removeObserver(observer) }
+    }
+
     MissuTheme(darkTheme = darkTheme, colorSource = colorSource, pureBlack = pureBlack) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             // NOTE: 卡片 → 详情的 container transform 需要共享元素作用域。它必须比 NavHost
@@ -188,6 +212,7 @@ private fun MissuRoot() {
                         contentLanguage = contentLanguage,
                         themeMode = themeMode,
                         colorSource = colorSource,
+                        followThemeIcon = followThemeIcon,
                         pureBlack = pureBlack,
                         onAppLanguageChange = { value ->
                             settings.setAppLanguage(value)
@@ -200,6 +225,10 @@ private fun MissuRoot() {
                         onColorSourceChange = { source ->
                             settings.setColorSource(source)
                             colorSource = source
+                        },
+                        onFollowThemeIconChange = { enabled ->
+                            settings.setFollowThemeIcon(enabled)
+                            followThemeIcon = enabled
                         },                        onPureBlackChange = { enabled ->
                             settings.setPureBlack(enabled)
                             pureBlack = enabled
@@ -223,9 +252,11 @@ private fun MissuApp(
     settings: SettingsStore,
     themeMode: ThemeMode,
     colorSource: ColorSource,
+    followThemeIcon: Boolean,
     pureBlack: Boolean,
     onThemeModeChange: (ThemeMode) -> Unit,
     onColorSourceChange: (ColorSource) -> Unit,
+    onFollowThemeIconChange: (Boolean) -> Unit,
     onPureBlackChange: (Boolean) -> Unit,
     appLanguage: AppLanguage,
     contentLanguage: String,
@@ -441,10 +472,12 @@ private fun MissuApp(
                     appLanguage = appLanguage,
                     themeMode = themeMode,
                     colorSource = colorSource,
+                    followThemeIcon = followThemeIcon,
                     pureBlack = pureBlack,
                     onAppLanguageChange = onAppLanguageChange,
                     onThemeModeChange = onThemeModeChange,
                     onColorSourceChange = onColorSourceChange,
+                    onFollowThemeIconChange = onFollowThemeIconChange,
                     onPureBlackChange = onPureBlackChange,
                     onBack = { navController.popBackStack() },
                 )

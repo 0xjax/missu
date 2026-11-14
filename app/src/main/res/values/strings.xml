@@ -137,6 +137,8 @@
     <string name="color_source_blue">Blue</string>
     <string name="color_source_teal">Teal</string>
     <string name="color_source_amber">Amber</string>
+    <string name="settings_follow_icon">Icon follows theme colour</string>
+    <string name="settings_follow_icon_note">Applies after you leave the app. Wallpaper colours keep the brand pink icon.</string>
     <string name="settings_pure_black">Pure black background</string>
     <string name="settings_pure_black_note">Dark theme only. Saves power, but flattens the container hierarchy.</string>
     <string name="settings_language">Language</string>
