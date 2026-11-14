@@ -307,7 +307,10 @@ app/           Android 应用（UI + 平台适配）
 设置里的「图标跟随主题色」（默认关）会让桌面图标跟当前色板换色。机制是 **五个 `activity-alias` + 五个 adaptive icon**，任意时刻只启用一个 alias。
 
 - **入口在 alias 上，不在 `MainActivity` 上**：桌面枚举的是「带 MAIN/LAUNCHER 的组件」，`<application android:icon>` 只决定读 `ApplicationInfo` 的界面（应用信息、权限弹窗、分享面板）。所以启动画面会跟着 alias 一起变（`ComponentInfo.getIconResource()` 取的就是启动组件的图标），而应用信息永远是品牌粉——这是机制边界，不是 bug。
-- **五套图标共用一个前景**：`drawable-nodpi/ic_launcher_foreground.png` 是从 legacy 的 `android-icon-foreground.png` 里裁出播放三角、放大到画布 52% 得到的（108dp 画布里 56dp，仍在 66dp 安全区内）。背景色在 `values/colors.xml`，与 `Palettes.kt` 的深色 `primary` 手工同步。
+- **五套图标共用一个前景**：`drawable-nodpi/ic_launcher_foreground.png` 与 legacy 的 `android-icon-foreground.png` **逐像素相同**（原样复用、不缩放）。三角高占画布 27.5%，在真机上表现为可见图标的 **46%**。
+  **CRITICAL：别把「画布百分比」当「显示百分比」。** 可见视口只有 108dp 画布的中心约 60%（再加桌面蒙版裁一圈），所以画布上 52% 的前景在屏幕上会变成 86%——三角几乎吞掉背景。第一版就是这么错的。
+  另外三角按**质心**居中，不是按包围盒居中：右向三角的重心偏底边一侧，按包围盒居中会有肉眼可见的偏移（实测质心偏左 18px @180px 图标）。
+  背景色在 `values/colors.xml`，与 `Palettes.kt` 的深色 `primary` 手工同步。
 - **不提供 monochrome 层**：图标的身分就是背景色，主题化图标会把它抹成单色；Android 16 QPR 2 起系统会强制给没有 monochrome 的应用自动上色，那是系统的选择。
 
 ### CRITICAL：`getComponentEnabledSetting` 返回 DEFAULT **不等于**启用
