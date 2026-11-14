@@ -7,6 +7,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -38,6 +39,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -87,6 +89,12 @@ private const val MAX_ATTEMPTS = 120
  * （页面被导去别处，例如登录态失效 302 回首页）就没必要干等满 60 秒。
  */
 private const val GIVE_UP_ATTEMPTS = 12
+
+/**
+ * 静默期上限（10 次 ≈ 5 秒）。正常情况下 1.3–1.5 秒就能靠标题判定完；
+ * 页面一直加载不出来时也要把浮层显出来——留一个看不见的模态挂在屏幕上更糟。
+ */
+private const val REVEAL_AFTER_ATTEMPTS = 10
 
 /** 抬起后多久补一张「刚打开」的截图：给 WebView 一点出画面的时间，又不至于错过白屏阶段。 */
 private const val OPENING_SHOT_MS = 400L
@@ -245,6 +253,13 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
     val cancel = context.getString(R.string.common_cancel)
     val passedText = context.getString(R.string.challenge_passed)
 
+    // NOTE: 先不显形——只有确认「这是真挑战页」才淡入。见 poll 循环里的 revealed 判定。
+    var revealed by remember(request) { mutableStateOf(false) }
+    val contentAlpha by animateFloatAsState(
+        targetValue = if (revealed) 1f else 0f,
+        animationSpec = tween(FADE_MS),
+        label = "challengeAlpha",
+    )
     var status by remember(request) { mutableStateOf(context.getString(R.string.challenge_opening)) }
     var attempts by remember(request) { mutableIntStateOf(0) }
     var finished by remember(request) { mutableStateOf(false) }
@@ -310,6 +325,8 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
                 ?.contains("cf_clearance") == true
             val challengePage = pageTitle.contains(CHALLENGE_TITLE, ignoreCase = true)
             val onTarget = samePath(view.url.orEmpty(), SourceConfig.localizedUrl(request.path))
+            // 真挑战页才显形；其余情况（浏览器直接拿到了目标页）全程不显示任何东西。
+            if (challengePage || attempts >= REVEAL_AFTER_ATTEMPTS) revealed = true
             when {
                 // 首选结局：clearance 到手，交给 OkHttp 重试，之后所有请求都通。
                 clearance && !challengePage -> finish(passed = true, html = null)
@@ -334,6 +351,9 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
     Box(
         modifier = Modifier
             .fillMaxSize()
+            // NOTE: alpha 只在绘制层生效——窗口照常存在，Chromium 仍认为它可见，挑战照常跑，
+            // 但用户什么都看不到。这样「正常首页也弹出防护层」在观感上就不存在了。
+            .alpha(contentAlpha)
             .background(Color.Black.copy(alpha = SCRIM_ALPHA))
             // 系统栏（状态栏、手势条）也要压在暗底里，卡片内容再避开它们。
             .windowInsetsPadding(WindowInsets.safeDrawing)
