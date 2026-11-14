@@ -26,6 +26,9 @@
 - ✅ **我的片单**：`/playlists` 列表（名字 · 可见性 · 更新时间）+ 片单详情网格；真实页面 fixture 测试锁住解析规则
 - ✅ **片单内移除影片（批量）**：页头「整理」进入多选 → M3E `HorizontalFloatingToolbar` 里「全选 / 移出 N 部」（动作是连体 `ButtonGroup`，窄屏自动收进溢出菜单）→ 二次确认 → 逐条 `DELETE /api/playlists/{片单id}/{影片id}`；实测 8→7 条且重进仍是 7 条（服务端生效），批量路径弹窗计数正确
 - ✅ **我的片单操作**：`FloatingActionButtonMenu` 收纳「新建片单 / 刷新列表」，替代原来的顶栏「新建」按钮（M3E 里主操作用 FAB）
+- ✅ **详情页动作条**：底部 `FlexibleBottomAppBar` + `SplitButtonLayout`（左半「收藏/已收藏」、右半「加入片单」），内容区不再被一行按钮打断
+- ✅ **片单整理入口**：右下角 `ToggleFloatingActionButton`（编辑图标 ⇄ ×）；进整理模式后「取消选择 / 完成」走 `AppBarRow` 溢出容器（放不下自动收进菜单）
+- ✅ **搜索栏**：M3E slot + `SearchBarState` —— 折叠态是页面顶部一条，点输入框自动展开成全屏 `ExpandedFullScreenSearchBar`，展开态里放最近搜索；IME 动作是「搜索」
 - ✅ **新建片单**：站点只有 Blade 表单（`/playlists/create`），先 GET 读 `_token` 与字段名再 urlencoded POST；实测建出 `test` 后列表自动刷新
 - ✅ **编辑 / 删除片单**：详情页页头「编辑」→ 改名/描述/公开 + 删除（二次确认）；实测改名 `test→test2`、删除后列表只剩 `精选`
 - ✅ **M3E 主题与组件**：`MaterialExpressiveTheme` + `MotionScheme.expressive()`；二级页统一 `PageTopBar`（up 图标 + Tooltip）；底栏换 `ShortNavigationBar`；转圈换 `LoadingIndicator`；首页第一个板块用 `HorizontalMultiBrowseCarousel` 当推荐位；首页/发现支持下拉刷新（`PullToRefreshBox`）；女优排序换连通 `ToggleButton` 组（`SegmentedButton` 在 M3E 已退役）
@@ -411,6 +414,15 @@ fixture 都是**真机抓的真实页面**（`home-cn.html` / `detail.html` / `s
   （`ToggleButton` 连通组 / `ShortNavigationBar` / 柔性顶栏）。编译不报错，但写出来就是「M3 味」而不是「M3E 味」。
 - **整页转圈统一 `LoadingIndicator`**：基线 `CircularProgressIndicator` 已经全换掉；极小尺寸（14–16dp）也用它，
   注意它**没有** `strokeWidth` 参数。
+- **`ToggleFloatingActionButton` 会吞掉 `Modifier.align`**：直接给它挂 `align(BottomEnd)` 会被摆到左上角（实测），
+  必须在外面包一层 `Box(Modifier.align(...))`。
+- **`containerColor` 参数是普通 lambda**（`(进度) -> Color`，不是 `@Composable`）：主题色要先在组合作用域里读出来再捕获。
+- **带 FAB 的 `HorizontalFloatingToolbar` 重载没有 `trailingContent`**：想要溢出容器就用普通重载，
+  溢出项放进 `trailingContent = { AppBarRow { clickableItem(..., icon = ...) } }`——`clickableItem` 的 `icon` 是必填。
+- **`TextFieldState` 在 foundation 1.13 只剩 `edit { }`**：`setTextAndPlaceCursorAtEnd` / `clearText` 都没了，
+  改写成 `edit { replace(0, length, value) }`。
+- **搜索的 `SearchBarState` 方法都是 suspend**：`animateToExpanded/Collapsed` 必须放进 `scope.launch`；
+  输入框获得焦点会自动展开，不要手动调。
 
 **播放器（Media3）**
 

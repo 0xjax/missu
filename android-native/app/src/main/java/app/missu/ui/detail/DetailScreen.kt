@@ -17,13 +17,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
 import androidx.compose.foundation.clickable
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FlexibleBottomAppBar
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SplitButtonDefaults
+import androidx.compose.material3.SplitButtonLayout
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -167,24 +173,16 @@ private fun ColumnScope.DetailContent(
             )
         }
 
-        item(key = "actions") {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                // NOTE: 收藏状态来自 /api/items/{id}/view；401 会先自动重登一次（见 withAuthRetry）。
-                Button(onClick = onToggleSaved) {
-                    Text(if (detail.saved) "已收藏" else "收藏")
-                }
-                TextButton(onClick = onOpenPlaylists) { Text("片单") }
-                message?.let { text ->
-                    Text(
-                        text = text,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
+        // NOTE: 收藏 / 片单两个动作搬到页面底部的 FlexibleBottomAppBar 里（SplitButton：
+        // 左半是主操作「收藏」，右半是「加入片单」），内容区不再被一行按钮打断。
+        message?.let { text ->
+            item(key = "message") {
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
             }
         }
 
@@ -202,6 +200,24 @@ private fun ColumnScope.DetailContent(
                 )
             }
         }
+    }
+
+    // NOTE: M3E 的底栏动作区：左半是主操作（收藏），右半是次要入口（加入片单）。
+    // NOTE: 收藏状态来自 /api/items/{id}/view；401 会先自动重登一次（见 withAuthRetry）。
+    FlexibleBottomAppBar {
+        SplitButtonLayout(
+            modifier = Modifier.weight(1f),
+            leadingButton = {
+                SplitButtonDefaults.LeadingButton(onClick = onToggleSaved) {
+                    Text(if (detail.saved) "已收藏" else "收藏")
+                }
+            },
+            trailingButton = {
+                SplitButtonDefaults.TrailingButton(onClick = onOpenPlaylists) {
+                    Icon(Icons.Filled.Add, contentDescription = "加入片单")
+                }
+            },
+        )
     }
 
     if (playlists !is PlaylistUiState.Hidden) {
