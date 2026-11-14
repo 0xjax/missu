@@ -453,7 +453,7 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
   会变成"每加一个页面都要记得加"，而且极易漏。需要贴边的页面单独 opt-out。
 - **列表页的空/错状态要区分**：网络上失败不能显示成"内容为空"，否则用户以为数据丢了。
 - **列表 key 必须在数据里唯一，跨页拼接时按 key 去重**：`LazyVerticalGrid(items, key = …)` 的 key 重复会直接抛 `IllegalArgumentException: Key "…" was already used`，崩掉整个页面（真机踩过：发现页女优目录翻页后重复了一个 `/actresses/…`，位置在 2026-11-14 的 `adb logcat -b crash`）。站点的分页会**重叠**（下一页开头又出现上一页的条目），所以 `current + page` 之后必须 `distinctBy { 与 key 相同的表达式 }`；单页来源（片单列表/片单详情）同理——站点可能把同一项列两次。
-- **整屏页面的转场不能用 alpha**：交叉淡入 = 两页文字叠在一起；顺序淡出再淡入 = 中间整屏空底色（"闪一下"）。用 shared axis 整幅横滑（两页全程不透明），方向按底栏顺序定。选型判据见 `.agents/skills/md3e` 的运动系统（有无持续容器 → container transform / shared axis / fade through / fade）。
+- **整屏页面的转场不能用 alpha**：交叉淡入 = 两页文字叠在一起；顺序淡出再淡入 = 中间整屏空底色（"闪一下"）。用 shared axis 整幅横滑（两页全程不透明），方向按底栏顺序定。选型判据见 `.agents/skills/md3e` 的运动系统（有无持续容器 → container transform / shared axis / fade through / fade），本工程各场景的落点与时长见 `DESIGN.md` 的「Motion」小节。
   **例外是卡片 → 详情**：那里有持续容器（封面 → 播放器框），所以走 container transform + fade through（`ui/components/HeroMotion.kt`），页面横滑只在其余路由用。
 - **共享元素的三个硬条件**（缺一个就静默不播，看起来像"没做"）：
   ① 两个页面在转场期间必须同时在组合里——导航转场的时长不能是 0，否则退场页立刻被移除；
