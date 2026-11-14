@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 enum class DiscoverTab(val kind: String, val label: String) {
     ACTRESSES("actresses", "女优"),
     GENRES("genres", "类型"),
+    MAKERS("makers", "厂商"),
 }
 
 sealed interface DirectoryUiState {
