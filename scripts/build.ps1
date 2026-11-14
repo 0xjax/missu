@@ -10,7 +10,7 @@
 param([string]$Task = "assembleDebug")
 
 $ErrorActionPreference = "Stop"
-# NOTE: 本脚本在 scripts/ 下，仓库根（= Gradle 根）是它的父目录；gradlew、app/、.tmp-gradle 都在那边。
+# NOTE: 本脚本在 scripts/ 下，仓库根（= Gradle 根）是它的父目录；gradlew、app/、core/ 都在那边。
 $root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 
 # JDK：目录名带版本号（D:\Android\jdk-21），但脚本**自动发现**——升级时解压出 jdk-25 即可，
