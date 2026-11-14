@@ -1,4 +1,4 @@
-﻿package app.missu.ui.list
+package app.missu.ui.list
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -59,7 +59,8 @@ class VideoListViewModel(
             _state.value = try {
                 val page = api.getVideos(path, next)
                 current.copy(
-                    videos = current.videos + page.videos,
+                    // CRITICAL: 按界面 key 去重（同 id 同 pageUrl），分页重叠会让 LazyVerticalGrid 抛重复 key 崩溃。
+                    videos = (current.videos + page.videos).distinctBy { it.id + it.pageUrl },
                     nextPage = page.nextPage,
                     loadingMore = false,
                 )

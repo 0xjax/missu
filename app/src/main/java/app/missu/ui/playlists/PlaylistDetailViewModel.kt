@@ -1,4 +1,4 @@
-﻿package app.missu.ui.playlists
+package app.missu.ui.playlists
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -43,7 +43,9 @@ class PlaylistDetailViewModel(
                 if (detail.videos.isEmpty()) {
                     PlaylistDetailUiState.Empty
                 } else {
-                    PlaylistDetailUiState.Content(detail.name.ifEmpty { id }, detail.videos)
+                    // CRITICAL: 列表 key 是 `id + pageUrl`，重复会让 LazyVerticalGrid 抛重复 key 崩溃
+                    // （站点可能把同一部影片列两次）。
+                    PlaylistDetailUiState.Content(detail.name.ifEmpty { id }, detail.videos.distinctBy { it.id + it.pageUrl })
                 }
             } catch (error: Exception) {
                 PlaylistDetailUiState.Error(error.toUiMessage())
