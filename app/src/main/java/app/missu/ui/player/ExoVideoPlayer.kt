@@ -60,6 +60,9 @@ fun ExoVideoPlayer(
     onToggleFullscreen: () -> Unit = {},
     initialPositionMs: Long = 0L,
     onPositionReport: ((Long) -> Unit)? = null,
+    // NOTE: 第一帧真正出画。上层（详情页）要靠它决定什么时候撤掉封面：
+    // 在它之前容器里必须一直有画面，否则"长大到位"的封面会凭空消失一下。
+    onFirstFrameRendered: () -> Unit = {},
 ) {
     val context = LocalContext.current
 
@@ -68,6 +71,9 @@ fun ExoVideoPlayer(
     var isPlaying by remember { mutableStateOf(false) }
     var speed by remember { mutableStateOf(1f) }
     var speedMenuOpen by remember { mutableStateOf(false) }
+    // NOTE: 控件只在第一帧出画之后才允许出现。加载中就把进度条和播放键摆出来，
+    // 等于在"还没有东西可控"的时候先给一堆控件——那正是详情页打开时最脏的一帧。
+    var ready by remember(url) { mutableStateOf(false) }
 
     val player = remember {
         val callFactory = OkHttpClient.Builder()
@@ -94,12 +100,19 @@ fun ExoVideoPlayer(
     val reportPosition = rememberUpdatedState<(Long) -> Unit> { position ->
         onPositionReport?.invoke(position)
     }
+    // NOTE: 监听器在 DisposableEffect 里只装一次，回调必须走 rememberUpdatedState 才不会拿到旧 lambda。
+    val notifyFirstFrame = rememberUpdatedState { onFirstFrameRendered() }
 
     DisposableEffect(player) {
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(playing: Boolean) {
                 isPlaying = playing
                 if (playing) controlsVisible = true
+            }
+
+            override fun onRenderedFirstFrame() {
+                ready = true
+                notifyFirstFrame.value()
             }
 
             override fun onPlayerError(error: PlaybackException) {
@@ -163,7 +176,7 @@ fun ExoVideoPlayer(
 
         PlayerOverlay(
             player = player,
-            visible = controlsVisible,
+            visible = ready && controlsVisible,
             speed = speed,
             isFullscreen = isFullscreen,
             onSpeedClick = { speedMenuOpen = true },
