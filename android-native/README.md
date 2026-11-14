@@ -41,7 +41,7 @@
 | targetSdk / minSdk | 36 / 26 | 编译用新 API、运行时行为按 36 走 |
 | JDK | **独立 Temurin 21**（`D:\Android\jdk-21`）+ 回落 AS 自带 JBR | 目录名带版本；`build.ps1` **自动发现** `D:\Android\jdk-*` 并取 major 最高者，升级只需解压出 `jdk-25`，脚本不用改。版本信息见目录内 `MISSU-JDK-VERSION.txt` |
 | Android SDK | API 37.0 + Build-Tools 37 + Platform-Tools | `D:\Android\Sdk` |
-| Android Studio | **2026.2.2**（build `AI-262.10968.63.2622.16840690`，数据目录 `AndroidStudio2026.2.2`） | 只需它自带的 JDK；不需要单独装 JDK |
+| Android Studio | **已卸载**（曾用 2026.2.2 / `AI-262.10968.63.2622.16840690`） | **构建不需要它**：JDK、SDK、Gradle wrapper 都是独立的。装它只是为了 IDE，不装也能构建、装机、跑测试 |
 
 **SDK 与 JDK 是全局安装物**，不在项目里；项目只通过 `local.properties`（`sdk.dir=D:/Android/Sdk`，已 gitignore）和 `build.ps1` 引用它们。
 
@@ -96,7 +96,7 @@ cd D:\missu\android-native
 
 | 变量 | 值 | 为什么 |
 |---|---|---|
-| `JAVA_HOME` | 自动选 `D:\Android\jdk-N`（N 最大），没有则 AS 的 `jbr` | 独立 JDK 让构建不依赖 AS；两条路都实测可构建 |
+| `JAVA_HOME` | 自动选 `D:\Android\jdk-N`（N 最大） | 独立 JDK；AS 已卸载，构建不依赖它（脚本仍保留 AS `jbr` 作为回落，装回 AS 时可用） |
 | `ANDROID_HOME` / `ANDROID_SDK_ROOT` | `D:\Android\Sdk` | 与 `local.properties` 的 `sdk.dir` 一致 |
 | `ANDROID_USER_HOME` | `.local/android-home` | `~/.android` 被拒写 |
 | `TMP` / `TEMP` | `.tmp-gradle` | `%TEMP%` 拒写，`generateDebugGlobalSynthetics` 会 `AccessDeniedException` |
@@ -106,25 +106,25 @@ cd D:\missu\android-native
 ## 构建不依赖 Android Studio
 
 命令行构建只需要三样东西：**JDK 21+**、**Android SDK**（`platform-tools` + `platforms/android-37.0` + `build-tools/37.0.0`）、以及项目自带的 **Gradle wrapper**（首次构建自动下载）。
-`Android Studio` 只是 IDE，外加目前**被当作 JDK 来源**（`build.ps1` 的 `JAVA_HOME` 指向它的 `jbr`）。AS 的 SDK Manager / sdkmanager 任选其一即可装 SDK 组件，`licenses` 也是独立目录。
+`Android Studio` 只是 IDE。**本机已卸载 AS**：JDK 用 `D:\Android\jdk-21`，SDK 组件用 `sdkmanager`（`D:\Android\Sdk\cmdline-tools\bin`）装，`licenses` 也是独立目录——卸载后 `assembleDebug` / `installDebug` / `:core:test` 全部实测通过。
 
 所以完全可以不装 AS，前提是：
 
 1. 装一个独立 JDK 21+（Temurin / Corretto 都行），把 `build.ps1` 里的 `JAVA_HOME` 指过去；放在 `D:\Android\jdk-<major>` 这类带版本的目录里（`build.ps1` 会自动挑最高版本，升级不影响脚本）；
-2. **该 JDK 的 `java.exe` 必须被安全软件放行**——本机踩过：`D:\Android\jdk-17\bin\java.exe` 能读不能写、而 AS 的 JBR 正常，是卡巴斯基按可执行文件的拦截，不是 JDK 版本问题；
+2. **该 JDK 的 `java.exe` 必须被安全软件放行**——本机踩过：旧的 `D:\Android\jdk-17\bin\java.exe` 被卡巴斯基按可执行文件拦截（读得到、写不了），而当时 AS 的 JBR 正常；换成 `D:\Android\jdk-21`（Temurin）后已无此问题；
 3. SDK 组件用 `sdkmanager` 装（在 `D:\Android\Sdk\cmdline-tools\bin` 下），不需要 AS 的图形界面。
 
 反过来，如果保留 AS：它约 3.3 GB，好处是 IDE（跳转/调试/Layout Inspector/Profiler）；坏处只有一个——同步时容易把 NDK / system-image 自动拉回来（见下面的设置项）。
 
 **本机现状**：`D:\Android\jdk-21`（Temurin 21.0.13）已装好并被 `build.ps1` 自动选中，`assembleDebug` / `installDebug` / `:core:test` 都实测通过。所以 AS 现在**只剩 IDE 作用**，卸载后可回收约 3.3 GB。
 
-## Android Studio 设置（一次性）
+## Android Studio 设置（仅当你重新安装 AS 时）
 
 1. **Open** → 选 `D:\missu\android-native`（不要选父目录 `D:\missu`，那是 Expo 工程）。
 2. Settings → Languages & Frameworks → **Android SDK** → Android SDK Location = `D:\Android\Sdk`
    - 只应有：Android API 37.0、Build-Tools 37、Platform-Tools
    - 不要装 NDK、CMake、system-image、Emulator、旧 API（本工程无原生代码，只跑真机）
-3. **Gradle JDK**：Settings → Build, Execution, Deployment → Build Tools → Gradle → **Gradle JDK = Embedded JDK**（即 AS 自带 JBR）。不要指向 `D:\Android\jdk-17`（已删）。
+3. **Gradle JDK**：仍用 **Embedded JDK**（AS 自带的）即可——它与 `build.ps1` 用的不是同一个 JDK，不影响命令行构建；也可以指到 `D:\Android\jdk-21` 保持一致。
 4. 缓存走标准位置 `%USERPROFILE%\.gradle`，不要自定义 Gradle 主目录。
 5. **关掉「自动下载缺失的 SDK 组件」**（Settings → Build Tools → Gradle → 关闭 "Auto-install missing components"，或至少别在有 NDK/Emulator 的勾选下同步），
    否则打开工程时 AS 会自动拉回 NDK / system-image（各 1–2 GB）。
@@ -142,6 +142,9 @@ cd D:\missu\android-native
 | 重复的 Android SDK 副本 | SDK Manager 里只能有一个 location（`D:\Android\Sdk`） |
 
 清理时顺便删：Studio 安装包（~1.5 GB）、`%USERPROFILE%\.gradle\wrapper\dists` 里的旧 Gradle（~150 MB）、旧 JDK（~300 MB）、legacy Expo 的 `android/`（~1 GB）与 `node_modules`。实测累计回收约 **10 GB**（其中 NDK/CMake/重复 SDK 约 5.6 GB）。
+
+**AS 本身也已卸载**（程序目录 3.32 GB）。卸载后只剩两处设置残留、共约 0.3 GB，可手动删：
+`%LOCALAPPDATA%\Google\AndroidStudio2026.2.2`、`%APPDATA%\Google\AndroidStudio2026.2.2`。
 
 ## 模块结构
 
@@ -232,8 +235,8 @@ fixture 都是**真机抓的真实页面**（`home-cn.html` / `detail.html` / `s
 **构建环境**
 
 - **JVM 写某个目录被拒，但 PowerShell 能写** → 这是安全软件按**可执行文件**拦截，不是文件权限。
-  实测：AS 自带 JBR 能写 `D:\gradle-home`，`D:\Android\jdk-17` 的 java 被拒，同一文件、同一用户。
-  所以构建 JDK 固定用 JBR；`D:\Android\jdk-17` 已闲置。
+  实测：当时 AS 自带 JBR 能写 `D:\gradle-home`，`D:\Android\jdk-17` 的 java 被拒，同一文件、同一用户。
+  现在构建用独立 Temurin（`D:\Android\jdk-21`），写入正常；换任何 JDK 前都先验证它的 `java.exe` 能正常跑。
 - **`native-platform.dll` 加载失败**（历史问题）→ 当时把 `GRADLE_USER_HOME` 挪出了用户目录；现在标准位置
   `%USERPROFILE%\.gradle` 实测可用（缓存已迁回，约 4.6 GB），不要再自定义 Gradle 主目录。
 - **`AccessDeniedException: %TEMP%\global_synthetics_*`** → `TMP`/`TEMP` 指到 `.tmp-gradle`。

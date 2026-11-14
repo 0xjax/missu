@@ -83,9 +83,9 @@ adb 按 serial（传输）记账，不按硬件去重。无线调试下同一台
 
 1. **PDM（系统监控）拦 DSH 的子进程**：DSH 启动 `powershell.exe`、批量改文件权限时会报 `PDM:Exploit.Win32.Generic`，工具侧表现为 `spawn EPERM`。
    处理：受信任应用程序里加 `C:\Users\user\AppData\Local\Programs\DeepSeek Harness\DeepSeek Harness.exe`，勾「不监控应用程序活动」「不监控子应用程序活动」（递归）；排除项目录加 `D:\missu`、`C:\Users\user\.dsh`。
-2. **按可执行文件拦写入**：某个 `java.exe` 即使被加进"受信任应用程序"，写工作区外目录仍可能被拒；同一文件用 PowerShell 或 Android Studio 自带的 JBR 写就正常。
+2. **按可执行文件拦写入**：某个 `java.exe` 即使被加进"受信任应用程序"，写工作区外目录仍可能被拒（当年 `D:\Android\jdk-17` 就是这样，而当时 AS 自带的 JBR 正常）。
    判别方法：同一个文件分别用 PowerShell 和 JVM 写一次，只有 JVM 被拒 = 程序级拦截，不是文件权限。
-   处理：构建固定用 Android Studio 自带的 JBR（`build.ps1` 里已配），不要用被拦的那个 JDK。
+   处理：构建用 `D:\Android\jdk-21`（Temurin，`build.ps1` 自动发现）；换 JDK 前先确认它的 `java.exe` 能正常跑。
 
 ## 构建、安装与迭代
 
