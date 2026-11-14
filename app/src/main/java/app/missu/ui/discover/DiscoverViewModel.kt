@@ -13,11 +13,19 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/** 发现页的两个目录。`kind` 同时是路径段与解析时用来筛链接的关键词。 */
+/**
+ * 发现页的页签。`kind` 只对**目录**有意义（它同时是路径段与解析时用来筛链接的关键词）；
+ * 「热门」不是目录，它只是三个列表页入口（见 `DiscoverScreen` 的 `HotPeriod`），所以不取数。
+ */
 enum class DiscoverTab(val kind: String, @param:StringRes val labelRes: Int) {
     ACTRESSES("actresses", R.string.discover_section_actresses),
     GENRES("genres", R.string.discover_section_genres),
     MAKERS("makers", R.string.discover_section_makers),
+    HOT("hot", R.string.discover_section_hot),
+    ;
+
+    /** 需要向后端取数的页签。「热门」的条目是本地常量，不占一次请求。 */
+    val isDirectory: Boolean get() = this != HOT
 }
 
 sealed interface DirectoryUiState {

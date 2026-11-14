@@ -155,6 +155,12 @@
     <string name="discover_section_actresses">Actresses</string>
     <string name="discover_section_genres">Genres</string>
     <string name="discover_section_makers">Makers</string>
+    <string name="discover_section_hot">Hot</string>
+
+    <!-- 热门（三个周期都是站点直出的列表页） -->
+    <string name="hot_today">Hottest today</string>
+    <string name="hot_weekly">Hottest this week</string>
+    <string name="hot_monthly">Hottest this month</string>
 
     <!-- 女优排序与筛选（选项值在 :core，文案在这里） -->
     <string name="sort_videos">Videos</string>
