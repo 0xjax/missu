@@ -13,7 +13,7 @@ Android 插件按这个顺序解析 adb：**`ADB` 环境变量 → PATH 上的 `
 | `ADB` | `D:\Android\Sdk\platform-tools\adb.exe` |
 | `ANDROID_HOME` | `D:\Android\Sdk` |
 
-`D:\platform-tools` 现在是一个**指向 SDK 的目录联接（junction）**，只为了让设置环境变量之前启动的进程继续可用；重启 DSH/终端后可以删掉，不需要任何路径例外。
+**不要再建第二份**。`D:\platform-tools` 已删除（原来是 SDK 那份的重复拷贝）。改完环境变量后，需要**重启一次宿主程序**（DSH/终端），插件才会用新值重新解析 adb；在那之前插件仍按启动时的旧 `ADB` 值找 adb，会报不可用。
 
 ```powershell
 D:\Android\Sdk\platform-tools\adb.exe --version
