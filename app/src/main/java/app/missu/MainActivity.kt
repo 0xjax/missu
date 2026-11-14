@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -12,7 +13,7 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.only
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
@@ -50,6 +51,7 @@ import app.missu.data.store.ProfileStore
 import app.missu.data.store.HistoryStore
 import app.missu.data.store.SearchHistoryStore
 import app.missu.data.store.SettingsStore
+import app.missu.data.store.ThemeMode
 import app.missu.ui.history.HistoryScreen
 import android.net.Uri
 import app.missu.ui.history.HistoryViewModel
@@ -79,12 +81,43 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        setContent {
-            MissuTheme {
-                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    MissuApp()
-                }
-            }
+        setContent { MissuRoot() }
+    }
+}
+
+/**
+ * 主题状态的唯一持有者：明暗模式与壁纸取色都要能实时改变整棵树，所以放在最外层。
+ *
+ * NOTE: 设置本身存在 SharedPreferences 里（[SettingsStore]），这里只是把它读成 Compose 状态；
+ * 改设置 → 立刻重组主题，不需要重启 Activity。
+ */
+@Composable
+private fun MissuRoot() {
+    val context = LocalContext.current
+    val settings = remember { SettingsStore(context.applicationContext).also { it.applyStoredLanguage() } }
+    var themeMode by remember { mutableStateOf(settings.themeMode()) }
+    var dynamicColor by remember { mutableStateOf(settings.dynamicColor()) }
+    val darkTheme = when (themeMode) {
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+
+    MissuTheme(darkTheme = darkTheme, dynamicColor = dynamicColor) {
+        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            MissuApp(
+                settings = settings,
+                themeMode = themeMode,
+                dynamicColor = dynamicColor,
+                onThemeModeChange = { mode ->
+                    settings.setThemeMode(mode)
+                    themeMode = mode
+                },
+                onDynamicColorChange = { enabled ->
+                    settings.setDynamicColor(enabled)
+                    dynamicColor = enabled
+                },
+            )
         }
     }
 }
@@ -97,7 +130,13 @@ private fun rememberApi(): MissavApi {
 }
 
 @Composable
-private fun MissuApp() {
+private fun MissuApp(
+    settings: SettingsStore,
+    themeMode: ThemeMode,
+    dynamicColor: Boolean,
+    onThemeModeChange: (ThemeMode) -> Unit,
+    onDynamicColorChange: (Boolean) -> Unit,
+) {
     val navController = rememberNavController()
     val api = rememberApi()
     val context = LocalContext.current
@@ -105,7 +144,6 @@ private fun MissuApp() {
     val auth: AuthViewModel = viewModel(factory = factory { AuthViewModel(api, ProfileStore(context.applicationContext), CredentialStore(context.applicationContext)) })
 
     // NOTE: 语言必须在第一次请求之前装进 SourceConfig，否则首屏会按默认语言拉一轮再换。
-    val settings = remember { SettingsStore(context.applicationContext).also { it.applyStoredLanguage() } }
     val historyStore = remember { HistoryStore(context.applicationContext) }
     val searchHistory = remember { SearchHistoryStore(context.applicationContext) }
     var language by remember { mutableStateOf(settings.language()) }
@@ -244,10 +282,14 @@ private fun MissuApp() {
             composable("settings") {
                 SettingsScreen(
                     language = language,
+                    themeMode = themeMode,
+                    dynamicColor = dynamicColor,
                     onLanguageChange = { value ->
                         settings.setLanguage(value)
                         language = value
                     },
+                    onThemeModeChange = onThemeModeChange,
+                    onDynamicColorChange = onDynamicColorChange,
                     onBack = { navController.popBackStack() },
                 )
             }
@@ -420,7 +462,7 @@ private data class TopLevel(
 // 底部只留三个一级页面：首页 / 发现 / 我的。
 private val topLevels = listOf(
     TopLevel("home", "首页", Icons.Filled.Home),
-    TopLevel("discover", "发现", Icons.Filled.List),
+    TopLevel("discover", "发现", Icons.AutoMirrored.Filled.List),
     TopLevel("account", "我的", Icons.Filled.Person),
 )
 

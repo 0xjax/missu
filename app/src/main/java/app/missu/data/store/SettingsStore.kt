@@ -4,14 +4,27 @@ import android.content.Context
 import app.missu.data.api.SourceConfig
 import app.missu.data.api.isSupportedLanguage
 
+/** 明暗模式：跟随系统 / 强制浅色 / 强制深色。 */
+enum class ThemeMode {
+    SYSTEM,
+    LIGHT,
+    DARK,
+    ;
+
+    companion object {
+        fun fromKey(key: String?): ThemeMode = entries.firstOrNull { it.name == key } ?: SYSTEM
+    }
+}
+
 /**
- * 应用设置。目前只有「内容语言」。
+ * 应用设置：内容语言、明暗模式、是否用系统壁纸取色。
  *
  * NOTE: 语言必须在**第一次网络请求之前**装进 [SourceConfig]，否则首屏会按默认语言拉一轮再换，
  * legacy 就是先读完偏好再挂载界面（见 `src/stores/language.tsx`）。
  * TODO: 设置项增加后（播放器默认倍速、列表列数…）统一放这里。
  */
 class SettingsStore(context: Context) {
+
     private val prefs = context.getSharedPreferences("missu:settings", Context.MODE_PRIVATE)
 
     fun language(): String {
@@ -30,8 +43,23 @@ class SettingsStore(context: Context) {
         SourceConfig.contentLanguage = language()
     }
 
+    fun themeMode(): ThemeMode = ThemeMode.fromKey(prefs.getString(KEY_THEME_MODE, null))
+
+    fun setThemeMode(value: ThemeMode) {
+        prefs.edit().putString(KEY_THEME_MODE, value.name).apply()
+    }
+
+    /** 壁纸取色。默认关：品牌粉是本 App 的识别度，不能让壁纸随手替掉。 */
+    fun dynamicColor(): Boolean = prefs.getBoolean(KEY_DYNAMIC_COLOR, false)
+
+    fun setDynamicColor(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_DYNAMIC_COLOR, enabled).apply()
+    }
+
     private companion object {
         const val KEY_LANGUAGE = "language"
+        const val KEY_THEME_MODE = "themeMode"
+        const val KEY_DYNAMIC_COLOR = "dynamicColor"
         const val DEFAULT_LANGUAGE = "cn"
     }
 }
