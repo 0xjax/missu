@@ -43,7 +43,7 @@
 
 取数方式有明确优先级，**不能跳过前一级**：
 
-1. **站点自己的 JSON 接口**（首选）。证据来源：站点页面内联脚本与 JS bundle 里的 `axios/fetch` 调用，或 legacy `src/api/missav.ts` 的请求构造。例：`GET /api/items/{id}/view`、`POST /api/playlists/add`。
+1. **站点自己的 JSON 接口**（首选）。证据来源：站点页面内联脚本与 JS bundle 里的 `axios/fetch` 调用，或归档实现 `legacy/expo/src/api/missav.ts` 的请求构造。例：`GET /api/items/{id}/view`、`POST /api/playlists/add`。
 2. **HTML 解析**（次选，仅在确认没有 JSON 接口时）。必须先确认第 1 级不存在，并在代码里写明依据。
 3. **Blade 表单 POST**（最后手段）。要读 `_token`、字段名、跳转语义，脆弱面最大。
 
@@ -54,14 +54,12 @@
 - 走到第 2/3 级时必须三件事齐全：① 代码里 `NOTE`/`WARNING` 写明「站点无 JSON 接口，只能解析」+ 依据；② 用真实或真实结构的 fixture 写离线测试锁住规则；③ 在 `docs/android-native.md`「已知坑 · 站点契约」记录结论。
 - 判断「要不要做」看**脆弱面 × 使用频率**，不看其他功能是否高效：低频 + 依赖解析的操作（如新建片单），优先考虑不做。
 
-## WebView 兜底（受限使用）
+## WebView（只用于人机验证）
 
-站点网页可以作为长尾功能的逃生口，但必须收敛：
-
-- 只用于**明确的、我们不打算移植**的操作（如新建片单、账号设置），并在 UI 上标明「此操作在网页中完成」。
-- 不做通用浏览模式（那就是浏览器，没有产品价值）。
-- 必须复用系统 `CookieManager`（与 OkHttp 同一份 Cookie）；返回后**显式触发**受影响页面的刷新——WebView 与原生之间没有事件通道。
-- 兜底坏了不能影响原生功能：它是补充，不是依赖。
+- 唯一用途：站点要求人机验证时由 `ChallengeActivity` 打开网页，拿到 `cf_clearance` 后自动重试原请求。
+- 不再用它兜「表单操作」：新建片单已经走原生表单（读 `_token` + urlencoded POST）。
+- 必须复用系统 `CookieManager`（与 OkHttp 同一份 Cookie），否则验证过了请求仍然 403。
+- 不做通用浏览模式；这条链路坏掉不能影响其余原生功能。
 
 ## Anti-Over-Engineering
 
@@ -101,7 +99,7 @@
 ## Verification
 
 - 原生工程：`.\build.ps1`（或 `install`）必须 `BUILD SUCCESSFUL`；这是唯一的验收命令。
-- legacy Expo 代码不做验证（不再构建）；`bun check`（bun 原生检查器）只在需要检查 legacy TS 时用。
+- `legacy/expo/` 不参与验证（不构建、不跑 lint）；它只是参照实现。
 - 构建环境的已知坑（`native-platform.dll`、`%TEMP%` 拒写、JVM 被按程序拦截、PS 5.1 需要 BOM）见 `docs/android-native.md` 的「已知坑」。
 - **升级 SDK / JDK 等环境依赖前，先查 Android CLI 最新情况**：Google 正在把 `sdkmanager` 迁到原生的 `android sdk`，新版 bundle 自带的 JRE 可能未签名，而本机 Windows 11 Smart App Control 处于强制模式（`VerifiedAndReputablePolicyState = 1`）会拒绝加载未签名代码。按 `docs/android-native.md`「升级 SDK 环境依赖前」的检查清单确认后再动，并把结论写回那里。
 - After structural changes, update stale descriptions in AGENTS.md / DESIGN.md / docs/android-native.md proactively.

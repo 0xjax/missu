@@ -52,21 +52,14 @@
 4. **选中态轻量表达** — 触发器只显示当前选项值（如 `全部`、`发行日期`），维度由按钮位置表达，不加「筛选 / 排序」前缀；菜单里的选中项只改文字颜色，不插入 `✓` 之类的字符前缀（会撑动布局、行宽跳动）。
 5. **状态一致** — 加载、空、错误、重试在首页/列表/发现/详情用同一套表达，错误必须可重试。
 
-## 组件框架（`src/components/ui/`）
-
-界面只允许用这些原语拼，新控件先加到这里，不要在页面里就地发明：
-
-| 原语 | 文件 | 用途 | 取代 |
-|---|---|---|---|
-| `Sheet` | `ui/sheet.tsx` | 底部弹层：遮罩淡入 + 卡片上滑，`onRequestClose` 接返回键 | Compose `BottomSheet`、Paper `Modal` |
-| `Menu` | `ui/menu.tsx` | 工具栏下拉：触发器 + 现测坐标的浮层，下方放不开自动翻到上方 | Paper `Menu`、Compose `DropdownMenu` |
-| `Pill` | `ui/pill.tsx` | 胶囊按钮（选中只填充色） | Paper `Chip`、Compose `ToggleButton` |
-| `UiButton` | `ui/button.tsx` | 40dp 按钮，`text` 次要 / `filled` 主操作 | Paper `Button`、Compose `Button`/`TextButton` |
-| `Checkbox` | `ui/checkbox.tsx` | 22dp 勾选框 | Compose `Checkbox` |
-| `SearchField` | `ui/search-field.tsx` | 搜索输入框（放大镜 + 清空） | Paper `Searchbar` |
-| `Toast` | `ui/toast.tsx` | 底部悬浮提示，自动消失 | Paper `Snackbar` |
+> Expo 版那套自绘原语（`Sheet` / `Menu` / `Pill` / `UiButton` / `Checkbox` / `SearchField` / `Toast`）
+> 已随归档实现移到 [`legacy/expo/DESIGN-legacy.md`](legacy/expo/DESIGN-legacy.md)；现役 native 版不再有这层原语，
+> 直接用 Material 3 Expressive 组件（见下面的 Control Map）。
 
 ## Control Map
+
+> 前半部分是现役 native 的实现；其余行描述的是归档 Expo 版（里面出现 `expo-router` / `FlatList` / `VideoCard` / `TabHeader`
+> 这类 RN 组件的行就是 legacy 口径），两者冲突时**以 native 为准**。
 
 | 场景 | 控件 | 规格 |
 |---|---|---|
@@ -143,12 +136,12 @@
 - Kotlin 2.4.21 + Jetpack Compose（BOM **alpha 2026.11.00** → material3 1.5.0-rc01）+ Material 3 **Expressive**；AGP 9.5.1 / Gradle 9.6.0
 - 单 Activity + Navigation Compose；界面一律自己写 Compose，不引第三方 UI 组件库
 - 数据层：OkHttp + Jsoup（对应 legacy 的 `fetch` + `node-html-parser`）
-- 存储：DataStore（对应 legacy 的 `expo-sqlite/kv-store`）
+- 存储：目前是 `SharedPreferences`（凭据再用 Android Keystore 里的密钥做 AES-GCM 加密）；迁 DataStore / Room 只在代码 TODO 里，尚未发生
 - 媒体：Media3 ExoPlayer；图片 Coil；网页/人机验证：系统 `WebView` + `CookieManager`
 
 **legacy（Expo，仅参照）**
 
 - Expo SDK 58 + React Native 0.88 + TypeScript
-- 路由 `expo-router`；UI 是 `src/components/ui/` 的七个自绘原语 + Reanimated + Gesture Handler
-- 数据 `src/api/*`；存储 `expo-sqlite/kv-store`；媒体 `expo-video` / `expo-image` / `react-native-webview`
+- 路由 `expo-router`；UI 是 `legacy/expo/src/components/ui/` 的七个自绘原语 + Reanimated + Gesture Handler（见 `legacy/expo/DESIGN-legacy.md`）
+- 数据 `legacy/expo/src/api/*`；存储 `expo-sqlite/kv-store`；媒体 `expo-video` / `expo-image` / `react-native-webview`
 - 不再构建、不再运行；`node_modules` 已删除，需要时 `bun install`

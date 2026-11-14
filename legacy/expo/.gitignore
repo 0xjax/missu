@@ -1,0 +1,22 @@
+# 归档的 Expo 工程自己的忽略规则（根 .gitignore 不再管这些）
+
+# 依赖与构建
+node_modules/
+.expo/
+dist/
+web-build/
+/ios
+/android
+.metro-health-check*
+
+# TS / lint 产物
+*.tsbuildinfo
+coverage/
+
+# Expo 生成物
+expo-env.d.ts
+
+# 调试日志
+npm-debug.*
+yarn-debug.*
+yarn-error.*
