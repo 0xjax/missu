@@ -53,6 +53,9 @@ import coil3.compose.AsyncImage
  *
  * NOTE: 站点每个板块给 16 条上下，全铺出来首页就是三十多行、要翻约 6000dp 才到最后一个板块。
  * 首页只当「预览」，完整列表走板块标题行的「更多」进 `/list`（复用已有分页页）。
+ * NOTE: 首页**不请求** `/new` 之类的列表接口——4 个板块来自同一次 `GET /`（站点把预览块直出在首页
+ * HTML 里），`take(SECTION_PREVIEW)` 是我们自己的上限；「更多」用的是站点那一行链接的路径。
+ * 所以首页与完整页是**导读关系**，不是同一份接口数据的两种截断。
  */
 private const val SECTION_PREVIEW = 6
 
