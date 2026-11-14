@@ -30,7 +30,7 @@ fun VideoListScreen(
     state: VideoListUiState,
     onRetry: () -> Unit,
     onLoadMore: () -> Unit,
-    onOpen: (String) -> Unit,
+    onOpen: (id: String, thumbnail: String?) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -56,7 +56,7 @@ fun VideoListScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     items(items = current.videos, key = { it.id + it.pageUrl }) { video ->
-                        VideoGridCard(video = video, onClick = { onOpen(video.id) })
+                        VideoGridCard(video = video, onClick = { onOpen(video.id, video.thumbnailUrl) })
                     }
 
                     if (current.nextPage != null) {

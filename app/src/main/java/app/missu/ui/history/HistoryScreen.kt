@@ -34,11 +34,12 @@ import app.missu.data.store.HistoryEntry
 import coil3.compose.AsyncImage
 import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.PageTopBar
+import app.missu.ui.components.videoHero
 
 @Composable
 fun HistoryScreen(
     entries: List<HistoryEntry>,
-    onOpen: (String) -> Unit,
+    onOpen: (id: String, thumbnail: String?) -> Unit,
     onClear: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -70,7 +71,7 @@ fun HistoryScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 items(items = entries, key = { it.id }) { entry ->
-                    HistoryCard(entry = entry, onClick = { onOpen(entry.id) })
+                    HistoryCard(entry = entry, onClick = { onOpen(entry.id, entry.thumbnailUrl) })
                 }
             }
         }
@@ -84,6 +85,7 @@ private fun HistoryCard(entry: HistoryEntry, onClick: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(16f / 9f)
+                .videoHero(entry.id, MaterialTheme.shapes.medium)
                 .clip(MaterialTheme.shapes.medium)
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh),
         ) {
