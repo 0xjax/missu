@@ -28,13 +28,14 @@
 - 两个模块：`:core` 是**纯 JVM**（取数/解析/模型，不许 `android.*` / `androidx.*`），`:app` 是 Android UI 与平台适配；`:app` 依赖 `:core`，反向禁止。解析测试在 `:core`，用 `.\gradlew.bat :core:test` 跑。
 - 真机调试（无线 ADB、截图、日志、uiautomator）见 `docs/android-debugging.md`。
 - 真机上**纯操作、不需要读屏判断的长链路**（如建片单→加影片→移除→复原）→ 直接把步骤交给我，别逐步调工具；需要看截图/读 UI 才能判断的（布局、文案、状态是否真的变了）才自己驱动。
+- 观感类缺陷（闪一下、抖、跳）**先量化再改**：`adb shell screencap` 抓中间帧比对亮度/像素，定位到层（窗口底色 / 转场 / 状态机 / 组合生命周期）。**同一层连续两次调参仍复现 → 停止调参、换层排查**，不要在参数上反复试。
 - adb server 报 `cannot open ...\adb.log: Permission denied` 时是**完整性级别**问题（adb 以 Low IL 运行、`%TEMP%` 是 Medium）：给 `%TEMP%\adb.log` 预建空文件并 `icacls ... /setintegritylevel L` 即可，不需要覆盖 `TMP/TEMP`（也不是杀软）。详见 `docs/android-native.md`「已知坑」。
 - legacy 的 Expo 侧已归档到 `legacy/expo/`，没有 `node_modules`（已删）；需要对照或重跑时先在那个目录 `bun install`。
 
 ## 依赖选择（不许靠猜）
 
 - 原生侧 UI 一律 **Material 3 Expressive + 自己写的 Compose**，不引入第三方 UI 组件库；需要行为可控时宁可自绘，也不要在别人的默认值上反复试参数。
-- MD3E 的版本门、配方、API 签名先查 `.agents/skills/md3e`（从 `references/version-baseline.md` 起手），别靠记忆：本工程走 **material3 1.5.0-rc01** 全套 M3E，退役组件（`SegmentedButton` / `NavigationBar` / `Medium|LargeTopAppBar`）不用于新代码。
+- MD3E 的版本门、配方、API 签名、**动效与转场选型**先查 `.agents/skills/md3e`（从 `references/version-baseline.md` 起手），别靠记忆：本工程走 **material3 1.5.0-rc01** 全套 M3E，退役组件（`SegmentedButton` / `NavigationBar` / `Medium|LargeTopAppBar`）不用于新代码。
 - 不用「行为/动画封在内部、只能靠猜默认值调参」的组件。遗留反面案例：Expo 侧的 `NativeTabs`（底层 RNS → Material `BottomNavigationView`）、`@expo/ui`（Compose 控件不可配，且 Expo Go 与 npm 版本错配时两次把环境搞崩）。
 - 引入任何依赖前先确认：它的可配置面能否覆盖设计需求？不能就自绘或换库。
 - 「社区推荐」不是引入理由：状态管理、查询缓存、绘图库当前都没有实测需求；要用先给出具体问题与实测数据。
