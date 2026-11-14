@@ -232,6 +232,8 @@ fixture 都是**真机抓的真实页面**（`home-cn.html` / `detail.html` / `s
 
 ## 已知坑（都踩过并已解决）
 
+**adb 只有一份**：在 SDK 里（`D:\Android\Sdk\platform-tools\adb.exe`），用户级 `ADB` 与 `ANDROID_HOME` 都指向 SDK。若 server 起不来并报 `cannot open ...\Temp\adb.log: Permission denied`，是安全软件拒写 `%TEMP%`：把 `TMP/TEMP` 指到 `.tmp-gradle` 后执行 `adb start-server`。
+
 **构建环境**
 
 - **JVM 写某个目录被拒，但 PowerShell 能写** → 这是安全软件按**可执行文件**拦截，不是文件权限。
