@@ -23,14 +23,15 @@ adb --version
 
 注意 PowerShell 默认不从**当前目录**加载命令：在 `platform-tools` 目录里仍要写 `.\adb`；PATH 只让它在其它目录可用。这里改的是**用户级** PATH，不是系统级。
 
-**已知坑**：如果 adb server 起不来并报 `cannot open ...\Temp\adb.log: Permission denied`，那是卡巴斯基只拦 `adb.exe` 这个程序（不是目录权限，也不是 DSH 子进程策略——诊断过程见 `docs/android-native.md` 的「已知坑」）。彻底解法是在杀软「受信任的应用程序」里给 `adb.exe` 加一条；临时办法是把临时目录指到工作区内再起 server：
+**已知坑**：如果 adb server 起不来并报 `cannot open ...\Temp\adb.log: Permission denied`，那是 **Windows 完整性级别**问题——adb 以 Low IL 运行，而 `%TEMP%` 是 Medium 标签，Low 写 Medium 被拒（不是杀软，加杀软例外没用；诊断见 `docs/android-native.md` 的「已知坑」）。修法是给日志文件打 Low 标签，然后用系统默认临时目录：
 
 ```powershell
-$env:TMP='D:\missu\.tmp-gradle'; $env:TEMP=$env:TMP
+New-Item -ItemType File -Force "$env:TEMP\adb.log" | Out-Null
+icacls "$env:TEMP\adb.log" /setintegritylevel L
 D:\Android\Sdk\platform-tools\adb.exe start-server
 ```
 
-server 起来之后，后续所有 `adb` 命令（含 `gradlew :app:installDebug`）都不需要再带这两个环境变量。
+`%TEMP%` 被清理后重跑一次即可；不需要给 `TMP/TEMP` 做任何覆盖。
 
 ## 无线配对与连接
 

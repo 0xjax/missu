@@ -28,7 +28,7 @@
 - 两个模块：`:core` 是**纯 JVM**（取数/解析/模型，不许 `android.*` / `androidx.*`），`:app` 是 Android UI 与平台适配；`:app` 依赖 `:core`，反向禁止。解析测试在 `:core`，用 `.\gradlew.bat :core:test` 跑。
 - 真机调试（无线 ADB、截图、日志、uiautomator）见 `docs/android-debugging.md`。
 - 真机上**纯操作、不需要读屏判断的长链路**（如建片单→加影片→移除→复原）→ 直接把步骤交给我，别逐步调工具；需要看截图/读 UI 才能判断的（布局、文案、状态是否真的变了）才自己驱动。
-- 卡巴斯基只挡 `adb.exe`：`adb server` 写 `%TEMP%\adb.log` 会 `Permission denied`（Gradle 不受影响，默认 `%TEMP%` 可完整构建）。工作区 `D:\missu` 在排除列表里，起 server 时把 `TMP/TEMP` 指到工作区内即可，详见 `docs/android-native.md`「已知坑」。
+- adb server 报 `cannot open ...\adb.log: Permission denied` 时是**完整性级别**问题（adb 以 Low IL 运行、`%TEMP%` 是 Medium）：给 `%TEMP%\adb.log` 预建空文件并 `icacls ... /setintegritylevel L` 即可，不需要覆盖 `TMP/TEMP`（也不是杀软）。详见 `docs/android-native.md`「已知坑」。
 - legacy 的 Expo 侧已归档到 `legacy/expo/`，没有 `node_modules`（已删）；需要对照或重跑时先在那个目录 `bun install`。
 
 ## 依赖选择（不许靠猜）
