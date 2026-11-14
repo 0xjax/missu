@@ -169,7 +169,11 @@ $sm = "$sdk\cmdline-tools\latest\bin\sdkmanager.bat"
 
 > 换句话说：**`platforms` 与 `licenses` 不是你手动建的**，是第一次跑 `sdkmanager --licenses` 与 `sdkmanager install ...` 时自动生成的；它们此前不存在。装第二个平台/工具时，会在这个目录里多出对应的子目录。
 
-> NOTE: **build-tools 版本与 compileSdk 无关**。本机实测：只留 `build-tools;36.0.0` 时 `.\build.ps1` 正常；把 36 删掉构建会**自动下载装回**，而把 37 删掉则毫无影响。所以 37.0.0 是多余的（省 ~137 MB）。
+> NOTE: **build-tools 版本与 compileSdk 无关，由 AGP 钉死**。AGP 解析的是它自己那个精确 revision
+> （9.5.1 与最新的 9.6.0-alpha03 都是 `36.0.0`），SDK 里没有就**自动下载装回**——不会因为装了 37 就改用 37。
+> 想换必须显式 `buildToolsVersion = "37.0.0"`。另外 `aapt2` 其实不走 SDK：AGP 从 Maven 取
+> `com.android.tools.build:aapt2:9.5.1-…`，SDK 的 build-tools 只剩 d8/zipalign/apksigner 等 + 版本下限校验。
+> 本机实测：只留 `build-tools;36.0.0` 时 `.\.build.ps1` 正常；删 36 会被装回，删 37 毫无影响（省 ~137 MB）。
 
 **3. 环境变量（用户级，一次性）**
 
