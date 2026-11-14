@@ -40,6 +40,18 @@ class HomeViewModel(private val api: MissavApi) : ViewModel() {
     }
 
     /**
+     * 只在「还没有内容」时拉一次首页；切回页签时用它。
+     *
+     * NOTE: 目的地每次重新进入组合都会重跑 `LaunchedEffect(Unit)`。那里如果直接调 [load]，
+     * 已经加载好的首页会被打回 Loading——用户看到的就是「先闪一帧旧内容，再变成转圈」。
+     * 已有内容就什么都不做，想要新内容走下拉刷新（[refresh]）。
+     */
+    fun loadIfNeeded() {
+        if (_state.value is HomeUiState.Content) return
+        load()
+    }
+
+    /**
      * 下拉刷新：不把页面打回 Loading（否则列表会闪一下变空）。
      * NOTE: 失败时只有在「本来就没有内容」的情况下才切错误页，否则保留旧内容——
      * 刷一下就把已经看到的列表清掉是最烦的。
