@@ -20,6 +20,24 @@ object SourceConfig {
     @Volatile
     var contentLanguage: String = "cn"
 
+    /**
+     * 发给站点的 `Accept-Language`，由 [contentLanguage] 派生。
+     *
+     * 实测（2026-11-15 06:56，真机 + httpbin）：WebView 自己发的头是 `en-US,en`（系统/引擎决定），
+     * 而 OkHttp 这边写死 `zh-CN`——**两个客户端对同一个站点报不同语言**，界面中文时尤其自相矛盾。
+     * 站点与 Cloudflare 都按这个头决定给哪种语言：同样出口下 `zh-CN` 拿到中文挑战页（`请稍候…`）、
+     * `en-US` 拿到英文（`Just a moment...`）。所以中文挑战页不需要我们维护，跟着这个头来。
+     */
+    fun acceptLanguage(): String = when (contentLanguage) {
+        "cn" -> "zh-CN,zh;q=0.9,en;q=0.8"
+        "tw" -> "zh-TW,zh;q=0.9,en;q=0.8"
+        "ja" -> "ja-JP,ja;q=0.9,en;q=0.8"
+        "ko" -> "ko-KR,ko;q=0.9,en;q=0.8"
+        "ms" -> "ms-MY,ms;q=0.9,en;q=0.8"
+        "th" -> "th-TH,th;q=0.9,en;q=0.8"
+        else -> "en-US,en;q=0.9"
+    }
+
     fun localizedPath(path: String): String {
         val withoutQuery = path.substringBefore('?')
         val query = path.substringAfter('?', "")

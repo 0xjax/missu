@@ -51,7 +51,7 @@ class MissavClient(
             .url(SourceConfig.localizedUrl(path))
             .header("User-Agent", userAgent)
             .header("Accept", "text/html,application/xhtml+xml")
-            .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+            .header("Accept-Language", SourceConfig.acceptLanguage())
             .build()
 
         client.newCall(request).execute().use { response ->
