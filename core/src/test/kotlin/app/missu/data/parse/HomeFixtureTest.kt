@@ -1,5 +1,6 @@
 package app.missu.data.parse
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -49,5 +50,31 @@ class HomeFixtureTest {
         // NOTE: 角标来自封面左下角（中文字幕 / 無碼影片），不是所有卡片都有。
         println("带角标的卡片: " + videos.count { it.badges.isNotEmpty() } + " / " + videos.size)
         println("角标取值样本: " + videos.flatMap { it.badges }.distinct().take(5))
+    }
+
+    /**
+     * 长按预览用的那段 mp4：卡片 HTML 里就带着 `data-src`，不是我们按番号拼出来的。
+     * 这条测试锁两件事——绝大多数卡片都有它，以及路径里就是卡片自己的 id（变体各有自己的预览轨）。
+     */
+    @Test
+    fun parsesCardPreviewClips() {
+        val videos = HomeParser.parseHome(html).flatMap { it.videos }
+        val withPreview = videos.filter { it.previewUrl != null }
+
+        println("带预览片的卡片: ${withPreview.size} / ${videos.size}")
+        withPreview.take(3).forEach { println("  ${it.id} -> ${it.previewUrl}") }
+
+        assertTrue("真实首页应解析出预览片（实际 ${withPreview.size}）", withPreview.size >= 10)
+        assertTrue("预览片必须是绝对地址", withPreview.all { it.previewUrl!!.startsWith("https://") })
+        assertTrue("预览片应以 /preview.mp4 结尾",
+            withPreview.all { it.previewUrl!!.substringBefore('?').endsWith("/preview.mp4") })
+
+        val mismatched = withPreview.filterNot { it.previewUrl!!.contains("/${it.id}/") }
+        assertTrue("预览片路径应包含卡片 id，否则就是猜出来的地址：$mismatched", mismatched.isEmpty())
+
+        assertEquals(
+            "https://fourhoi.com/jimmy-015/preview.mp4",
+            videos.first { it.id == "jimmy-015" }.previewUrl,
+        )
     }
 }
