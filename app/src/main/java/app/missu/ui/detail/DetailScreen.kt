@@ -2,6 +2,7 @@
 
 package app.missu.ui.detail
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -43,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
@@ -132,16 +134,31 @@ private const val POSTER_FADE_MS = 200
 private const val PROGRESS_DELAY_MS = 600L
 
 /**
+ * 封面虚焦的时序与强度。
+ *
+ * NOTE: 延迟必须 ≥ 容器转场时长（300ms）。飞行途中就开始虚化，等于把刚建立的
+ * 「同一个东西」的连续性自己拆掉——先让它落位、被看清，再让它退到"未就绪"的状态里。
+ */
+private const val DEFOCUS_DELAY_MS = 300L
+private const val DEFOCUS_RAMP_MS = 600
+private const val POSTER_BLUR_DP = 12
+private const val POSTER_SCRIM_ALPHA = 0.22f
+
+/**
  * 播放器框——同时是卡片封面的**共享容器**（container transform 的落点）。
  *
- * 这里也是「静帧 → 动态画面」的接缝，三件事必须按顺序发生，否则接缝会露出来：
- * 1. 容器长大到位时，里面还是**同一张封面**（卡片那张，从内存缓存来）；
- * 2. 视频第一帧真正出画之前，封面一直在；中途容器里不会空一下，也不会先出现控件；
- * 3. 第一帧出画 → 封面 200ms 淡出（画面在下面显影），控件同时出现，之后 3 秒无操作自动隐藏。
+ * 这里也是「静帧 → 动态画面」的接缝，四件事必须按顺序发生，否则接缝会露出来：
+ * 1. 容器长大到位时，里面还是**同一张封面**（卡片那张，从内存缓存来），此时不虚化；
+ * 2. 落位 300ms 后开始虚焦 + 轻压暗（600ms 渐变）：降低封面的"认知抓力"，
+ *    让画面只有一个主角——还没出现的视频。等待中若一直清晰，用户会以为这就是内容；
+ * 3. 视频第一帧真正出画之前，封面一直在；中途容器里不会空一下，也不会先出现控件；
+ * 4. 第一帧出画 → 封面 200ms 淡出（画面在下面显影），控件同时出现，之后 3 秒无操作自动隐藏。
  *
+ * NOTE: 虚化用**两层静态图交叉淡入**（清晰层 + 虚焦层），不逐帧改 blur 半径——
+ * 后者每帧重建 RenderEffect，中端机会掉帧；前者只动 alpha，成本恒定且可逆。
+ * `Modifier.blur` 在 API < 31 是空操作，那时只剩压暗，降级不崩。
  * NOTE: 封面画在播放器**之上**（含控件层之上），所以过渡只能是「封面淡出露出画面」，
  * 而不可能是「画面替换封面」那种硬切。
- * NOTE: 转圈延迟 600ms 才出现——秒开时不该闪一下。
  * NOTE: 它必须在首帧就存在，Loading / Error 也不例外：点卡片时共享元素要有另一侧可长进去。
  * NOTE: 播放器本身固定在这一格（不进 LazyColumn），切全屏只是换尺寸、不会离开组合，
  * ExoPlayer 实例与播放进度都能保住。
@@ -179,6 +196,22 @@ private fun DetailHero(
         showProgress = true
     }
 
+    // NOTE: 用 Animatable 而不是 animateFloatAsState：出画时要把当前值**冻住**让封面整体淡出，
+    // 不能反向"重新对焦"（那会在淡出前先闪一下变清晰）。
+    val defocus = remember(playbackUrl) { Animatable(0f) }
+    LaunchedEffect(pending) {
+        if (pending) {
+            delay(DEFOCUS_DELAY_MS)
+            defocus.animateTo(1f, tween(durationMillis = DEFOCUS_RAMP_MS))
+        } else if (detail != null && playbackUrl == null) {
+            // 站点没给 m3u8：不会再播放了，把封面恢复清晰（这里反向是对的）。
+            defocus.animateTo(0f, tween(durationMillis = DEFOCUS_RAMP_MS))
+        }
+    }
+
+    val sharpAlpha = posterAlpha * (1f - defocus.value)
+    val softAlpha = posterAlpha * defocus.value
+
     Box(
         modifier = (if (fullscreen) {
             Modifier.fillMaxSize()
@@ -198,16 +231,37 @@ private fun DetailHero(
                 initialPositionMs = startPositionMs,
                 onPositionReport = onPositionReport,
                 onFirstFrameRendered = { firstFrame = true },
+                // 播放失败：把封面撤掉让错误层露出来（否则它永远被压在最上面）。
+                onPlaybackFailed = { firstFrame = true },
             )
         }
 
         // 封面盖在播放器之上：出画前它是容器内容，出画时它淡出。
-        if (poster != null && posterAlpha > 0.01f) {
+        if (poster != null && sharpAlpha > 0.01f) {
             AsyncImage(
                 model = poster,
                 contentDescription = detail?.title,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize().alpha(posterAlpha),
+                modifier = Modifier.fillMaxSize().alpha(sharpAlpha),
+            )
+        }
+        if (poster != null && softAlpha > 0.01f) {
+            AsyncImage(
+                model = poster,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .blur(POSTER_BLUR_DP.dp)
+                    .alpha(softAlpha),
+            )
+        }
+        // 压暗：只压暗不虚化，封面的"同一张图"辨识度就还在，那正是要削掉的东西。
+        if (defocus.value > 0.01f) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = POSTER_SCRIM_ALPHA * defocus.value)),
             )
         }
 
