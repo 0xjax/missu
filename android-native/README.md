@@ -173,28 +173,26 @@ $sm = "$sdk\cmdline-tools\latest\bin\sdkmanager.bat"
 
 **5. 验证**：`cd android-native; .\build.ps1 install` → `BUILD SUCCESSFUL` + App 装到手机。
 
-> WARNING: **cmdline-tools 现在是 23.0（`latest`），但它还不能跑**：23.0 把 `sdkmanager`
-> 改成转调新的原生 `android.exe`，而那个 exe 被卡巴斯基的**应用程序控制**拒绝加载
-> （`Unable to load native library: 应用程序控制策略阻止了文件`）。
-
-> **要放行的确切路径**（已就位，不会再有改名）：
-
-| 项 | 值 |
-|---|---|
-| 文件 | `D:\Android\Sdk\cmdline-tools\latest\bin\android.exe` |
-| 卡巴斯基显示名 | **Android CLI** |
-| 位置 | 设置 → 安全 → 入侵防御 → **管理应用程序** → 设为**受信任** |
-
-> 把 `D:\Android\Sdk` 加进「排除项」**不够**——排除项管文件扫描，拦它的是应用程序控制。
-> 放行后 `latest\bin\android.exe sdk list` 就能用，新命令是 `android sdk`：
+> WARNING: **本机只能用 cmdline-tools 19.0，23.0 装不了**——原因不在杀毒软件，而在 **Windows 11 的 Smart App Control**：
+>
+> `HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy` 的 `VerifiedAndReputablePolicyState = 1` 表示它处于**强制模式**，
+> 会拦掉所有没有 Microsoft 信誉背书的新 exe。23.0 把 `sdkmanager` 改成转调原生 `android.exe`，该 exe 虽然由 **Google LLC 有效签名**，
+> 依然被拦，报错是 **Windows 的**「应用程序控制策略阻止了文件」（形如 `Unable to load native library: ...`）。
+>
+> 常见误判：以为要放行杀毒软件。**在卡巴斯基里加受信任应用程序/排除项对这条完全无效**（实测：受信任列表里能看到 `android.exe` 已启用，照样被拦）。
+>
+> 关闭 Smart App Control 是**不可逆**的（关掉后只能重装/重置 Windows 才能再打开），为升级一个装包工具不值得。
+> 因此本机保持 **19.0**：纯 Java，用 `java.exe` 跑，不受 SAC 影响。它的局限只是看不懂 API 37 的 v4 XML 元数据
+> （列全量包时会警告），但**列已装、装卸指定版本的包都实测可用**：
 
 ```powershell
-& 'D:\Android\Sdk\cmdline-tools\latest\bin\android.exe' sdk list
-& 'D:\Android\Sdk\cmdline-tools\latest\bin\android.exe' sdk install platform-tools platforms;android-37.0 build-tools;37.0.0
+$env:JAVA_HOME = 'D:\Android\jdk-21'
+$sm = 'D:\Android\Sdk\cmdline-tools\latest\bin\sdkmanager.bat'
+& $sm --sdk_root='D:\Android\Sdk' --list_installed
+& $sm --sdk_root='D:\Android\Sdk' --uninstall "build-tools;37.0.0"
 ```
 
-> **放行之前**：要装/卸 SDK 包就用回落版本 `D:\Android\Sdk\cmdline-tools\legacy-19.0\bin\sdkmanager.bat`
-> （19.0 是纯 Java 的，能跑；它只是看不懂 API 37 的 v4 XML，列包没问题）。**构建不依赖 cmdline-tools**，所以放不放行都不影响 `.\build.ps1`。
+> 哪天真的需要 23.0（例如要装只有新 XML 才认识的包），前提是先关掉 Smart App Control —— 那是个**独立决定**，不要顺手做。
 
 **本机现状**：`D:\Android\jdk-21`（Temurin 21.0.13）已装好并被 `build.ps1` 自动选中；AS 已卸载（回收 3.3 GB）；`assembleDebug` / `installDebug` / `:core:test` 在无 AS 的状态下全部实测通过。
 
@@ -327,7 +325,9 @@ fixture 都是**真机抓的真实页面**（`home-cn.html` / `detail.html` / `s
 - **compileSdk 必须 37** → Compose BOM 2026.09 的 AndroidX 组件要求 ≥ 37。
 - **`build.ps1` 必须是 UTF-8 带 BOM** → Windows PowerShell 5.1 对无 BOM 的 UTF-8 按 ANSI 解码，中文全角字符会吞掉行尾换行，把下一行代码并进注释（曾导致 `JAVA_HOME` 从未生效）。**用工具/AI 改这个文件后一定要重新写回 BOM**（`[System.Text.UTF8Encoding]::new($true)`），否则一改就坏。
 - **Gradle daemon 占住 stdout** → 自动化采集输出时加 `MISSU_NO_DAEMON=1`，否则管道永远等不到 EOF。
-- **新版 cmdline-tools 的 `android.exe` 被应用程序控制拦截**：23.0 起 `sdkmanager` 只是转调原生 `android.exe`，
+- **Windows 11 Smart App Control 会拦新 exe，且报错像是杀毒软件**：`VerifiedAndReputablePolicyState = 1` 时，没有 Microsoft 信誉背书的新二进制一律被拦，
+  提示是「应用程序控制策略阻止了文件」。本机表现：cmdline-tools 23.0 的 `android.exe`（Google 有效签名）跑不起来，
+  而**在卡巴斯基里加受信任/排除项毫无作用**——排查时先看注册表那个值，别在杀软里绕圈。关 SAC 不可逆（需重装 Windows 才能恢复）。
   被拦时连 `sdkmanager` 都不可用（报 `Unable to load native library ... 应用程序控制策略阻止了文件`）。
   要么放行该 exe/目录，要么继续用旧的纯 Java 版 19.0。
 - **KDoc 里不能出现 `/*` 序列**（例如写 `` `/api/playlists/*` ``）：Kotlin 支持嵌套块注释，这会开启一个
