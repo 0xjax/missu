@@ -108,15 +108,61 @@ cd D:\missu\android-native
 命令行构建只需要三样东西：**JDK 21+**、**Android SDK**（`platform-tools` + `platforms/android-37.0` + `build-tools/37.0.0`）、以及项目自带的 **Gradle wrapper**（首次构建自动下载）。
 `Android Studio` 只是 IDE。**本机已卸载 AS**：JDK 用 `D:\Android\jdk-21`，SDK 组件用 `sdkmanager`（`D:\Android\Sdk\cmdline-tools\bin`）装，`licenses` 也是独立目录——卸载后 `assembleDebug` / `installDebug` / `:core:test` 全部实测通过。
 
-所以完全可以不装 AS，前提是：
+### 从零装环境（无 AS，就是本机现在的样子）
 
-1. 装一个独立 JDK 21+（Temurin / Corretto 都行），把 `build.ps1` 里的 `JAVA_HOME` 指过去；放在 `D:\Android\jdk-<major>` 这类带版本的目录里（`build.ps1` 会自动挑最高版本，升级不影响脚本）；
-2. **该 JDK 的 `java.exe` 必须被安全软件放行**——本机踩过：旧的 `D:\Android\jdk-17\bin\java.exe` 被卡巴斯基按可执行文件拦截（读得到、写不了），而当时 AS 的 JBR 正常；换成 `D:\Android\jdk-21`（Temurin）后已无此问题；
-3. SDK 组件用 `sdkmanager` 装（在 `D:\Android\Sdk\cmdline-tools\bin` 下），不需要 AS 的图形界面。
+只需要装两样东西，第三样由项目自带。
 
+**1. JDK 21**（免安装 zip，不需要管理员）
+
+```powershell
+# 官方 API，直接给最新 21 GA 的 zip
+$zip = 'D:\temp\temurin21.zip'
+Invoke-WebRequest 'https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jdk/hotspot/normal/eclipse' -OutFile $zip
+Expand-Archive $zip -DestinationPath 'D:\Android'
+# 解压出来的目录形如 jdk-21.0.13+9，重命名成 jdk-21（build.ps1 会自己找 jdk-*）
+Rename-Item 'D:\Android\jdk-21.0.13+9' 'jdk-21'
+D:\Android\jdk-21\bin\java.exe -version
+```
+
+**2. Android SDK**：用 command-line tools 装，不需要 AS。
+
+```powershell
+# cmdline-tools 从 https://developer.android.com/studio#command-tools 下 Windows 版 zip
+# 解压后必须落在 <sdk>\cmdline-tools\latest（目录名就叫 latest，否则 sdkmanager 不认）
+$sdk = 'D:\Android\Sdk'
+$env:JAVA_HOME = 'D:\Android\jdk-21'          # sdkmanager 也要 JDK
+$sm = "$sdk\cmdline-tools\latest\bin\sdkmanager.bat"
+& $sm --sdk_root=$sdk --licenses                  # 全部 y
+& $sm --sdk_root=$sdk "platform-tools" "platforms;android-37.0" "build-tools;37.0.0"
+```
+
+只要这三个包（本机实测装的就是它们，另有一个 `build-tools;36.0.0` 是历史残留、不是必需）：
+
+| 包 | 本机版本 | 用途 |
+|---|---|---|
+| `platform-tools` | 37.0.1 | `adb` |
+| `platforms;android-37.0` | rev 2 | `compileSdk = 37` 的编译目标 |
+| `build-tools;37.0.0` | 37.0.0 | aapt2 / d8 / zipalign |
+
+**不要装**：NDK、CMake、LLDB、emulator、system-image、旧 API（见下方「精简安装」）。
+
+**3. 环境变量（用户级，一次性）**
+
+| 变量 | 值 |
+|---|---|
+| `PATH` 追加 | `D:\Android\Sdk\platform-tools`（这样 `adb` 才能从 PATH 解析到） |
+| `ANDROID_HOME` | `D:\Android\Sdk` |
+
+**4. Gradle 不用装**：`gradlew.bat` 首次运行会自动下载 wrapper 指定的 9.6.0（腾讯镜像），之后走 `%USERPROFILE%\.gradle` 缓存。
+
+**5. 验证**：`cd android-native; .\build.ps1 install` → `BUILD SUCCESSFUL` + App 装到手机。
+
+> WARNING: `cmdline-tools` 自身也有版本要求。本机这份是 19.0（旧布局 `cmdline-tools\bin`），列包时会警告
+> 「only understands SDK XML versions up to 3 but version 4 was encountered」——它认不全 API 37 的新包。
+> 新机器请直接装**最新** cmdline-tools 到 `cmdline-tools\latest`；要在这台机器上继续装新 SDK 包，也先升级它。
 反过来，如果保留 AS：它约 3.3 GB，好处是 IDE（跳转/调试/Layout Inspector/Profiler）；坏处只有一个——同步时容易把 NDK / system-image 自动拉回来（见下面的设置项）。
 
-**本机现状**：`D:\Android\jdk-21`（Temurin 21.0.13）已装好并被 `build.ps1` 自动选中，`assembleDebug` / `installDebug` / `:core:test` 都实测通过。所以 AS 现在**只剩 IDE 作用**，卸载后可回收约 3.3 GB。
+**本机现状**：`D:\Android\jdk-21`（Temurin 21.0.13）已装好并被 `build.ps1` 自动选中；AS 已卸载（回收 3.3 GB）；`assembleDebug` / `installDebug` / `:core:test` 在无 AS 的状态下全部实测通过。
 
 ## Android Studio 设置（仅当你重新安装 AS 时）
 
