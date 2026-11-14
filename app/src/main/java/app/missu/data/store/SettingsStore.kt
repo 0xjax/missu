@@ -16,7 +16,27 @@ enum class ThemeMode {
 }
 
 /**
- * 应用设置：语言、明暗模式、是否用系统壁纸取色。
+ * 主题色源：壁纸取色 + 四套静态色板（品牌粉是默认）。
+ *
+ * NOTE: 壁纸取色和其它色块是**同一个轴**——它只是「这一套色板由系统按壁纸生成」。以前它是独立的
+ * 开关，会和色板选择叠成两个控件（开关开着时点色块没反应），合并后语义只有一条：当前用哪套色板。
+ */
+enum class ColorSource {
+    WALLPAPER,
+    BRAND,
+    VIOLET,
+    BLUE,
+    TEAL,
+    AMBER,
+    ;
+
+    companion object {
+        fun fromKey(key: String?): ColorSource? = entries.firstOrNull { it.name == key }
+    }
+}
+
+/**
+ * 应用设置：语言、明暗模式、主题色源。
  *
  * NOTE: 语言必须在**第一次网络请求之前**装进 [SourceConfig]，否则首屏会按默认语言拉一轮再换，
  * legacy 就是先读完偏好再挂载界面（见 `src/stores/language.tsx`）。现在这一步由 `MissuRoot`
@@ -44,11 +64,20 @@ class SettingsStore(context: Context) {
         prefs.edit().putString(KEY_THEME_MODE, value.name).apply()
     }
 
-    /** 壁纸取色。默认关：品牌粉是本 App 的识别度，不能让壁纸随手替掉。 */
-    fun dynamicColor(): Boolean = prefs.getBoolean(KEY_DYNAMIC_COLOR, false)
+    /**
+     * 主题色源。
+     *
+     * NOTE: 旧的 `dynamicColor` 布尔是一次性的迁移入口——原来开关开着的人升级后应该还是壁纸取色，
+     * 不该悄悄变回粉色。除此之外不保留任何旧字段的兼容代码。
+     */
+    fun colorSource(): ColorSource {
+        val stored = ColorSource.fromKey(prefs.getString(KEY_COLOR_SOURCE, null))
+            ?: return if (prefs.getBoolean(KEY_DYNAMIC_COLOR, false)) ColorSource.WALLPAPER else ColorSource.BRAND
+        return stored
+    }
 
-    fun setDynamicColor(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_DYNAMIC_COLOR, enabled).apply()
+    fun setColorSource(value: ColorSource) {
+        prefs.edit().putString(KEY_COLOR_SOURCE, value.name).remove(KEY_DYNAMIC_COLOR).apply()
     }
 
     /**
@@ -66,7 +95,9 @@ class SettingsStore(context: Context) {
     private companion object {
         const val KEY_APP_LANGUAGE = "appLanguage"
         const val KEY_THEME_MODE = "themeMode"
+        // TODO: `dynamicColor` 是旧字段，只用于一次性迁移，下个版本可以删。
         const val KEY_DYNAMIC_COLOR = "dynamicColor"
+        const val KEY_COLOR_SOURCE = "colorSource"
         const val KEY_PURE_BLACK = "pureBlack"
     }
 }

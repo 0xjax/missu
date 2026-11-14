@@ -280,7 +280,7 @@ core/          纯 JVM 库（非 UI 层）——**不许出现 android.* / andro
   src/main/kotlin/app/missu/data/
     api/    SourceConfig（语言前缀 /dm 前缀）、MissavClient（OkHttp + 挑战翻译 + JSON 请求）、
             MissavApi（getHome / getVideoDetail / searchVideos / getSaved / getVideos /
-            getDirectory / login / 收藏 / 片单）、ContentLanguages、CredentialsProvider、Errors
+            getDirectory / login / 收藏 / 片单）、CredentialsProvider、Errors
     model/  VideoSummary · HomeSection · VideoDetail · VideoList · DirectoryList · DirectoryItem ·
             PlaylistSummary · PlaylistDetail · VideoPlaylist · AccountUser · DetailInfoRow ·
             FilterOption · FilterSection
@@ -295,11 +295,22 @@ app/           Android 应用（UI + 平台适配）
     ui/history · ui/settings · ui/account · ui/list · ui/components · ui/theme · ui/challenge
     data/api/              AndroidCookieJar（CookieManager 适配）· ChallengeHost · AndroidApi
     data/store/            ProfileStore（邮箱）· CredentialStore（Keystore 加密的账号密码）·
-                           SettingsStore（内容语言）· HistoryStore（观看进度）·
+                           SettingsStore（语言 / 明暗模式 / 主题色 / 纯黑）· HistoryStore（观看进度）·
                            SearchHistoryStore（最近搜索）
 ```
 
 **边界规则**：`:app` 依赖 `:core`，反向禁止。取数、解析、模型都只在 `:core`，因此它们能在纯 JVM 上跑测试，将来也能被服务端复用。
+
+## 主题色板
+
+五套静态色板（品牌粉 / 紫 / 蓝 / 青绿 / 琥珀）加系统壁纸取色，是同一条轴上的六个选项（`ColorSource`）。
+
+- **`Palettes.kt` 是生成的，不要手改**：`scripts/gen-theme.py` 从种子色推导，一次写全五套。它固定色相、按角色取 M3 的 tone（`L*`）、超 sRGB 时二分降饱和。品牌色板的历史产物写死在脚本的 `BRAND_SNAPSHOT` 里，公式漂了脚本会直接报错退出（允许单通道 ±1 的取整差）。
+- **换色相不动 tone 阶梯**：各家族（primary / secondary / tertiary / error / neutral / neutral-variant）的色度与每一档 tone 完全相同，所以五套色板的对比度逐位一致——深色 `primary` 压白字 3.72:1（够图形与大字的 3:1），浅色 6.4~6.5:1。要加一套色板，改脚本 `SEEDS` + `ColorSource` 两项，重跑即可。
+- **纯黑背景不是第六套色板**：`withPureBlack()` 只覆盖表面那八档。它们是色度 2 的近黑，任何色相在 tone < 10 处都看不出差别，所以五套共用一份色值。
+- 壁纸取色不是开关而是一个选项：Android 12+ 走 `dynamicColorScheme`，低版本设置页直接不出现这块。旧的 `dynamicColor` 布尔只在 `SettingsStore.colorSource()` 里做一次性迁移。
+
+色板验证不需要屏摄目测：`adb shell screencap` 后取色块中心的像素，应当与该色板 `Dark.primary` 完全相等（品牌粉 `#D85A76`、紫 `#AF6ABE`、蓝 `#5083DE`、青绿 `#029584`、琥珀 `#B9752D`）；页面底色则是该色相 neutral tone 6 的值（粉 `#171213`、青 `#101413`）。
 
 ## 记住账号
 
