@@ -267,6 +267,9 @@ private fun ActressCell(item: DirectoryItem, onClick: () -> Unit) {
                 .size(48.dp)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            // NOTE: 居中必须写在这一层。之前里面又套了一个 `Box(contentAlignment = Center)`，
+            // 但内层没给尺寸、只包住文字，结果整块被摆在圆的左上角，还被圆形裁掉一角。
+            contentAlignment = Alignment.Center,
         ) {
             if (item.imageUrl != null) {
                 AsyncImage(
@@ -276,14 +279,12 @@ private fun ActressCell(item: DirectoryItem, onClick: () -> Unit) {
                     modifier = Modifier.fillMaxSize(),
                 )
             } else {
-                // 没有头像时用首字占位，避免出现一个空圈。
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = item.name.take(1),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                // 没有头像时用首字占位（站点上刚出道的新人常常还没图），比一个空圈更容易扫读。
+                Text(
+                    text = item.name.take(1),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
 
