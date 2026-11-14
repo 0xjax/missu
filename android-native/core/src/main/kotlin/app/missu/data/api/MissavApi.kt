@@ -159,6 +159,25 @@ class MissavApi(
             }
         }
     }
+
+    /**
+     * 把某部影片从指定片单里移除（片单详情页的「移除」）。
+     *
+     * NOTE: 站点有两条不同的移除入口，别混用：
+     * - 详情页片单面板：`POST /api/playlists/remove`，body 要 `{dvdId, key}`；
+     * - 片单详情页：`DELETE /api/playlists/{片单id}/{影片id}`，不要 key。
+     * 依据是片单详情页的内联脚本（`deletePlaylistItem()` 里
+     * `window.axios.delete('https://missav.ai/api/playlists/z85tfntj/sdmf-018')`，实测抓包）。
+     * 片单页只拿得到片单 id，所以这里走第二条；两条入口都不能猜。
+     */
+    suspend fun removePlaylistItem(playlistId: String, dvdId: String) {
+        withAuthRetry {
+            withChallengeRetry {
+                client.requestJson("DELETE", "/api/playlists/$playlistId/$dvdId", rawPath = true)
+            }
+        }
+    }
+
     /**
      * 用记住的凭据主动重登一次。返回是否成功。
      *

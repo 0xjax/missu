@@ -111,60 +111,6 @@ private fun MissuApp() {
     var language by remember { mutableStateOf(settings.language()) }
     val authState by auth.state.collectAsState()
     val loginState by auth.loginState.collectAsState()
-    // TEMP-DEBUG: 抓「新建片单」页面（不绑定影片的 /playlists/create），本地再分析表单。
-    LaunchedEffect(Unit) {
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            val dir = java.io.File(context.filesDir, "site").apply { mkdirs() }
-            try {
-                val jar = app.missu.data.api.AndroidCookieJar()
-                val http = okhttp3.OkHttpClient.Builder().cookieJar(jar).build()
-                val response = http.newCall(
-                    okhttp3.Request.Builder().url("https://missav.ai/cn/playlists/create")
-                        .header("User-Agent", app.missu.data.api.SourceConfig.DEFAULT_USER_AGENT)
-                        .build(),
-                ).execute()
-                val html = response.body.string()
-                java.io.File(dir, "playlist-create.html").writeText(html)
-                java.io.File(dir, "create-page.txt").writeText("code=${response.code} length=${html.length}")
-            } catch (error: Exception) {
-                java.io.File(dir, "create-page.txt").writeText("ERR ${error::class.simpleName}: ${error.message}")
-            }
-        }
-    }
-    // TEMP-DEBUG: 抓「修改片单」页，确认更新表单与删除表单的真实字段。
-    LaunchedEffect(Unit) {
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            val dir = java.io.File(context.filesDir, "site").apply { mkdirs() }
-            val log = StringBuilder()
-            try {
-                val jar = app.missu.data.api.AndroidCookieJar()
-                val http = okhttp3.OkHttpClient.Builder().cookieJar(jar).build()
-                fun get(url: String): Pair<Int, String> = http.newCall(
-                    okhttp3.Request.Builder().url(url)
-                        .header("User-Agent", app.missu.data.api.SourceConfig.DEFAULT_USER_AGENT)
-                        .build(),
-                ).execute().use { it.code to it.body.string() }
-
-                val list = get("https://missav.ai/cn/playlists")
-                java.io.File(dir, "playlists2.html").writeText(list.second)
-                log.appendLine("list code=${list.first} length=${list.second.length}")
-
-                // 找 /playlists/{id} 链接（排除 create），拿第一个 id 去看它的编辑页。
-                val ids = Regex("/cn/playlists/([A-Za-z0-9]+)\"")
-                    .findAll(list.second).map { it.groupValues[1] }.distinct().take(5).toList()
-                log.appendLine("ids=$ids")
-
-                ids.forEach { id ->
-                    val edit = get("https://missav.ai/cn/playlists/$id/edit")
-                    java.io.File(dir, "playlist-edit-$id.html").writeText(edit.second)
-                    log.appendLine("edit[$id] code=${edit.first} length=${edit.second.length}")
-                }
-            } catch (error: Exception) {
-                log.appendLine("FATAL ${error::class.simpleName}: ${error.message}")
-            }
-            java.io.File(dir, "edit-probe.txt").writeText(log.toString())
-        }
-    }
     // 底部导航只在四个一级页面显示；详情/列表/收藏等二级页面全屏展示。
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -368,15 +314,18 @@ private fun MissuApp() {
                     factory = factory { PlaylistDetailViewModel(api, id) },
                 )
                 val state by viewModel.state.collectAsState()
+                val message by viewModel.message.collectAsState()
                 LaunchedEffect(id) { viewModel.load() }
 
                 PlaylistDetailScreen(
                     fallbackTitle = fallbackTitle,
                     state = state,
+                    message = message,
                     onRetry = viewModel::load,
                     onOpen = { videoId -> navController.navigate("detail/$videoId") },
                     onBack = { navController.popBackStack() },
                     onEdit = { navController.navigate("playlist/$id/edit") },
+                    onRemove = viewModel::remove,
                 )
             }
 

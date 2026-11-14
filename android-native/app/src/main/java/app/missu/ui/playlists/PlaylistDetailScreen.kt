@@ -1,5 +1,7 @@
 package app.missu.ui.playlists
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,41 +12,64 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import app.missu.data.model.VideoSummary
 import app.missu.ui.components.VideoGridCard
 
+/**
+ * 片单详情：标题 + 影片网格 + 每张卡片的「移除」。
+ *
+ * NOTE: 移除是破坏性但可逆的操作，按 DESIGN.md 的做法弹一次确认对话框（站点自己也会 confirm），
+ * 不做滑动删除，也不把入口藏进长按。
+ */
 @Composable
 fun PlaylistDetailScreen(
     fallbackTitle: String,
     state: PlaylistDetailUiState,
+    message: String?,
     onRetry: () -> Unit,
     onOpen: (String) -> Unit,
     onBack: () -> Unit,
     onEdit: () -> Unit = {},
+    onRemove: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    val title = when (state) {
+        is PlaylistDetailUiState.Content -> state.name
+        else -> fallbackTitle
+    }
+    var pendingRemove by remember { mutableStateOf<VideoSummary?>(null) }
+
     Column(modifier.fillMaxSize()) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             TextButton(onClick = onBack) { Text("← 返回") }
-            val title = when (state) {
-                is PlaylistDetailUiState.Content -> state.name
-                else -> fallbackTitle
-            }
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
@@ -54,6 +79,15 @@ fun PlaylistDetailScreen(
             )
             Spacer(Modifier.weight(1f))
             TextButton(onClick = onEdit) { Text("编辑") }
+        }
+
+        message?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
         }
 
         when (state) {
@@ -73,9 +107,61 @@ fun PlaylistDetailScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 items(items = state.videos, key = { it.id + it.pageUrl }) { video ->
-                    VideoGridCard(video = video, onClick = { onOpen(video.id) })
+                    Box {
+                        VideoGridCard(video = video, onClick = { onOpen(video.id) })
+                        RemoveButton(
+                            removing = state.removingId == video.id,
+                            onClick = { pendingRemove = video },
+                            modifier = Modifier.align(Alignment.TopEnd).padding(6.dp),
+                        )
+                    }
                 }
             }
+        }
+    }
+
+    pendingRemove?.let { video ->
+        AlertDialog(
+            onDismissRequest = { pendingRemove = null },
+            title = { Text("从片单移除？") },
+            text = { Text("《${video.title}》会从「$title」里移除，影片本身不受影响。") },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingRemove = null
+                    onRemove(video.id)
+                }) { Text("移除") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingRemove = null }) { Text("取消") }
+            },
+        )
+    }
+}
+
+/**
+ * 封面右上角的移除入口。
+ * NOTE: 自绘一个半透明圆点而不是用 IconButton——默认的图标内边距与最小触控尺寸会把封面压花，
+ * 这里的点击区域靠 padding 撑到 26dp，视觉上只占很小一块。
+ */
+@Composable
+private fun RemoveButton(removing: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .size(26.dp)
+            .clip(CircleShape)
+            .background(Color(0xCC000000))
+            .clickable(enabled = !removing, onClick = onClick)
+            .semantics { contentDescription = "从片单移除" },
+        contentAlignment = Alignment.Center,
+    ) {
+        if (removing) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(14.dp),
+                strokeWidth = 2.dp,
+                color = Color.White,
+            )
+        } else {
+            Text("×", color = Color.White, fontSize = 15.sp)
         }
     }
 }
