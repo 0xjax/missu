@@ -547,6 +547,11 @@ private fun MissuApp(
                 val title = Uri.decode(entry.arguments?.getString("t").orEmpty())
                     .ifEmpty { stringResource(R.string.list_default_title) }
 
+                // NOTE: 从首页「更多」进这一页时**不做**卡片→列表项的逐点共享元素：两边条数不同、
+                // 进入后要按真实滚动位置落位、而且可能带着筛选，逐项动画必然参差。那个方向本身是
+                // 成立的（数据同源、位置可对齐时），先记在这里；当前统一走「页面级转场 + 口径切换的
+                // fade through」这两条既有分支，一致性优先。
+                //
                 // NOTE: 口径（排序/过滤）是这一页的**状态**，与 path 一起构成 `VideoListQuery`。
                 // 换口径 = 换一个 ViewModel 实例（按 cacheKey），页面结构一点不动；切回已看过的
                 // 口径还能复用那份数据，不重新转圈。

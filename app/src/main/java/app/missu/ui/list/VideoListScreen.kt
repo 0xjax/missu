@@ -222,8 +222,11 @@ private fun sortColor(selected: Boolean): Color =
 /**
  * 排序的文案。`null` = 站点默认序。
  *
- * NOTE: `released_at` 与 `published_at` 的确切差别站点没写明（静态 HTML 里只有一个标签可读），
- * 这里按名字直译成「发售时间 / 上架时间」，不猜语义。
+ * NOTE: 站点那 7 档标签由前端脚本渲染，静态 HTML 只有 `saved=收藏数` 能读到，所以文案必须我们自己定。
+ * 取词原则：**能用站点自己用过的词就用站点的**——`released_at` 用「发行日期」（与详情页信息行同一
+ * 个词），`saved` 用「收藏数」（站点标签）；浏览四档直接对参数名（`today_views` / `views` …）直译成
+ * 「今日浏览 / 总浏览」，不发明「热门」这种同时用作板块名的词。`released_at` 与 `published_at` 的
+ * 确切差别站点没写明，这里按名字分别叫「发行日期 / 上架日期」，不猜语义。
  */
 @Composable
 private fun sortLabel(sort: VideoListOptions.Sort?): String = when (sort) {
