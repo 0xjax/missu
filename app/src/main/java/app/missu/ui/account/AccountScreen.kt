@@ -69,13 +69,22 @@ fun AccountScreen(
         when (state) {
             AuthUiState.Checking -> LoadingHint()
 
-            AuthUiState.LoggedOut -> EmptyHint(
-                icon = Icons.Filled.AccountCircle,
-                title = stringResource(R.string.account_logged_out_title),
-                subtitle = stringResource(R.string.account_logged_out_subtitle),
-                actionLabel = stringResource(R.string.account_go_login),
-                onAction = onLogin,
-            )
+            AuthUiState.LoggedOut -> Column(Modifier.fillMaxSize()) {
+                // NOTE: 未登录也要够得到设置（主题 / 语言 / 播放），所以空态只占中间那块，
+                // 入口与登录后那张分组容器同一套样式——同一个入口不该因为有没有登录而换样子。
+                EmptyHint(
+                    icon = Icons.Filled.AccountCircle,
+                    title = stringResource(R.string.account_logged_out_title),
+                    subtitle = stringResource(R.string.account_logged_out_subtitle),
+                    actionLabel = stringResource(R.string.account_go_login),
+                    onAction = onLogin,
+                    modifier = Modifier.weight(1f),
+                )
+                MenuGroup {
+                    MenuRow(Icons.Filled.Settings, stringResource(R.string.account_settings), onSettings)
+                }
+                Spacer(Modifier.height(16.dp))
+            }
 
             is AuthUiState.LoggedIn -> Column(
                 modifier = Modifier
