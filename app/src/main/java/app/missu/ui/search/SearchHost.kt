@@ -42,6 +42,7 @@ import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadMoreFooter
 import app.missu.ui.components.LoadingHint
+import app.missu.ui.components.PageStateTransition
 import app.missu.ui.components.VideoGridCard
 import kotlinx.coroutines.launch
 
@@ -144,8 +145,8 @@ fun SearchBody(
     onOpen: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(modifier.fillMaxSize()) {
-        when (state) {
+    PageStateTransition(state = state, modifier = modifier.fillMaxSize()) { current ->
+        when (current) {
             SearchUiState.Idle -> Unit
 
             SearchUiState.Loading -> LoadingHint()
@@ -157,12 +158,12 @@ fun SearchBody(
             )
 
             is SearchUiState.Error -> ErrorHint(
-                message = state.message,
+                message = current.message,
                 onRetry = { onRetry(keyword) },
             )
 
             is SearchUiState.Content -> Results(
-                state = state,
+                state = current,
                 onLoadMore = onLoadMore,
                 onOpen = onOpen,
             )

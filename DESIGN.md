@@ -87,6 +87,7 @@
 | 我的片单操作 | `FloatingActionButtonMenu` | 右下 FAB 展开「新建片单 / 刷新列表」；FAB 与菜单项容器色显式取 `primary`（默认 `primaryContainer` 是紫色，与粉色 accent 不搭）；主操作不再占顶栏动作位 |
 | 片单内移除影片 | 右下 `ToggleFloatingActionButton` + `HorizontalFloatingToolbar` | 未整理时只有一个「整理」FAB（编辑图标，点开 morph）；整理模式里点卡片是选中/取消（不进详情），浮条里是连体 `ButtonGroup`「全选 / 移出 N 部」，少见动作「取消选择 / 完成」放进 `AppBarRow` 溢出容器；二次确认后逐条 `DELETE /api/playlists/{片单id}/{影片id}`，成功只删本地这几条（删空转空态） |
 | 页面三态 | `LoadingIndicator` / `EmptyHint` / `ErrorHint` | 统一在 `ui/components/PageStates.kt`：空态 = 降对比度图标 + 标题 + 说明 + 可选 `FilledTonalButton`；错误态必须可重试（M3E 要求），不做「错误但没有出路」的页面 |
+| 状态之间的交接 | `PageStateTransition`（fade through） | 转圈 → 内容不再是硬切：旧内容 90ms 淡出，新内容延迟 90ms 再 210ms 淡入并轻微放大（0.96→1），两段不重叠所以没有重影。`contentKey` 用状态类型，分页时 Content→Content 不重放动画 |
 | 分页加载更多 | `LoadMoreFooter` | 列表页与收藏页共用；加载中把按钮换成 `LoadingIndicator`，按钮留在原地会让列表底部高度跳变 |
 | 登录页 | 整宽主行动 + 内联错误 | 「登录」是整宽 `Button`，加载中按钮内换成 `onPrimary` 色的 `LoadingIndicator`（默认 `primary` 压在粉色按钮上看不见）；账号密码错误写在字段下方，不弹 dialog |
 | 女优筛选 | `Sheet` + 手风琴 + `Pill` | 4 个维度各占一行，行内显示当前值，点行展开该维度的胶囊网格；选中即生效并收起。出道年份有 26 个选项，四列同时铺开会撑爆面板 |

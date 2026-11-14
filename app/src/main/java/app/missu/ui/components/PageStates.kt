@@ -2,6 +2,13 @@
 
 package app.missu.ui.components
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedContentScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -32,6 +39,37 @@ import androidx.compose.ui.unit.dp
  * 统一到这里后，M3E 的 `LoadingIndicator` 与 `FilledTonalButton` 只在一个地方改。
  * 细节态（详情页正文内的行内错误等）仍在各自页面内处理，不走这里。
  */
+
+/**
+ * 页面状态之间的过渡：M3 的 **fade through**。
+ *
+ * NOTE: 之前「转圈」到「内容」是一次硬切——加载指示一消失，整页内容就"啪"地出现。M3 对
+ * 这种**表面级变化**给的动效就是 fade through：旧内容 90ms 淡出，新内容等 90ms 再 210ms 淡入，
+ * 并伴随极轻微的放大（0.96 → 1）。两段不重叠，所以看不到两块内容同时存在的重影。
+ * NOTE: `contentKey` 用状态的**类型**——分页时 Content→Content 只是数据变了，不该整页重放动画。
+ */
+@Composable
+fun <S : Any> PageStateTransition(
+    state: S,
+    modifier: Modifier = Modifier,
+    content: @Composable AnimatedContentScope.(S) -> Unit,
+) {
+    AnimatedContent(
+        targetState = state,
+        modifier = modifier,
+        contentKey = { it::class },
+        transitionSpec = {
+            (
+                fadeIn(animationSpec = tween(durationMillis = 210, delayMillis = 90)) +
+                    scaleIn(animationSpec = tween(durationMillis = 210, delayMillis = 90), initialScale = 0.96f)
+                ).togetherWith(
+                fadeOut(animationSpec = tween(durationMillis = 90)),
+            )
+        },
+        label = "page-state",
+        content = content,
+    )
+}
 
 /** 加载态：居中的 M3E `LoadingIndicator`。 */
 @Composable
