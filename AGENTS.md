@@ -19,9 +19,9 @@ cd android-native
 .\build.ps1 release      # release（沿用 debug 签名，仅自用侧载）
 ```
 
-`build.ps1` 会配好 `JAVA_HOME`（自动选 `D:\Android\jdk-N`，回落 AS 自带 JBR）、`ANDROID_HOME`（`D:\Android\Sdk`）、`ANDROID_USER_HOME`、`TMP/TEMP`。自动化采集输出时加 `MISSU_NO_DAEMON=1`——Gradle daemon 会一直占着 stdout，管道等不到 EOF。
+`build.ps1` 会配好 `JAVA_HOME`（自动选 `D:\Android\jdk-N`；AS 已卸载，构建不依赖它）、`ANDROID_HOME`（`D:\Android\Sdk`）、`ANDROID_USER_HOME`、`TMP/TEMP`。自动化采集输出时加 `MISSU_NO_DAEMON=1`——Gradle daemon 会一直占着 stdout，管道等不到 EOF。
 
-工具链：SDK `D:\Android\Sdk`、JDK = 独立 Temurin 21（`D:\Android\jdk-21`，`build.ps1` 自动发现 `jdk-*` 取最高版本），回落 Android Studio 自带 JBR、Gradle 缓存 `%USERPROFILE%\.gradle`、Gradle 发行包 9.6.0（wrapper，腾讯镜像）。
+工具链：SDK `D:\Android\Sdk`、JDK = 独立 Temurin 21（`D:\Android\jdk-21`，`build.ps1` 自动发现 `jdk-*` 取最高版本）；Android Studio 已卸载，构建不依赖它。Gradle 缓存 `%USERPROFILE%\.gradle`、Gradle 发行包 9.6.0（wrapper，腾讯镜像）。
 
 ## 开发流程
 
