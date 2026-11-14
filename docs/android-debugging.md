@@ -100,25 +100,25 @@ adb 按 serial（传输）记账，不按硬件去重。无线调试下同一台
    处理：受信任应用程序里加 `C:\Users\user\AppData\Local\Programs\DeepSeek Harness\DeepSeek Harness.exe`，勾「不监控应用程序活动」「不监控子应用程序活动」（递归）；排除项目录加 `D:\missu`、`C:\Users\user\.dsh`。
 2. **按可执行文件拦写入**：某个 `java.exe` 即使被加进"受信任应用程序"，写工作区外目录仍可能被拒（当年 `D:\Android\jdk-17` 就是这样，而当时 AS 自带的 JBR 正常）。
    判别方法：同一个文件分别用 PowerShell 和 JVM 写一次，只有 JVM 被拒 = 程序级拦截，不是文件权限。
-   处理：构建用 `D:\Android\jdk-21`（Temurin，`build.ps1` 自动发现）；换 JDK 前先确认它的 `java.exe` 能正常跑。
+   处理：构建用 `D:\Android\jdk-21`（Temurin，`scripts/build.ps1` 自动发现）；换 JDK 前先确认它的 `java.exe` 能正常跑。
 
 ## 构建、安装与迭代
 
 ```powershell
 cd D:\missu
-.\build.ps1            # debug APK
-.\build.ps1 install    # 构建并直接装到当前设备
+.\scripts\build.ps1            # debug APK
+.\scripts\build.ps1 install    # 构建并直接装到当前设备
 adb shell am start -n app.missu/.MainActivity
 ```
 
 - 增量构建通常 10–30 秒；**没有 Fast Refresh**，改完必须重新编译装机才能看到效果。
 - 自动化采集输出时设 `MISSU_NO_DAEMON=1`，否则 Gradle daemon 会占着 stdout，管道等不到 EOF（命令看起来"卡死"，其实构建早已结束）。
-- `build.ps1` 里固定了 `JAVA_HOME`、`ANDROID_HOME`、`ANDROID_USER_HOME`、`TMP/TEMP`；这些不是可选项，原因见 `docs/android-native.md` 的「已知坑」。
+- `scripts/build.ps1` 里固定了 `JAVA_HOME`、`ANDROID_HOME`、`ANDROID_USER_HOME`、`TMP/TEMP`；这些不是可选项，原因见 `docs/android-native.md` 的「已知坑」。
 
 独立 release 包：
 
 ```powershell
-.\build.ps1 release
+.\scripts\build.ps1 release
 # 产物：app\build\outputs\apk\release\app-release.apk
 ```
 
