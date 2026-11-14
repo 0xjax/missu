@@ -64,6 +64,7 @@ import app.missu.data.store.AppLanguage
 import app.missu.data.store.contentLanguage
 import app.missu.data.store.uiLocale
 import app.missu.data.store.CredentialStore
+import app.missu.data.store.ColorSource
 import app.missu.data.store.ProfileStore
 import app.missu.data.store.HistoryStore
 import app.missu.data.store.SearchHistoryStore
@@ -117,7 +118,7 @@ class MainActivity : ComponentActivity() {
         setContent { MissuRoot() }
     }
 
-    /** 按持久化的明暗模式（含「跟随系统」）先给窗口铺上与页面一致的底色。 */
+    /** 按持久化的明暗模式（含「跟随系统」）与色源，先给窗口铺上与页面一致的底色。 */
     private fun applyWindowBackground() {
         val settings = SettingsStore(applicationContext)
         val nightMask = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
@@ -126,7 +127,8 @@ class MainActivity : ComponentActivity() {
             ThemeMode.LIGHT -> false
             ThemeMode.DARK -> true
         }
-        window.setBackgroundDrawable(ColorDrawable(themeBackgroundColor(darkTheme).toArgb()))
+        val color = themeBackgroundColor(applicationContext, darkTheme, settings.colorSource())
+        window.setBackgroundDrawable(ColorDrawable(color.toArgb()))
     }
 }
 
@@ -148,7 +150,7 @@ private fun MissuRoot() {
     val settings = remember { SettingsStore(context.applicationContext) }
     var appLanguage by remember { mutableStateOf(settings.appLanguage()) }
     var themeMode by remember { mutableStateOf(settings.themeMode()) }
-    var dynamicColor by remember { mutableStateOf(settings.dynamicColor()) }
+    var colorSource by remember { mutableStateOf(settings.colorSource()) }
     var pureBlack by remember { mutableStateOf(settings.pureBlack()) }
     val darkTheme = when (themeMode) {
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
@@ -170,7 +172,7 @@ private fun MissuRoot() {
         context.createConfigurationContext(configuration)
     }
 
-    MissuTheme(darkTheme = darkTheme, dynamicColor = dynamicColor, pureBlack = pureBlack) {
+    MissuTheme(darkTheme = darkTheme, colorSource = colorSource, pureBlack = pureBlack) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             // NOTE: 卡片 → 详情的 container transform 需要共享元素作用域。它必须比 NavHost
             // 更高——两个页面的封面在转场期间同时存在，那层覆盖物由 SharedTransitionLayout 画。
@@ -185,7 +187,7 @@ private fun MissuRoot() {
                         appLanguage = appLanguage,
                         contentLanguage = contentLanguage,
                         themeMode = themeMode,
-                        dynamicColor = dynamicColor,
+                        colorSource = colorSource,
                         pureBlack = pureBlack,
                         onAppLanguageChange = { value ->
                             settings.setAppLanguage(value)
@@ -195,11 +197,10 @@ private fun MissuRoot() {
                             settings.setThemeMode(mode)
                             themeMode = mode
                         },
-                        onDynamicColorChange = { enabled ->
-                            settings.setDynamicColor(enabled)
-                            dynamicColor = enabled
-                        },
-                        onPureBlackChange = { enabled ->
+                        onColorSourceChange = { source ->
+                            settings.setColorSource(source)
+                            colorSource = source
+                        },                        onPureBlackChange = { enabled ->
                             settings.setPureBlack(enabled)
                             pureBlack = enabled
                         },
@@ -221,10 +222,10 @@ private fun rememberApi(): MissavApi {
 private fun MissuApp(
     settings: SettingsStore,
     themeMode: ThemeMode,
-    dynamicColor: Boolean,
+    colorSource: ColorSource,
     pureBlack: Boolean,
     onThemeModeChange: (ThemeMode) -> Unit,
-    onDynamicColorChange: (Boolean) -> Unit,
+    onColorSourceChange: (ColorSource) -> Unit,
     onPureBlackChange: (Boolean) -> Unit,
     appLanguage: AppLanguage,
     contentLanguage: String,
@@ -439,11 +440,11 @@ private fun MissuApp(
                 SettingsScreen(
                     appLanguage = appLanguage,
                     themeMode = themeMode,
-                    dynamicColor = dynamicColor,
+                    colorSource = colorSource,
                     pureBlack = pureBlack,
                     onAppLanguageChange = onAppLanguageChange,
                     onThemeModeChange = onThemeModeChange,
-                    onDynamicColorChange = onDynamicColorChange,
+                    onColorSourceChange = onColorSourceChange,
                     onPureBlackChange = onPureBlackChange,
                     onBack = { navController.popBackStack() },
                 )
