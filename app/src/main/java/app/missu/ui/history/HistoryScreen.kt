@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,6 +16,8 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -29,9 +30,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import app.missu.data.store.HistoryEntry
 import coil3.compose.AsyncImage
+import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.PageTopBar
 
 @Composable
@@ -55,13 +56,11 @@ fun HistoryScreen(
         )
 
         if (entries.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = "还没有观看记录",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            EmptyHint(
+                icon = Icons.Filled.PlayArrow,
+                title = "还没有观看记录",
+                subtitle = "打开任意影片开始播放后，这里会记下看到哪一分钟",
+            )
         } else {
             LazyVerticalGrid(
                 modifier = Modifier.fillMaxSize(),
@@ -82,9 +81,11 @@ fun HistoryScreen(
 private fun HistoryCard(entry: HistoryEntry, onClick: () -> Unit) {
     Column(Modifier.clickable(onClick = onClick)) {
         Box(
-            modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f)
-                .clip(RoundedCornerShape(10.dp))
-                .background(Color(0xFF212225)),
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(16f / 9f)
+                .clip(MaterialTheme.shapes.medium)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
         ) {
             AsyncImage(
                 model = entry.thumbnailUrl,
@@ -107,8 +108,8 @@ private fun HistoryCard(entry: HistoryEntry, onClick: () -> Unit) {
                 }
                 Text(
                     text = "${formatTime(entry.positionMs)} / ${entry.duration ?: "--:--"}",
+                    style = MaterialTheme.typography.labelSmall,
                     color = Color.White,
-                    fontSize = 11.sp,
                     modifier = Modifier
                         .align(Alignment.End)
                         .padding(6.dp)

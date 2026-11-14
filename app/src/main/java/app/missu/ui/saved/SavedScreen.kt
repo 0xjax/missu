@@ -3,30 +3,25 @@
 package app.missu.ui.saved
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.LoadingIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import app.missu.ui.components.VideoGridCard
+import app.missu.ui.components.EmptyHint
+import app.missu.ui.components.ErrorHint
+import app.missu.ui.components.LoadMoreFooter
+import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.PageTopBar
+import app.missu.ui.components.VideoGridCard
 
 @Composable
 fun SavedScreen(
@@ -41,13 +36,15 @@ fun SavedScreen(
         PageTopBar(title = "我的收藏", onBack = onBack)
 
         when (state) {
-            SavedUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                LoadingIndicator()
-            }
+            SavedUiState.Loading -> LoadingHint()
 
-            SavedUiState.Empty -> CenteredHint("还没有收藏，去详情页点收藏试试")
+            SavedUiState.Empty -> EmptyHint(
+                icon = Icons.Filled.Favorite,
+                title = "还没有收藏",
+                subtitle = "在详情页点一下「收藏」，之后就能从这里直接打开",
+            )
 
-            is SavedUiState.Error -> CenteredHint(state.message, onRetry)
+            is SavedUiState.Error -> ErrorHint(state.message, onRetry)
 
             is SavedUiState.Content -> LazyVerticalGrid(
                 modifier = Modifier.fillMaxSize(),
@@ -62,35 +59,13 @@ fun SavedScreen(
 
                 if (state.nextPage != null) {
                     item(key = "more", span = { GridItemSpan(maxLineSpan) }) {
-                        Box(
-                            Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            if (state.loadingMore) {
-                                LoadingIndicator()
-                            } else {
-                                Button(onClick = onLoadMore) { Text("加载更多") }
-                            }
-                        }
+                        LoadMoreFooter(
+                            loading = state.loadingMore,
+                            onLoadMore = onLoadMore,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CenteredHint(text: String, onRetry: (() -> Unit)? = null) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (onRetry != null) {
-                Spacer(Modifier.height(12.dp))
-                Button(onClick = onRetry) { Text("重试") }
             }
         }
     }

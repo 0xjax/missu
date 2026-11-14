@@ -66,9 +66,9 @@
 | 底部导航 | `expo-router/js-tabs` 的 `Tabs` | 纯 RN 栏，**3 项固定（首页/发现/我的）**，配色只来自 theme |
 | 页头 | `TabHeader`（自绘） | 每个 tab 页自己画大标题，不用原生 Stack header |
 | 首页板块 | 首页 HTML 板块 + 顶部「今日热门」 | 板块来自首页 HTML；「今日热门」额外请求 `/today-hot` 列表页置顶，条数与其他板块一致不裁剪，失败时整块不显示，不影响其他板块 |
-| 个人中心 | `SettingsRow` | 56dp 行、透明容器、右侧 chevron；二级页走根 Stack |
+| 个人中心（我的） | `ListItem` 分组容器 + 资料卡 | 资料卡 `extraLarge` 圆角 + `surfaceContainerHigh`，首字母头像取 `primary`；四个入口装在 `surfaceContainerLow`（`largeIncreased` 圆角）里，行间分隔线从图标位之后开始；「退出登录」单独一张容器并挂 `error` 色，破坏性动作不与普通入口同层 |
 | 频道 / 周期 / 筛选 / 排序 | `ChoiceMenuBar` + `Menu` | 40dp 触发器 + 自绘浮层，选中项只改文字颜色 |
-| 一级分类（发现页） | `TabRow` | 三项等宽（女优/类型/厂商）；发现页**不放搜索入口**（搜索的唯一入口是首页顶部的 `SearchBox`），搜索不单独占页签 |
+| 一级分类（发现页） | `PrimaryTabRow` | 三项等宽（女优/类型/厂商）；基线 `TabRow` 已废弃；发现页**不放搜索入口**（搜索的唯一入口是首页顶部的 `SearchBox`），搜索不单独占页签 |
 | 厂商频道组 | `CollapsibleGroup` + `SettingsRow` | 默认折叠三组（素人/无码影片/亚洲 AV），路径见 `src/constants/channel-groups.ts` |
 | 目录栅格 | `FlatList` + `DirectoryCard` | 女优 / 排行 3 列（低分辨率竖图），分类 / 厂商 2 列（文字块） |
 | 视频卡封面角标 | `VideoCard` | 左下变体标签（中文字幕 / 无码影片），右下时长；标签取自卡片 HTML，不新增请求 |
@@ -76,7 +76,7 @@
 | 详情信息块 | 详情页内联行 | 8 行（发行日期/番号/标题/女优/类型/系列/发行商/标籤），文案随内容语言变化不硬编码；标签 `textSecondary` 与值同行，可点击值用 accent 色跳 `/latest?source=path`。不用下划线：Android 嵌套 `Text` 的下划线会错位成漂浮短线 |
 | 详情页片单 | 收藏旁「片单」按钮 + `Sheet` | 打开时 `GET /api/playlists/{dvdId}`；点行或勾选框乐观切换再 `POST /api/playlists/add\|remove`；超过 6 行面板内滚动；「新建片单」就地展开单行输入框，提交后重新拉列表；未登录先跳登录 |
 | 删除片单 | 片单详情页页头「编辑」→ 编辑页内「删除片单」 | 系统 `Alert` 二次确认（destructive）；确认后提交站点「修改片单」页里的删除表单（`_method=delete` + `_token`），成功后返回列表；列表页不放破坏性入口（滑动露出删除这类方案同理不采用）。改名/描述/公开与删除同在这一个编辑页，站点上它们本就是同一张表单 |
-| 二级页顶栏 | `TopAppBar` + `PageTopBar` | up 图标 + 标题 + 动作槽；返回图标挂 `PlainTooltip`；容器色取 `background`（默认 surface 在纯黑底上会露灰边） |
+| 二级页顶栏 | `TopAppBar` + `PageTopBar` | up 图标 + 标题 + 动作槽；返回图标挂 `PlainTooltip`；容器色取 `background`（默认 surface 在纯黑底上会露灰边）；`onBack` 可空——「我的」这类一级页签只借它放标题，不伪造返回键 |
 | 底部导航 | `ShortNavigationBar` | 3 个目的地，用 `ShortNavigationBarItem`；指示器是药丸形。`NavigationBar` 属 M3 基线，M3E 目标下不再用 |
 | 首页推荐位 | `HorizontalMultiBrowseCarousel` | 只给第一个板块做轮播（大项 + 中项 + 小项随滚动变形吸附，这是 M3E carousel 的核心行为，别关）；其余板块保持网格，全轮播会让首页变横向长龙 |
 | 下拉刷新 | `PullToRefreshBox` | 首页与发现页（发现页只包住有内容的支）；刷新时内容留在原地、只有顶部指示器转；失败保留旧列表 |
@@ -85,9 +85,12 @@
 | 搜索栏 | M3E `SearchBar`（slot + `SearchBarState`） | 折叠态在页面顶部，点输入框自动展开成全屏 `ExpandedFullScreenSearchBar`；展开态里是最近搜索胶囊；提交后自动收起到结果列表 |
 | 我的片单操作 | `FloatingActionButtonMenu` | 右下 FAB 展开「新建片单 / 刷新列表」；FAB 与菜单项容器色显式取 `primary`（默认 `primaryContainer` 是紫色，与粉色 accent 不搭）；主操作不再占顶栏动作位 |
 | 片单内移除影片 | 右下 `ToggleFloatingActionButton` + `HorizontalFloatingToolbar` | 未整理时只有一个「整理」FAB（编辑图标，点开 morph）；整理模式里点卡片是选中/取消（不进详情），浮条里是连体 `ButtonGroup`「全选 / 移出 N 部」，少见动作「取消选择 / 完成」放进 `AppBarRow` 溢出容器；二次确认后逐条 `DELETE /api/playlists/{片单id}/{影片id}`，成功只删本地这几条（删空转空态） |
+| 页面三态 | `LoadingIndicator` / `EmptyHint` / `ErrorHint` | 统一在 `ui/components/PageStates.kt`：空态 = 降对比度图标 + 标题 + 说明 + 可选 `FilledTonalButton`；错误态必须可重试（M3E 要求），不做「错误但没有出路」的页面 |
+| 分页加载更多 | `LoadMoreFooter` | 列表页与收藏页共用；加载中把按钮换成 `LoadingIndicator`，按钮留在原地会让列表底部高度跳变 |
+| 登录页 | 整宽主行动 + 内联错误 | 「登录」是整宽 `Button`，加载中按钮内换成 `onPrimary` 色的 `LoadingIndicator`（默认 `primary` 压在粉色按钮上看不见）；账号密码错误写在字段下方，不弹 dialog |
 | 女优筛选 | `Sheet` + 手风琴 + `Pill` | 4 个维度各占一行，行内显示当前值，点行展开该维度的胶囊网格；选中即生效并收起。出道年份有 26 个选项，四列同时铺开会撑爆面板 |
 | 搜索 | `SearchBox` + `SearchField` | 列表页与首页共用；聚焦时展示搜索历史胶囊 |
-| 内容语言 | 设置行 → `/language` 子页 | 7 种语言，当前项 accent 色；路径前缀由 api 层统一拼接，切换后列表换 key 重拉 |
+| 内容语言 | 设置页内单选分组 | 7 种语言；整行 `selectable(role = RadioButton)`，行尾 `RadioButton(onClick = null)`（整行已可点，控件再接点击会让读屏看到两个节点）；选中态由控件表达，不再给整行刷硬编码底色；路径前缀由 api 层统一拼接，切换后列表换 key 重拉 |
 | 自动播放 | 设置行 + 系统 `Switch` | 默认开；关闭后打开视频保持暂停，不影响当前播放中的视频 |
 | 视频快进退 | 播放器下方 6 个按钮 | 10 秒 / 1 分钟 / 10 分钟双向，36dp 高，点击调用 `seekBy` 并显示提示；按下态用 accent 填充 + 白字，比降透明度更明显 |
 | 倍速设置 | 底部条「倍速」按钮 + `Sheet` | 播放倍速 0.75–2x，选中的存进偏好并对所有视频生效；长按不再临时加速，定位靠 6 个 seek 按钮与双击连击 |

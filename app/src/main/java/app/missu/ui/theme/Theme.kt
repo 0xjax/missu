@@ -18,6 +18,15 @@ private val MissuDarkColors = darkColorScheme(
     background = Background,
     surface = Background,
     surfaceVariant = SurfaceVariant,
+    // NOTE: 五档容器色必须显式给。把 surface 设成纯黑后，官方从 surface 推导出来的容器色会塌到黑色
+    // （实测 surfaceContainerLow 直接等于 #000000），于是「分组容器 / 卡片」这类 M3E 布局在屏幕上看不见——
+    // 只有分隔线还在，看起来像一条条孤立的文字。这里按 #212225 的中性灰给出一组可用的容器梯度，
+    // 由暗到亮：lowest < low < container < high < highest；卡片用 high，分组容器用 low。
+    surfaceContainerLowest = Color(0xFF0E0E10),
+    surfaceContainerLow = Color(0xFF17171A),
+    surfaceContainer = Color(0xFF1D1D21),
+    surfaceContainerHigh = Color(0xFF242428),
+    surfaceContainerHighest = Color(0xFF2C2C31),
 )
 
 /**

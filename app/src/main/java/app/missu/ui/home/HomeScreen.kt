@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,8 +18,8 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.carousel.CarouselDefaults
@@ -38,6 +37,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.missu.data.model.HomeSection
 import app.missu.data.model.VideoSummary
+import app.missu.ui.components.EmptyHint
+import app.missu.ui.components.ErrorHint
+import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.VideoGridCard
 import coil3.compose.AsyncImage
 
@@ -52,23 +54,16 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
 ) {
     when (state) {
-        HomeUiState.Loading -> Centered(modifier) { LoadingIndicator() }
+        HomeUiState.Loading -> LoadingHint(modifier)
 
-        HomeUiState.Empty -> Centered(modifier) {
-            Text("首页没有内容", style = MaterialTheme.typography.bodyMedium)
-        }
+        HomeUiState.Empty -> EmptyHint(
+            icon = Icons.Filled.Home,
+            title = "首页没有内容",
+            subtitle = "站点这次没有返回任何板块，下拉或稍后重试",
+            modifier = modifier,
+        )
 
-        is HomeUiState.Error -> Centered(modifier) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    state.message,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error,
-                )
-                Spacer(Modifier.height(12.dp))
-                Button(onClick = onRetry) { Text("重试") }
-            }
-        }
+        is HomeUiState.Error -> ErrorHint(state.message, onRetry, modifier)
 
         is HomeUiState.Content -> HomeContent(
             sections = state.sections,
@@ -79,11 +74,6 @@ fun HomeScreen(
             modifier = modifier,
         )
     }
-}
-
-@Composable
-private fun Centered(modifier: Modifier, content: @Composable () -> Unit) {
-    Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) { content() }
 }
 
 @Composable

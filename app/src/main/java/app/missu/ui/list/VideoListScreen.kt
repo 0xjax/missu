@@ -3,31 +3,25 @@
 package app.missu.ui.list
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.LoadingIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import app.missu.ui.components.VideoGridCard
+import app.missu.ui.components.EmptyHint
+import app.missu.ui.components.ErrorHint
+import app.missu.ui.components.LoadMoreFooter
+import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.PageTopBar
+import app.missu.ui.components.VideoGridCard
 
 @Composable
 fun VideoListScreen(
@@ -43,13 +37,14 @@ fun VideoListScreen(
         PageTopBar(title = title, onBack = onBack)
 
         when (state) {
-            VideoListUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                LoadingIndicator()
-            }
+            VideoListUiState.Loading -> LoadingHint()
 
-            VideoListUiState.Empty -> CenteredHint("这里还没有内容")
+            VideoListUiState.Empty -> EmptyHint(
+                icon = Icons.AutoMirrored.Filled.List,
+                title = "这里还没有内容",
+            )
 
-            is VideoListUiState.Error -> CenteredHint(state.message, onRetry)
+            is VideoListUiState.Error -> ErrorHint(state.message, onRetry)
 
             is VideoListUiState.Content -> LazyVerticalGrid(
                 modifier = Modifier.fillMaxSize(),
@@ -64,35 +59,13 @@ fun VideoListScreen(
 
                 if (state.nextPage != null) {
                     item(key = "more", span = { GridItemSpan(maxLineSpan) }) {
-                        Box(
-                            Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            if (state.loadingMore) {
-                                LoadingIndicator()
-                            } else {
-                                Button(onClick = onLoadMore) { Text("加载更多") }
-                            }
-                        }
+                        LoadMoreFooter(
+                            loading = state.loadingMore,
+                            onLoadMore = onLoadMore,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CenteredHint(text: String, onRetry: (() -> Unit)? = null) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (onRetry != null) {
-                Spacer(Modifier.height(12.dp))
-                Button(onClick = onRetry) { Text("重试") }
             }
         }
     }

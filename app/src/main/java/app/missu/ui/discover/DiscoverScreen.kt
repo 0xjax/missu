@@ -21,16 +21,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
@@ -44,7 +43,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -53,6 +51,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.missu.data.api.ActressFilterOptions
 import app.missu.data.model.DirectoryItem
+import app.missu.ui.components.EmptyHint
+import app.missu.ui.components.ErrorHint
+import app.missu.ui.components.LoadMoreFooter
+import app.missu.ui.components.LoadingHint
 import coil3.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -78,7 +80,8 @@ fun DiscoverScreen(
 
     Column(modifier.fillMaxSize()) {
 
-        TabRow(selectedTabIndex = tabIndex) {
+        // NOTE: 用 M3E 的 PrimaryTabRow（基线 TabRow 已废弃）；一级分类只有三项，等宽排布。
+        PrimaryTabRow(selectedTabIndex = tabIndex) {
             tabs.forEachIndexed { index, item ->
                 Tab(
                     selected = index == tabIndex,
@@ -135,13 +138,14 @@ fun DiscoverScreen(
         }
 
         when (val state = states[tab.kind]) {
-            null, DirectoryUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                LoadingIndicator()
-            }
+            null, DirectoryUiState.Loading -> LoadingHint()
 
-            DirectoryUiState.Empty -> CenteredHint("这里还没有内容")
+            DirectoryUiState.Empty -> EmptyHint(
+                icon = Icons.AutoMirrored.Filled.List,
+                title = "这里还没有内容",
+            )
 
-            is DirectoryUiState.Error -> CenteredHint(state.message) { onLoad(tab.kind) }
+            is DirectoryUiState.Error -> ErrorHint(state.message, onRetry = { onLoad(tab.kind) })
 
             // NOTE: 下拉刷新只包住有内容的这一支：Loading / Empty / Error 三支本来就有自己的重试入口，
             // 给不可滚动的空态套下手势没有意义。
@@ -160,16 +164,10 @@ fun DiscoverScreen(
 
                     if (state.nextPage != null) {
                         item(key = "more-${tab.kind}") {
-                            Box(
-                                Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                if (state.loadingMore) {
-                                    LoadingIndicator()
-                                } else {
-                                    Button(onClick = { onLoadMore(tab.kind) }) { Text("加载更多") }
-                                }
-                            }
+                            LoadMoreFooter(
+                                loading = state.loadingMore,
+                                onLoadMore = { onLoadMore(tab.kind) },
+                            )
                         }
                     }
                 }
@@ -247,7 +245,10 @@ private fun DirectoryRow(item: DirectoryItem, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier.size(44.dp).clip(CircleShape).background(Color(0xFF212225)),
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
         ) {
             AsyncImage(
                 model = item.imageUrl,
@@ -273,23 +274,6 @@ private fun DirectoryRow(item: DirectoryItem, onClick: () -> Unit) {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun CenteredHint(text: String, onRetry: (() -> Unit)? = null) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (onRetry != null) {
-                Spacer(Modifier.height(12.dp))
-                Button(onClick = onRetry) { Text("重试") }
             }
         }
     }

@@ -21,11 +21,10 @@ import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExpandedFullScreenSearchBar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
@@ -39,6 +38,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import app.missu.ui.components.EmptyHint
+import app.missu.ui.components.ErrorHint
+import app.missu.ui.components.LoadMoreFooter
+import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.VideoGridCard
 import kotlinx.coroutines.launch
 
@@ -116,13 +119,18 @@ fun SearchScreen(
                 onClear = onClearHistory,
             )
 
-            SearchUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                LoadingIndicator()
-            }
+            SearchUiState.Loading -> LoadingHint()
 
-            SearchUiState.Empty -> Hint("没有找到结果")
+            SearchUiState.Empty -> EmptyHint(
+                icon = Icons.Filled.Search,
+                title = "没有找到结果",
+                subtitle = "换个番号、女优或关键词再试",
+            )
 
-            is SearchUiState.Error -> Hint(current.message)
+            is SearchUiState.Error -> ErrorHint(
+                message = current.message,
+                onRetry = { submit(textFieldState.text.toString().trim()) },
+            )
 
             is SearchUiState.Content -> Results(
                 state = current,
@@ -213,13 +221,7 @@ private fun Results(state: SearchUiState.Content, onLoadMore: () -> Unit, onOpen
 
         if (state.nextPage != null) {
             item(key = "more", span = { GridItemSpan(maxLineSpan) }) {
-                Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
-                    if (state.loadingMore) {
-                        LoadingIndicator()
-                    } else {
-                        Button(onClick = onLoadMore) { Text("加载更多") }
-                    }
-                }
+                LoadMoreFooter(loading = state.loadingMore, onLoadMore = onLoadMore)
             }
         } else {
             item(key = "end", span = { GridItemSpan(maxLineSpan) }) {
