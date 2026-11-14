@@ -64,6 +64,7 @@ import androidx.navigation.compose.rememberNavController
 import app.missu.ui.discover.DiscoverScreen
 import app.missu.ui.discover.DiscoverViewModel
 import app.missu.ui.discover.HotPeriod
+import app.missu.data.api.ChallengeHandler
 import app.missu.data.api.MissavApi
 import app.missu.data.api.SourceConfig
 import app.missu.data.api.VideoListOptions
@@ -78,6 +79,8 @@ import app.missu.data.store.HistoryStore
 import app.missu.data.store.SearchHistoryStore
 import app.missu.data.store.SettingsStore
 import app.missu.data.store.ThemeMode
+import app.missu.ui.challenge.ChallengeOverlayHost
+import app.missu.ui.challenge.ChallengeState
 import app.missu.ui.history.HistoryScreen
 import android.content.res.Configuration
 import android.graphics.drawable.ColorDrawable
@@ -169,6 +172,9 @@ private fun MissuRoot() {
     // NOTE: 长按预览的宿主挂在根部：卡片离它十几层，用 CompositionLocal 传下去比逐层加参数省。
     // 它自己是一层 Dialog，所以放在导航/底栏之外也能盖住它们。
     val previewState = remember { VideoPreviewState() }
+    // NOTE: 人机验证的宿主同样挂在根部（理由同上）。它也是 Dialog，所以验证期间能盖住底栏与系统栏；
+    // 而且它就在主题与语言覆写之内，不需要自己再解析一遍明暗/色板/界面语言。
+    val challengeState = remember { ChallengeState() }
     var appLanguage by remember { mutableStateOf(settings.appLanguage()) }
     var themeMode by remember { mutableStateOf(settings.themeMode()) }
     var colorSource by remember { mutableStateOf(settings.colorSource()) }
@@ -226,6 +232,7 @@ private fun MissuRoot() {
                 ) {
                     MissuApp(
                         settings = settings,
+                        challengeState = challengeState,
                         appLanguage = appLanguage,
                         contentLanguage = contentLanguage,
                         themeMode = themeMode,
@@ -253,22 +260,24 @@ private fun MissuRoot() {
                         },
                     )
                     VideoPreviewHost(state = previewState)
+                    ChallengeOverlayHost(state = challengeState)
                 }
             }
         }
     }
 }
 
-/** 取数入口：用 applicationContext（ChallengeActivity 自己带 NEW_TASK，不依赖 Activity 引用）。 */
+/** 取数入口：用 applicationContext（数据层不持有 Activity 引用）。验证面是组合里的一层 Dialog。 */
 @Composable
-private fun rememberApi(): MissavApi {
+private fun rememberApi(challenge: ChallengeHandler): MissavApi {
     val context = LocalContext.current
-    return remember { createMissavApi(context.applicationContext) }
+    return remember { createMissavApi(context.applicationContext, challenge) }
 }
 
 @Composable
 private fun MissuApp(
     settings: SettingsStore,
+    challengeState: ChallengeState,
     themeMode: ThemeMode,
     colorSource: ColorSource,
     followThemeIcon: Boolean,
@@ -282,7 +291,7 @@ private fun MissuApp(
     onAppLanguageChange: (AppLanguage) -> Unit,
 ) {
     val navController = rememberNavController()
-    val api = rememberApi()
+    val api = rememberApi(challengeState)
     val context = LocalContext.current
 
     /**

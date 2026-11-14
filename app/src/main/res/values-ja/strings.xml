@@ -198,8 +198,9 @@
     <string name="error_unknown">不明なエラー</string>
 
     <!-- 認証 -->
+    <string name="challenge_title">認証</string>
     <string name="challenge_opening">サイトを開いています…</string>
     <string name="challenge_passed">確認できました。ページを読み込んでいます…</string>
-    <string name="challenge_waiting">サイトの応答を待っています…（%1$d 回目の確認）</string>
+    <string name="challenge_waiting">サイトの応答を待っています…</string>
     <string name="challenge_blocked">まだ通っていません（%1$d 回確認）。キャンセルして再試行してください。</string>
 </resources>
