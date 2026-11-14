@@ -1,17 +1,17 @@
 ﻿# 一次性修复 DSH Windows 沙箱对本工作区的写权限。
 #
 # 背景：DSH 在每个工作区根目录上放一条 S-1-4-* 的允许 ACE + Low 完整性标签，受限子进程
-# （bun / git / expo）靠这两样东西写文件。它们只对「授权之后新建」的对象生效；工作区里
+# （git / Gradle / adb / bun）靠这两样东西写文件。它们只对「授权之后新建」的对象生效；工作区里
 # 早于授权就存在的文件既没有 ACE 也没有 Low 标签，于是子进程报 EPERM / 拒绝访问，而
 # 编辑器类工具（不受 ACL 限制）却一切正常。
 #
 # 关键点：Windows 在给目录重新设置安全描述符时，会把可继承项（ACL 和 Low 标签）传播给
-# 已经存在的子对象。所以本脚本只处理根目录，秒级完成；逐个遍历 node_modules 之类的
-# 十几万个对象既慢又没必要。极少数传播失败的情况用 -Full 兜底。
+# 已经存在的子对象。所以本脚本只处理根目录，秒级完成；逐个遍历 build 之类的几万个对象
+# 既慢又没必要。极少数传播失败的情况用 -Full 兜底。
 #
-# NOTE: node_modules 里仍有约 20% 的目录继承了「关闭」的 SACL，标签传播不进去；那里
-# 只有「原地改写旧依赖文件」会失败，而删掉依赖目录重装（新对象会自动继承父目录的标签）
-# 比 -Full 逐对象打标签更快也更干净。所以 -Full 只在确实要原地改 node_modules 时才需要。
+# NOTE: 归档的 `legacy/expo`（当年的 Expo 工程）已经不再构建、也没有 node_modules 了；
+# 那棵树里历史上就有约 20% 的对象继承不进标签。只有在原地改写那里的旧文件时才会失败，
+# 需要时用 -Full 逐对象兜底一次即可。
 #
 # 做法（幂等，可重复执行，普通权限即可，不需要管理员）：
 #   1. 根目录上补当前用户的显式完全控制（改 SACL 里的完整性标签需要 WRITE_OWNER，
@@ -21,7 +21,6 @@
 #   4. 抽样复验，失败则非零退出。
 #
 # 用法（在仓库根目录）：
-#   bun run acl:fix
 #   powershell -NoProfile -ExecutionPolicy Bypass -File scripts/fix-workspace-acl.ps1
 #   powershell -NoProfile -ExecutionPolicy Bypass -File scripts/fix-workspace-acl.ps1 -Full
 
@@ -94,15 +93,18 @@ $labelDenied = @($labelOut | Where-Object { $_ -match 'Access is denied|拒绝�
 Write-Output ("  exit=$labelExit  denied=$labelDenied  耗时 {0:n1}s" -f $sw.Elapsed.TotalSeconds)
 $labelOut | Select-Object -Last 2 | ForEach-Object { Write-Output "  $_" }
 
-# 第 4 步：抽样复验。挑的是历史上最容易漏的对象：根目录文件、源码、临时目录、依赖。
+# 第 4 步：抽样复验。挑的是历史上最容易漏的对象：源码、构建产物、工具目录、归档的 Expo 树。
+# NOTE: 这份清单要跟着仓库结构维护。还写着 Expo 工程那会儿的 `src` / `node_modules` 时，
+# 抽样会全部被 Test-Path 跳过——脚本「通过」，但其实什么都没验。
 Write-Output '第 4 步：抽样复验'
 $checks = @(
-    (Join-Path $root 'expo-env.d.ts'),
-    (Join-Path $root 'package.json'),
-    (Join-Path $root 'src'),
-    (Join-Path $root '.local'),
+    (Join-Path $root 'app'),
+    (Join-Path $root 'core'),
+    (Join-Path $root 'docs'),
     (Join-Path $root 'scripts'),
-    (Join-Path $root 'node_modules')
+    (Join-Path $root 'build'),
+    (Join-Path $root '.agents'),
+    (Join-Path $root 'legacy\expo')
 )
 $failures = 0
 foreach ($check in $checks) {
@@ -121,4 +123,4 @@ if ($failures -gt 0 -or $labelDenied -gt 0 -or $labelExit -ne 0) {
     exit 1
 }
 
-Write-Output '完成。受限子进程（bun / git / expo）现在可以正常写这个工作区。'
+Write-Output '完成。受限子进程（git / Gradle / adb）现在可以正常写这个工作区。'
