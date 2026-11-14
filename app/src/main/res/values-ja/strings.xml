@@ -10,7 +10,7 @@
 
     <!-- ボトムタブ -->
     <string name="nav_home">ホーム</string>
-    <string name="nav_discover">発見</string>
+    <string name="nav_discover">さがす</string>
     <string name="nav_account">マイページ</string>
 
     <!-- マイページ -->
