@@ -78,13 +78,18 @@ object HomeParser {
             if (pageUrl.isEmpty()) return@mapNotNull null
 
             val id = pageUrl.substringBefore('?').trimEnd('/').substringAfterLast('/')
-            if (id.isEmpty() || DM_PREFIX.matches(id)) return@mapNotNull null
+            // NOTE: 空结果页/页脚里也会出现 `.thumbnail.group` 外壳，最后一段可能是 `#` 这类非番号；
+            // 只接受含字母或数字的 id，否则会解析出一张标题为域名的"幽灵卡片"（实测踩过）。
+            if (id.isEmpty() || DM_PREFIX.matches(id) || id.none { it.isLetterOrDigit() }) return@mapNotNull null
+
+            // NOTE: 真卡片一定带封面 `<img>`。没有 `<img>` 的 `.thumbnail.group` 不是视频卡——
+            // 空结果页上就留着这么一个壳，解析出来就是一张没有图的空缩略图卡片。
+            val image = thumbnail.selectFirst("img") ?: return@mapNotNull null
 
             val card = thumbnail.parent() ?: return@mapNotNull null
             val title = card.selectFirst("a.text-secondary")?.text()?.trim().orEmpty().ifEmpty { id }
 
-            val image = thumbnail.selectFirst("img")
-            val rawImage = image?.attr("data-src")?.takeIf { it.isNotEmpty() } ?: image?.attr("src")
+            val rawImage = image.attr("data-src").takeIf { it.isNotEmpty() } ?: image.attr("src")
             val thumbnailUrl = rawImage?.takeIf { it.isNotEmpty() && !it.startsWith("data:") }?.let { absolute(it) }
 
             val spans = thumbnail.select("span").map { span ->

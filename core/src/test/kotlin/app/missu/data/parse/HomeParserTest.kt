@@ -70,4 +70,32 @@ class HomeParserTest {
 
         assertTrue("没有可识别的板块 id 时不应产出板块", HomeParser.parseHome(html).isEmpty())
     }
+
+    @Test
+    fun dropsNonVideoShellsOnAnEmptyResultPage() {
+        // 空结果页会留下 `.thumbnail.group` 外壳：一个是页脚域名的锚点（最后一段是 `#`），
+        // 一个干脆没有 `<img>`。以前这两类会被解析成「没有缩略图的幽灵卡片」。
+        val html = """
+            <html><body>
+              <div class="card">
+                <div class="thumbnail group"><a href="https://missav.ai/#"></a></div>
+                <a class="text-secondary">missav.ai</a>
+              </div>
+              <div class="card">
+                <div class="thumbnail group"><a href="/cn/hublk-105"></a></div>
+                <a class="text-secondary">HUBLK-105</a>
+              </div>
+              <div class="card">
+                <div class="thumbnail group">
+                  <a href="/cn/sone-001"><img data-src="//i/sone.jpg"></a>
+                </div>
+                <a class="text-secondary">SONE-001</a>
+              </div>
+            </body></html>
+        """.trimIndent()
+
+        val videos = HomeParser.parseVideoCards(org.jsoup.Jsoup.parse(html, "https://missav.ai"))
+
+        assertEquals("只应留下真正带封面的视频卡", listOf("sone-001"), videos.map { it.id })
+    }
 }
