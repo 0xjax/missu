@@ -314,10 +314,31 @@ private fun applyPageTheme(view: WebView, dark: Boolean, onRules: (Int) -> Unit 
     }
 }
 
-/** 取证探针：标题能分辨挑战页与真页面，后两项是「页面为什么读不清」的直接证据。 */
+/**
+ * 页面探针：标题 / 就绪状态 / 是不是挑战页 / 明暗 / body 实际计算色。
+ *
+ * `c` 是**挑战页自己的身份标记 `window._cf_chl_opt`**：CF 的 chl 脚本一定会在页面上挂它
+ * （实测：抓下来的英文 403 正文里 7 处；中文挑战页 `请稍候…` 的实时 DOM 里同样成立）。
+ *
+ * 为什么不能只靠标题（2026-11-15 06:52 实测）：CF 的挑战页标题**会被本地化**——同一个站点，
+ * 我们的 WebView 收到 `Just a moment...`，无头 Chrome 收到的是 `请稍候…`。旧代码只认英文标题，
+ * 遇到后者就会把**挑战页当正常页**、把它的 HTML 交回请求（05:02 那次 `html=44698` 就是这个坑）。
+ *
+ * NOTE: 只用 `_cf_chl_opt` 一个标记。它在两种挑战页上都验过成立（英文 403 正文、中文 `请稍候…`），
+ * 在真正的站点正常页上验过为 false（`t="MissAV | 免费高清AV在线看"`、`c=false`，2026-11-15 06:54 真机）。
+ * 没有再加「资源里出现 `/cdn-cgi/challenge-platform`」这条：它覆盖的资源面比一个标记宽，
+ * 而 CF 正常页面是否也拉那套脚本我们没验过——既然一个已验证足够的信号已经覆盖两种标题变体，
+ * 就不引入第二个面更大、还没验证的信号。
+ */
 private const val PROBE_JS =
-    "JSON.stringify({t:document.title,d:matchMedia('(prefers-color-scheme: dark)').matches," +
+    "JSON.stringify({t:document.title,r:document.readyState," +
+        "c:(typeof window._cf_chl_opt!=='undefined')," +
+        "d:matchMedia('(prefers-color-scheme: dark)').matches," +
         "bg:getComputedStyle(document.body).backgroundColor,fg:getComputedStyle(document.body).color})"
+
+/** 挑战页判定：CF 自己的标记优先，标题只作辅助（标题会改版、会本地化）。 */
+private fun JSONObject.isChallengePage(): Boolean =
+    optBoolean("c") || optString("t").contains(CHALLENGE_TITLE, ignoreCase = true)
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -371,16 +392,15 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
     }
 
     /**
-     * 标题 + 就绪状态。标题能区分「挑战页（Just a moment...）」与「真页面」。
+     * 跑一次 [PROBE_JS]，返回解析好的对象（拿到什么算什么，页面没准备好时是 null）。
      *
      * WARNING: 用 JSON 而不是拼分隔符——站点标题里本来就有 `|`（`MissAV | 免费高清AV在线看`），
      * 按分隔符切会把 readyState 切错（实测被这条卡住：判定永远不成立，浮层干等到超时）。
      */
-    suspend fun pageInfo(view: WebView): Pair<String, String> = suspendCancellableCoroutine { cont ->
-        view.evaluateJavascript("JSON.stringify({t: document.title, r: document.readyState})") { raw ->
+    suspend fun probePage(view: WebView): JSONObject? = suspendCancellableCoroutine { cont ->
+        view.evaluateJavascript(PROBE_JS) { raw ->
             val text = runCatching { JSONTokener(raw).nextValue() as? String }.getOrNull().orEmpty()
-            val obj = runCatching { JSONObject(text) }.getOrNull()
-            cont.resume(obj?.optString("t").orEmpty() to obj?.optString("r").orEmpty())
+            cont.resume(runCatching { JSONObject(text) }.getOrNull())
         }
     }
 
@@ -413,13 +433,14 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
                 delay(POLL_MS)
                 continue
             }
-            val (pageTitle, ready) = pageInfo(view)
+            val page = probePage(view)
+            val ready = page?.optString("r").orEmpty()
             // NOTE: 只看 cookie 会误判——cookie 可能由别的出口 IP 签发、或刚被站点作废，
-            // 此时页面还停在挑战页，照读 HTML 会把挑战页当结果。所以标题必须一起看。
+            // 此时页面还停在挑战页，照读 HTML 会把挑战页当结果。所以还要看页面身份（见 isChallengePage）。
             val clearance = CookieManager.getInstance()
                 .getCookie(view.url ?: targetUrl)
                 ?.contains("cf_clearance") == true
-            val challengePage = pageTitle.contains(CHALLENGE_TITLE, ignoreCase = true)
+            val challengePage = page?.isChallengePage() == true
             val onTarget = samePath(view.url.orEmpty(), targetUrl)
             // 真挑战页才显形；其余情况（浏览器直接拿到了目标页）全程不显示任何东西。
             if (challengePage || attempts >= REVEAL_AFTER_ATTEMPTS) revealed = true
@@ -518,7 +539,7 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
                                                 runCatching { JSONTokener(raw).nextValue() as? String }.getOrNull().orEmpty()
                                             ChallengeDiagnostics.event(context, "page=$text url=$pageUrl")
                                             val probe = runCatching { JSONObject(text) }.getOrNull()
-                                            if (probe?.optString("t")?.contains(CHALLENGE_TITLE, true) == true) {
+                                            if (probe?.isChallengePage() == true) {
                                                 // 挑战页自己写死浅色文字，深色主题下必须靠解包 CF 的深色样式。
                                                 if (darkTheme) applyPageTheme(view, darkTheme) { n -> themeRules.set(n) }
                                                 if (htmlDumped.compareAndSet(false, true)) {
