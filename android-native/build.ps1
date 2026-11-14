@@ -1,4 +1,4 @@
-# 构建 missu 原生工程：把需要的环境变量一次配好，避免每次重新推导。
+﻿# 构建 missu 原生工程：把需要的环境变量一次配好，避免每次重新推导。
 # 用法：  .\build.ps1            （只构建 debug APK）
 #         .\build.ps1 install    （构建 + 装到已连接的设备）
 #         .\build.ps1 release    （构建 release APK，沿用 debug 签名）
@@ -11,9 +11,13 @@ param([string]$Task = "assembleDebug")
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-# JDK：用 Android Studio 自带的 JBR（本机 AS 2026.2.2 内置 JDK 25）。构建路径里的另一个 JDK 17 被安全软件按程序拦截，不可用。
+# JDK：优先用独立的 JDK 21（D:\jdk-21，不依赖 Android Studio），找不到才回落到 AS 自带 JBR。
+# NOTE: 另一个历史 JDK 17（D:\Android\jdk-17）被安全软件按可执行文件拦截，已删除；换 JDK 前先确认它的 java.exe 能正常跑。
 # SDK：全局安装位置，与 AS 的 Android SDK Location 及 local.properties 的 sdk.dir 一致。
-$env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
+$jdkCandidates = @('D:\jdk-21', 'C:\Program Files\Android\Android Studio\jbr')
+$jdk = $jdkCandidates | Where-Object { Test-Path (Join-Path $_ 'bin\java.exe') } | Select-Object -First 1
+if (-not $jdk) { throw "找不到可用的 JDK，尝试过：$($jdkCandidates -join ' / ')" }
+$env:JAVA_HOME = $jdk
 $env:ANDROID_HOME = 'D:\Android\Sdk'
 $env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
 
@@ -25,7 +29,7 @@ $env:TEMP = $env:TMP
 New-Item -ItemType Directory -Force $env:TMP, $env:ANDROID_USER_HOME | Out-Null
 
 if (-not (Test-Path (Join-Path $env:JAVA_HOME 'bin\java.exe'))) {
-    throw "JAVA_HOME 里找不到 java.exe：$env:JAVA_HOME"
+    throw ("JAVA_HOME 里找不到 java.exe：{0}（候选：{1}）" -f $env:JAVA_HOME, ($jdkCandidates -join ' / '))
 }
 
 $extra = @('--console=plain')

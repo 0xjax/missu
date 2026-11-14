@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-- ✅ 工程骨架可编译：`BUILD SUCCESSFUL`，产出 `app-debug.apk`（11.4 MB）
+- ✅ 工程骨架可编译：`BUILD SUCCESSFUL`，产出 `app-debug.apk`（25.6 MB）
 - ✅ 工具链已收口：SDK/JDK 全局唯一，NDK/CMake/重复 SDK 已删（回收约 5.6 GB）
 - ✅ 数据层首块：`data/api` + `data/parse`，`getHome` 已用**真实抓取的首页**验证（4 个板块 / 56 条视频）
 - ✅ **真机端到端**：vivo V2507A 上点按钮 → `getHome` 直接拿到 HTML 并解析出同样 4 板块 / 56 条（未触发人机验证）
@@ -39,7 +39,7 @@
 | activity / navigation / lifecycle-vm | 1.13.0 / 2.10.2 / 2.11.0 (compose 版) | |
 | compileSdk | **37**（+ `compileSdkMinor = 0`） | 新 AndroidX 要求 ≥ 37 |
 | targetSdk / minSdk | 36 / 26 | 编译用新 API、运行时行为按 36 走 |
-| JDK | **Android Studio 自带 JBR（当前 JDK 25）** | `C:\Program Files\Android\Android Studio\jbr`（`D:\Android\jdk-17` 被卡巴斯基按程序拦截，见已知坑） |
+| JDK | **独立 Temurin 21**（`D:\jdk-21`）+ 回落 AS 自带 JBR | `build.ps1` 优先用 `D:\jdk-21`，不存在才用 `C:\Program Files\Android\Android Studio\jbr`；两者都实测可构建（`D:\Android\jdk-17` 曾被卡巴斯基按程序拦截，已删） |
 | Android SDK | API 37.0 + Build-Tools 37 + Platform-Tools | `D:\Android\Sdk` |
 | Android Studio | **2026.2.2**（build `AI-262.10968.63.2622.16840690`，数据目录 `AndroidStudio2026.2.2`） | 只需它自带的 JDK；不需要单独装 JDK |
 
@@ -89,17 +89,34 @@ cd D:\missu\android-native
 
 - **首次**构建要下载 Gradle 9.6.0（腾讯镜像）+ 全部依赖（阿里云），冷启动约几分钟；之后增量约 10–30 秒。
 - `build.ps1` **不跑测试**：测试用 `.\gradlew.bat :core:test`（见「测试」）。
+- 如果 PowerShell 报「禁止运行脚本」（Restricted 执行策略）：用 `powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1`，不要去改全局策略。
+- **`install` 会装到所有在线设备**：本机同时存在无线 serial 与 mDNS serial（同一台手机两条），日志会显示 `Installed on 2 devices`。只想装一次就设 `ANDROID_SERIAL=<serial>`。
 
 `build.ps1` 里固定了这些环境变量（**每次构建都自动设，不依赖系统环境**）：
 
 | 变量 | 值 | 为什么 |
 |---|---|---|
-| `JAVA_HOME` | `C:\Program Files\Android\Android Studio\jbr` | 自带 JBR（当前 JDK 25）；另一个 JDK 17 被安全软件按程序拦截 |
+| `JAVA_HOME` | 先 `D:\jdk-21`，没有则 AS 的 `jbr` | 独立 JDK 让构建不依赖 AS；两个路径都实测可构建 |
 | `ANDROID_HOME` / `ANDROID_SDK_ROOT` | `D:\Android\Sdk` | 与 `local.properties` 的 `sdk.dir` 一致 |
 | `ANDROID_USER_HOME` | `.local/android-home` | `~/.android` 被拒写 |
 | `TMP` / `TEMP` | `.tmp-gradle` | `%TEMP%` 拒写，`generateDebugGlobalSynthetics` 会 `AccessDeniedException` |
 
 **只在本地、不进 Git 的东西**（`.gitignore` 已覆盖）：`local.properties`（sdk.dir）、`.local/`（android-home、截图、诊断输出）、`.tmp-gradle/`（构建临时目录）、`**/build/`、`.gradle/`、`.kotlin/`、`.idea/`。换机器时这些都要重新生成本地副本。
+
+## 构建不依赖 Android Studio
+
+命令行构建只需要三样东西：**JDK 21+**、**Android SDK**（`platform-tools` + `platforms/android-37.0` + `build-tools/37.0.0`）、以及项目自带的 **Gradle wrapper**（首次构建自动下载）。
+`Android Studio` 只是 IDE，外加目前**被当作 JDK 来源**（`build.ps1` 的 `JAVA_HOME` 指向它的 `jbr`）。AS 的 SDK Manager / sdkmanager 任选其一即可装 SDK 组件，`licenses` 也是独立目录。
+
+所以完全可以不装 AS，前提是：
+
+1. 装一个独立 JDK 21+（Temurin / Corretto 都行），把 `build.ps1` 里的 `JAVA_HOME` 指过去；
+2. **该 JDK 的 `java.exe` 必须被安全软件放行**——本机踩过：`D:\Android\jdk-17\bin\java.exe` 能读不能写、而 AS 的 JBR 正常，是卡巴斯基按可执行文件的拦截，不是 JDK 版本问题；
+3. SDK 组件用 `sdkmanager` 装（在 `D:\Android\Sdk\cmdline-tools\bin` 下），不需要 AS 的图形界面。
+
+反过来，如果保留 AS：它约 3.3 GB，好处是 IDE（跳转/调试/Layout Inspector/Profiler）；坏处只有一个——同步时容易把 NDK / system-image 自动拉回来（见下面的设置项）。
+
+**本机现状**：`D:\jdk-21`（Temurin 21.0.13）已装好并被 `build.ps1` 优先采用，`assembleDebug` / `installDebug` / `:core:test` 都实测通过。所以 AS 现在**只剩 IDE 作用**，卸载后可回收约 3.3 GB。
 
 ## Android Studio 设置（一次性）
 
@@ -223,7 +240,7 @@ fixture 都是**真机抓的真实页面**（`home-cn.html` / `detail.html` / `s
 - **`FAIL_ON_PROJECT_REPOS` 冲突** → 本机 `GRADLE_USER_HOME/init.d/mirrors.gradle` 会注入阿里云镜像，`settings.gradle.kts` 不能设那个模式（镜像已同时写进工程，换机器也能用）。
 - **AGP 9 内置 Kotlin** → 再加 `org.jetbrains.kotlin.android` 会直接报错。
 - **compileSdk 必须 37** → Compose BOM 2026.09 的 AndroidX 组件要求 ≥ 37。
-- **`build.ps1` 必须是 UTF-8 带 BOM** → Windows PowerShell 5.1 对无 BOM 的 UTF-8 按 ANSI 解码，中文全角字符会吞掉行尾换行，把下一行代码并进注释（曾导致 `JAVA_HOME` 从未生效）。
+- **`build.ps1` 必须是 UTF-8 带 BOM** → Windows PowerShell 5.1 对无 BOM 的 UTF-8 按 ANSI 解码，中文全角字符会吞掉行尾换行，把下一行代码并进注释（曾导致 `JAVA_HOME` 从未生效）。**用工具/AI 改这个文件后一定要重新写回 BOM**（`[System.Text.UTF8Encoding]::new($true)`），否则一改就坏。
 - **Gradle daemon 占住 stdout** → 自动化采集输出时加 `MISSU_NO_DAEMON=1`，否则管道永远等不到 EOF。
 - **KDoc 里不能出现 `/*` 序列**（例如写 `` `/api/playlists/*` ``）：Kotlin 支持嵌套块注释，这会开启一个
   新注释，把后面的代码整段吃掉，最后在**文件末尾**报 `Syntax error`——错误位置和真正原因完全无关，很难查。
