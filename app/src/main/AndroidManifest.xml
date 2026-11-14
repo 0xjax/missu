@@ -14,10 +14,10 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.Missu">
-        <activity
-            android:name=".ui.challenge.ChallengeActivity"
-            android:exported="false"
-            android:theme="@style/Theme.Missu" />
+        <!--
+          NOTE: 人机验证没有独立 Activity：它是 MainActivity 组合里的一层 Dialog（ChallengeOverlayHost）。
+          好处是主题、语言、色板、返回键全部继承，也不在最近任务里留一个独立页面。
+        -->
         <!--
           NOTE: 启动入口不在这里，而在下面五个 activity-alias 上——图标要能换色，就只能让「桌面入口」
           是多个可启停的 alias，每个 alias 带自己的 android:icon。MainActivity 不能再挂 LAUNCHER 过滤，

@@ -57,7 +57,7 @@
 
 ## WebView（只用于人机验证）
 
-- 唯一用途：站点要求人机验证时由 `ChallengeActivity` 打开网页，拿到 `cf_clearance` 后自动重试原请求。
+- 唯一用途：站点要求人机验证时由组合根部的一层 `Dialog`（`ChallengeOverlayHost`）打开网页，拿到 `cf_clearance` 后自动重试原请求。
 - 不再用它兜「表单操作」：新建片单已经走原生表单（读 `_token` + urlencoded POST）。
 - 必须复用系统 `CookieManager`（与 OkHttp 同一份 Cookie），否则验证过了请求仍然 403。
 - 不做通用浏览模式；这条链路坏掉不能影响其余原生功能。

@@ -4,20 +4,14 @@ import android.content.Context
 import app.missu.data.store.CredentialStore
 
 /**
- * App 侧的依赖装配：OkHttp 与 WebView 共享系统 Cookie 存储，
- * 遇到人机验证时弹 [app.missu.ui.challenge.ChallengeActivity]。
+ * App 侧的依赖装配：OkHttp 与 WebView 共享系统 Cookie 存储；
+ * 人机验证交给调用方传入的 [ChallengeHandler]（App 里是 `ChallengeState`，浮层挂在组合根部）。
  */
-fun createMissavApi(context: Context): MissavApi {
+fun createMissavApi(context: Context, challenge: ChallengeHandler): MissavApi {
     val credentials = CredentialStore(context.applicationContext)
     return MissavApi(
         client = MissavClient(cookieJar = AndroidCookieJar()),
-        challenge = object : ChallengeHandler {
-            override suspend fun verify(url: String): ChallengeResult {
-                val deferred = ChallengeHost.prepare(url)
-                ChallengeHost.start(context)
-                return deferred.await()
-            }
-        },
+        challenge = challenge,
         // NOTE: 只在受保护请求返回 401 时被读取——启动时不去猜会话是否有效（实测判据不成立）。
         credentials = object : CredentialsProvider {
             override fun load(): Pair<String, String>? = credentials.load()

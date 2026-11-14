@@ -294,7 +294,7 @@ app/           Android 应用（UI + 平台适配）
     MainActivity.kt        壳层：Scaffold + 底部导航 + NavHost（所有路由集中在这里）
     ui/home · ui/detail · ui/player · ui/search · ui/discover · ui/saved · ui/playlists ·
     ui/history · ui/settings · ui/account · ui/list · ui/components · ui/theme · ui/challenge
-    data/api/              AndroidCookieJar（CookieManager 适配）· ChallengeHost · AndroidApi
+    data/api/              AndroidCookieJar（CookieManager 适配）· AndroidApi（把 ChallengeState 注入取数层）
     data/store/            ProfileStore（邮箱）· CredentialStore（Keystore 加密的账号密码）·
                            SettingsStore（语言 / 明暗模式 / 主题色 / 纯黑）· HistoryStore（观看进度）·
                            SearchHistoryStore（最近搜索）
@@ -473,19 +473,30 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
   `deletePlaylistItem()` 里的原始调用）。片单页只有片单 id，走前者需要先查一次 `key`，没必要。
 - **首页 4 个板块来自同一次请求**：`GET /` 的 HTML 里就是 4 个兄弟 `<h2>`（新作上市 / 最近更新 / 無碼影片 / 隨機），不是 4 个接口——`getHome()` 只发一次请求。真正各自独立的是各板块「更多」指向的列表页（`/cn/new`、`/cn/release`、`/cn/uncensored-leak`、`/cn/random`），打开时才各发一次。
 - **空结果页仍带 `.thumbnail.group` 外壳**：搜不到东西时页面残留一个没有 `<img>` 的卡片壳、外加一个指向域名/`#` 的锚点。按 `.thumbnail.group` 直接取卡片会解析出一张「标题是 missav.ai、没有封面」的幽灵卡片，UI 上就是一块空缩略图。规则：**id 必须含字母或数字，且必须有 `<img>`**，否则丢弃——这样空结果才会走到空态。
-- **Cloudflare 挑战会真的落在手机上，且链路已验证可用**（2026-11-14 真机实测）：冷启动加载首页时被 403 挑战，
-  App 自动跳到 `ChallengeActivity` 打开验证页（logcat 可证：`MainActivity` 起来后 1.3 s 就 `Displayed
-  app.missu/.ui.challenge.ChallengeActivity`），页内状态文案依次是「等待站点放行…（第 N 次检查）」「验证通过，
-  正在读取页面…」，通过后自动返回首页继续加载，**全程无需用户手动操作**（只在 40 次轮询仍不通时给「取消」）。
+- **Cloudflare 挑战会真的落在手机上，链路已验证可用**（2026-11-14 真机实测，2026-11-15 复查）：冷启动加载首页时被 403 挑战，
+  App 在当前页之上盖一层**验证浮层**（`ChallengeOverlayHost`：组合根部的 `Dialog`，不再是独立 Activity），
+  WebView 里 Cloudflare 的 JS 挑战通常 1–3 秒自动通过；通过后浮层淡出、`cf_clearance` 落进共享 `CookieManager`，
+  **重试原请求**继续加载首页。**全程无需用户手动操作**（只在轮询 60 次仍不通时给「取消」）。
   PC 的 JVM 请求同样会被挑战（`cf-mitigated: challenge`），所以这条链路不是"未验证的兜底"：
   改任何 Cookie 相关代码都必须保证 OkHttp 与 WebView 共用系统 `CookieManager`，否则验证过了仍然 403。
 - **「看到的是正常页面」不等于误触发**：判定条件是 `403 | cf-mitigated: challenge | 挑战页标题`（三者任一），
-  命中后 `withChallengeRetry` 用 `handler.verify(/)` 打开 `ChallengeActivity`，WebView 里 Cloudflare 的 JS
-  挑战通常 1–3 秒自动通过——通过后 WebView 显示的就是**真实页面**（所以看起来"直接跳过了"），随后
-  `cf_clearance` 落进共享 Cookie、Activity 自动关闭、**重试原请求**（不是拿验证页的 HTML 当结果）。
-  验证是否真的通过看两处：logcat 的 `Displayed app.missu/.ui.challenge.ChallengeActivity`，以及之后原请求
-  是否返回内容。真正会误判的只有一种情况：**非挑战原因的 403**（例如权限/风控）也会开一次验证页，
-  最多白跑一趟（40 次轮询后给「取消」），不会破坏数据。
+  命中后 `withChallengeRetry` 用 `handler.verify(/)` 抬起浮层，WebView 里通过后显示的就是**真实页面**
+  （所以看起来"直接跳过了"），随后 `cf_clearance` 落进共享 Cookie、浮层自动消失、**重试原请求**
+  （不是拿验证页的 HTML 当结果）。
+  判读"真的通过"看三处：① 浮层自己消失；② 之后原请求返回了内容；③ `app_webview/Default/Cookies` 里出现 `cf_clearance`。
+  真正会误判的只有一种情况：**非挑战原因的 403**（例如权限/风控）也会抬一次浮层，
+  最多白等约 30 秒（60 次轮询）后给「取消」，不会破坏数据。
+- **`cf_clearance` 还在 ≠ 不会再被挑战**：2026-11-14/15 的几次触发都发生在 cookie 有效期内（实测该 cookie 的 `expires_utc`
+  到 2027-11-14，约一年），说明站点会**主动作废**它——挑战出现频率与 cookie 过期无关，别按"过期时间"做任何优化。
+- **要手动验证这条链路**：先 `am force-stop`，只删这一条 cookie ——
+  `run-as app.missu /system/bin/sqlite3 app_webview/Default/Cookies` 执行
+  `delete from cookies where name='cf_clearance';`。会话 cookie（`missav_session` / `remember_web_*`）保持不动，
+  用户不会掉登录。**但删了也不一定触发**：2026-11-15 00:14 实测风险低时，没有 clearance 的请求直接被放行、
+  也不会补发该 cookie；反之塞一个假的 `cf_clearance` 同样不触发。挑战是否发生由站点按 IP/指纹判定，**无法按需制造**。
+- **验证浮层里的文案必须自带语言 context**：`Dialog` 会用自己的窗口 context 重新起一段组合，根部的
+  `LocalContext` / `LocalConfiguration` / `LocalResources` 覆写在里面**不生效**（实测：界面简体中文，浮层显示
+  `Verification` / `Waiting for the site…`）。做法是在进 `Dialog` 之前把三个 local 取出来，再用
+  `CompositionLocalProvider` 显式提供进去（见 `ChallengeOverlayHost`）。
 
 **多语言（i18n）**
 
@@ -495,7 +506,7 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
 - **`:core` 不放界面文案**（纯 JVM 没有资源系统）：筛选项的**值**留在 `ActressFilterOptions`，文案在 app 侧按 `section.key` 组合（`optionLabel()`）；异常消息只当类型用，界面文案由 `UiMessage` 映射。
 - **ViewModel 不存拼好的文案**：状态里放 `UiMessage`（类型 + 参数），显示时 `@Composable UiMessage.text()` 取字符串。否则切换语言后，屏幕上留着的还是旧语言的字符串。
 - **切换语言不重建 Activity**：`MissuRoot` 用 `createConfigurationContext` 生成带目标 locale 的 Context，再用 `CompositionLocalProvider(LocalContext / LocalConfiguration / LocalResources)` 罩住整棵树——改设置即重组生效，`stringResource` 读的就是这个 Context。
-- **`LocalResources` 必须一起覆写，否则弹层会掉回系统语言**：`stringResource` 读的是 compose-ui 的 `LocalResources`（一个由 `LocalContext`/`LocalConfiguration` 计算出来的 local）。`DropdownMenu` / `ModalBottomSheet` 这些**弹层**会以窗口自己的 context 重新起一段组合，只覆写 `LocalContext` 时弹层里的文案用的是系统语言（实测：界面简体中文 + 系统英文 = 弹层全英文）。把 `LocalResources provides localizedContext.resources` 一起给出去就好了。
+- **`LocalResources` 必须一起覆写，否则弹层会掉回系统语言**：`stringResource` 读的是 compose-ui 的 `LocalResources`（一个由 `LocalContext`/`LocalConfiguration` 计算出来的 local）。`DropdownMenu` / `ModalBottomSheet` 这些**弹层**会以窗口自己的 context 重新起一段组合，只覆写 `LocalContext` 时弹层里的文案用的是系统语言（实测：界面简体中文 + 系统英文 = 弹层全英文）。把 `LocalResources provides localizedContext.resources` 一起给出去就好了。**`Dialog` 更彻底**：它连 `LocalContext` 本身都会换成窗口的（根部覆写在里面完全不生效），所以自带内容的自绘弹层（如 `ChallengeOverlayHost`）要在进 `Dialog` 之前取出这三个 local、再用 `CompositionLocalProvider` 显式传进去。
 - 需要按内容语言重载的数据，用**内容语言**做 key：`LaunchedEffect(contentLanguage) { homeViewModel.load() }`。
 - **不要用 PowerShell 的 `.Replace()` + `Set-Content` 改源码**：本仓库已经踩过两次，结果是文件里**字母被换成别的字母**（`import`→`impore`、`Experimental`→`rxperimental`、`compose`→`coepose`），编译器报一堆莫名其妙的"未解析引用"。改代码只用编辑工具；批量替换脚本一旦跑过，必须用 `git diff` 逐行确认。PS 5.1 的 `Set-Content -Encoding UTF8` 还会加 BOM。
 
