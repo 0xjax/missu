@@ -29,7 +29,9 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.toShape
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
@@ -42,6 +44,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -61,6 +64,12 @@ import app.missu.ui.components.LoadMoreFooter
 import app.missu.ui.components.LoadingHint
 import coil3.compose.AsyncImage
 
+/**
+ * 无头像占位用的 expressive 形状取 M3E 的 `MaterialShapes`（`Cookie9Sided`）。
+ *
+ * NOTE: `toShape()` 是 `@Composable`（内部带缓存），所以只能在组合里取，不能提到文件级 val。
+ * 形状全局固定、只有颜色随条目变化——比正圆多一点"设计过"的意味，又不至于让整列花掉。
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiscoverScreen(
@@ -262,11 +271,26 @@ private fun ActressCell(item: DirectoryItem, onClick: () -> Unit) {
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // NOTE: 没有头像时不做"灰色空圈 + 中性首字"（那看起来像加载失败），改成 M3E 的 expressive 形状
+        // + 三种色调容器里的首字：形状与配色都由条目 id 决定，同一女优每次进来都一样（不会闪），
+        // 但不同条目之间有细微差异——这就是那点"小惊喜"，成本只有十几行、不引任何资源。
+        val tone = remember(item.id) { Math.floorMod(item.id.hashCode(), 3) }
+        val containerColor = when (tone) {
+            0 -> MaterialTheme.colorScheme.primaryContainer
+            1 -> MaterialTheme.colorScheme.secondaryContainer
+            else -> MaterialTheme.colorScheme.tertiaryContainer
+        }
+        val contentColor = when (tone) {
+            0 -> MaterialTheme.colorScheme.onPrimaryContainer
+            1 -> MaterialTheme.colorScheme.onSecondaryContainer
+            else -> MaterialTheme.colorScheme.onTertiaryContainer
+        }
+        val placeholderShape = if (item.imageUrl == null) MaterialShapes.Cookie9Sided.toShape() else null
         Box(
             modifier = Modifier
                 .size(48.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                .clip(placeholderShape ?: CircleShape)
+                .background(if (item.imageUrl != null) MaterialTheme.colorScheme.surfaceContainerHigh else containerColor),
             // NOTE: 居中必须写在这一层。之前里面又套了一个 `Box(contentAlignment = Center)`，
             // 但内层没给尺寸、只包住文字，结果整块被摆在圆的左上角，还被圆形裁掉一角。
             contentAlignment = Alignment.Center,
@@ -279,11 +303,10 @@ private fun ActressCell(item: DirectoryItem, onClick: () -> Unit) {
                     modifier = Modifier.fillMaxSize(),
                 )
             } else {
-                // 没有头像时用首字占位（站点上刚出道的新人常常还没图），比一个空圈更容易扫读。
                 Text(
                     text = item.name.take(1),
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = contentColor,
                 )
             }
         }
