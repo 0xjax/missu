@@ -578,6 +578,9 @@ private fun MissuApp(
                         onBack = { navController.popBackStack() },
                         videoId = id,
                         posterUrl = poster.ifEmpty { null },
+                        // NOTE: 返回时这一项会先变 false（popBackStack 是同步的），
+                        // 详情页据此在转场第一帧就把容器换回封面、停掉音频。
+                        isCurrent = backStackEntry?.id == entry.id,
                         message = message,
                         onToggleSaved = viewModel::toggleSaved,
                         startPositionMs = viewModel.startPositionMs,

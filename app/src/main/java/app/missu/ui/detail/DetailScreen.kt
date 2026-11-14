@@ -9,7 +9,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
@@ -56,6 +55,7 @@ import app.missu.data.model.VideoPlaylist
 import app.missu.ui.player.ExoVideoPlayer
 import app.missu.ui.player.FullscreenEffect
 import app.missu.ui.components.ErrorHint
+import app.missu.ui.components.PageStateTransition
 import app.missu.ui.components.PageTopBar
 import app.missu.ui.components.videoHero
 import coil3.compose.AsyncImage
@@ -71,6 +71,9 @@ fun DetailScreen(
     videoId: String = "",
     // NOTE: 卡片封面。详情解析出来之前先用它铺满播放器框——点卡片时那个框就是从这里长过来的。
     posterUrl: String? = null,
+    // NOTE: 这个目的地还是不是导航栈顶。返回时它会先变 false，用来在**转场开始那一帧**
+    // 把容器内容换回封面、停掉音频（比目的地被销毁早整整一个转场）。
+    isCurrent: Boolean = true,
     message: String? = null,
     onToggleSaved: () -> Unit = {},
     startPositionMs: Long = 0L,
@@ -98,6 +101,7 @@ fun DetailScreen(
             state = state,
             poster = poster,
             heroKey = videoId.ifEmpty { detail?.id.orEmpty() },
+            isCurrent = isCurrent,
             fullscreen = fullscreen,
             startPositionMs = startPositionMs,
             onPositionReport = onPositionReport,
@@ -105,23 +109,32 @@ fun DetailScreen(
         )
 
         if (!fullscreen) {
-            when (state) {
-                // NOTE: 加载态不在正文里放转圈——进度统一收在播放器框里（封面 + 延迟出现的
-                // LoadingIndicator），否则页面上会同时有两个"正在加载"。
-                DetailUiState.Loading -> Unit
+            // NOTE: 正文（标题/信息行）和底部动作条本来只有在详情数据回来之后才存在。
+            // 详情请求常在整页淡入窗口（90–300ms）**之后**才返回，那时把这两块直接摆上去
+            // 就是一次硬切——而页签里的其它页面全都有 fade through 兜这一下。所以这里也走
+            // `PageStateTransition`：同一个语言，快慢网的行为也一致（快网时它就是跟着整页淡入）。
+            PageStateTransition(
+                state = state,
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+            ) { current ->
+                when (current) {
+                    // 加载态不在正文里放转圈——进度统一收在播放器框里（封面 + 延迟出现的
+                    // 指示器），否则页面上会同时有两个"正在加载"。
+                    DetailUiState.Loading -> Unit
 
-                is DetailUiState.Error -> ErrorHint(state.message, onRetry)
+                    is DetailUiState.Error -> ErrorHint(current.message, onRetry)
 
-                is DetailUiState.Content -> DetailBody(
-                    detail = state.detail,
-                    message = message,
-                    onToggleSaved = onToggleSaved,
-                    playlists = playlists,
-                    onOpenPlaylists = onOpenPlaylists,
-                    onClosePlaylists = onClosePlaylists,
-                    onTogglePlaylist = onTogglePlaylist,
-                    onOpenPath = onOpenPath,
-                )
+                    is DetailUiState.Content -> DetailBody(
+                        detail = current.detail,
+                        message = message,
+                        onToggleSaved = onToggleSaved,
+                        playlists = playlists,
+                        onOpenPlaylists = onOpenPlaylists,
+                        onClosePlaylists = onClosePlaylists,
+                        onTogglePlaylist = onTogglePlaylist,
+                        onOpenPath = onOpenPath,
+                    )
+                }
             }
         }
     }
@@ -170,6 +183,7 @@ private fun DetailHero(
     state: DetailUiState,
     poster: String?,
     heroKey: String,
+    isCurrent: Boolean,
     fullscreen: Boolean,
     startPositionMs: Long,
     onPositionReport: (Long) -> Unit,
@@ -182,15 +196,20 @@ private fun DetailHero(
     // playbackUrl 会从 null 变成真正的地址，按它做 key 等于在详情数据回来那一刻重建状态：
     // Animatable 被重置成 0，正在跑的虚化动画作用在旧实例上、直接被丢掉——表现就是
     // "虚化一小段 → 弹回清晰封面 → 一直清晰等视频"。
-    var firstFrame by remember(heroKey) { mutableStateOf(false) }
+    /** 封面已经可以让位给画面（视频出过画，或播放失败要让错误层露出来）。 */
+    var revealed by remember(heroKey) { mutableStateOf(false) }
+    /** 正在离开当前目的地（返回）。容器里要换回封面，缩回去的才不是一个活视频。 */
+    var leaving by remember(heroKey) { mutableStateOf(false) }
+
+    val coverVisible = leaving || !revealed
     val posterAlpha by animateFloatAsState(
-        targetValue = if (firstFrame) 0f else 1f,
+        targetValue = if (coverVisible) 1f else 0f,
         animationSpec = tween(durationMillis = POSTER_FADE_MS),
         label = "posterFade",
     )
 
     // 还在等：要么详情没回来，要么播放地址有了但视频还没出画。
-    val pending = detail == null || (playbackUrl != null && !firstFrame)
+    val pending = detail == null || (playbackUrl != null && !revealed)
     var showProgress by remember { mutableStateOf(false) }
     LaunchedEffect(pending) {
         if (!pending) {
@@ -214,6 +233,20 @@ private fun DetailHero(
         }
     }
 
+    // NOTE: 离开（返回 / 被压栈）时容器里要换回封面：反向的 container transform 落点必须是
+    // 卡片上那张封面，不能是一帧视频画面。用 `isCurrent` 而不是拦截返回键——它在 pop 开始那一帧
+    // 就变 false（比目的地被销毁早整整一个转场），而且不参与返回决策，预测性返回的手势预览照旧。
+    LaunchedEffect(isCurrent) {
+        if (isCurrent) {
+            // 预测性返回被取消：视频重新盖过封面（音频由播放器自己恢复）。
+            leaving = false
+        } else {
+            leaving = true
+            // 还在等待（封面是虚的）时离开：把它恢复清晰再飞回去。
+            if (!revealed) defocus.snapTo(0f)
+        }
+    }
+
     val sharpAlpha = posterAlpha * (1f - defocus.value)
     val softAlpha = posterAlpha * defocus.value
 
@@ -231,13 +264,14 @@ private fun DetailHero(
             ExoVideoPlayer(
                 url = playbackUrl,
                 modifier = Modifier.fillMaxSize(),
+                active = isCurrent,
                 isFullscreen = fullscreen,
                 onToggleFullscreen = onToggleFullscreen,
                 initialPositionMs = startPositionMs,
                 onPositionReport = onPositionReport,
-                onFirstFrameRendered = { firstFrame = true },
+                onFirstFrameRendered = { revealed = true },
                 // 播放失败：把封面撤掉让错误层露出来（否则它永远被压在最上面）。
-                onPlaybackFailed = { firstFrame = true },
+                onPlaybackFailed = { revealed = true },
             )
         }
 
@@ -308,9 +342,11 @@ private fun DetailHero(
  * 播放器下面的一切：标题 / 信息行 / 简介，以及底部的收藏与片单动作。
  *
  * NOTE: 播放器不在这里——它由 [DetailHero] 固定在页首，本函数只负责剩余内容。
+ * NOTE: 这里自己开一个 Column：它是 [PageStateTransition] 的内容，拿不到外层的 ColumnScope，
+ * 所以 `weight(1f)` 只能由这一层的 Column 提供。
  */
 @Composable
-private fun ColumnScope.DetailBody(
+private fun DetailBody(
     detail: VideoDetail,
     message: String?,
     onToggleSaved: () -> Unit,
@@ -320,73 +356,76 @@ private fun ColumnScope.DetailBody(
     onTogglePlaylist: (VideoPlaylist) -> Unit,
     onOpenPath: (path: String, title: String) -> Unit,
 ) {
-    LazyColumn(
-        modifier = Modifier.weight(1f),
-        contentPadding = PaddingValues(bottom = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        item(key = "title") {
-            Text(
-                text = detail.title,
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-        }
-
-        item(key = "meta") {
-            Text(
-                text = listOfNotNull(detail.duration, detail.releaseDate).joinToString(" · "),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-        }
-
-        // NOTE: 收藏 / 片单两个动作搬到页面底部的 FlexibleBottomAppBar 里（SplitButton：
-        // 左半是主操作「收藏」，右半是「加入片单」），内容区不再被一行按钮打断。
-        message?.let { text ->
-            item(key = "message") {
+    Column(Modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            item(key = "title") {
                 Text(
-                    text = text,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
+                    text = detail.title,
+                    style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
-        }
 
-        items(detail.info, key = { row -> row.label }) { row ->
-            InfoRow(row = row, onOpenPath = onOpenPath)
-        }
-
-        detail.description?.let { description ->
-            item(key = "description") {
+            item(key = "meta") {
                 Text(
-                    text = description,
+                    text = listOfNotNull(detail.duration, detail.releaseDate).joinToString(" · "),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
-        }
-    }
 
-    // NOTE: M3E 的底栏动作区：左半是主操作（收藏），右半是次要入口（加入片单）。
-    // NOTE: 收藏状态来自 /api/items/{id}/view；401 会先自动重登一次（见 withAuthRetry）。
-    FlexibleBottomAppBar {
-        SplitButtonLayout(
-            modifier = Modifier.weight(1f),
-            leadingButton = {
-                SplitButtonDefaults.LeadingButton(onClick = onToggleSaved) {
-                    Text(if (detail.saved) "已收藏" else "收藏")
+            // NOTE: 收藏 / 片单两个动作搬到页面底部的 FlexibleBottomAppBar 里（SplitButton：
+            // 左半是主操作「收藏」，右半是「加入片单」），内容区不再被一行按钮打断。
+            message?.let { text ->
+                item(key = "message") {
+                    Text(
+                        text = text,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
                 }
-            },
-            trailingButton = {
-                SplitButtonDefaults.TrailingButton(onClick = onOpenPlaylists) {
-                    Icon(Icons.Filled.Add, contentDescription = "加入片单")
+            }
+
+            items(detail.info, key = { row -> row.label }) { row ->
+                InfoRow(row = row, onOpenPath = onOpenPath)
+            }
+
+            detail.description?.let { description ->
+                item(key = "description") {
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
                 }
-            },
-        )
+            }
+        }
+
+        // NOTE: M3E 的底栏动作区：左半是主操作（收藏），右半是次要入口（加入片单）。
+        // NOTE: 收藏状态来自 /api/items/{id}/view；401 会先自动重登一次（见 withAuthRetry）。
+        // NOTE: 它和正文一起走 fade through——动作条属于「内容到达」，不该比文字先到或后到。
+        FlexibleBottomAppBar {
+            SplitButtonLayout(
+                modifier = Modifier.weight(1f),
+                leadingButton = {
+                    SplitButtonDefaults.LeadingButton(onClick = onToggleSaved) {
+                        Text(if (detail.saved) "已收藏" else "收藏")
+                    }
+                },
+                trailingButton = {
+                    SplitButtonDefaults.TrailingButton(onClick = onOpenPlaylists) {
+                        Icon(Icons.Filled.Add, contentDescription = "加入片单")
+                    }
+                },
+            )
+        }
     }
 
     if (playlists !is PlaylistUiState.Hidden) {

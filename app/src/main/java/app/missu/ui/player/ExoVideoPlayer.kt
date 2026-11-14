@@ -56,6 +56,9 @@ private const val PROGRESS_REPORT_MS = 5_000L
 fun ExoVideoPlayer(
     url: String,
     modifier: Modifier = Modifier,
+    // NOTE: 这个目的地还是不是栈顶。返回时它先变 false，用它在**转场开始那一帧**停音频——
+    // 等 onDispose 才 release 要晚整整一个转场，用户会听到"画面已经缩回卡片了，声音还在响"。
+    active: Boolean = true,
     isFullscreen: Boolean = false,
     onToggleFullscreen: () -> Unit = {},
     initialPositionMs: Long = 0L,
@@ -146,6 +149,20 @@ fun ExoVideoPlayer(
         while (true) {
             delay(PROGRESS_REPORT_MS)
             if (player.isPlaying) reportPosition.value(player.currentPosition)
+        }
+    }
+
+    // 离开栈顶就静音停走；回到栈顶（预测性返回被取消）再续上。
+    var pausedByLeaving by remember { mutableStateOf(false) }
+    LaunchedEffect(active) {
+        if (!active) {
+            if (player.playWhenReady) {
+                player.playWhenReady = false
+                pausedByLeaving = true
+            }
+        } else if (pausedByLeaving) {
+            pausedByLeaving = false
+            player.playWhenReady = true
         }
     }
 
