@@ -24,14 +24,16 @@ val BrandPink = Color(0xFFD85A76)
 /**
  * 深色色板（主体验）。
  *
- * NOTE: `primary` 直接钉品牌色本身，而不是 M3 配方里的 tone 80——品牌粉是这款 App 唯一的高强调色，
- * 换成浅粉（#FEB2BD）整机看起来就不是它了。代价是白字压 `#D85A76` 只有 **3.7:1**：达到 UI 元素
- * 的 3:1 门槛（FAB 图标、选中态、进度条都够），但**不够正文级 4.5:1**，所以这个色只用于图形与
- * 大字号，不要拿它做小字正文的底色。浅色方案用 tone 40 的深一档品牌粉，白字 6.5:1。
+ * NOTE: 色板由品牌粉按 M3 的 tone（`L*`）体系推导（`scripts/gen-theme.py`）：固定色相，按角色取音调，
+ * 超 sRGB 色域时降饱和。中性表面用**色度 2**——留一丝来源色相但基本是灰，观感与官方基线
+ * （深色 surface `#141218`，通道差 6）同一量级；色度取 4 时会明显偏粉，是试过才知道的坑。
  *
- * NOTE: 其余角色（secondary/tertiary/error/surface 五档容器/outline/inverse*）全部由品牌色按
- * M3 的 tone 体系推导：固定色相，按角色取 L*，超色域时降饱和度。推导脚本跑出来的每一对
- * on/容器 对比度都 ≥ 5.4:1（浅色最低 5.49，深色最低 5.49）。
+ * NOTE: `primary` 直接钉品牌色本身，而不是配方里的 tone 80——品牌粉是这款 App 唯一的高强调色。
+ * 代价是白字压 `#D85A76` 只有 **3.7:1**：达到 UI 元素的 3:1 门槛（FAB 图标、选中态、进度条都够），
+ * 但**不够正文级 4.5:1**，所以这个色只用于图形与大字号。浅色方案用 tone 40 的深一档品牌粉，白字 6.5:1。
+ *
+ * NOTE: 深色底取 neutral **tone 6**（`#171213`），不是纯黑：OLED 上黑底与亮像素相邻会拖影，纯黑也
+ * 留不出「更亮的容器」这一档。想省电的人可在设置里切「纯黑背景」。
  */
 private val MissuDarkColors = darkColorScheme(
     primary = BrandPink,
@@ -51,47 +53,27 @@ private val MissuDarkColors = darkColorScheme(
     onError = Color(0xFF680113),
     errorContainer = Color(0xFF92031E),
     onErrorContainer = Color(0xFFFEDAD7),
-    background = Color(0xFF191112),
-    onBackground = Color(0xFFEBE0E1),
-    // NOTE: 深色底色取 M3 的 neutral tone 6，不是纯黑。纯黑是 MD2 之前就明确不建议的：
-    // OLED 上黑底与亮像素相邻会有拖影，纯黑底也留不出「更亮的容器」这一档层级。
-    // 想省电的人可以在设置里切「纯黑背景」，见 [MissuDarkColorsPureBlack]。
-    surface = Color(0xFF191112),
-    onSurface = Color(0xFFEBE0E1),
-    surfaceVariant = Color(0xFF544245),
-    onSurfaceVariant = Color(0xFFD7C1C4),
-    outline = Color(0xFFA08C8E),
-    outlineVariant = Color(0xFF544245),
-    inverseSurface = Color(0xFFEBE0E1),
-    inverseOnSurface = Color(0xFF372E2F),
+    background = Color(0xFF171213),
+    onBackground = Color(0xFFE7E1E2),
+    surface = Color(0xFF171213),
+    onSurface = Color(0xFFE7E1E2),
+    surfaceVariant = Color(0xFF4F4445),
+    onSurfaceVariant = Color(0xFFD1C3C5),
+    outline = Color(0xFF9A8E8F),
+    outlineVariant = Color(0xFF4F4445),
+    inverseSurface = Color(0xFFE7E1E2),
+    inverseOnSurface = Color(0xFF342F30),
     inversePrimary = Color(0xFFAA2F51),
     scrim = Color(0xFF000000),
-    surfaceBright = Color(0xFF403738),
-    surfaceDim = Color(0xFF191112),
+    surfaceBright = Color(0xFF3C3839),
+    surfaceDim = Color(0xFF171213),
     // NOTE: 五档容器色必须显式给。只给 surface 时官方从它推导的容器色会和底色几乎重合，
-    // 「分组容器 / 卡片」这类 M3E 布局会把层级丢掉。这里按 M3 的 N 系列音调给出梯度。
-    surfaceContainerLowest = Color(0xFF160B0D),
-    surfaceContainerLow = Color(0xFF211A1B),
-    surfaceContainer = Color(0xFF251E1F),
-    surfaceContainerHigh = Color(0xFF302829),
-    surfaceContainerHighest = Color(0xFF3B3334),
-)
-
-/**
- * 深色 +「纯黑背景」。
- *
- * NOTE: 只换表面那几档，强调色不动。纯黑会把容器梯度整体压暗两档，否则容器和底色差太小。
- * 这是设置里的显式选择；默认走 [MissuDarkColors]（tone 6 底），符合 M3 的深色规范。
- */
-private val MissuDarkColorsPureBlack = MissuDarkColors.copy(
-    background = Color(0xFF000000),
-    surface = Color(0xFF000000),
-    surfaceDim = Color(0xFF0E0E10),
-    surfaceContainerLowest = Color(0xFF0A0A0C),
-    surfaceContainerLow = Color(0xFF17171A),
-    surfaceContainer = Color(0xFF1D1D21),
-    surfaceContainerHigh = Color(0xFF242428),
-    surfaceContainerHighest = Color(0xFF2C2C31),
+    // 「分组容器 / 卡片」这类 M3E 布局会把层级丢掉（只剩分隔线）。
+    surfaceContainerLowest = Color(0xFF120D0D),
+    surfaceContainerLow = Color(0xFF1E1B1B),
+    surfaceContainer = Color(0xFF221F1F),
+    surfaceContainerHigh = Color(0xFF2D2929),
+    surfaceContainerHighest = Color(0xFF383434),
 )
 
 /** 浅色色板：同一色相、按 M3 的 tone 40/90 取，白字压在 primary 上 6.5:1。 */
@@ -113,24 +95,41 @@ private val MissuLightColors = lightColorScheme(
     errorContainer = Color(0xFFFEDAD7),
     onErrorContainer = Color(0xFF410100),
     background = Color(0xFFFEFBFC),
-    onBackground = Color(0xFF211A1B),
+    onBackground = Color(0xFF1E1B1B),
     surface = Color(0xFFFEFBFC),
-    onSurface = Color(0xFF211A1B),
-    surfaceVariant = Color(0xFFF3DDE0),
-    onSurfaceVariant = Color(0xFF544245),
-    outline = Color(0xFF857275),
-    outlineVariant = Color(0xFFD7C1C4),
-    inverseSurface = Color(0xFF372E2F),
-    inverseOnSurface = Color(0xFFF9EEEF),
+    onSurface = Color(0xFF1E1B1B),
+    surfaceVariant = Color(0xFFEDDFE1),
+    onSurfaceVariant = Color(0xFF4F4445),
+    outline = Color(0xFF807476),
+    outlineVariant = Color(0xFFD1C3C5),
+    inverseSurface = Color(0xFF342F30),
+    inverseOnSurface = Color(0xFFF5EFF0),
     inversePrimary = Color(0xFFFEB2BD),
     scrim = Color(0xFF000000),
-    surfaceBright = Color(0xFFFFF8F8),
-    surfaceDim = Color(0xFFE2D7D9),
+    surfaceBright = Color(0xFFFEF8F9),
+    surfaceDim = Color(0xFFDED9D9),
     surfaceContainerLowest = Color(0xFFFFFFFF),
-    surfaceContainerLow = Color(0xFFFCF1F2),
-    surfaceContainer = Color(0xFFF6EBEC),
-    surfaceContainerHigh = Color(0xFFF1E6E7),
-    surfaceContainerHighest = Color(0xFFEBE0E1),
+    surfaceContainerLow = Color(0xFFF8F2F3),
+    surfaceContainer = Color(0xFFF2ECED),
+    surfaceContainerHigh = Color(0xFFECE7E7),
+    surfaceContainerHighest = Color(0xFFE7E1E2),
+)
+
+/**
+ * 深色 +「纯黑背景」。
+ *
+ * NOTE: 只换表面那几档，强调色不动。纯黑上容器梯度整体下移两档，否则容器和底色差太小。
+ * 这是设置里的显式选择；默认走 [MissuDarkColors]（tone 6 底），符合 M3 的深色规范。
+ */
+private val MissuDarkColorsPureBlack = MissuDarkColors.copy(
+    background = Color(0xFF000000),
+    surface = Color(0xFF000000),
+    surfaceDim = Color(0xFF0D0606),
+    surfaceContainerLowest = Color(0xFF0D0606),
+    surfaceContainerLow = Color(0xFF171213),
+    surfaceContainer = Color(0xFF1E1B1B),
+    surfaceContainerHigh = Color(0xFF292525),
+    surfaceContainerHighest = Color(0xFF342F30),
 )
 
 /**
@@ -138,7 +137,7 @@ private val MissuLightColors = lightColorScheme(
  *
  * NOTE: 用 [MaterialExpressiveTheme] 而不是 [androidx.compose.material3.MaterialTheme]——
  * 它多的是把 [MotionScheme.expressive] 装进 CompositionLocal，让官方组件的
- * 展开/按压/过渡走 M3E 的 spatial 动效曲线；颜色仍由下面的 colorScheme 决定。
+ * 展开/按压/过渡走 M3E 的 spatial 动效曲线；颜色仍由上面的 colorScheme 决定。
  * NOTE: [dynamicColor] 打开时用系统壁纸取色（Android 12+），品牌粉会被系统色板取代——
  * 这是设置项、默认关，因为这款 App 的识别度就在那个粉色上。低版本自动回落品牌色板。
  * WARNING: 换主题会改变所有官方组件的默认形状与动效，改完必须逐页真机复查（浅色方案尤其）。

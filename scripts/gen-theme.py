@@ -105,8 +105,10 @@ P = lambda L: tone(hue, chroma, L)
 S = lambda L: tone(hue, 16, L)
 T = lambda L: tone(hue + 60, 28, L)
 E = lambda L: tone(28, 60, L)
-N = lambda L: tone(hue, 4, L)
-NV = lambda L: tone(hue, 8, L)
+# neutral 色度决定「表面带多少来源色」。0 = 纯中性灰，Material 基线的观感大约相当于这里的 2
+# （官方基线深色 surface #141218 的通道差是 6，色度 2 给出 5）；neutral-variant 略高，取 5。
+N = lambda L: tone(hue, 2, L)
+NV = lambda L: tone(hue, 5, L)
 
 light = {
     "primary": P(40), "onPrimary": P(100), "primaryContainer": P(90), "onPrimaryContainer": P(10),
@@ -127,12 +129,12 @@ dark = {
     "secondary": S(80), "onSecondary": S(20), "secondaryContainer": S(30), "onSecondaryContainer": S(90),
     "tertiary": T(80), "onTertiary": T(20), "tertiaryContainer": T(30), "onTertiaryContainer": T(90),
     "error": E(80), "onError": E(20), "errorContainer": E(30), "onErrorContainer": E(90),
-    "background": N(0), "onBackground": N(90), "surface": N(0), "onSurface": N(90),
+    "background": N(6), "onBackground": N(90), "surface": N(6), "onSurface": N(90),
     "surfaceVariant": NV(30), "onSurfaceVariant": NV(80),
     "outline": NV(60), "outlineVariant": NV(30),
     "inverseSurface": N(90), "inverseOnSurface": N(20), "inversePrimary": P(40),
     "scrim": N(0), "surfaceBright": N(24), "surfaceDim": N(6),
-    "surfaceContainerLowest": N(4), "surfaceContainerLow": N(8),
+    "surfaceContainerLowest": N(4), "surfaceContainerLow": N(10),
     "surfaceContainer": N(12), "surfaceContainerHigh": N(17), "surfaceContainerHighest": N(22),
 }
 
