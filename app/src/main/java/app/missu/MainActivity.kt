@@ -44,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.Lifecycle
@@ -65,6 +66,7 @@ import app.missu.ui.discover.DiscoverViewModel
 import app.missu.ui.discover.HotPeriod
 import app.missu.data.api.MissavApi
 import app.missu.data.api.SourceConfig
+import app.missu.data.api.VideoListOptions
 import app.missu.data.api.createMissavApi
 import app.missu.data.store.AppLanguage
 import app.missu.data.store.contentLanguage
@@ -81,6 +83,7 @@ import android.content.res.Configuration
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import app.missu.ui.history.HistoryViewModel
+import app.missu.ui.list.VideoListQuery
 import app.missu.ui.list.VideoListScreen
 import app.missu.ui.list.VideoListUiState
 import app.missu.ui.list.VideoListViewModel
@@ -214,6 +217,11 @@ private fun MissuRoot() {
                     LocalSharedTransitionScope provides this,
                     LocalContext provides localizedContext,
                     LocalConfiguration provides localizedContext.resources.configuration,
+                    // NOTE: `stringResource` 走的是 `LocalResources`（compose-ui 的计算型 local）。
+                    // 弹层（DropdownMenu / ModalBottomSheet）会以窗口自身的 context 重新起一段组合，
+                    // 只覆写 LocalContext/LocalConfiguration 时它们的文案会掉回系统语言；这里把
+                    // Resources 也显式给出去，弹层里才能跟界面语言一致。
+                    LocalResources provides localizedContext.resources,
                     LocalVideoPreview provides previewState,
                 ) {
                     MissuApp(
@@ -438,12 +446,15 @@ private fun MissuApp(
                 val refreshingKinds by viewModel.refreshing.collectAsState()
                 val channels by viewModel.channels.collectAsState()
 
-                // NOTE: 热门三档是同一面内容的三个 path，所以按 path 建 VM：换档 = 换数据源，
-                // 切回来那份也已经缓存着（ViewModelStore 里各存一份，不会重新转圈）。
+                // NOTE: 热门三档是**同一面列表的三个排序取值**（实测与三个 vanity path 等价），
+                // 所以按 cacheKey 建 VM：换档只换数据源，切回来那份还在缓存里，不重新转圈。
                 var hotPeriod by rememberSaveable { mutableStateOf(HotPeriod.TODAY) }
+                val hotQuery = remember(hotPeriod) {
+                    VideoListQuery(HotPeriod.PATH, sort = hotPeriod.sort)
+                }
                 val hotViewModel: VideoListViewModel = viewModel(
-                    key = "hot-${hotPeriod.path}",
-                    factory = factory { VideoListViewModel(api, hotPeriod.path) },
+                    key = "hot-${hotQuery.cacheKey}",
+                    factory = factory { VideoListViewModel(api, hotQuery) },
                 )
                 val hotState by hotViewModel.state.collectAsState()
                 LaunchedEffect(hotPeriod) {
@@ -535,17 +546,32 @@ private fun MissuApp(
                 val path = Uri.decode(entry.arguments?.getString("p").orEmpty())
                 val title = Uri.decode(entry.arguments?.getString("t").orEmpty())
                     .ifEmpty { stringResource(R.string.list_default_title) }
+
+                // NOTE: 口径（排序/过滤）是这一页的**状态**，与 path 一起构成 `VideoListQuery`。
+                // 换口径 = 换一个 ViewModel 实例（按 cacheKey），页面结构一点不动；切回已看过的
+                // 口径还能复用那份数据，不重新转圈。
+                var sort by rememberSaveable { mutableStateOf<VideoListOptions.Sort?>(null) }
+                var filter by rememberSaveable { mutableStateOf<VideoListOptions.Filter?>(null) }
+                val query = remember(path, sort, filter) { VideoListQuery(path, sort = sort, filter = filter) }
                 val viewModel: VideoListViewModel = viewModel(
-                    key = "list-$path",
-                    factory = factory { VideoListViewModel(api, path) },
+                    key = "list-${query.cacheKey}",
+                    factory = factory { VideoListViewModel(api, query) },
                 )
                 val state by viewModel.state.collectAsState()
-                LaunchedEffect(path) { viewModel.load() }
+                LaunchedEffect(query) {
+                    if (state is VideoListUiState.Loading) viewModel.load()
+                }
 
                 ProvideHeroVisibility(this) {
                     VideoListScreen(
                         title = title,
                         state = state,
+                        sort = sort,
+                        filter = filter,
+                        sorts = VideoListOptions.Sort.entries,
+                        filters = VideoListOptions.Filter.entries,
+                        onSortChange = { sort = it },
+                        onFilterChange = { filter = it },
                         onRetry = viewModel::load,
                         onLoadMore = viewModel::loadMore,
                         onOpen = ::openDetail,

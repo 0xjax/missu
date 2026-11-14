@@ -284,9 +284,9 @@ class MissavApi(
     /**
      * 目录页（`/actresses`、`/genres`、`/makers`），分页 `?page=N`，可选排序 `?sort=`。
      * NOTE: `kind` 必须与路径段一致，解析时用它筛链接。
-     * NOTE: 站点当前**只提供** `sort=videos`（作品数）与 `sort=debut`（出道年）；
-     * legacy 里那个 height/cup/age/debut 筛选表单在现行页面已不存在（实测页面只有这两种排序链接），
-     * 所以这里不做筛选参数，避免拼出站点不认识的 query。
+     * NOTE: 排序只有 `sort=videos`（作品数）与 `sort=debut`（出道年）两档——女优目录的
+     * height/cup/age/debut 筛选是**表单**（`/actresses` 页面上仍有 4 个 `<select>`，服务端也真的
+     * 生效），走 [getActresses] 那条路径；这里只发排序，避免给类型/厂商拼出站点不认识的参数。
      */
     suspend fun getDirectory(kind: String, page: Int = 1, sort: String? = null): DirectoryList = withChallengeRetry {
         val params = buildList {
@@ -330,14 +330,22 @@ class MissavApi(
         DirectoryParser.parse(client.fetchHtml(path), "actresses", page)
     }
     /**
-     * 通用视频列表页（`/latest`、`/actresses/{名}`、`/genres/{名}`…），分页用 `?page=N`。
-     * NOTE: 路径来自详情页信息行的归一化结果（已剥掉 `/dmNNN` 与语言段），直接交给这里即可。
-     * NOTE: 过滤/排序参数（filters/sort）暂不支持——等目录页需要时再加。
+     * 通用视频列表页（`/new`、`/today-hot`、`/genres/{名}`、频道页…），分页用 `?page=N`。
+     *
+     * NOTE: 路径来自详情页信息行 / 频道 / 首页「更多」的归一化结果（已剥掉 `/dmNNN` 与语言段）。
+     * NOTE: `sort` / `filter` 为 null 表示**不传**，也就是站点默认序 / 不过滤。默认序不等于任何
+     * 一个 sort 取值（[VideoListOptions] 里有实测记录），所以别用某个值去「还原默认」。
      */
-    suspend fun getVideos(path: String, page: Int = 1): VideoList = withChallengeRetry {
-        val separator = if (path.contains('?')) '&' else '?'
-        val fullPath = if (page > 1) "$path${separator}page=$page" else path
-        HomeParser.parseVideoList(client.fetchHtml(fullPath), page)
+    suspend fun getVideos(
+        path: String,
+        page: Int = 1,
+        sort: VideoListOptions.Sort? = null,
+        filter: VideoListOptions.Filter? = null,
+    ): VideoList = withChallengeRetry {
+        HomeParser.parseVideoList(
+            client.fetchHtml(videoListPath(path, page, sort, filter)),
+            page,
+        )
     }
     /** 收藏列表：`/saved`，分页 `?page=N`。未登录会 302 回首页，交给 [withAuthRetry] 自动重登。 */
     suspend fun getSaved(page: Int = 1): VideoList = withAuthRetry {

@@ -47,6 +47,18 @@
     <!-- 列表 -->
     <string name="list_empty_title">这里还没有内容</string>
     <string name="list_default_title">列表</string>
+    <string name="list_sort_default">默认</string>
+    <string name="list_sort_released_at">发售时间</string>
+    <string name="list_sort_published_at">上架时间</string>
+    <string name="list_sort_saved">收藏数</string>
+    <string name="list_sort_today_views">今日浏览</string>
+    <string name="list_sort_weekly_views">本周浏览</string>
+    <string name="list_sort_monthly_views">本月浏览</string>
+    <string name="list_sort_views">总浏览</string>
+    <string name="list_filter_all">全部</string>
+    <string name="list_filter_individual">单人作品</string>
+    <string name="list_filter_multiple">多人作品</string>
+    <string name="list_filter_chinese_subtitle">中文字幕</string>
 
     <!-- 首页 -->
     <string name="home_empty_title">首页没有内容</string>

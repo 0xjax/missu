@@ -53,6 +53,18 @@
     <!-- 列表 -->
     <string name="list_empty_title">Nothing here yet</string>
     <string name="list_default_title">List</string>
+    <string name="list_sort_default">Default</string>
+    <string name="list_sort_released_at">Release date</string>
+    <string name="list_sort_published_at">Date added</string>
+    <string name="list_sort_saved">Saves</string>
+    <string name="list_sort_today_views">Views today</string>
+    <string name="list_sort_weekly_views">Views this week</string>
+    <string name="list_sort_monthly_views">Views this month</string>
+    <string name="list_sort_views">Total views</string>
+    <string name="list_filter_all">All</string>
+    <string name="list_filter_individual">Solo</string>
+    <string name="list_filter_multiple">Multiple</string>
+    <string name="list_filter_chinese_subtitle">Chinese subtitles</string>
 
     <!-- 首页 -->
     <string name="home_empty_title">The home page is empty</string>
