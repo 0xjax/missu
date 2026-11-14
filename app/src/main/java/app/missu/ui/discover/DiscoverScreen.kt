@@ -19,7 +19,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -28,6 +31,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Text
@@ -154,16 +158,25 @@ fun DiscoverScreen(
                 onRefresh = { onRefresh(tab.kind) },
                 modifier = Modifier.fillMaxSize(),
             ) {
-                LazyColumn(
+                // NOTE: 女优带头像走双列卡片，类型/厂商没有头像图，走三列文字块——两者都是一屏多放 60% 的密度。
+                val actresses = tab == DiscoverTab.ACTRESSES
+                LazyVerticalGrid(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = 8.dp),
+                    columns = GridCells.Fixed(if (actresses) 2 else 3),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(if (actresses) 4.dp else 8.dp),
                 ) {
                     items(items = state.items, key = { it.path }) { item ->
-                        DirectoryRow(item = item, onClick = { onOpen(item.path, item.name) })
+                        if (actresses) {
+                            ActressCell(item = item, onClick = { onOpen(item.path, item.name) })
+                        } else {
+                            DirectoryTextCell(item = item, onClick = { onOpen(item.path, item.name) })
+                        }
                     }
 
                     if (state.nextPage != null) {
-                        item(key = "more-${tab.kind}") {
+                        item(key = "more-${tab.kind}", span = { GridItemSpan(maxLineSpan) }) {
                             LoadMoreFooter(
                                 loading = state.loadingMore,
                                 onLoadMore = { onLoadMore(tab.kind) },
@@ -237,28 +250,44 @@ private fun FilterSheet(
     }
 }
 
+/**
+ * 女优单元格：双列，头像 + 名字 + 条数 + 出道（后两行按数据有无出现）。
+ *
+ * NOTE: 双列后单元格只有 158dp，头像 44dp + 12dp 间距留给文字 102dp——名字超过 5~6 个汉字会截断，
+ * 这是换取「一屏多 60% 条目」的代价，已确认可接受。
+ */
 @Composable
-private fun DirectoryRow(item: DirectoryItem, onClick: () -> Unit) {
+private fun ActressCell(item: DirectoryItem, onClick: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier = Modifier
-                .size(44.dp)
+                .size(48.dp)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh),
         ) {
-            AsyncImage(
-                model = item.imageUrl,
-                contentDescription = item.name,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
+            if (item.imageUrl != null) {
+                AsyncImage(
+                    model = item.imageUrl,
+                    contentDescription = item.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                // 没有头像时用首字占位，避免出现一个空圈。
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = item.name.take(1),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
 
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text(
                 text = item.name,
@@ -266,10 +295,59 @@ private fun DirectoryRow(item: DirectoryItem, onClick: () -> Unit) {
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            item.subtitle?.let { subtitle ->
+            item.countText?.let { count ->
                 Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
+                    text = count,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            item.debutText?.let { debut ->
+                Text(
+                    text = debut,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 类型 / 厂商单元格：三列卡片。
+ *
+ * NOTE: 这两类没有头像图，纯文字铺满三列会变成一片「没有样式的名单」，和其余页面的容器语言脱节；
+ * 所以给每个格子一张 `surfaceContainer` 圆角面（与「设置」「我的」分组同一档），名称固定两行、
+ * 条数压底——这样一屏仍是三列十几行，但每一格都有明确的边界与层级。
+ */
+@Composable
+private fun DirectoryTextCell(item: DirectoryItem, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        // NOTE: 固定卡片高度 + 名称与条数分居两端：厂商名一行两行都有（Moody's / Wanz Factory），
+        // 让高度随内容变会让同一行的卡片高低不齐；固定高度后条数永远压在同一基线上，看着是刻意的统计卡。
+        Column(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp).height(56.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = item.name,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            item.countText?.let { count ->
+                Text(
+                    text = count,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
