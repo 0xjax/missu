@@ -11,10 +11,11 @@ param([string]$Task = "assembleDebug")
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 
-# JDK：优先用独立的 JDK 21（D:\jdk-21，不依赖 Android Studio），找不到才回落到 AS 自带 JBR。
-# NOTE: 另一个历史 JDK 17（D:\Android\jdk-17）被安全软件按可执行文件拦截，已删除；换 JDK 前先确认它的 java.exe 能正常跑。
+# JDK：优先用独立 JDK，路径**故意不带版本号**（D:\Android\jdk）——升级 JDK 时原地替换内容即可，脚本不用改。
+# 版本记录在该目录下的 MISSU-JDK-VERSION.txt。找不到才回落到 AS 自带 JBR。
+# NOTE: 历史 JDK 17（D:\Android\jdk-17）曾被安全软件按可执行文件拦截；换 JDK 后要确认其 java.exe 能正常跑。
 # SDK：全局安装位置，与 AS 的 Android SDK Location 及 local.properties 的 sdk.dir 一致。
-$jdkCandidates = @('D:\jdk-21', 'C:\Program Files\Android\Android Studio\jbr')
+$jdkCandidates = @('D:\Android\jdk', 'C:\Program Files\Android\Android Studio\jbr')
 $jdk = $jdkCandidates | Where-Object { Test-Path (Join-Path $_ 'bin\java.exe') } | Select-Object -First 1
 if (-not $jdk) { throw "找不到可用的 JDK，尝试过：$($jdkCandidates -join ' / ')" }
 $env:JAVA_HOME = $jdk
