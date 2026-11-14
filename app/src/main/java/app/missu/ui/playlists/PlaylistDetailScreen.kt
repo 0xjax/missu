@@ -45,6 +45,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -92,11 +94,18 @@ fun PlaylistDetailScreen(
     val allSelected = content != null && content.videos.isNotEmpty() &&
         selected.size == content.videos.size
 
+    // NOTE: 触觉只确认「状态改变」，不用在导航与滚动上（见 DESIGN.md「Motion」）。进入/退出整理
+    // 改的是整页的交互语义（点卡片从「看详情」变成「选中」），而那一下的变化在屏幕底部与顶栏，
+    // 手指还在卡片上——触觉在这里是唯一即时的确认。
+    val haptics = LocalHapticFeedback.current
+
     fun enterManaging() {
+        haptics.performHapticFeedback(HapticFeedbackType.ToggleOn)
         managing = true
     }
 
     fun exitManaging() {
+        haptics.performHapticFeedback(HapticFeedbackType.ToggleOff)
         managing = false
         selected = emptyList()
     }
