@@ -36,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -251,17 +252,17 @@ private fun MissuApp(
             // 方向：页签按底栏顺序比较（首页→发现→我的 是前进），其它路由（详情/列表）前进即右进左出。
             enterTransition = {
                 val forward = isForward(initialState, targetState, tabOrder)
-                slideInHorizontally(animationSpec = tween(durationMillis = 280)) { if (forward) it else -it }
+                slideInHorizontally(animationSpec = tween(durationMillis = 300)) { if (forward) it else -it }
             },
             exitTransition = {
                 val forward = isForward(initialState, targetState, tabOrder)
-                slideOutHorizontally(animationSpec = tween(durationMillis = 280)) { if (forward) -it else it }
+                slideOutHorizontally(animationSpec = tween(durationMillis = 300)) { if (forward) -it else it }
             },
             popEnterTransition = {
-                slideInHorizontally(animationSpec = tween(durationMillis = 280)) { -it }
+                slideInHorizontally(animationSpec = tween(durationMillis = 300)) { -it }
             },
             popExitTransition = {
-                slideOutHorizontally(animationSpec = tween(durationMillis = 280)) { it }
+                slideOutHorizontally(animationSpec = tween(durationMillis = 300)) { it }
             },
         ) {
             composable("home") {
