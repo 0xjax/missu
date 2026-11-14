@@ -206,5 +206,5 @@
     <string name="challenge_opening">正在開啟站點…</string>
     <string name="challenge_passed">驗證通過，正在讀取頁面…</string>
     <string name="challenge_waiting">等待站點放行…</string>
-    <string name="challenge_blocked">仍未通過（已檢查 %1$d 次）。可以點「取消」後重試。</string>
+    <string name="challenge_blocked">站點仍未放行。可以點「取消」後重試，或換個網路再試。</string>
 </resources>

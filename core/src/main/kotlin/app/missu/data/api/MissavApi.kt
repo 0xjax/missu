@@ -39,7 +39,7 @@ class MissavApi(
 ) {
 
     /** 首页板块。站点直出 HTML，直接 Jsoup 解析，不需要 WebView。 */
-    suspend fun getHome(): List<HomeSection> = withChallengeRetry { HomeParser.parseHome(client.fetchHtml("/")) }
+    suspend fun getHome(): List<HomeSection> = HomeParser.parseHome(fetchPage("/"))
 
     /**
      * 站点导航里的分组入口（「频道」页签的数据源）。
@@ -47,17 +47,17 @@ class MissavApi(
      * NOTE: 与 [getHome] 是同一份首页 HTML，只是解析另一段；站点没有独立的导航接口。
      * 分组与条目都由站点给，我们不维护频道清单——它的编辑菜单变了就自动跟上。
      */
-    suspend fun getNavGroups(): List<NavGroup> = withChallengeRetry { HomeParser.parseNav(client.fetchHtml("/")) }
+    suspend fun getNavGroups(): List<NavGroup> = HomeParser.parseNav(fetchPage("/"))
 
     /**
      * 详情页。播放地址从内联打包脚本里解出来（见 [app.missu.data.parse.DetailParser.extractPlaybackUrl]）。
      * NOTE: 顺带查收藏状态，查不到就当「未收藏」——详情页不该因为收藏接口抖动而整体失败。
      */
-    suspend fun getVideoDetail(id: String): VideoDetail = withChallengeRetry {
-        val detail = DetailParser.parse(client.fetchHtml("/$id"), id)
-        val internalId = detail.internalId ?: return@withChallengeRetry detail
+    suspend fun getVideoDetail(id: String): VideoDetail {
+        val detail = DetailParser.parse(fetchPage("/$id"), id)
+        val internalId = detail.internalId ?: return detail
         val saved = runCatching { isSaved(internalId) }.getOrDefault(false)
-        detail.copy(saved = saved)
+        return detail.copy(saved = saved)
     }
 
     /** 收藏状态。`rawPath`：收藏接口只挂在根路径。 */
@@ -81,7 +81,7 @@ class MissavApi(
         }
     }
 
-    suspend fun html(path: String): String = withChallengeRetry { client.fetchHtml(path) }
+    suspend fun html(path: String): String = fetchPage(path)
 
     /**
      * 登录。步骤与 legacy 一致：
@@ -213,10 +213,8 @@ class MissavApi(
      */
     suspend fun createPlaylist(name: String, isPublic: Boolean = false, description: String? = null) {
         val form = withAuthRetry {
-            withChallengeRetry {
-                val html = client.fetchHtml(CREATE_PLAYLIST_PATH)
-                PlaylistFormParser.parseCreate(html) ?: throw IllegalStateException("新建片单页没有找到表单")
-            }
+            val html = fetchPage(CREATE_PLAYLIST_PATH)
+            PlaylistFormParser.parseCreate(html) ?: throw IllegalStateException("新建片单页没有找到表单")
         }
 
         val fields = form.fields.toMutableMap()
@@ -233,10 +231,8 @@ class MissavApi(
     }
     /** 读取「修改片单」页：当前值 + 更新表单 + 删除表单（站点没有对应 JSON 接口）。 */
     suspend fun getPlaylistEdit(id: String): PlaylistEditPage = withAuthRetry {
-        withChallengeRetry {
-            val html = client.fetchHtml("/playlists/$id/edit")
-            PlaylistFormParser.parseEdit(html) ?: throw IllegalStateException("修改片单页没有找到表单")
-        }
+        val html = fetchPage("/playlists/$id/edit")
+        PlaylistFormParser.parseEdit(html) ?: throw IllegalStateException("修改片单页没有找到表单")
     }
 
     /** 更新片单（名称 / 描述 / 是否公开）。表单 action 为空表示提交回编辑页自身。 */
@@ -270,16 +266,12 @@ class MissavApi(
      * WARNING: 该页对游客返回 200 + 空列表，调用方要用 `reloginWithRemembered()` 确认会话。
      */
     suspend fun getPlaylists(): List<PlaylistSummary> = withAuthRetry {
-        withChallengeRetry {
-            PlaylistParser.parsePlaylists(client.fetchHtml("/playlists"))
-        }
+        PlaylistParser.parsePlaylists(fetchPage("/playlists"))
     }
 
     /** 片单详情（`/playlists/{id}`）：标题 + 影片列表。同样只能解析 HTML。 */
     suspend fun getPlaylistDetail(id: String): PlaylistDetail = withAuthRetry {
-        withChallengeRetry {
-            PlaylistParser.parsePlaylistDetail(client.fetchHtml("/playlists/$id"))
-        }
+        PlaylistParser.parsePlaylistDetail(fetchPage("/playlists/$id"))
     }
     /**
      * 目录页（`/actresses`、`/genres`、`/makers`），分页 `?page=N`，可选排序 `?sort=`。
@@ -288,13 +280,13 @@ class MissavApi(
      * height/cup/age/debut 筛选是**表单**（`/actresses` 页面上仍有 4 个 `<select>`，服务端也真的
      * 生效），走 [getActresses] 那条路径；这里只发排序，避免给类型/厂商拼出站点不认识的参数。
      */
-    suspend fun getDirectory(kind: String, page: Int = 1, sort: String? = null): DirectoryList = withChallengeRetry {
+    suspend fun getDirectory(kind: String, page: Int = 1, sort: String? = null): DirectoryList {
         val params = buildList {
             if (sort != null) add("sort=$sort")
             if (page > 1) add("page=$page")
         }
         val path = if (params.isEmpty()) "/$kind" else "/$kind?" + params.joinToString("&")
-        DirectoryParser.parse(client.fetchHtml(path), kind, page)
+        return DirectoryParser.parse(fetchPage(path), kind, page)
     }
 
     /**
@@ -306,9 +298,9 @@ class MissavApi(
      *
      * NOTE: 这个榜单没有 JSON 接口，只能解析 HTML——与 `/actresses` / `/genres` / `/makers` 同一批页面。
      */
-    suspend fun getActressRanking(page: Int = 1): DirectoryList = withChallengeRetry {
+    suspend fun getActressRanking(page: Int = 1): DirectoryList {
         val path = if (page > 1) "/actresses/ranking?page=$page" else "/actresses/ranking"
-        DirectoryParser.parse(client.fetchHtml(path), "actresses", page)
+        return DirectoryParser.parse(fetchPage(path), "actresses", page)
     }
 
     /**
@@ -320,14 +312,14 @@ class MissavApi(
         page: Int = 1,
         sort: String? = null,
         filters: Map<String, String> = emptyMap(),
-    ): DirectoryList = withChallengeRetry {
+    ): DirectoryList {
         val params = buildList {
             if (sort != null) add("sort=$sort")
             filters.forEach { (key, value) -> if (value.isNotEmpty()) add("$key=$value") }
             if (page > 1) add("page=$page")
         }
         val path = if (params.isEmpty()) "/actresses" else "/actresses?" + params.joinToString("&")
-        DirectoryParser.parse(client.fetchHtml(path), "actresses", page)
+        return DirectoryParser.parse(fetchPage(path), "actresses", page)
     }
     /**
      * 通用视频列表页（`/new`、`/today-hot`、`/genres/{名}`、频道页…），分页用 `?page=N`。
@@ -341,28 +333,24 @@ class MissavApi(
         page: Int = 1,
         sort: VideoListOptions.Sort? = null,
         filter: VideoListOptions.Filter? = null,
-    ): VideoList = withChallengeRetry {
-        HomeParser.parseVideoList(
-            client.fetchHtml(videoListPath(path, page, sort, filter)),
-            page,
-        )
-    }
+    ): VideoList = HomeParser.parseVideoList(
+        fetchPage(videoListPath(path, page, sort, filter)),
+        page,
+    )
     /** 收藏列表：`/saved`，分页 `?page=N`。未登录会 302 回首页，交给 [withAuthRetry] 自动重登。 */
     suspend fun getSaved(page: Int = 1): VideoList = withAuthRetry {
-        withChallengeRetry {
-            val path = if (page > 1) "/saved?page=$page" else "/saved"
-            HomeParser.parseVideoList(client.fetchHtml(path), page)
-        }
+        val path = if (page > 1) "/saved?page=$page" else "/saved"
+        HomeParser.parseVideoList(fetchPage(path), page)
     }
 
     /**
      * 搜索：路径 `/search/{keyword}`，分页用 `?page=N`（从 1 开始，第 1 页不带参数）。
      * NOTE: 关键词按 legacy 用 `encodeURIComponent` 语义（空格编码成 %20 而不是 +）。
      */
-    suspend fun searchVideos(keyword: String, page: Int = 1): VideoList = withChallengeRetry {
+    suspend fun searchVideos(keyword: String, page: Int = 1): VideoList {
         val encoded = java.net.URLEncoder.encode(keyword, "UTF-8").replace("+", "%20")
         val path = if (page > 1) "/search/$encoded?page=$page" else "/search/$encoded"
-        HomeParser.parseVideoList(client.fetchHtml(path), page)
+        return HomeParser.parseVideoList(fetchPage(path), page)
     }
 
     /**
@@ -388,14 +376,34 @@ class MissavApi(
         const val CREATE_PLAYLIST_PATH = "/playlists/create"
     }
 
+    /**
+     * 取页面 HTML，并处理人机验证。
+     *
+     * NOTE: 与 [withChallengeRetry] 的区别在这儿：验证浮层加载的**就是这个路径**，
+     * 所以浏览器要是没被挑战、直接渲染出了这一页，[ChallengeHandler.verify] 会把 HTML 一起带回来——
+     * 直接用，省掉一次注定再被 403 的请求。这正是「OkHttp 被挡、浏览器没被挡」那种卡死的解法。
+     */
+    private suspend fun fetchPage(path: String): String =
+        try {
+            client.fetchHtml(path)
+        } catch (error: ChallengeException) {
+            val handler = challenge ?: throw error
+            val result = handler.verify(path)
+            if (!result.passed) throw error
+            result.html ?: client.fetchHtml(path)
+        }
+
+    /**
+     * 非页面请求（JSON / 表单）的人机验证包装：只能让浮层去拿 `cf_clearance`，然后重试。
+     * NOTE: 这类响应不是可渲染的页面，浏览器代取没有意义，所以 [ChallengeHandler.verify] 只给它首页。
+     */
     private suspend fun <T> withChallengeRetry(block: suspend () -> T): T =
         try {
             block()
         } catch (error: ChallengeException) {
             val handler = challenge ?: throw error
-            val result = handler.verify(SourceConfig.localizedUrl("/"))
+            val result = handler.verify("/")
             if (!result.passed) throw error
-            // NOTE: 验证结果里的 HTML 属于某个具体路径，不能拿来当任意请求的响应；统一重试原请求。
             block()
         }
 }

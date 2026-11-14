@@ -473,12 +473,38 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
   `deletePlaylistItem()` 里的原始调用）。片单页只有片单 id，走前者需要先查一次 `key`，没必要。
 - **首页 4 个板块来自同一次请求**：`GET /` 的 HTML 里就是 4 个兄弟 `<h2>`（新作上市 / 最近更新 / 無碼影片 / 隨機），不是 4 个接口——`getHome()` 只发一次请求。真正各自独立的是各板块「更多」指向的列表页（`/cn/new`、`/cn/release`、`/cn/uncensored-leak`、`/cn/random`），打开时才各发一次。
 - **空结果页仍带 `.thumbnail.group` 外壳**：搜不到东西时页面残留一个没有 `<img>` 的卡片壳、外加一个指向域名/`#` 的锚点。按 `.thumbnail.group` 直接取卡片会解析出一张「标题是 missav.ai、没有封面」的幽灵卡片，UI 上就是一块空缩略图。规则：**id 必须含字母或数字，且必须有 `<img>`**，否则丢弃——这样空结果才会走到空态。
-- **Cloudflare 挑战会真的落在手机上，链路已验证可用**（2026-11-14 真机实测，2026-11-15 复查）：冷启动加载首页时被 403 挑战，
-  App 在当前页之上盖一层**验证浮层**（`ChallengeOverlayHost`：组合根部的 `Dialog`，不再是独立 Activity），
-  WebView 里 Cloudflare 的 JS 挑战通常 1–3 秒自动通过；通过后浮层淡出、`cf_clearance` 落进共享 `CookieManager`，
-  **重试原请求**继续加载首页。**全程无需用户手动操作**（只在轮询 60 次仍不通时给「取消」）。
-  PC 的 JVM 请求同样会被挑战（`cf-mitigated: challenge`），所以这条链路不是"未验证的兜底"：
-  改任何 Cookie 相关代码都必须保证 OkHttp 与 WebView 共用系统 `CookieManager`，否则验证过了仍然 403。
+- **Cloudflare 挑战会真的落在手机上**（2026-11-14 真机实测，2026-11-15 又触发过几次）：那时是**独立 `ChallengeActivity`** 版本——
+  冷启动加载首页被 403 挑战，验证页里 Cloudflare 的 JS 挑战 1–3 秒自动通过，`cf_clearance` 落进共享 `CookieManager`，
+  重试原请求后首页正常加载，全程无需用户操作。PC 的 JVM 请求同样会被挑战（`cf-mitigated: challenge`），
+  所以这条链路不是"未验证的兜底"：改任何 Cookie 相关代码都必须保证 OkHttp 与 WebView 共用系统 `CookieManager`，
+  否则验证过了仍然 403。
+- **浮层里的真实挑战已取证（2026-11-15 05:02）**：临时 harness 强制抬起浮层后，WebView 打开 `https://missav.ai/cn`
+  收到了**真的挑战页**（标题 `Just a moment...`，最终地址 `https://missav.ai/dm247/cn`），截图留在 `ChallengeDiagnostics` 的
+  产物里——**`Dialog` 窗口里的 WebView 能正常渲染 Cloudflare 挑战**，这条疑问可以消掉。
+  页面先显示 "Performing security verification / Ray ID …"，随后给出 **Turnstile 勾选框**；实测 10 秒内未放行，
+  而用户侧多次观察是「算力校验走完自己跳过」——两种都可能，所以**等待要按「可能要几十秒」设计**，
+  不能按「1–3 秒必过」假设（轮询上限已放宽到 60 秒）。
+  **仍未验**：① 真 403 进来时浮层被抬起（入口一次没自然触发过，用户侧经验是「退出再登录」很容易触发）；
+  ② 通过之后那次重试（`:core` 既有逻辑，本次未改）。
+  验收标准：下次自然触发时浮层淡出、页面自己继续加载 = 全链通过。
+- **只按 cookie 判「通过」会误判（已实测并修掉）**：那次 harness 在 10s 时塞了一个假 `cf_clearance`，旧逻辑立刻判定通过
+  并去读 HTML，而页面仍停在挑战页（`html=44698` 正是挑战页本身）。真机上「cookie 还在但页面仍是挑战页」很容易发生——
+  cookie 由别的出口 IP 签发、或刚被站点作废。现在判通过前会再用 `document.title` 确认页面已离开挑战页（`Just a moment` 不算过）。
+- **验证页的页面永远是亮色，这层改不动**：WebView 的 `prefers-color-scheme` 恒为 `light`——即使系统 `uiMode=0x21`（深色）
+  且应用强制深色，探针实测仍是 `false`。试过两条路都无效、已回退：① 给 WebView 传一个覆写 `uiMode` 的 context；
+  ② 引入 `androidx.webkit` 打开 `setAlgorithmicDarkeningAllowed`（页面声明了自己的配色，算法压暗不生效，白搭 +2.8MB）。
+  结论：**白色是站点自己的皮肤，不是我们的主题色**。我们自己这层是跟随主题的——截图像素实测卡片填充 `#292A2E`，
+  正是蓝色深色板的 `surfaceContainerHigh`（`#292A2D`）。要页面变暗只能注入 CSS，会破坏站点样式与勾选框对比度，不做。
+- **取证钩子（只对 debuggable 构建生效）**：浮层每次抬起都会写事件行 + 存截图，事后判读，不必守在设备边上：
+
+  ```powershell
+  adb logcat -s MissuChallenge
+  adb pull /sdcard/Android/data/app.missu/files/challenge/   # events.log + PNG，只留最近 12 张
+  ```
+
+  事件：`shown url=…` / `page=<标题>|dark=<true|false> url=…` / `passed attempts=N in Xms html=Len` / `blocked` / `cancelled`；
+  截图：抬起后 0.4s、`onPageFinished` 时、结束时各一张；`page` 那张是判读「挑战页有没有真的渲染出来」的关键。
+  **NOTE**：vivo 的 logcat 会把 URL 打成 `****`，完整 URL 只在 `events.log` 里——判读以文件为准。
 - **「看到的是正常页面」不等于误触发**：判定条件是 `403 | cf-mitigated: challenge | 挑战页标题`（三者任一），
   命中后 `withChallengeRetry` 用 `handler.verify(/)` 抬起浮层，WebView 里通过后显示的就是**真实页面**
   （所以看起来"直接跳过了"），随后 `cf_clearance` 落进共享 Cookie、浮层自动消失、**重试原请求**
