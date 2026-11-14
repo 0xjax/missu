@@ -138,9 +138,11 @@ private const val PROGRESS_DELAY_MS = 600L
  *
  * NOTE: 延迟必须 ≥ 容器转场时长（300ms）。飞行途中就开始虚化，等于把刚建立的
  * 「同一个东西」的连续性自己拆掉——先让它落位、被看清，再让它退到"未就绪"的状态里。
+ * NOTE: 爬升时长按**典型的视频起步延迟（2–3 秒）**来定，不是按普通状态切换的 300ms：
+ * 它要在整段等待里持续可见地变化，而不是"一闪就完成、然后一直锁死"。
  */
 private const val DEFOCUS_DELAY_MS = 300L
-private const val DEFOCUS_RAMP_MS = 600
+private const val DEFOCUS_RAMP_MS = 1500
 private const val POSTER_BLUR_DP = 12
 private const val POSTER_SCRIM_ALPHA = 0.22f
 
@@ -176,8 +178,11 @@ private fun DetailHero(
     val detail = (state as? DetailUiState.Content)?.detail
     val playbackUrl = detail?.playbackUrl
 
-    // NOTE: 换一集（playbackUrl 变）就重置，否则新视频会继承上一集的"已出画"状态。
-    var firstFrame by remember(playbackUrl) { mutableStateOf(false) }
+    // CRITICAL: 这里的状态**只能按 heroKey（路由 id）取 remember，不能按 playbackUrl**。
+    // playbackUrl 会从 null 变成真正的地址，按它做 key 等于在详情数据回来那一刻重建状态：
+    // Animatable 被重置成 0，正在跑的虚化动画作用在旧实例上、直接被丢掉——表现就是
+    // "虚化一小段 → 弹回清晰封面 → 一直清晰等视频"。
+    var firstFrame by remember(heroKey) { mutableStateOf(false) }
     val posterAlpha by animateFloatAsState(
         targetValue = if (firstFrame) 0f else 1f,
         animationSpec = tween(durationMillis = POSTER_FADE_MS),
@@ -198,7 +203,7 @@ private fun DetailHero(
 
     // NOTE: 用 Animatable 而不是 animateFloatAsState：出画时要把当前值**冻住**让封面整体淡出，
     // 不能反向"重新对焦"（那会在淡出前先闪一下变清晰）。
-    val defocus = remember(playbackUrl) { Animatable(0f) }
+    val defocus = remember(heroKey) { Animatable(0f) }
     LaunchedEffect(pending) {
         if (pending) {
             delay(DEFOCUS_DELAY_MS)
