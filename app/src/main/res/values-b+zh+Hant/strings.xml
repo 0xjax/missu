@@ -171,12 +171,8 @@
     <string name="discover_section_makers">廠商</string>
     <string name="discover_section_hot">熱門</string>
 
-    <!-- 熱門（三個週期都是站點直出的列表頁） -->
-    <string name="hot_today">今日熱門</string>
     <string name="discover_section_channels">頻道</string>
     <string name="discover_channels_live">直播</string>
-    <string name="hot_weekly">本週熱門</string>
-    <string name="hot_monthly">本月熱門</string>
 
     <!-- 女優排序與篩選（選項值在 :core，文案在這裡） -->
     <string name="sort_videos">影片</string>

@@ -63,7 +63,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import app.missu.ui.discover.DiscoverScreen
 import app.missu.ui.discover.DiscoverViewModel
-import app.missu.ui.discover.HotPeriod
+import app.missu.ui.discover.HOT_PATH
 import app.missu.data.api.ChallengeHandler
 import app.missu.data.api.MissavApi
 import app.missu.data.api.SourceConfig
@@ -467,19 +467,22 @@ private fun MissuApp(
                 val refreshingKinds by viewModel.refreshing.collectAsState()
                 val channels by viewModel.channels.collectAsState()
 
-                // NOTE: 热门三档是**同一面列表的三个排序取值**（实测与三个 vanity path 等价），
-                // 所以按 cacheKey 建 VM：换档只换数据源，切回来那份还在缓存里，不重新转圈。
-                var hotPeriod by rememberSaveable { mutableStateOf(HotPeriod.TODAY) }
-                val hotQuery = remember(hotPeriod) {
-                    VideoListQuery(HotPeriod.PATH, sort = hotPeriod.sort)
+                // NOTE: 热门就是 `/today-hot` 一面列表：今日 / 本周 / 本月只是它的三个排序取值（实测与三个
+                // vanity path 等价），过滤也同享。所以它和列表页用**同一套口径**（同一个 `VideoListQuery`
+                // 与 `VideoListContent`），不另造一套「周期」结构；按 cacheKey 建 VM，切回来那份还在缓存里。
+                var hotSort by rememberSaveable { mutableStateOf<VideoListOptions.Sort?>(null) }
+                var hotFilter by rememberSaveable { mutableStateOf<VideoListOptions.Filter?>(null) }
+                val hotQuery = remember(hotSort, hotFilter) {
+                    VideoListQuery(HOT_PATH, sort = hotSort, filter = hotFilter)
                 }
                 val hotViewModel: VideoListViewModel = viewModel(
                     key = "hot-${hotQuery.cacheKey}",
                     factory = factory { VideoListViewModel(api, hotQuery) },
                 )
                 val hotState by hotViewModel.state.collectAsState()
-                LaunchedEffect(hotPeriod) {
-                    // 只有还没取过的（初始就是 Loading）才发请求，切回已加载过的档位不重拉。
+                val hotDetectedSort by hotViewModel.detectedSort.collectAsState()
+                LaunchedEffect(hotQuery) {
+                    // 只有还没取过的（初始就是 Loading）才发请求，切回已取过的口径不重拉。
                     if (hotState is VideoListUiState.Loading) hotViewModel.load()
                 }
 
@@ -488,7 +491,9 @@ private fun MissuApp(
                     sort = sort,
                     filters = filters,
                     refreshingKinds = refreshingKinds,
-                    hotPeriod = hotPeriod,
+                    hotSort = hotSort,
+                    hotFilter = hotFilter,
+                    hotDetectedSort = hotDetectedSort,
                     hotState = hotState,
                     channels = channels,
                     onLoad = viewModel::load,
@@ -496,7 +501,8 @@ private fun MissuApp(
                     onRefresh = viewModel::refresh,
                     onChannelsLoad = { viewModel.loadChannels() },
                     onChannelsRetry = { viewModel.loadChannels(force = true) },
-                    onHotPeriodChange = { hotPeriod = it },
+                    onHotSortChange = { hotSort = it },
+                    onHotFilterChange = { hotFilter = it },
                     onHotLoadMore = hotViewModel::loadMore,
                     onHotRetry = hotViewModel::load,
                     onOpen = { path, title ->
