@@ -18,7 +18,7 @@
 .\scripts\build.ps1 release      # release（沿用 debug 签名，仅自用侧载）
 ```
 
-`scripts/build.ps1` 会配好 `JAVA_HOME`（自动选 `D:\Android\jdk-N`；AS 已卸载，构建不依赖它）、`ANDROID_HOME`（`D:\Android\Sdk`）、`ANDROID_USER_HOME`、`TMP/TEMP`。自动化采集输出时加 `MISSU_NO_DAEMON=1`——Gradle daemon 会一直占着 stdout，管道等不到 EOF。
+`scripts/build.ps1` 会配好 `JAVA_HOME`（自动选 `D:\Android\jdk-N`；AS 已卸载，构建不依赖它）、`ANDROID_HOME`（`D:\Android\Sdk`）、`ANDROID_USER_HOME`。自动化采集输出时加 `MISSU_NO_DAEMON=1`——Gradle daemon 会一直占着 stdout，管道等不到 EOF。
 
 工具链：SDK `D:\Android\Sdk`、JDK = 独立 Temurin 21（`D:\Android\jdk-21`，`scripts/build.ps1` 自动发现 `jdk-*` 取最高版本）；Android Studio 已卸载，构建不依赖它。Gradle 缓存 `%USERPROFILE%\.gradle`、Gradle 发行包 9.6.0（wrapper，腾讯镜像）。
 
@@ -28,7 +28,7 @@
 - 两个模块：`:core` 是**纯 JVM**（取数/解析/模型，不许 `android.*` / `androidx.*`），`:app` 是 Android UI 与平台适配；`:app` 依赖 `:core`，反向禁止。解析测试在 `:core`，用 `.\gradlew.bat :core:test` 跑。
 - 真机调试（无线 ADB、截图、日志、uiautomator）见 `docs/android-debugging.md`。
 - 真机上**纯操作、不需要读屏判断的长链路**（如建片单→加影片→移除→复原）→ 直接把步骤交给我，别逐步调工具；需要看截图/读 UI 才能判断的（布局、文案、状态是否真的变了）才自己驱动。
-- 卡巴斯基会拦 DSH 子进程与 `java.exe` 的写入：工作区 `D:\missu` 在排除列表里，构建临时目录也因此落在 `.tmp-gradle`，不要改回 `%TEMP%`。
+- 卡巴斯基只挡 `adb.exe`：`adb server` 写 `%TEMP%\adb.log` 会 `Permission denied`（Gradle 不受影响，默认 `%TEMP%` 可完整构建）。工作区 `D:\missu` 在排除列表里，起 server 时把 `TMP/TEMP` 指到工作区内即可，详见 `docs/android-native.md`「已知坑」。
 - legacy 的 Expo 侧已归档到 `legacy/expo/`，没有 `node_modules`（已删）；需要对照或重跑时先在那个目录 `bun install`。
 
 ## 依赖选择（不许靠猜）
@@ -100,6 +100,6 @@
 
 - 原生工程：`.\scripts\build.ps1`（或 `install`）必须 `BUILD SUCCESSFUL`；这是唯一的验收命令。
 - `legacy/expo/` 不参与验证（不构建、不跑 lint）；它只是参照实现。
-- 构建环境的已知坑（`native-platform.dll`、`%TEMP%` 拒写、JVM 被按程序拦截、PS 5.1 需要 BOM）见 `docs/android-native.md` 的「已知坑」。
+- 构建环境的已知坑（`native-platform.dll`、adb 的 `%TEMP%` 拒写、JVM 被按程序拦截、PS 5.1 需要 BOM）见 `docs/android-native.md` 的「已知坑」。
 - **升级 SDK / JDK 等环境依赖前，先查 Android CLI 最新情况**：Google 正在把 `sdkmanager` 迁到原生的 `android sdk`，新版 bundle 自带的 JRE 可能未签名，而本机 Windows 11 Smart App Control 处于强制模式（`VerifiedAndReputablePolicyState = 1`）会拒绝加载未签名代码。按 `docs/android-native.md`「升级 SDK 环境依赖前」的检查清单确认后再动，并把结论写回那里。
 - After structural changes, update stale descriptions in AGENTS.md / DESIGN.md / docs/android-native.md proactively.

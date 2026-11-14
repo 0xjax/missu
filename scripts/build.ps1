@@ -30,11 +30,11 @@ $env:ANDROID_HOME = 'D:\Android\Sdk'
 $env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
 
 # NOTE: GRADLE_USER_HOME 不设，走标准位置 %USERPROFILE%\.gradle（实测可用，5 GB 缓存已迁到那里）。
-# NOTE: %TEMP% 会被安全软件拦（native-platform.dll / AccessDeniedException），所以临时目录落进工作区。
+# NOTE: TMP/TEMP 不再覆盖，用系统默认目录。实测（2026-11-14）`gradlew :app:assembleDebug --rerun-tasks
+# --no-build-cache` 在默认 %TEMP% 下 BUILD SUCCESSFUL——早先「%TEMP% 被安全软件拦」的结论只对 adb 成立
+# （adb server 要写 %TEMP%\adb.log），Gradle 本身不需要，详见 docs/android-native.md「已知坑」。
 $env:ANDROID_USER_HOME = Join-Path $root '.local\android-home'
-$env:TMP = Join-Path $root '.tmp-gradle'
-$env:TEMP = $env:TMP
-New-Item -ItemType Directory -Force $env:TMP, $env:ANDROID_USER_HOME | Out-Null
+New-Item -ItemType Directory -Force $env:ANDROID_USER_HOME | Out-Null
 
 if (-not (Test-Path (Join-Path $env:JAVA_HOME 'bin\java.exe'))) {
     throw ("JAVA_HOME 里找不到 java.exe：{0}（候选：{1}）" -f $env:JAVA_HOME, ($jdkCandidates -join ' / '))
