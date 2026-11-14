@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  繁體中文（BCP-47 `b+zh+Hant`，涵蓋 zh-TW / zh-HK / zh-MO）。
+  預設值（`values/`）是英文，簡體在 `values-zh/`。
+-->
+<resources>
+    <!-- 通用 -->
+    <string name="common_retry">重試</string>
+    <string name="common_load_more">載入更多</string>
+    <string name="common_back">返回</string>
+    <string name="common_cancel">取消</string>
+    <string name="common_done">完成</string>
+    <string name="common_clear">清除</string>
+
+    <!-- 底部頁籤 -->
+    <string name="nav_home">首頁</string>
+    <string name="nav_discover">發現</string>
+    <string name="nav_account">我的</string>
+
+    <!-- 我的 -->
+    <string name="account_title">我的</string>
+    <string name="account_logged_out_title">未登入</string>
+    <string name="account_logged_out_subtitle">登入後可以收藏影片、管理片單，並同步觀看紀錄</string>
+    <string name="account_go_login">去登入</string>
+    <string name="account_saved">我的收藏</string>
+    <string name="account_playlists">我的片單</string>
+    <string name="account_history">觀看紀錄</string>
+    <string name="account_settings">設定</string>
+    <string name="account_logout">登出</string>
+    <string name="account_logged_in">已登入</string>
+
+    <!-- 登入 -->
+    <string name="login_title">登入 Missu</string>
+    <string name="login_subtitle">使用站點帳號登入，收藏與片單會在網頁端與 App 之間保持同步。</string>
+    <string name="login_email">電子郵件</string>
+    <string name="login_password">密碼</string>
+    <string name="login_submit">登入</string>
+    <string name="login_submitting">登入中…</string>
+    <string name="login_cookie_note">登入前會先清空 Cookie 罐——站點拒絕帶舊工作階段的登入請求。</string>
+
+    <!-- 收藏 -->
+    <string name="saved_title">我的收藏</string>
+    <string name="saved_empty_title">還沒有收藏</string>
+    <string name="saved_empty_subtitle">在詳情頁點一下「收藏」，之後就能從這裡直接打開</string>
+
+    <!-- 觀看紀錄 -->
+    <string name="history_title">觀看紀錄</string>
+    <string name="history_empty_title">還沒有觀看紀錄</string>
+    <string name="history_empty_subtitle">打開任意影片開始播放後，這裡會記下看到第幾分鐘</string>
+
+    <!-- 列表 -->
+    <string name="list_empty_title">這裡還沒有內容</string>
+    <string name="list_default_title">清單</string>
+
+    <!-- 首頁 -->
+    <string name="home_empty_title">首頁沒有內容</string>
+    <string name="home_empty_subtitle">站點這次沒有回傳任何區塊，下拉或稍後再試</string>
+    <string name="home_more">更多</string>
+
+    <!-- 搜尋 -->
+    <string name="search_placeholder">搜尋番號、女優、關鍵字</string>
+    <string name="search_exit">離開搜尋</string>
+    <string name="search_empty_title">沒有找到結果</string>
+    <string name="search_empty_subtitle">換個番號、女優或關鍵字再試</string>
+    <string name="search_hint_idle">輸入關鍵字後按 Enter 搜尋</string>
+    <string name="search_recent">最近搜尋</string>
+    <string name="search_results_count">「%1$s」共 %2$d 筆</string>
+
+    <!-- 發現 -->
+    <string name="discover_clear">清除</string>
+    <string name="discover_filter">篩選</string>
+    <string name="discover_filter_count">篩選 (%1$d)</string>
+    <string name="discover_filter_title">篩選女優</string>
+
+    <!-- 詳情 -->
+    <string name="detail_no_playback">暫時無法取得播放位址</string>
+    <string name="detail_saved">已收藏</string>
+    <string name="detail_save">收藏</string>
+    <string name="detail_add_to_playlist">加入片單</string>
+    <string name="detail_no_playlists">還沒有片單，去網頁端建立一個吧</string>
+
+    <!-- 播放器 -->
+    <string name="player_fullscreen">全螢幕</string>
+    <string name="player_exit_fullscreen">結束全螢幕</string>
+
+    <!-- 片單 -->
+    <string name="playlists_title">我的片單</string>
+    <string name="playlists_empty_title">還沒有片單</string>
+    <string name="playlists_empty_subtitle">用右下角的按鈕建立第一個片單</string>
+    <string name="playlists_more_actions">更多操作</string>
+    <string name="playlists_collapse">收起</string>
+    <string name="playlists_create">新增片單</string>
+    <string name="playlists_refresh">重新整理</string>
+    <string name="playlist_name">片單名稱</string>
+    <string name="playlists_public">公開片單</string>
+    <string name="playlists_create_action">建立</string>
+    <string name="playlists_updated">更新 %1$s</string>
+
+    <!-- 片單詳情 -->
+    <string name="playlist_select_all">全選</string>
+    <string name="playlist_unselect_all">取消全選</string>
+    <string name="playlist_deselect">取消選取</string>
+    <string name="playlist_manage">整理</string>
+    <string name="playlist_remove">移出影片</string>
+    <string name="playlist_remove_n">移出 %1$d 部</string>
+    <string name="playlist_remove_dialog_title">移出所選影片？</string>
+    <string name="playlist_remove_dialog_body">會把選中的 %1$d 部從「%2$s」裡移除，影片本身不受影響。</string>
+    <string name="playlist_remove_action">移除</string>
+    <string name="playlist_selected">已選取</string>
+    <string name="playlist_unselected">未選取</string>
+    <string name="playlist_empty_title">這個片單還是空的</string>
+    <string name="playlist_empty_subtitle">在詳情頁點「加入片單」，影片就會出現在這裡</string>
+
+    <!-- 編輯片單 -->
+    <string name="playlist_edit">編輯</string>
+    <string name="playlist_edit_title">編輯片單</string>
+    <string name="playlist_description">描述（選填）</string>
+    <string name="playlist_save">儲存</string>
+    <string name="playlist_saving">儲存中…</string>
+    <string name="playlist_delete_action">刪除片單</string>
+    <string name="playlist_delete_dialog_title">刪除這個片單？</string>
+    <string name="playlist_delete_dialog_body">刪除後無法復原，片單裡的影片不會被刪除。</string>
+
+    <!-- 設定 -->
+    <string name="settings_title">設定</string>
+    <string name="settings_appearance">外觀</string>
+    <string name="settings_theme_system">跟隨系統</string>
+    <string name="settings_theme_light">淺色</string>
+    <string name="settings_theme_dark">深色</string>
+    <string name="settings_dynamic_color">桌布取色</string>
+    <string name="settings_dynamic_color_note">用系統桌布取色；關掉時一律使用 Missu 的品牌粉</string>
+    <string name="settings_dynamic_color_unavailable">需要 Android 12 以上</string>
+    <string name="settings_pure_black">純黑背景</string>
+    <string name="settings_pure_black_note">僅深色模式生效。純黑更省電，但分組容器的層級會被壓平</string>
+    <string name="settings_palette_note">Missu 的色盤由品牌粉推導：深色下主色就是品牌色本身，淺色下用深一階以確保白字可讀。</string>
+    <string name="settings_language">語言</string>
+    <string name="settings_language_system">跟隨系統</string>
+    <string name="settings_language_note">同時決定介面語言與從站點取回的內容語言。「跟隨系統」時，介面會退回英文（該語言尚未翻譯），內容仍照系統語言取。</string>
+
+    <!-- 發現頁的目錄分類 -->
+    <string name="discover_section_actresses">女優</string>
+    <string name="discover_section_genres">類型</string>
+    <string name="discover_section_makers">廠商</string>
+
+    <!-- 女優排序與篩選（選項值在 :core，文案在這裡） -->
+    <string name="sort_videos">影片</string>
+    <string name="sort_debut">出道</string>
+    <string name="filter_height">身高</string>
+    <string name="filter_cup">罩杯</string>
+    <string name="filter_age">年齡</string>
+    <string name="filter_debut">出道年份</string>
+    <string name="filter_cup_value">%1$s 罩杯</string>
+    <string name="filter_debut_value">%1$d 以前</string>
+
+    <!-- 錯誤與提示（由 UiMessage 渲染） -->
+    <string name="error_network">網路連線中斷，請重試</string>
+    <string name="error_http">請求失敗（HTTP %1$d）</string>
+    <string name="error_challenge">站點要求人機驗證，請重試</string>
+    <string name="error_session_expired">登入已失效，請重新登入</string>
+    <string name="error_invalid_credentials">電子郵件或密碼錯誤</string>
+    <string name="error_login_failed">登入失敗</string>
+    <string name="error_no_video_id">沒有取得影片 ID，無法收藏</string>
+    <string name="error_playlist_name_empty">片單名稱不能為空</string>
+    <string name="error_partial_remove">有 %1$d 部沒移除成功，可以再試一次</string>
+    <string name="error_unknown">未知錯誤</string>
+
+    <!-- 人機驗證 -->
+    <string name="challenge_opening">正在開啟站點…</string>
+    <string name="challenge_passed">驗證通過，正在讀取頁面…</string>
+    <string name="challenge_waiting">等待站點放行…（第 %1$d 次檢查）</string>
+    <string name="challenge_blocked">仍未通過（已檢查 %1$d 次）。可以點「取消」後重試。</string>
+</resources>

@@ -194,11 +194,12 @@ private fun ThemeMode.label(): String = when (this) {
     ThemeMode.DARK -> stringResource(R.string.settings_theme_dark)
 }
 
-/** 语言名用**自身语言**书写（简体中文 / English / 日本語）——比翻译成当前界面语言更好认。 */
+/** 语言名用**自身语言**书写（简体中文 / 繁體中文 / English / 日本語）——比翻译成当前界面语言更好认。 */
 @Composable
 private fun AppLanguage.label(): String = when (this) {
     AppLanguage.SYSTEM -> stringResource(R.string.settings_language_system)
     AppLanguage.ZH_HANS -> "简体中文"
+    AppLanguage.ZH_HANT -> "繁體中文"
     AppLanguage.EN -> "English"
     AppLanguage.JA -> "日本語"
 }

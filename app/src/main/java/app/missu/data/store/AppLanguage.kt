@@ -15,6 +15,7 @@ import java.util.Locale
 enum class AppLanguage {
     SYSTEM,
     ZH_HANS,
+    ZH_HANT,
     EN,
     JA,
     ;
@@ -29,10 +30,11 @@ fun AppLanguage.uiLocale(config: Configuration): Locale {
     val system = config.locales[0]
     return when (this) {
         AppLanguage.ZH_HANS -> Locale.SIMPLIFIED_CHINESE
+        AppLanguage.ZH_HANT -> Locale.TRADITIONAL_CHINESE
         AppLanguage.EN -> Locale.ENGLISH
         AppLanguage.JA -> Locale.JAPANESE
         AppLanguage.SYSTEM -> when (system?.language) {
-            "zh" -> Locale.SIMPLIFIED_CHINESE
+            "zh" -> if (system.isTraditionalChinese) Locale.TRADITIONAL_CHINESE else Locale.SIMPLIFIED_CHINESE
             "ja" -> Locale.JAPANESE
             else -> Locale.ENGLISH
         }
@@ -50,10 +52,11 @@ fun AppLanguage.contentLanguage(config: Configuration): String {
     val system = config.locales[0]
     return when (this) {
         AppLanguage.ZH_HANS -> "cn"
+        AppLanguage.ZH_HANT -> "tw"
         AppLanguage.EN -> "en"
         AppLanguage.JA -> "ja"
         AppLanguage.SYSTEM -> when (system?.language) {
-            "zh" -> if (system.script == "Hant" || system.country in setOf("TW", "HK", "MO")) "tw" else "cn"
+            "zh" -> if (system.isTraditionalChinese) "tw" else "cn"
             "ja" -> "ja"
             "ko" -> "ko"
             "ms" -> "ms"
@@ -62,3 +65,7 @@ fun AppLanguage.contentLanguage(config: Configuration): String {
         }
     }
 }
+
+/** zh-Hant 的判定：显式文字标签，或台湾/香港/澳门的地区码。 */
+private val Locale.isTraditionalChinese: Boolean
+    get() = script == "Hant" || country in setOf("TW", "HK", "MO")
