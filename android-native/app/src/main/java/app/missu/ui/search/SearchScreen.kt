@@ -5,6 +5,7 @@ package app.missu.ui.search
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,33 +13,42 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExpandedFullScreenSearchBar
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SearchBar
+import androidx.compose.material3.SearchBarDefaults
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberSearchBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import app.missu.ui.components.VideoGridCard
+import kotlinx.coroutines.launch
 
+/**
+ * 搜索页：M3E 的 slot + `SearchBarState` 搜索栏。
+ *
+ * NOTE: 折叠态是页面顶部的一条 `SearchBar`，展开态是独立的 `ExpandedFullScreenSearchBar` 浮层；
+ * 输入框获得焦点会自动展开，所以不需要手动调 `animateToExpanded()`。
+ * NOTE: `SearchBarState` 的 `animateToExpanded/Collapsed` 都是 suspend，只能放进 `scope.launch`。
+ */
 @Composable
 fun SearchScreen(
     state: SearchUiState,
@@ -51,61 +61,84 @@ fun SearchScreen(
     initialKeyword: String = "",
     modifier: Modifier = Modifier,
 ) {
-    var keywordValue by rememberSaveable { mutableStateOf("") }
-    // 从发现页点最近搜索进来时直接搜（只跑一次）。
+    val searchBarState = rememberSearchBarState()
+    val textFieldState = rememberTextFieldState()
+    val scope = rememberCoroutineScope()
+
+    // 从发现页/历史胶囊带关键词进来时直接搜（只跑一次）。
     LaunchedEffect(initialKeyword) {
         if (initialKeyword.isNotBlank()) {
-            keywordValue = initialKeyword
+            textFieldState.edit { replace(0, length, initialKeyword) }
             onSearch(initialKeyword)
         }
     }
-    val keyboard = LocalSoftwareKeyboardController.current
-    val submit = {
-        keyboard?.hide()
-        onSearch(keywordValue)
+
+    // NOTE: foundation 1.13 的 TextFieldState 只有 edit { }（没有 setTextAndPlaceCursorAtEnd/clearText）。
+    fun submit(keyword: String) {
+        if (keyword.isBlank()) return
+        scope.launch { searchBarState.animateToCollapsed() }
+        onSearch(keyword)
+    }
+
+    fun pick(keyword: String) {
+        textFieldState.edit { replace(0, length, keyword) }
+        submit(keyword)
+    }
+
+    val inputField = @Composable {
+        SearchBarDefaults.InputField(
+            textFieldState = textFieldState,
+            searchBarState = searchBarState,
+            onSearch = { submit(textFieldState.text.toString().trim()) },
+            placeholder = { Text("搜索番号、女优、关键词") },
+            leadingIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                }
+            },
+            trailingIcon = {
+                if (textFieldState.text.isNotEmpty()) {
+                    IconButton(onClick = { textFieldState.edit { replace(0, length, "") } }) {
+                        Icon(Icons.Filled.Close, contentDescription = "清空")
+                    }
+                }
+            },
+        )
     }
 
     Column(modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(onClick = onBack) { Text("←") }
-            OutlinedTextField(
-                value = keywordValue,
-                onValueChange = { keywordValue = it },
-                modifier = Modifier.weight(1f),
-                placeholder = { Text("搜索番号、女优、关键词") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { submit() }),
-            )
-            Spacer(Modifier.width(8.dp))
-            Button(onClick = { submit() }) { Text("搜索") }
-            Spacer(Modifier.width(8.dp))
-        }
+        SearchBar(state = searchBarState, inputField = inputField)
 
         when (val current = state) {
             SearchUiState.Idle -> RecentSearches(
                 keywords = recent,
-                onPick = { keyword ->
-                    keywordValue = keyword
-                    onSearch(keyword)
-                },
+                onPick = { pick(it) },
                 onClear = onClearHistory,
-                onSearch = submit,
             )
+
             SearchUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 LoadingIndicator()
             }
+
             SearchUiState.Empty -> Hint("没有找到结果")
+
             is SearchUiState.Error -> Hint(current.message)
+
             is SearchUiState.Content -> Results(
                 state = current,
                 onLoadMore = onLoadMore,
                 onOpen = onOpen,
             )
         }
+    }
+
+    // 展开态：全屏浮层里放最近搜索。
+    ExpandedFullScreenSearchBar(state = searchBarState, inputField = inputField) {
+        RecentSearches(
+            keywords = recent,
+            onPick = { pick(it) },
+            onClear = onClearHistory,
+        )
     }
 }
 
@@ -115,10 +148,9 @@ private fun RecentSearches(
     keywords: List<String>,
     onPick: (String) -> Unit,
     onClear: () -> Unit,
-    onSearch: () -> Unit,
 ) {
     if (keywords.isEmpty()) {
-        Hint("输入关键词后点搜索")
+        Hint("输入关键词后回车搜索")
         return
     }
 
@@ -136,11 +168,9 @@ private fun RecentSearches(
             TextButton(onClick = onClear) { Text("清空") }
         }
 
-        androidx.compose.foundation.layout.FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             keywords.forEach { keyword ->
-                androidx.compose.material3.SuggestionChip(
+                SuggestionChip(
                     onClick = { onPick(keyword) },
                     label = { Text(keyword) },
                 )
@@ -152,7 +182,11 @@ private fun RecentSearches(
 @Composable
 private fun Hint(text: String) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

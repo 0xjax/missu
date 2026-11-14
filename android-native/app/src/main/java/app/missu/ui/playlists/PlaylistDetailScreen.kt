@@ -22,7 +22,12 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AppBarRow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.ButtonGroupDefaults
@@ -32,6 +37,7 @@ import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.ToggleFloatingActionButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -81,22 +87,28 @@ fun PlaylistDetailScreen(
     val allSelected = content != null && content.videos.isNotEmpty() &&
         selected.size == content.videos.size
 
+    fun enterManaging() {
+        managing = true
+    }
+
+    fun exitManaging() {
+        managing = false
+        selected = emptyList()
+    }
+
+    // NOTE: containerColor 是 (进度) -> Color 的普通 lambda（不是 @Composable），
+    // 所以主题色要先在组合作用域里读出来再捕获。
+    val fabContainer = MaterialTheme.colorScheme.primary
+    val onFabContainer = MaterialTheme.colorScheme.onPrimary
+
     Box(modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             PageTopBar(
                 title = title,
                 onBack = onBack,
-                actions = {
-                    if (content != null) {
-                        TextButton(onClick = {
-                            managing = !managing
-                            if (!managing) selected = emptyList()
-                        }) {
-                            Text(if (managing) "完成" else "整理")
-                        }
-                    }
-                    TextButton(onClick = onEdit) { Text("编辑") }
-                },
+                // NOTE: 「整理」不再占顶栏动作位——它是个开关，交给右下角的 ToggleFAB（M3E 里
+                // 双态操作用会 morph 的 ToggleFloatingActionButton）。顶栏只留「编辑」。
+                actions = { TextButton(onClick = onEdit) { Text("编辑") } },
             )
 
             message?.let {
@@ -125,7 +137,8 @@ fun PlaylistDetailScreen(
                         start = 16.dp,
                         end = 16.dp,
                         top = 12.dp,
-                        bottom = if (managing) 120.dp else 32.dp,
+                        // NOTE: 底部留白：整理模式给浮动工具条让位，平时给右下角的整理 FAB 让位。
+                        bottom = if (managing) 120.dp else 96.dp,
                     ),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -163,6 +176,23 @@ fun PlaylistDetailScreen(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(horizontal = 16.dp, vertical = 20.dp),
+                // NOTE: 少见动作交给 AppBarRow 当溢出容器——它是 FloatingToolbar 的 trailingContent
+                // 标准搭档：放不下时自己收进溢出菜单，不用我们算宽度。
+                trailingContent = {
+                    AppBarRow {
+                        clickableItem(
+                            onClick = { selected = emptyList() },
+                            icon = { Icon(Icons.Filled.Clear, contentDescription = null) },
+                            label = "取消选择",
+                            enabled = selected.isNotEmpty() && removing.isEmpty(),
+                        )
+                        clickableItem(
+                            onClick = { exitManaging() },
+                            icon = { Icon(Icons.Filled.Done, contentDescription = null) },
+                            label = "完成",
+                        )
+                    }
+                },
             ) {
                 ButtonGroup(
                     overflowIndicator = { menuState ->
@@ -179,6 +209,23 @@ fun PlaylistDetailScreen(
                         onClick = { if (selected.isNotEmpty()) pendingRemove = selected },
                         label = if (selected.isEmpty()) "移出影片" else "移出 ${selected.size} 部",
                         enabled = selected.isNotEmpty() && removing.isEmpty(),
+                    )
+                }
+            }
+        } else if (content != null) {
+            // 未进入整理模式：右下角只有一个「整理」开关（morph 成 ×）。
+            // WARNING: align 必须挂在外面这层 Box 上——直接挂在 ToggleFloatingActionButton 上时
+            // 它的内部布局会吞掉 parent data，结果被摆到左上角（实测踩过）。
+            Box(Modifier.align(Alignment.BottomEnd).padding(20.dp)) {
+                ToggleFloatingActionButton(
+                    checked = false,
+                    onCheckedChange = { if (it) enterManaging() },
+                    containerColor = { fabContainer },
+                ) {
+                    Icon(
+                        Icons.Filled.Edit,
+                        contentDescription = "整理",
+                        tint = onFabContainer,
                     )
                 }
             }
