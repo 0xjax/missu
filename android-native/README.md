@@ -173,19 +173,18 @@ $sm = "$sdk\cmdline-tools\latest\bin\sdkmanager.bat"
 
 **5. 验证**：`cd android-native; .\build.ps1 install` → `BUILD SUCCESSFUL` + App 装到手机。
 
-> WARNING: **本机只能用 cmdline-tools 19.0，23.0 装不了**——原因不在杀毒软件，而在 **Windows 11 的 Smart App Control**：
+> WARNING: **本机只能用 cmdline-tools 19.0；新版 Android CLI 在 SAC 强制下跑不了**。实测根因：
 >
-> `HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy` 的 `VerifiedAndReputablePolicyState = 1` 表示它处于**强制模式**，
-> 会拦掉所有没有 Microsoft 信誉背书的新 exe。23.0 把 `sdkmanager` 改成转调原生 `android.exe`，该 exe 虽然由 **Google LLC 有效签名**，
-> 依然被拦，报错是 **Windows 的**「应用程序控制策略阻止了文件」（形如 `Unable to load native library: ...`）。
+> 1. 23.0 的 `sdkmanager` 已废弃，实际入口是 `android.exe`，而它只是**引导器**：运行时会下载一个 bundle
+>    （约 174 MB 的 `main.jar` + **自带的 jre**）到 `$ANDROID_USER_HOME\cli\bundles\<hash>`，再启动那个 jre。
+> 2. 那个自带 jre 的 `jvm.dll` **没有 Authenticode 签名**（`NotSigned`），Windows 11 Smart App Control
+>    （`VerifiedAndReputablePolicyState = 1`）拒绝加载未签名代码 → 报「应用程序控制策略阻止了文件」。
+> 3. 对照：19.0 用**系统的** `jvm.dll`（Temurin，签名者 Eclipse Foundation，状态 Valid），SAC 放行，所以 19.0 能跑。
 >
-> 常见误判：以为要放行杀毒软件。**在卡巴斯基里加受信任应用程序/排除项对这条完全无效**（实测：受信任列表里能看到 `android.exe` 已启用，照样被拦）。
+> 因此这不是 Google 与 Windows 不兼容，而是 SAC 拦未签名二进制；`Unblock-File` 无效（SAC 看签名，不看 MOTW），
+> 卡巴斯基的受信任/排除项也无效（不是它在拦）。**不关 SAC 就没有正路**——除非把 bundle 里那个未签名 jre 换掉（见下，未验证）。
 >
-> 本机的实际情况：Windows 安全中心里「评估 / 关闭」两个选项**都是灰的**——SAC 处于「打开」后 UI 不允许再切回，
-> 想改只能用注册表 `HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy\VerifiedAndReputablePolicyState = 0` 并重启（会削弱系统防护，
-> 为一个装包工具不值得）。**所以本机接受现实：用 19.0。**
-> 因此本机保持 **19.0**：纯 Java，用 `java.exe` 跑，不受 SAC 影响。它的局限只是看不懂 API 37 的 v4 XML 元数据
-> （列全量包时会警告），但**列已装、装卸指定版本的包都实测可用**：
+> 本机决定：**留在 19.0**。它的能力对本项目足够：
 
 ```powershell
 $env:JAVA_HOME = 'D:\Android\jdk-21'
@@ -194,7 +193,11 @@ $sm = 'D:\Android\Sdk\cmdline-tools\latest\bin\sdkmanager.bat'
 & $sm --sdk_root='D:\Android\Sdk' --uninstall "build-tools;37.0.0"
 ```
 
-> 哪天真的需要 23.0（例如要装只有新 XML 才认识的包），前提是先关掉 Smart App Control —— 那是个**独立决定**，不要顺手做。
+> 唯一缺陷：列「全量可用包」时看不懂 API 37 的 v4 XML（会警告），装/卸**指定版本**不受影响。
+> 另外 AGP 在构建时会用**签名 JDK** 自动补装缺失的 SDK 包（实测自动装过 build-tools 36），所以日常根本不需要手动跑 sdkmanager。
+>
+> 真要用新版 CLI 的三条路（都不推荐）：① 关 Smart App Control（注册表 + 重启，削弱系统防护）；② 用 WSL2/Docker 里的 Linux 版
+> cmdline-tools（本机未装 WSL）；③ 把 bundle 里的未签名 jre 换成签名 JDK（未验证，且每次 CLI 更新都要重做）。
 
 **本机现状**：`D:\Android\jdk-21`（Temurin 21.0.13）已装好并被 `build.ps1` 自动选中；AS 已卸载（回收 3.3 GB）；`assembleDebug` / `installDebug` / `:core:test` 在无 AS 的状态下全部实测通过。
 
