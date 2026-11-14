@@ -42,11 +42,12 @@ import app.missu.data.model.VideoSummary
 import app.missu.ui.components.VideoGridCard
 
 /**
- * 片单详情：标题 + 影片网格，页头「管理」打开后才在卡片上显示「移除」。
+ * 片单详情：标题 + 影片网格，页头「整理」打开后才在卡片上显示「移除」。
  *
  * NOTE: 移除入口不常驻——常驻的角标会压住封面，也容易误触。按 DESIGN.md 的做法做成
- * 「管理」/「完成」二态 + 二次确认对话框（站点自己也会 confirm），不做滑动删除、不藏进长按。
+ * 「整理」/「完成」二态 + 二次确认对话框（站点自己也会 confirm），不做滑动删除、不藏进长按。
  * NOTE: 管理模式里点卡片不再进详情，避免想移除却跳走了。
+ * NOTE: 入口叫「整理」而不是「管理」——页头右边是「编辑」（改片单名/删片单），两个词要拉开距离。
  */
 @Composable
 fun PlaylistDetailScreen(
@@ -84,7 +85,7 @@ fun PlaylistDetailScreen(
             Spacer(Modifier.weight(1f))
             if (content != null) {
                 TextButton(onClick = { managing = !managing }) {
-                    Text(if (managing) "完成" else "管理")
+                    Text(if (managing) "完成" else "整理")
                 }
             }
             TextButton(onClick = onEdit) { Text("编辑") }
