@@ -70,12 +70,12 @@
 
 | 场景 | 控件 | 规格 |
 |---|---|---|
-| 底部导航 | `expo-router/js-tabs` 的 `Tabs` | 纯 RN 栏，4 项固定（首页/列表/发现/我的），配色只来自 theme |
+| 底部导航 | `expo-router/js-tabs` 的 `Tabs` | 纯 RN 栏，**3 项固定（首页/发现/我的）**，配色只来自 theme |
 | 页头 | `TabHeader`（自绘） | 每个 tab 页自己画大标题，不用原生 Stack header |
 | 首页板块 | 首页 HTML 板块 + 顶部「今日热门」 | 板块来自首页 HTML；「今日热门」额外请求 `/today-hot` 列表页置顶，条数与其他板块一致不裁剪，失败时整块不显示，不影响其他板块 |
 | 个人中心 | `SettingsRow` | 56dp 行、透明容器、右侧 chevron；二级页走根 Stack |
 | 频道 / 周期 / 筛选 / 排序 | `ChoiceMenuBar` + `Menu` | 40dp 触发器 + 自绘浮层，选中项只改文字颜色 |
-| 一级分类（发现页） | `DiscoverTabs` + `Pill` | 单行等宽胶囊（热门/分类/女优/厂商/排行），选中只填充 accent |
+| 一级分类（发现页） | `TabRow` | 三项等宽（女优/类型/厂商）；顶部是搜索入口 + 最近搜索胶囊——**搜索不单独占页签**，它是发现页的一部分，结果页仍是独立路由 |
 | 厂商频道组 | `CollapsibleGroup` + `SettingsRow` | 默认折叠三组（素人/无码影片/亚洲 AV），路径见 `src/constants/channel-groups.ts` |
 | 目录栅格 | `FlatList` + `DirectoryCard` | 女优 / 排行 3 列（低分辨率竖图），分类 / 厂商 2 列（文字块） |
 | 视频卡封面角标 | `VideoCard` | 左下变体标签（中文字幕 / 无码影片），右下时长；标签取自卡片 HTML，不新增请求 |

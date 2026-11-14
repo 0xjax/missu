@@ -17,14 +17,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -58,6 +61,9 @@ fun DiscoverScreen(
     onSortChange: (String) -> Unit,
     onFilterChange: (key: String, value: String?) -> Unit,
     onResetFilters: () -> Unit,
+    recentSearches: List<String> = emptyList(),
+    onSearchEntry: () -> Unit = {},
+    onRecentSearch: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var tabIndex by rememberSaveable { mutableStateOf(0) }
@@ -66,6 +72,36 @@ fun DiscoverScreen(
     val tab = tabs[tabIndex]
 
     Column(modifier.fillMaxSize()) {
+        // 搜索入口：发现页吸收搜索之后，这里就是搜索的唯一入口（结果页仍是独立路由）。
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, top = 8.dp)
+                .background(Color(0xFF212225), RoundedCornerShape(10.dp))
+                .clickable(onClick = onSearchEntry)
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+        ) {
+            Text(
+                text = "搜索番号、女优、关键词",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        if (recentSearches.isNotEmpty()) {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(recentSearches) { keyword ->
+                    SuggestionChip(
+                        onClick = { onRecentSearch(keyword) },
+                        label = { Text(keyword) },
+                    )
+                }
+            }
+        }
+
         TabRow(selectedTabIndex = tabIndex) {
             tabs.forEachIndexed { index, item ->
                 Tab(

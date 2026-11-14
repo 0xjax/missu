@@ -24,6 +24,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,9 +46,17 @@ fun SearchScreen(
     onBack: () -> Unit,
     recent: List<String> = emptyList(),
     onClearHistory: () -> Unit = {},
+    initialKeyword: String = "",
     modifier: Modifier = Modifier,
 ) {
     var keywordValue by rememberSaveable { mutableStateOf("") }
+    // 从发现页点最近搜索进来时直接搜（只跑一次）。
+    LaunchedEffect(initialKeyword) {
+        if (initialKeyword.isNotBlank()) {
+            keywordValue = initialKeyword
+            onSearch(initialKeyword)
+        }
+    }
     val keyboard = LocalSoftwareKeyboardController.current
     val submit = {
         keyboard?.hide()
