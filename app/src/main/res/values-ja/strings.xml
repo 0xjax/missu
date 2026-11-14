@@ -47,6 +47,18 @@
     <!-- 一覧 -->
     <string name="list_empty_title">まだ何もありません</string>
     <string name="list_default_title">一覧</string>
+    <string name="list_sort_default">既定</string>
+    <string name="list_sort_released_at">発売日</string>
+    <string name="list_sort_published_at">公開日</string>
+    <string name="list_sort_saved">お気に入り数</string>
+    <string name="list_sort_today_views">今日の再生</string>
+    <string name="list_sort_weekly_views">今週の再生</string>
+    <string name="list_sort_monthly_views">今月の再生</string>
+    <string name="list_sort_views">総再生</string>
+    <string name="list_filter_all">すべて</string>
+    <string name="list_filter_individual">単体作品</string>
+    <string name="list_filter_multiple">複数作品</string>
+    <string name="list_filter_chinese_subtitle">中文字幕</string>
 
     <!-- ホーム -->
     <string name="home_empty_title">ホームにコンテンツがありません</string>

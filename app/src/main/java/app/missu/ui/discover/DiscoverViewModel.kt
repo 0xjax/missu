@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.missu.data.api.ActressFilterOptions
 import app.missu.data.api.MissavApi
+import app.missu.data.api.VideoListOptions
 import app.missu.R
 import app.missu.data.model.DirectoryItem
 import app.missu.data.model.DirectoryList
@@ -39,14 +40,21 @@ enum class DiscoverTab(val kind: String, @param:StringRes val labelRes: Int) {
 /**
  * 热门的三个周期。
  *
- * NOTE: 站点把「今日 / 本周 / 本月热门」做成**同一面列表的三个路径**（`/today-hot` 等，
- * 不是 `?period=` 参数）——legacy 的 `getVideos(path)` 也是这么传的。所以换周期 = 换数据源，
- * 页面结构完全不变。
+ * NOTE: 站点把「今日 / 本周 / 本月热门」做成了三个 path，但那三页就是**同一面列表**换了
+ * `?sort=`：实测 `/today-hot?sort=weekly_views` 与 `/weekly-hot`、`?sort=monthly_views` 与
+ * `/monthly-hot`，第 1、2 页的条目 id 完全一致。所以这里只留一个 path + 三个排序取值，
+ * 三个入口不再各建一条数据源。
  */
-enum class HotPeriod(val path: String, @param:StringRes val labelRes: Int) {
-    TODAY("/today-hot", R.string.hot_today),
-    WEEKLY("/weekly-hot", R.string.hot_weekly),
-    MONTHLY("/monthly-hot", R.string.hot_monthly),
+enum class HotPeriod(@param:StringRes val labelRes: Int, val sort: VideoListOptions.Sort) {
+    TODAY(R.string.hot_today, VideoListOptions.Sort.TODAY_VIEWS),
+    WEEKLY(R.string.hot_weekly, VideoListOptions.Sort.WEEKLY_VIEWS),
+    MONTHLY(R.string.hot_monthly, VideoListOptions.Sort.MONTHLY_VIEWS),
+    ;
+
+    companion object {
+        /** 三个周期共用的列表路径。 */
+        const val PATH = "/today-hot"
+    }
 }
 
 /**
@@ -74,7 +82,8 @@ internal object ChannelRules {
         "/new", "/release", "/uncensored-leak",
         "/actresses", "/actresses/ranking",
         "/genres", DiscoverPins.vrGenre.path, "/makers",
-        HotPeriod.TODAY.path, HotPeriod.WEEKLY.path, HotPeriod.MONTHLY.path,
+        // 三个热门 path 都指向同一面列表（我们用一个页签 + 排序覆盖），所以全剔掉。
+        "/today-hot", "/weekly-hot", "/monthly-hot",
     )
 
     /** 属于「我的」或非列表页：它们不是频道（按路径判，不看标题，换语言也不会失效）。 */

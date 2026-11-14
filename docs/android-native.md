@@ -487,7 +487,8 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
 - **一个设置项同时决定界面与内容语言**（`AppLanguage` + `uiLocale()` / `contentLanguage()`）。别拆成两个开关：详情页的信息行标签是站点按内容语言返回的，拆开会得到「中文界面 + 英文标签」的混排。选项只列**有 UI 翻译**的语言。
 - **`:core` 不放界面文案**（纯 JVM 没有资源系统）：筛选项的**值**留在 `ActressFilterOptions`，文案在 app 侧按 `section.key` 组合（`optionLabel()`）；异常消息只当类型用，界面文案由 `UiMessage` 映射。
 - **ViewModel 不存拼好的文案**：状态里放 `UiMessage`（类型 + 参数），显示时 `@Composable UiMessage.text()` 取字符串。否则切换语言后，屏幕上留着的还是旧语言的字符串。
-- **切换语言不重建 Activity**：`MissuRoot` 用 `createConfigurationContext` 生成带目标 locale 的 Context，再用 `CompositionLocalProvider(LocalContext / LocalConfiguration)` 罩住整棵树——改设置即重组生效，`stringResource` 读的就是这个 Context。
+- **切换语言不重建 Activity**：`MissuRoot` 用 `createConfigurationContext` 生成带目标 locale 的 Context，再用 `CompositionLocalProvider(LocalContext / LocalConfiguration / LocalResources)` 罩住整棵树——改设置即重组生效，`stringResource` 读的就是这个 Context。
+- **`LocalResources` 必须一起覆写，否则弹层会掉回系统语言**：`stringResource` 读的是 compose-ui 的 `LocalResources`（一个由 `LocalContext`/`LocalConfiguration` 计算出来的 local）。`DropdownMenu` / `ModalBottomSheet` 这些**弹层**会以窗口自己的 context 重新起一段组合，只覆写 `LocalContext` 时弹层里的文案用的是系统语言（实测：界面简体中文 + 系统英文 = 弹层全英文）。把 `LocalResources provides localizedContext.resources` 一起给出去就好了。
 - 需要按内容语言重载的数据，用**内容语言**做 key：`LaunchedEffect(contentLanguage) { homeViewModel.load() }`。
 - **不要用 PowerShell 的 `.Replace()` + `Set-Content` 改源码**：本仓库已经踩过两次，结果是文件里**字母被换成别的字母**（`import`→`impore`、`Experimental`→`rxperimental`、`compose`→`coepose`），编译器报一堆莫名其妙的"未解析引用"。改代码只用编辑工具；批量替换脚本一旦跑过，必须用 `git diff` 逐行确认。PS 5.1 的 `Set-Content -Encoding UTF8` 还会加 BOM。
 
