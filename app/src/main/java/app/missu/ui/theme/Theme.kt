@@ -3,6 +3,7 @@ package app.missu.ui.theme
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialExpressiveTheme
@@ -14,6 +15,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
@@ -132,6 +134,26 @@ private val MissuDarkColorsPureBlack = MissuDarkColors.copy(
     surfaceContainerHighest = Color(0xFF342F30),
 )
 
+/** 页面底色。窗口底色必须跟着它走，见 [WindowBackground]。 */
+fun themeBackgroundColor(darkTheme: Boolean): Color =
+    if (darkTheme) MissuDarkColors.background else MissuLightColors.background
+
+/**
+ * 把窗口底色同步成当前主题的页面底色。
+ *
+ * NOTE: `res/values/themes.xml` 里把 `windowBackground` 写死成 `#000000`（当时只有深色）。
+ * 一旦切到浅色（页面底 `#FEFBFC`），**任何透明帧都会露出纯黑**：页面转场的淡入淡出、切换瞬间的
+ * 首帧组合、甚至回到前台的重绘。实测把转场拉长到 700ms 抓帧，画面平均亮度从 232 掉到 183，
+ * 就是「闪一下、亮度不一致」的来源。窗口底色与页面底色一致后，透明帧看到的仍是同一个颜色。
+ */
+@Composable
+private fun WindowBackground(color: Color) {
+    val view = LocalView.current
+    if (view.isInEditMode) return
+    val window = view.context.findActivity()?.window ?: return
+    SideEffect { window.setBackgroundDrawable(ColorDrawable(color.toArgb())) }
+}
+
 /**
  * 全局主题。
  *
@@ -159,6 +181,7 @@ fun MissuTheme(
     }
 
     SystemBarAppearance(darkTheme)
+    WindowBackground(colorScheme.background)
 
     MaterialExpressiveTheme(
         colorScheme = colorScheme,
