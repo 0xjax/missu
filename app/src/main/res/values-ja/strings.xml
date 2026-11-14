@@ -163,6 +163,7 @@
     <!-- 女優の並び替えと絞り込み（値は :core、文言はここ） -->
     <string name="sort_videos">作品数</string>
     <string name="sort_debut">デビュー</string>
+    <string name="sort_ranking">今月のランキング</string>
     <string name="filter_height">身長</string>
     <string name="filter_cup">カップ</string>
     <string name="filter_age">年齢</string>

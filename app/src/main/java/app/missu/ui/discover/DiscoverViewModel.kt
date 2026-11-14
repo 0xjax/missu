@@ -3,9 +3,11 @@ package app.missu.ui.discover
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.missu.data.api.ActressFilterOptions
 import app.missu.data.api.MissavApi
 import app.missu.R
 import app.missu.data.model.DirectoryItem
+import app.missu.data.model.DirectoryList
 import app.missu.ui.common.UiMessage
 import app.missu.ui.common.toUiMessage
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,17 +17,33 @@ import kotlinx.coroutines.launch
 
 /**
  * 发现页的页签。`kind` 只对**目录**有意义（它同时是路径段与解析时用来筛链接的关键词）；
- * 「热门」不是目录，它只是三个列表页入口（见 `DiscoverScreen` 的 `HotPeriod`），所以不取数。
+ * 「热门」不是目录（它是一面视频列表，数据由 `VideoListViewModel` 按周期取），所以不取数。
+ *
+ * NOTE: 顺序就是页签顺序：**热门在第一位**。三个目录都要求用户先有一个名字（女优 / 题材 / 厂牌）
+ * 才来点，只有热门不要求任何意图——它是这个页面唯一能当入口的页签。
  */
 enum class DiscoverTab(val kind: String, @param:StringRes val labelRes: Int) {
+    HOT("hot", R.string.discover_section_hot),
     ACTRESSES("actresses", R.string.discover_section_actresses),
     GENRES("genres", R.string.discover_section_genres),
     MAKERS("makers", R.string.discover_section_makers),
-    HOT("hot", R.string.discover_section_hot),
     ;
 
-    /** 需要向后端取数的页签。「热门」的条目是本地常量，不占一次请求。 */
+    /** 需要向后端取数的页签。「热门」由自己的列表状态负责，不走目录那套。 */
     val isDirectory: Boolean get() = this != HOT
+}
+
+/**
+ * 热门的三个周期。
+ *
+ * NOTE: 站点把「今日 / 本周 / 本月热门」做成**同一面列表的三个路径**（`/today-hot` 等，
+ * 不是 `?period=` 参数）——legacy 的 `getVideos(path)` 也是这么传的。所以换周期 = 换数据源，
+ * 页面结构完全不变。
+ */
+enum class HotPeriod(val path: String, @param:StringRes val labelRes: Int) {
+    TODAY("/today-hot", R.string.hot_today),
+    WEEKLY("/weekly-hot", R.string.hot_weekly),
+    MONTHLY("/monthly-hot", R.string.hot_monthly),
 }
 
 sealed interface DirectoryUiState {
@@ -39,14 +57,14 @@ sealed interface DirectoryUiState {
     ) : DirectoryUiState
 }
 
-/** 两个目录各自独立加载，用一个 Map 存状态，避免写两份几乎一样的代码。 */
+/** 三个目录各自独立加载，用一个 Map 存状态，避免写三份几乎一样的代码。 */
 class DiscoverViewModel(private val api: MissavApi) : ViewModel() {
 
     private val _states = MutableStateFlow<Map<String, DirectoryUiState>>(emptyMap())
     val states: StateFlow<Map<String, DirectoryUiState>> = _states.asStateFlow()
 
-    /** 女优排序：`videos`（影片数，默认）/ `debut`（出道年）。 */
-    private val _sort = MutableStateFlow(ACTRESS_SORT_VIDEOS)
+    /** 女优排序：`videos`（影片数，默认）/ `debut`（出道年）/ `ranking`（本月排行）。 */
+    private val _sort = MutableStateFlow(ActressFilterOptions.SORT_VIDEOS)
     val sort: StateFlow<String> = _sort.asStateFlow()
 
     /** 女优筛选：`height / cup / age / debut` → 值。空 Map 表示不筛。 */
@@ -57,6 +75,23 @@ class DiscoverViewModel(private val api: MissavApi) : ViewModel() {
     private val _refreshing = MutableStateFlow<Set<String>>(emptySet())
     val refreshing: StateFlow<Set<String>> = _refreshing.asStateFlow()
 
+    /**
+     * 取一页目录。三个调用点共用，避免把「女优有两条取数路径」这件事抄三遍。
+     *
+     * NOTE: 女优的「本月排行」不是 `?sort=` 参数——站点把它做成独立页面 `/actresses/ranking`，
+     * 所以这里要分流。排行页不吃套筛选，所以那一档不带 filters。
+     */
+    private suspend fun fetch(kind: String, page: Int): DirectoryList =
+        if (kind == DiscoverTab.ACTRESSES.kind) {
+            if (_sort.value == ActressFilterOptions.SORT_RANKING) {
+                api.getActressRanking(page)
+            } else {
+                api.getActresses(page = page, sort = _sort.value, filters = _filters.value)
+            }
+        } else {
+            api.getDirectory(kind, page)
+        }
+
     fun load(kind: String) {
         if (_states.value[kind] is DirectoryUiState.Loading) return
         update(kind, DirectoryUiState.Loading)
@@ -64,11 +99,7 @@ class DiscoverViewModel(private val api: MissavApi) : ViewModel() {
             update(
                 kind,
                 try {
-                    val page = if (kind == DiscoverTab.ACTRESSES.kind) {
-                        api.getActresses(sort = _sort.value, filters = _filters.value)
-                    } else {
-                        api.getDirectory(kind)
-                    }
+                    val page = fetch(kind, page = 1)
                     if (page.items.isEmpty()) {
                         DirectoryUiState.Empty
                     } else {
@@ -90,11 +121,7 @@ class DiscoverViewModel(private val api: MissavApi) : ViewModel() {
         _refreshing.value = _refreshing.value + kind
         viewModelScope.launch {
             try {
-                val page = if (kind == DiscoverTab.ACTRESSES.kind) {
-                    api.getActresses(sort = _sort.value, filters = _filters.value)
-                } else {
-                    api.getDirectory(kind)
-                }
+                val page = fetch(kind, page = 1)
                 update(
                     kind,
                     if (page.items.isEmpty()) {
@@ -123,11 +150,7 @@ class DiscoverViewModel(private val api: MissavApi) : ViewModel() {
             update(
                 kind,
                 try {
-                    val page = if (kind == DiscoverTab.ACTRESSES.kind) {
-                        api.getActresses(page = next, sort = _sort.value, filters = _filters.value)
-                    } else {
-                        api.getDirectory(kind, next)
-                    }
+                    val page = fetch(kind, page = next)
                     current.copy(
                         // CRITICAL: 必须按 `path` 去重再拼。站点的分页会重叠（下一页开头又出现上一页的条目），
                     // 而列表的 key 就是 path——重复 key 会让 LazyVerticalGrid 直接抛
@@ -171,9 +194,5 @@ class DiscoverViewModel(private val api: MissavApi) : ViewModel() {
 
     private fun update(kind: String, state: DirectoryUiState) {
         _states.value = _states.value + (kind to state)
-    }
-
-    private companion object {
-        const val ACTRESS_SORT_VIDEOS = "videos"
     }
 }

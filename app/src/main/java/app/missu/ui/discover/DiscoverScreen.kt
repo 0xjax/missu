@@ -2,7 +2,6 @@
 
 package app.missu.ui.discover
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,12 +25,10 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.toShape
@@ -68,6 +65,8 @@ import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadMoreFooter
 import app.missu.ui.components.LoadingHint
 import app.missu.ui.common.text
+import app.missu.ui.list.VideoListBody
+import app.missu.ui.list.VideoListUiState
 import coil3.compose.AsyncImage
 
 /**
@@ -83,10 +82,16 @@ fun DiscoverScreen(
     sort: String,
     filters: Map<String, String>,
     refreshingKinds: Set<String>,
+    hotPeriod: HotPeriod,
+    hotState: VideoListUiState,
     onLoad: (String) -> Unit,
     onLoadMore: (String) -> Unit,
     onRefresh: (String) -> Unit,
+    onHotPeriodChange: (HotPeriod) -> Unit,
+    onHotLoadMore: () -> Unit,
+    onHotRetry: () -> Unit,
     onOpen: (path: String, title: String) -> Unit,
+    onOpenVideo: (id: String, thumbnail: String?) -> Unit,
     onSortChange: (String) -> Unit,
     onFilterChange: (key: String, value: String?) -> Unit,
     onResetFilters: () -> Unit,
@@ -145,29 +150,30 @@ fun DiscoverScreen(
                     }
                 }
 
-                if (filters.isNotEmpty()) {
-                    TextButton(onClick = onResetFilters) { Text(stringResource(R.string.discover_clear)) }
+                // NOTE: 「本月排行」是站点另一张页面，不吃 height/cup/age/debut 这些筛选参数；
+                // 留着「筛选」按钮的话，点开会得到一组点完没有任何变化的胶囊。所以那一档藏起来。
+                if (sort != ActressFilterOptions.SORT_RANKING) {
+                    if (filters.isNotEmpty()) {
+                        TextButton(onClick = onResetFilters) { Text(stringResource(R.string.discover_clear)) }
+                    }
+                    FilterChip(
+                        selected = filters.isNotEmpty(),
+                        onClick = { filterSheetOpen = true },
+                        label = { Text(if (filters.isEmpty()) stringResource(R.string.discover_filter) else stringResource(R.string.discover_filter_count, filters.size)) },
+                    )
                 }
-                FilterChip(
-                    selected = filters.isNotEmpty(),
-                    onClick = { filterSheetOpen = true },
-                    label = { Text(if (filters.isEmpty()) stringResource(R.string.discover_filter) else stringResource(R.string.discover_filter_count, filters.size)) },
-                )
             }
         }
 
         if (tab == DiscoverTab.HOT) {
-            // NOTE: 「热门」不是目录，是三个周期列表的入口——它们都落在现成的 `/list` 路由上，
-            // 所以这里没有取数、没有状态机，改周期就是换一个 path。
-            Column(
-                modifier = Modifier.fillMaxSize().padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                HotPeriod.entries.forEach { period ->
-                    val label = stringResource(period.labelRes)
-                    HotEntryRow(label = label, onClick = { onOpen(period.path, label) })
-                }
-            }
+            HotContent(
+                period = hotPeriod,
+                state = hotState,
+                onPeriodChange = onHotPeriodChange,
+                onRetry = onHotRetry,
+                onLoadMore = onHotLoadMore,
+                onOpen = onOpenVideo,
+            )
         } else when (val state = states[tab.kind]) {
             null, DirectoryUiState.Loading -> LoadingHint()
 
@@ -226,38 +232,51 @@ fun DiscoverScreen(
     }
 }
 
-/** 热门三个周期：站点首页导航直出的三个普通列表页（证据：fixture `home-cn.html`）。 */
-private enum class HotPeriod(val path: String, @param:StringRes val labelRes: Int) {
-    TODAY("/today-hot", R.string.hot_today),
-    WEEKLY("/weekly-hot", R.string.hot_weekly),
-    MONTHLY("/monthly-hot", R.string.hot_monthly),
-}
-
 /**
- * 「热门」页签里的一行：周期名 + 箭头。
+ * 热门：一面视频列表 + 三档周期。
  *
- * NOTE: 用 `Surface(onClick)` 而不是自己拼 `Row + clickable`——容器色、圆角、涟漪与
- * 「整行可点」的无障碍语义都由它给。
+ * NOTE: 三档是同一面内容的三个 path（站点把今日 / 本周 / 本月做成三个普通列表页），
+ * 所以换周期只是换数据源，页面结构不变——用的还是女优排序那一套连通 `ToggleButton` 组，
+ * 两个页签因此长得一样：**页签选实体，页签内部的组选口径**。
  */
 @Composable
-private fun HotEntryRow(label: String, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
+private fun HotContent(
+    period: HotPeriod,
+    state: VideoListUiState,
+    onPeriodChange: (HotPeriod) -> Unit,
+    onRetry: () -> Unit,
+    onLoadMore: () -> Unit,
+    onOpen: (id: String, thumbnail: String?) -> Unit,
+) {
+    Column(Modifier.fillMaxSize()) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
         ) {
-            Text(text = label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            val lastIndex = HotPeriod.entries.lastIndex
+            HotPeriod.entries.forEachIndexed { index, option ->
+                ToggleButton(
+                    checked = option == period,
+                    onCheckedChange = { onPeriodChange(option) },
+                    shapes = when {
+                        index == 0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                        index == lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                        else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                    },
+                    modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
+                ) {
+                    Text(stringResource(option.labelRes), maxLines = 1, softWrap = false)
+                }
+            }
         }
+
+        VideoListBody(
+            state = state,
+            onRetry = onRetry,
+            onLoadMore = onLoadMore,
+            onOpen = onOpen,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 
@@ -439,6 +458,7 @@ private fun DirectoryTextCell(item: DirectoryItem, onClick: () -> Unit) {
 @Composable
 private fun sortLabel(value: String): String = when (value) {
     "debut" -> stringResource(R.string.sort_debut)
+    "ranking" -> stringResource(R.string.sort_ranking)
     else -> stringResource(R.string.sort_videos)
 }
 

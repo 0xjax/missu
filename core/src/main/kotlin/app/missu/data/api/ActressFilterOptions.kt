@@ -16,9 +16,21 @@ import java.time.Year
  */
 object ActressFilterOptions {
 
+    /** `?sort=` 的两档：站点现行页面只提供这两种排序链接。 */
+    const val SORT_VIDEOS = "videos"
+    const val SORT_DEBUT = "debut"
+
+    /**
+     * 女优月榜。**不是** `?sort=` 的取值：站点把它做成独立页面 `/actresses/ranking`，
+     * 所以这里只当「第三档口径」用，真正的请求由 `DiscoverViewModel` 分流
+     * （见 `MissavApi.getActressRanking`）。
+     */
+    const val SORT_RANKING = "ranking"
+
     val sorts: List<FilterOption> = listOf(
-        FilterOption("videos"),
-        FilterOption("debut"),
+        FilterOption(SORT_VIDEOS),
+        FilterOption(SORT_DEBUT),
+        FilterOption(SORT_RANKING),
     )
 
     private val heights = listOf(

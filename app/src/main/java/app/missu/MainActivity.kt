@@ -37,6 +37,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -61,6 +62,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import app.missu.ui.discover.DiscoverScreen
 import app.missu.ui.discover.DiscoverViewModel
+import app.missu.ui.discover.HotPeriod
 import app.missu.data.api.MissavApi
 import app.missu.data.api.SourceConfig
 import app.missu.data.api.createMissavApi
@@ -80,6 +82,7 @@ import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import app.missu.ui.history.HistoryViewModel
 import app.missu.ui.list.VideoListScreen
+import app.missu.ui.list.VideoListUiState
 import app.missu.ui.list.VideoListViewModel
 import app.missu.ui.settings.SettingsScreen
 import app.missu.ui.components.LocalNavAnimatedVisibilityScope
@@ -434,17 +437,36 @@ private fun MissuApp(
                 val filters by viewModel.filters.collectAsState()
                 val refreshingKinds by viewModel.refreshing.collectAsState()
 
+                // NOTE: 热门三档是同一面内容的三个 path，所以按 path 建 VM：换档 = 换数据源，
+                // 切回来那份也已经缓存着（ViewModelStore 里各存一份，不会重新转圈）。
+                var hotPeriod by rememberSaveable { mutableStateOf(HotPeriod.TODAY) }
+                val hotViewModel: VideoListViewModel = viewModel(
+                    key = "hot-${hotPeriod.path}",
+                    factory = factory { VideoListViewModel(api, hotPeriod.path) },
+                )
+                val hotState by hotViewModel.state.collectAsState()
+                LaunchedEffect(hotPeriod) {
+                    // 只有还没取过的（初始就是 Loading）才发请求，切回已加载过的档位不重拉。
+                    if (hotState is VideoListUiState.Loading) hotViewModel.load()
+                }
+
                 DiscoverScreen(
                     states = states,
                     sort = sort,
                     filters = filters,
                     refreshingKinds = refreshingKinds,
+                    hotPeriod = hotPeriod,
+                    hotState = hotState,
                     onLoad = viewModel::load,
                     onLoadMore = viewModel::loadMore,
                     onRefresh = viewModel::refresh,
+                    onHotPeriodChange = { hotPeriod = it },
+                    onHotLoadMore = hotViewModel::loadMore,
+                    onHotRetry = hotViewModel::load,
                     onOpen = { path, title ->
                         navController.navigate("list?p=${Uri.encode(path)}&t=${Uri.encode(title)}")
                     },
+                    onOpenVideo = { id, thumbnail -> openDetail(id, thumbnail) },
                     onSortChange = viewModel::setSort,
                     onFilterChange = viewModel::setFilter,
                     onResetFilters = viewModel::resetFilters,

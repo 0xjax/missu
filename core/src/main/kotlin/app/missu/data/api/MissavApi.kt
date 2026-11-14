@@ -289,6 +289,20 @@ class MissavApi(
     }
 
     /**
+     * 女优月榜：站点把它做成**独立页面** `/actresses/ranking`（现行标题「女优排行 NOV 2026」），
+     * 不接受 `sort` 参数——所以它不是一个 query 取值，而是另一条路径。
+     *
+     * 条目结构与女优目录相同，复用 [DirectoryParser]（legacy 也是拿同一个目录解析器读它的，
+     * 只是在解析目录页时把 `/ranking` 链接排除了，见 `legacy/expo/src/api/parse.ts`）。
+     *
+     * NOTE: 这个榜单没有 JSON 接口，只能解析 HTML——与 `/actresses` / `/genres` / `/makers` 同一批页面。
+     */
+    suspend fun getActressRanking(page: Int = 1): DirectoryList = withChallengeRetry {
+        val path = if (page > 1) "/actresses/ranking?page=$page" else "/actresses/ranking"
+        DirectoryParser.parse(client.fetchHtml(path), "actresses", page)
+    }
+
+    /**
      * 女优目录（带筛选与排序）。参数名与 legacy `getActresses` 的请求构造一致：
      * `?sort=videos|debut&height=&cup=&age=&debut=&page=N`。
      * NOTE: 空值不发；但 `0-20` 这类要原样发，不能当假值丢掉。
