@@ -1,0 +1,134 @@
+<!doctype html>
+<!--
+  防护层预览用的 fixture（**只进 debug 构建**：app/src/debug/assets/）。
+
+  用途：真实挑战何时出现由站点决定、造不出来，所以给一份「结构近似、配色真实」的页面，
+  用来在明暗 × 色板的组合下预览浮层实际长什么样。
+
+  - 三种状态由 hash 选择，对应现场观察到的三个阶段（没有验证条 → 转圈算 → 白条勾选）：
+      challenge-preview.html#init        只有 Ray ID 页脚，没有验证条
+      challenge-preview.html#computing   验证条位置在转圈
+      challenge-preview.html#widget      白色 Turnstile 条（勾选框）
+  - 配色**取自 Cloudflare 自己下发的 chl_page 脚本**（浅色 #313131，链接 #82b6ff；
+    深色 #000 底 / #f2f2f2 字），所以浮层那条「解包深色样式」的代码在这里会真的被执行到。
+  - `-webkit-text-size-adjust:100%` 是照 CF 抄的：缺了它 Android 会对窄视口做字体自动放大。
+
+  WARNING: 这不是真页面。结构和字号是按 2026-11-15 06:11 现场截图近似还原的，
+  所以「配色」可以据此判断，「版式是否与真页一致」不行——那要等下一次自然触发（钩子会存下真 DOM）。
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Just a moment...</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html {
+      line-height: 1.15;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+      color: #313131;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    body { display: flex; flex-direction: column; min-height: 100vh; }
+    .main-content { margin: 2.6rem auto 0; padding: 0 1.4rem; width: 100%; max-width: 60rem; }
+    .logo { display: flex; align-items: center; gap: .55rem; margin-bottom: 1.5rem; }
+    .logo-mark { width: 1.75rem; height: 1.75rem; border-radius: 50%; background: #ff2e88; position: relative; flex: none; }
+    .logo-mark::after {
+      content: ""; position: absolute; left: .64rem; top: .53rem;
+      border-left: .6rem solid #fff;
+      border-top: .36rem solid transparent;
+      border-bottom: .36rem solid transparent;
+    }
+    .logo-name { font-size: 1.75rem; font-weight: 600; letter-spacing: -.02em; }
+    h1 { font-size: 1.4rem; line-height: 1.3; margin-bottom: 1rem; font-weight: 600; }
+    p { font-size: .95rem; line-height: 1.55; max-width: 30rem; }
+    a { color: inherit; }
+    #spinner { margin-top: 1.6rem; }
+    #widget { display: none; }
+    /* 转圈：Cloudflare 的真实写法（border-color #313131 + 透明），它的深色样式**没有**跟着改，深色下几乎看不见。 */
+    .lds-ring { display: inline-block; position: relative; width: 1.875rem; height: 1.875rem; }
+    .lds-ring div {
+      position: absolute; display: block; width: 1.875rem; height: 1.875rem;
+      border: .3rem solid; border-radius: 50%;
+      border-color: #313131 rgba(0, 0, 0, 0) rgba(0, 0, 0, 0);
+      animation: lds-ring 1.2s cubic-bezier(.5, 0, .5, 1) infinite;
+    }
+    .lds-ring div:nth-child(1) { animation-delay: -.45s; }
+    .lds-ring div:nth-child(2) { animation-delay: -.3s; }
+    .lds-ring div:nth-child(3) { animation-delay: -.15s; }
+    @keyframes lds-ring { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    /* Turnstile 在真页里是跨域 iframe；这里用同尺寸白条近似——注意它自己永远是浅色，我们改不到。 */
+    .widget {
+      display: flex; align-items: center; gap: .7rem;
+      width: 18rem; max-width: 100%; height: 4rem; padding: 0 .9rem;
+      border: 1px solid #e5e5e5; border-radius: .2rem;
+      background: #fff; color: #333; font-size: .95rem;
+    }
+    .widget .box { width: 1.6rem; height: 1.6rem; border: 2px solid #444; border-radius: .15rem; flex: none; }
+    .widget .brand { margin-left: auto; text-align: right; line-height: 1.1; }
+    .widget .brand .cf { font-size: .58rem; letter-spacing: .16em; font-weight: 700; color: #222; }
+    .widget .brand .links { font-size: .58rem; margin-top: .2rem; }
+    .footer { margin-top: auto; padding: 1.2rem 0 1.4rem; text-align: center; color: #313131; display: none; }
+    .footer-divider { border: 1px solid #313131; margin: 0 0 .9rem; }
+    .footer p { font-size: .85rem; line-height: 1.5; max-width: none; margin-bottom: .2rem; }
+
+    body[data-state="init"] .footer { display: block; }
+    body[data-state="computing"] #widget { display: none; }
+    body[data-state="computing"] #spinner { display: block; }
+    body[data-state="widget"] #spinner { display: none; }
+    body[data-state="widget"] #widget { display: flex; }
+    body[data-state="init"] #spinner { display: none; }
+
+    /* ↓↓↓ 以下深色块与 Cloudflare 下发的规则同义（颜色值一字不改），会被浮层的「解包」逻辑重放 ↓↓↓ */
+    @media (prefers-color-scheme: dark) {
+      body { background-color: #000; color: #f2f2f2; }
+      body h1 { color: #f2f2f2; }
+      body a { color: #f2f2f2; color: #82b6ff; }
+      body a:link { color: #82b6ff; }
+      body .footer-divider { border: 1px solid #f2f2f2; }
+      body .footer, body .footer p { color: #b6b6b6; }
+    }
+  </style>
+</head>
+<body data-state="init">
+  <div class="main-content">
+    <div class="logo">
+      <div class="logo-mark"></div>
+      <div class="logo-name">missav.ai</div>
+    </div>
+    <h1>Performing security verification</h1>
+    <p>This website uses a security service to protect against malicious bots. This page is displayed while the website verifies you are not a bot.</p>
+
+    <div id="spinner">
+      <div class="lds-ring"><div></div><div></div><div></div><div></div></div>
+    </div>
+    <div id="widget">
+      <div class="widget">
+        <div class="box"></div>
+        <div>Verify you are human</div>
+        <div class="brand">
+          <div class="cf">CLOUDFLARE</div>
+          <div class="links"><a href="#">Privacy</a> · <a href="#">Help</a></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <hr class="footer-divider">
+    <p>Ray ID: a5a95a33193857de</p>
+    <p>Performance and Security by Cloudflare</p>
+    <p><a href="#">Privacy</a> · <a href="#">Help</a></p>
+  </div>
+
+  <script>
+    // 状态由 hash 决定（file:// 上 query 不可靠）。
+    (function () {
+      var state = (location.hash || '').replace('#', '');
+      if (['init', 'computing', 'widget'].indexOf(state) < 0) state = 'init';
+      document.body.dataset.state = state;
+    })();
+  </script>
+</body>
+</html>

@@ -28,7 +28,7 @@ internal object ChallengeDiagnostics {
     private const val KEEP_IMAGES = 12
 
     /** 用 `FLAG_DEBUGGABLE` 而不是 `BuildConfig.DEBUG`：不必为它打开 buildConfig 特性，且语义就是要的那件事。 */
-    private fun enabled(context: Context): Boolean =
+    internal fun enabled(context: Context): Boolean =
         (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
 
     private fun directory(context: Context): File? {

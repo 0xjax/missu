@@ -566,6 +566,28 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
   `challenge-*.html` 则是挑战页自己的 DOM（每个请求只存一次）。
   判读重点：静默期（`alpha=0`）里 Turnstile 是否照常跑通——若出现浮层但勾选框不响应，就是 Chromium 对不可见窗口的处理差异，
   退路是把 `1473ec1` 一条 revert 掉（退回「先显示、再快速关闭」）。
+- **预览防护层（不必等站点挑你）**：调试构建里留了一条不改数据、不发请求的预览通道——
+  ```powershell
+  adb shell am force-stop app.missu
+  adb shell am start -n app.missu/.MainActivity `
+    --es challenge_preview "file:///android_asset/challenge-preview.html#widget"
+  ```
+  hash 选状态：`#init`（只有 Ray ID 页脚）/ `#computing`（转圈）/ `#widget`（白色 Turnstile 条），
+  正对应 06:11 现场看到的三个阶段。换明暗或色板后**重跑同一条命令**即可对比。
+  - 页面是 `app/src/debug/assets/challenge-preview.html`，**只进 debug 构建**：结构按现场截图近似还原，
+    配色则照抄 CF 下发的 `chl_page` 脚本（含那段 `@media (prefers-color-scheme: dark)`），
+    所以深色主题下会真的走一遍「解包」逻辑。`-webkit-text-size-adjust:100%` 也要照抄，否则
+    Android 会对窄视口做字体自动放大，字号凭空大 1.6 倍。
+  - 预览只抬浮层：不判通过、不写 cookie、不碰 `cf_clearance`；进出用「取消」或返回键。
+  - 这个 extra 只在 debuggable 构建里生效（`MainActivity` 用 `FLAG_DEBUGGABLE` 判断），
+    预览占着浮层时真实验证**不抢槽位**（否则应用的请求会把预览顶掉，还在界面上留一句「Job was cancelled」）。
+  - **色板只影响外壳**：卡片、标题、暗底、按钮跟主题走；页面内部永远是 CF 自己的颜色（它的浅/深两套与我们无关）。
+  - 想预览**真**挑战页：把钩子存下的 `challenge-*.html` 推到 `/sdcard/Android/data/app.missu/files/`，
+    再用 `file:///sdcard/Android/data/app.missu/files/challenge-….html` 走同一条命令（debug 构建已放开 `allowFileAccess`）。
+  - WARNING: fixture 的**版式与字号是近似的**，只能据此判断配色；判断「跟真页像不像」要等下一次自然触发。
+  - 已知遗留：CF 的深色样式**没有**给转圈（`border-color:#313131`）换色，深色下那个环几乎看不见；
+    它的类名是随包变化的哈希，没有稳定选择器可打，所以没改——这一段（`#computing`）只有我们自己的
+    `等待站点放行…` 是看得清的。
 - **手动删 cookie 只用于排障，不要当测试手段**：先 `am force-stop`，再
   `run-as app.missu /system/bin/sqlite3 app_webview/Default/Cookies` 执行 `delete from cookies where name='cf_clearance';`。
   会话 cookie（`missav_session` / `remember_web_*`）不要动，否则会退出登录。
