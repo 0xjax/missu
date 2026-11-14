@@ -17,7 +17,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import app.missu.R
 
 /**
  * 页面统一顶栏（M3E：「标题 + 可选 up 图标 + 动作槽」）。
@@ -46,11 +48,11 @@ fun PageTopBar(
             if (back != null) {
                 TooltipBox(
                     positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                    tooltip = { PlainTooltip { Text("返回") } },
+                    tooltip = { PlainTooltip { Text(stringResource(R.string.common_back)) } },
                     state = rememberTooltipState(),
                 ) {
                     IconButton(onClick = back) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 }
             }

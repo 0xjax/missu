@@ -1,27 +1,29 @@
-package app.missu.ui.discover
+﻿package app.missu.ui.discover
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.missu.data.api.ChallengeException
-import app.missu.data.api.HttpStatusException
 import app.missu.data.api.MissavApi
+import app.missu.R
 import app.missu.data.model.DirectoryItem
+import app.missu.ui.common.UiMessage
+import app.missu.ui.common.toUiMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /** 发现页的两个目录。`kind` 同时是路径段与解析时用来筛链接的关键词。 */
-enum class DiscoverTab(val kind: String, val label: String) {
-    ACTRESSES("actresses", "女优"),
-    GENRES("genres", "类型"),
-    MAKERS("makers", "厂商"),
+enum class DiscoverTab(val kind: String, @param:StringRes val labelRes: Int) {
+    ACTRESSES("actresses", R.string.discover_section_actresses),
+    GENRES("genres", R.string.discover_section_genres),
+    MAKERS("makers", R.string.discover_section_makers),
 }
 
 sealed interface DirectoryUiState {
     data object Loading : DirectoryUiState
     data object Empty : DirectoryUiState
-    data class Error(val message: String) : DirectoryUiState
+    data class Error(val message: UiMessage) : DirectoryUiState
     data class Content(
         val items: List<DirectoryItem>,
         val nextPage: Int?,
@@ -65,7 +67,7 @@ class DiscoverViewModel(private val api: MissavApi) : ViewModel() {
                         DirectoryUiState.Content(page.items, page.nextPage)
                     }
                 } catch (error: Exception) {
-                    DirectoryUiState.Error(describe(error))
+                    DirectoryUiState.Error(error.toUiMessage())
                 },
             )
         }
@@ -95,7 +97,7 @@ class DiscoverViewModel(private val api: MissavApi) : ViewModel() {
                 )
             } catch (error: Exception) {
                 if (_states.value[kind] !is DirectoryUiState.Content) {
-                    update(kind, DirectoryUiState.Error(describe(error)))
+                    update(kind, DirectoryUiState.Error(error.toUiMessage()))
                 }
             } finally {
                 _refreshing.value = _refreshing.value - kind
@@ -158,13 +160,6 @@ class DiscoverViewModel(private val api: MissavApi) : ViewModel() {
 
     private fun update(kind: String, state: DirectoryUiState) {
         _states.value = _states.value + (kind to state)
-    }
-
-    private fun describe(error: Exception): String = when (error) {
-        is ChallengeException -> "站点要求人机验证，请重试"
-        is HttpStatusException -> "请求失败（HTTP ${error.status}）"
-        is java.io.IOException -> "网络连接中断，请重试"
-        else -> error.message ?: error::class.simpleName ?: "未知错误"
     }
 
     private companion object {

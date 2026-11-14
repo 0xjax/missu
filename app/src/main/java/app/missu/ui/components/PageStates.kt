@@ -29,8 +29,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import app.missu.R
 
 /**
  * 页面级三态（加载 / 空 / 错误）的统一表达。
@@ -146,7 +148,7 @@ fun ErrorHint(message: String, onRetry: () -> Unit, modifier: Modifier = Modifie
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(16.dp))
-            FilledTonalButton(onClick = onRetry) { Text("重试") }
+            FilledTonalButton(onClick = onRetry) { Text(stringResource(R.string.common_retry)) }
         }
     }
 }
@@ -166,7 +168,7 @@ fun LoadMoreFooter(loading: Boolean, onLoadMore: () -> Unit, modifier: Modifier 
         if (loading) {
             LoadingIndicator()
         } else {
-            FilledTonalButton(onClick = onLoadMore) { Text("加载更多") }
+            FilledTonalButton(onClick = onLoadMore) { Text(stringResource(R.string.common_load_more)) }
         }
     }
 }

@@ -1,12 +1,11 @@
-package app.missu.ui.saved
+﻿package app.missu.ui.saved
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.missu.data.api.ChallengeException
-import app.missu.data.api.HttpStatusException
 import app.missu.data.api.MissavApi
-import app.missu.data.api.SessionExpiredException
 import app.missu.data.model.VideoSummary
+import app.missu.ui.common.UiMessage
+import app.missu.ui.common.toUiMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,7 +14,7 @@ import kotlinx.coroutines.launch
 sealed interface SavedUiState {
     data object Loading : SavedUiState
     data object Empty : SavedUiState
-    data class Error(val message: String) : SavedUiState
+    data class Error(val message: UiMessage) : SavedUiState
     data class Content(
         val videos: List<VideoSummary>,
         val nextPage: Int?,
@@ -44,7 +43,7 @@ class SavedViewModel(private val api: MissavApi) : ViewModel() {
                     SavedUiState.Content(page.videos, page.nextPage)
                 }
             } catch (error: Exception) {
-                SavedUiState.Error(describe(error))
+                SavedUiState.Error(error.toUiMessage())
             }
         }
     }
@@ -67,13 +66,5 @@ class SavedViewModel(private val api: MissavApi) : ViewModel() {
                 current.copy(loadingMore = false)
             }
         }
-    }
-
-    private fun describe(error: Exception): String = when (error) {
-        is ChallengeException -> "站点要求人机验证，请重试"
-        is HttpStatusException -> "请求失败（HTTP ${error.status}）"
-        is SessionExpiredException -> "登录已失效，请重新登录"
-        is java.io.IOException -> "网络连接中断，请重试"
-        else -> error.message ?: error::class.simpleName ?: "未知错误"
     }
 }

@@ -424,6 +424,16 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
   PC 的 JVM 请求同样会被挑战（`cf-mitigated: challenge`），所以这条链路不是"未验证的兜底"：
   改任何 Cookie 相关代码都必须保证 OkHttp 与 WebView 共用系统 `CookieManager`，否则验证过了仍然 403。
 
+**多语言（i18n）**
+
+- **英文是 base**（`res/values/`），中文 `values-zh/`、日文 `values-ja/`。没匹配的语言自动回退英文——「自动检测系统语言 + 回退英语」不用写代码，是资源机制的默认行为。
+- **一个设置项同时决定界面与内容语言**（`AppLanguage` + `uiLocale()` / `contentLanguage()`）。别拆成两个开关：详情页的信息行标签是站点按内容语言返回的，拆开会得到「中文界面 + 英文标签」的混排。选项只列**有 UI 翻译**的语言。
+- **`:core` 不放界面文案**（纯 JVM 没有资源系统）：筛选项的**值**留在 `ActressFilterOptions`，文案在 app 侧按 `section.key` 组合（`optionLabel()`）；异常消息只当类型用，界面文案由 `UiMessage` 映射。
+- **ViewModel 不存拼好的文案**：状态里放 `UiMessage`（类型 + 参数），显示时 `@Composable UiMessage.text()` 取字符串。否则切换语言后，屏幕上留着的还是旧语言的字符串。
+- **切换语言不重建 Activity**：`MissuRoot` 用 `createConfigurationContext` 生成带目标 locale 的 Context，再用 `CompositionLocalProvider(LocalContext / LocalConfiguration)` 罩住整棵树——改设置即重组生效，`stringResource` 读的就是这个 Context。
+- 需要按内容语言重载的数据，用**内容语言**做 key：`LaunchedEffect(contentLanguage) { homeViewModel.load() }`。
+- **不要用 PowerShell 的 `.Replace()` + `Set-Content` 改源码**：本仓库已经踩过两次，结果是文件里**字母被换成别的字母**（`import`→`impore`、`Experimental`→`rxperimental`、`compose`→`coepose`），编译器报一堆莫名其妙的"未解析引用"。改代码只用编辑工具；批量替换脚本一旦跑过，必须用 `git diff` 逐行确认。PS 5.1 的 `Set-Content -Encoding UTF8` 还会加 BOM。
+
 **UI 与交互**
 
 - **底部栏高度**：`ShortNavigationBar` 自己处理窗口 inset，外面不要再加一次 `insets.bottom`，否则底栏高度翻倍（Expo 版踩过）。

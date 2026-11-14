@@ -1,12 +1,12 @@
-package app.missu.ui.search
+﻿package app.missu.ui.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.missu.data.api.ChallengeException
-import app.missu.data.api.HttpStatusException
 import app.missu.data.api.MissavApi
 import app.missu.data.model.VideoSummary
 import app.missu.data.store.SearchHistoryStore
+import app.missu.ui.common.UiMessage
+import app.missu.ui.common.toUiMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,7 +16,7 @@ sealed interface SearchUiState {
     data object Idle : SearchUiState
     data object Loading : SearchUiState
     data object Empty : SearchUiState
-    data class Error(val message: String) : SearchUiState
+    data class Error(val message: UiMessage) : SearchUiState
     data class Content(
         val keyword: String,
         val videos: List<VideoSummary>,
@@ -55,7 +55,7 @@ class SearchViewModel(
                     SearchUiState.Content(normalized, page.videos, page.nextPage)
                 }
             } catch (error: Exception) {
-                SearchUiState.Error(describe(error))
+                SearchUiState.Error(error.toUiMessage())
             }
         }
     }
@@ -89,13 +89,5 @@ class SearchViewModel(
                 current.copy(loadingMore = false)
             }
         }
-    }
-
-    private fun describe(error: Exception): String = when (error) {
-        is ChallengeException -> "站点要求人机验证，请重试"
-        is HttpStatusException -> "请求失败（HTTP ${error.status}）"
-        // NOTE: OkHttp 的连接类异常 message 是英文（"connection closed" 之类），不直接甩给用户。
-        is java.io.IOException -> "网络连接中断，请重试"
-        else -> error.message ?: error::class.simpleName ?: "未知错误"
     }
 }

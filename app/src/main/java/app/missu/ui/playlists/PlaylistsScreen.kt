@@ -42,9 +42,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.missu.R
 import app.missu.data.model.PlaylistSummary
+import app.missu.ui.common.UiMessage
+import app.missu.ui.common.text
 import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadingHint
@@ -57,7 +61,7 @@ fun PlaylistsScreen(
     onRetry: () -> Unit,
     onOpen: (PlaylistSummary) -> Unit,
     onBack: () -> Unit,
-    createMessage: String? = null,
+    createMessage: UiMessage? = null,
     onCreate: (name: String, isPublic: Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
@@ -65,11 +69,11 @@ fun PlaylistsScreen(
     var fabExpanded by rememberSaveable { mutableStateOf(false) }
 
     Column(modifier.fillMaxSize()) {
-        PageTopBar(title = "我的片单", onBack = onBack)
+        PageTopBar(title = stringResource(R.string.playlists_title), onBack = onBack)
 
         if (dialogOpen) {
             CreateDialog(
-                message = createMessage,
+                message = createMessage?.text(),
                 onConfirm = { name, isPublic ->
                     onCreate(name, isPublic)
                     dialogOpen = false
@@ -87,11 +91,11 @@ fun PlaylistsScreen(
 
                     PlaylistsUiState.Empty -> EmptyHint(
                         icon = Icons.AutoMirrored.Filled.List,
-                        title = "还没有片单",
-                        subtitle = "用右下角的按钮新建第一个片单",
+                        title = stringResource(R.string.playlists_empty_title),
+                        subtitle = stringResource(R.string.playlists_empty_subtitle),
                     )
 
-                    is PlaylistsUiState.Error -> ErrorHint(current.message, onRetry)
+                    is PlaylistsUiState.Error -> ErrorHint(current.message.text(), onRetry)
 
                     is PlaylistsUiState.Content -> LazyColumn(
                         modifier = Modifier.fillMaxSize(),
@@ -118,7 +122,7 @@ fun PlaylistsScreen(
                     ) {
                         Icon(
                             imageVector = if (fabExpanded) Icons.Filled.Close else Icons.Filled.Add,
-                            contentDescription = if (fabExpanded) "收起" else "更多操作",
+                            contentDescription = if (fabExpanded) stringResource(R.string.playlists_collapse) else stringResource(R.string.playlists_more_actions),
                         )
                     }
                 },
@@ -128,7 +132,7 @@ fun PlaylistsScreen(
                         fabExpanded = false
                         dialogOpen = true
                     },
-                    text = { Text("新建片单") },
+                    text = { Text(stringResource(R.string.playlists_create)) },
                     icon = { Icon(Icons.Filled.Add, contentDescription = null) },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -138,7 +142,7 @@ fun PlaylistsScreen(
                         fabExpanded = false
                         onRetry()
                     },
-                    text = { Text("刷新列表") },
+                    text = { Text(stringResource(R.string.playlists_refresh)) },
                     icon = { Icon(Icons.Filled.Refresh, contentDescription = null) },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -160,13 +164,13 @@ private fun CreateDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("新建片单") },
+        title = { Text(stringResource(R.string.playlists_create)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("片单名") },
+                    label = { Text(stringResource(R.string.playlist_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -175,7 +179,7 @@ private fun CreateDialog(
                 // 和「编辑片单」页的「公开片单」保持一致。
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "公开片单",
+                        text = stringResource(R.string.playlists_public),
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.weight(1f),
                     )
@@ -188,10 +192,10 @@ private fun CreateDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(name, isPublic) }) { Text("创建") }
+            TextButton(onClick = { onConfirm(name, isPublic) }) { Text(stringResource(R.string.playlists_create_action)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("取消") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
         },
     )
 }
@@ -205,7 +209,7 @@ private fun CreateDialog(
 @Composable
 private fun PlaylistRow(playlist: PlaylistSummary, onClick: () -> Unit) {
     // NOTE: owner 一定是自己（这是「我的片单」），不显示以免噪音。
-    val meta = listOfNotNull(playlist.visibility, playlist.updatedAt?.let { "更新 $it" }).joinToString(" · ")
+    val meta = listOfNotNull(playlist.visibility, playlist.updatedAt?.let { stringResource(R.string.playlists_updated, it) }).joinToString(" · ")
     val supporting: (@Composable () -> Unit)? = if (meta.isEmpty()) {
         null
     } else {

@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 共通 -->
+    <string name="common_retry">再試行</string>
+    <string name="common_load_more">さらに読み込む</string>
+    <string name="common_back">戻る</string>
+    <string name="common_cancel">キャンセル</string>
+    <string name="common_done">完了</string>
+    <string name="common_clear">クリア</string>
+
+    <!-- ボトムタブ -->
+    <string name="nav_home">ホーム</string>
+    <string name="nav_discover">発見</string>
+    <string name="nav_account">マイページ</string>
+
+    <!-- マイページ -->
+    <string name="account_title">マイページ</string>
+    <string name="account_logged_out_title">未ログイン</string>
+    <string name="account_logged_out_subtitle">ログインすると、お気に入り・プレイリスト・視聴履歴をサイトと同期できます</string>
+    <string name="account_go_login">ログイン</string>
+    <string name="account_saved">お気に入り</string>
+    <string name="account_playlists">プレイリスト</string>
+    <string name="account_history">視聴履歴</string>
+    <string name="account_settings">設定</string>
+    <string name="account_logout">ログアウト</string>
+    <string name="account_logged_in">ログイン中</string>
+
+    <!-- ログイン -->
+    <string name="login_title">Missu にログイン</string>
+    <string name="login_subtitle">サイトのアカウントでログインします。お気に入りとプレイリストはウェブと同期されます。</string>
+    <string name="login_email">メールアドレス</string>
+    <string name="login_password">パスワード</string>
+    <string name="login_submit">ログイン</string>
+    <string name="login_submitting">ログイン中…</string>
+    <string name="login_cookie_note">ログイン前に Cookie を消去します（古いセッション付きのログインは拒否されるため）。</string>
+
+    <!-- お気に入り -->
+    <string name="saved_title">お気に入り</string>
+    <string name="saved_empty_title">お気に入りはまだありません</string>
+    <string name="saved_empty_subtitle">動画ページで「お気に入り」を押すと、ここから開けます</string>
+
+    <!-- 視聴履歴 -->
+    <string name="history_title">視聴履歴</string>
+    <string name="history_empty_title">視聴履歴はまだありません</string>
+    <string name="history_empty_subtitle">動画を再生すると、どこまで見たかがここに記録されます</string>
+
+    <!-- 一覧 -->
+    <string name="list_empty_title">まだ何もありません</string>
+    <string name="list_default_title">一覧</string>
+
+    <!-- ホーム -->
+    <string name="home_empty_title">ホームにコンテンツがありません</string>
+    <string name="home_empty_subtitle">サイトがセクションを返しませんでした。引っ張って更新するか、後でもう一度お試しください</string>
+    <string name="home_more">もっと見る</string>
+
+    <!-- 検索 -->
+    <string name="search_placeholder">品番・女優・キーワードで検索</string>
+    <string name="search_exit">検索を終了</string>
+    <string name="search_empty_title">結果が見つかりません</string>
+    <string name="search_empty_subtitle">別の品番・女優・キーワードでお試しください</string>
+    <string name="search_hint_idle">キーワードを入力して Enter で検索</string>
+    <string name="search_recent">最近の検索</string>
+    <string name="search_results_count">「%1$s」の検索結果: %2$d 件</string>
+
+    <!-- 発見 -->
+    <string name="discover_clear">クリア</string>
+    <string name="discover_filter">絞り込み</string>
+    <string name="discover_filter_count">絞り込み (%1$d)</string>
+    <string name="discover_filter_title">女優を絞り込む</string>
+
+    <!-- 詳細 -->
+    <string name="detail_no_playback">再生 URL を取得できませんでした</string>
+    <string name="detail_saved">お気に入り済み</string>
+    <string name="detail_save">お気に入り</string>
+    <string name="detail_add_to_playlist">プレイリストに追加</string>
+    <string name="detail_no_playlists">プレイリストがありません。ウェブで作成してください</string>
+
+    <!-- プレイヤー -->
+    <string name="player_fullscreen">全画面</string>
+    <string name="player_exit_fullscreen">全画面を終了</string>
+
+    <!-- プレイリスト -->
+    <string name="playlists_title">プレイリスト</string>
+    <string name="playlists_empty_title">プレイリストがありません</string>
+    <string name="playlists_empty_subtitle">右下のボタンから最初のプレイリストを作成できます</string>
+    <string name="playlists_more_actions">その他の操作</string>
+    <string name="playlists_collapse">閉じる</string>
+    <string name="playlists_create">新規プレイリスト</string>
+    <string name="playlists_refresh">最新の状態に更新</string>
+    <string name="playlist_name">プレイリスト名</string>
+    <string name="playlists_public">公開プレイリスト</string>
+    <string name="playlists_create_action">作成</string>
+    <string name="playlists_updated">更新 %1$s</string>
+
+    <!-- プレイリスト詳細 -->
+    <string name="playlist_select_all">すべて選択</string>
+    <string name="playlist_unselect_all">すべて解除</string>
+    <string name="playlist_deselect">選択解除</string>
+    <string name="playlist_manage">整理</string>
+    <string name="playlist_remove">動画を削除</string>
+    <string name="playlist_remove_n">%1$d 件を削除</string>
+    <string name="playlist_remove_dialog_title">選択した動画を削除しますか？</string>
+    <string name="playlist_remove_dialog_body">「%2$s」から選択した %1$d 件を削除します。動画自体は削除されません。</string>
+    <string name="playlist_remove_action">削除</string>
+    <string name="playlist_selected">選択済み</string>
+    <string name="playlist_unselected">未選択</string>
+    <string name="playlist_empty_title">このプレイリストは空です</string>
+    <string name="playlist_empty_subtitle">動画ページで「プレイリストに追加」を押すと、ここに追加されます</string>
+
+    <!-- プレイリスト編集 -->
+    <string name="playlist_edit">編集</string>
+    <string name="playlist_edit_title">プレイリストを編集</string>
+    <string name="playlist_description">説明（任意）</string>
+    <string name="playlist_save">保存</string>
+    <string name="playlist_saving">保存中…</string>
+    <string name="playlist_delete_action">プレイリストを削除</string>
+    <string name="playlist_delete_dialog_title">このプレイリストを削除しますか？</string>
+    <string name="playlist_delete_dialog_body">元に戻せません。中の動画は削除されません。</string>
+
+    <!-- 設定 -->
+    <string name="settings_title">設定</string>
+    <string name="settings_appearance">外観</string>
+    <string name="settings_theme_system">システムに従う</string>
+    <string name="settings_theme_light">ライト</string>
+    <string name="settings_theme_dark">ダーク</string>
+    <string name="settings_dynamic_color">壁紙の色を使う</string>
+    <string name="settings_dynamic_color_note">壁紙から色を取ります。オフのときは Missu のブランドピンクを使います</string>
+    <string name="settings_dynamic_color_unavailable">Android 12 以降が必要です</string>
+    <string name="settings_pure_black">純黒の背景</string>
+    <string name="settings_pure_black_note">ダークテーマのみ。省電力ですが、コンテナの階層が平坦になります</string>
+    <string name="settings_palette_note">Missu の配色はブランドピンクから導出しています。ダークではブランド色そのもの、ライトでは一段深くして白文字の可読性を保ちます。</string>
+    <string name="settings_language">言語</string>
+    <string name="settings_language_system">システムに従う</string>
+    <string name="settings_language_note">アプリの表示言語と、サイトから取得するコンテンツの言語を同時に決めます。未翻訳の言語では表示が英語になります（コンテンツはシステム言語のまま）。</string>
+
+    <!-- 発見ページのディレクトリ分類 -->
+    <string name="discover_section_actresses">女優</string>
+    <string name="discover_section_genres">ジャンル</string>
+    <string name="discover_section_makers">メーカー</string>
+
+    <!-- 女優の並び替えと絞り込み（値は :core、文言はここ） -->
+    <string name="sort_videos">作品数</string>
+    <string name="sort_debut">デビュー</string>
+    <string name="filter_height">身長</string>
+    <string name="filter_cup">カップ</string>
+    <string name="filter_age">年齢</string>
+    <string name="filter_debut">デビュー年</string>
+    <string name="filter_cup_value">%1$s カップ</string>
+    <string name="filter_debut_value">%1$d 年以前</string>
+
+    <!-- エラーと通知（UiMessage が描画） -->
+    <string name="error_network">ネットワーク接続が切れました。再試行してください</string>
+    <string name="error_http">リクエストに失敗しました（HTTP %1$d）</string>
+    <string name="error_challenge">サイトが認証を求めています。再試行してください</string>
+    <string name="error_session_expired">セッションが切れました。再度ログインしてください</string>
+    <string name="error_invalid_credentials">メールアドレスまたはパスワードが違います</string>
+    <string name="error_login_failed">ログインに失敗しました</string>
+    <string name="error_no_video_id">動画 ID を取得できないため保存できません</string>
+    <string name="error_playlist_name_empty">プレイリスト名を入力してください</string>
+    <string name="error_partial_remove">%1$d 件を削除できませんでした。もう一度お試しください</string>
+    <string name="error_unknown">不明なエラー</string>
+
+    <!-- 認証 -->
+    <string name="challenge_opening">サイトを開いています…</string>
+    <string name="challenge_passed">確認できました。ページを読み込んでいます…</string>
+    <string name="challenge_waiting">サイトの応答を待っています…（%1$d 回目の確認）</string>
+    <string name="challenge_blocked">まだ通っていません（%1$d 回確認）。キャンセルして再試行してください。</string>
+</resources>

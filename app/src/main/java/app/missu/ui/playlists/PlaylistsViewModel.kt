@@ -1,12 +1,11 @@
-package app.missu.ui.playlists
+﻿package app.missu.ui.playlists
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.missu.data.api.ChallengeException
-import app.missu.data.api.HttpStatusException
 import app.missu.data.api.MissavApi
-import app.missu.data.api.SessionExpiredException
 import app.missu.data.model.PlaylistSummary
+import app.missu.ui.common.UiMessage
+import app.missu.ui.common.toUiMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,7 +14,7 @@ import kotlinx.coroutines.launch
 sealed interface PlaylistsUiState {
     data object Loading : PlaylistsUiState
     data object Empty : PlaylistsUiState
-    data class Error(val message: String) : PlaylistsUiState
+    data class Error(val message: UiMessage) : PlaylistsUiState
     data class Content(val playlists: List<PlaylistSummary>) : PlaylistsUiState
 }
 
@@ -25,8 +24,8 @@ class PlaylistsViewModel(private val api: MissavApi) : ViewModel() {
     val state: StateFlow<PlaylistsUiState> = _state.asStateFlow()
 
     /** 新建片单的一次性状态：null=空闲，否则是错误提示。 */
-    private val _createMessage = MutableStateFlow<String?>(null)
-    val createMessage: StateFlow<String?> = _createMessage.asStateFlow()
+    private val _createMessage = MutableStateFlow<UiMessage?>(null)
+    val createMessage: StateFlow<UiMessage?> = _createMessage.asStateFlow()
 
     fun load() {
         viewModelScope.launch {
@@ -43,7 +42,7 @@ class PlaylistsViewModel(private val api: MissavApi) : ViewModel() {
                     PlaylistsUiState.Content(playlists)
                 }
             } catch (error: Exception) {
-                PlaylistsUiState.Error(describe(error))
+                PlaylistsUiState.Error(error.toUiMessage())
             }
         }
     }
@@ -56,7 +55,7 @@ class PlaylistsViewModel(private val api: MissavApi) : ViewModel() {
     fun create(name: String, isPublic: Boolean) {
         val normalized = name.trim()
         if (normalized.isEmpty()) {
-            _createMessage.value = "片单名不能为空"
+            _createMessage.value = UiMessage.PlaylistNameEmpty
             return
         }
         _createMessage.value = null
@@ -65,7 +64,7 @@ class PlaylistsViewModel(private val api: MissavApi) : ViewModel() {
                 api.createPlaylist(normalized, isPublic)
                 load()
             } catch (error: Exception) {
-                _createMessage.value = describe(error)
+                _createMessage.value = error.toUiMessage()
             }
         }
     }
@@ -74,11 +73,4 @@ class PlaylistsViewModel(private val api: MissavApi) : ViewModel() {
         _createMessage.value = null
     }
 
-    private fun describe(error: Exception): String = when (error) {
-        is ChallengeException -> "站点要求人机验证，请重试"
-        is HttpStatusException -> "请求失败（HTTP ${error.status}）"
-        is SessionExpiredException -> "登录已失效，请重新登录"
-        is java.io.IOException -> "网络连接中断，请重试"
-        else -> error.message ?: error::class.simpleName ?: "未知错误"
-    }
 }

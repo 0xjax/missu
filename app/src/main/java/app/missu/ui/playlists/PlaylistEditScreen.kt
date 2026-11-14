@@ -27,7 +27,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import app.missu.R
+import app.missu.ui.common.UiMessage
+import app.missu.ui.common.text
 import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.PageTopBar
@@ -42,7 +46,7 @@ import app.missu.ui.components.PageTopBar
 @Composable
 fun PlaylistEditScreen(
     state: PlaylistEditUiState,
-    message: String?,
+    message: UiMessage?,
     busy: Boolean,
     onSave: (name: String, description: String, isPublic: Boolean) -> Unit,
     onDelete: () -> Unit,
@@ -53,16 +57,16 @@ fun PlaylistEditScreen(
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
 
     Column(modifier.fillMaxSize()) {
-        PageTopBar(title = "编辑片单", onBack = onBack)
+        PageTopBar(title = stringResource(R.string.playlist_edit_title), onBack = onBack)
 
         when (state) {
             PlaylistEditUiState.Loading -> LoadingHint()
 
-            is PlaylistEditUiState.Error -> ErrorHint(state.message, onRetry)
+            is PlaylistEditUiState.Error -> ErrorHint(state.message.text(), onRetry)
 
             is PlaylistEditUiState.Ready -> EditForm(
                 initial = state,
-                message = message,
+                message = message?.text(),
                 busy = busy,
                 onSave = onSave,
                 onDeleteRequest = { confirmDelete = true },
@@ -73,16 +77,16 @@ fun PlaylistEditScreen(
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("删除这个片单？") },
-            text = { Text("删除后无法恢复，片单里的影片不会被删除。") },
+            title = { Text(stringResource(R.string.playlist_delete_dialog_title)) },
+            text = { Text(stringResource(R.string.playlist_delete_dialog_body)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmDelete = false
                     onDelete()
-                }) { Text("删除") }
+                }) { Text(stringResource(R.string.playlist_remove_action)) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmDelete = false }) { Text("取消") }
+                TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.common_cancel)) }
             },
         )
     }
@@ -111,7 +115,7 @@ private fun EditForm(
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
-            label = { Text("片单名") },
+            label = { Text(stringResource(R.string.playlist_name)) },
             singleLine = true,
             enabled = !busy,
             modifier = Modifier.fillMaxWidth(),
@@ -120,7 +124,7 @@ private fun EditForm(
         OutlinedTextField(
             value = description,
             onValueChange = { description = it },
-            label = { Text("描述（可选）") },
+            label = { Text(stringResource(R.string.playlist_description)) },
             minLines = 2,
             enabled = !busy,
             modifier = Modifier.fillMaxWidth(),
@@ -128,7 +132,7 @@ private fun EditForm(
         Spacer(Modifier.height(16.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "公开片单",
+                text = stringResource(R.string.playlists_public),
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f),
             )
@@ -146,7 +150,7 @@ private fun EditForm(
             enabled = !busy,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(if (busy) "保存中…" else "保存")
+            Text(if (busy) stringResource(R.string.playlist_saving) else stringResource(R.string.playlist_save))
         }
 
         Spacer(Modifier.height(32.dp))
@@ -156,7 +160,7 @@ private fun EditForm(
             enabled = !busy,
         ) {
             Text(
-                text = "删除片单",
+                text = stringResource(R.string.playlist_delete_action),
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodyLarge,
             )

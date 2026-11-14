@@ -15,7 +15,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import app.missu.R
+import app.missu.ui.common.text
 import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadMoreFooter
@@ -34,7 +37,7 @@ fun SavedScreen(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxSize()) {
-        PageTopBar(title = "我的收藏", onBack = onBack)
+        PageTopBar(title = stringResource(R.string.saved_title), onBack = onBack)
 
         PageStateTransition(state = state, modifier = Modifier.fillMaxSize()) { current ->
             when (current) {
@@ -42,11 +45,11 @@ fun SavedScreen(
 
                 SavedUiState.Empty -> EmptyHint(
                     icon = Icons.Filled.Favorite,
-                    title = "还没有收藏",
-                    subtitle = "在详情页点一下「收藏」，之后就能从这里直接打开",
+                    title = stringResource(R.string.saved_empty_title),
+                    subtitle = stringResource(R.string.saved_empty_subtitle),
                 )
 
-                is SavedUiState.Error -> ErrorHint(current.message, onRetry)
+                is SavedUiState.Error -> ErrorHint(current.message.text(), onRetry)
 
                 is SavedUiState.Content -> LazyVerticalGrid(
                     modifier = Modifier.fillMaxSize(),

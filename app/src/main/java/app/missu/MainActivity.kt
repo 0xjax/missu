@@ -6,6 +6,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.StringRes
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
@@ -39,7 +40,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -55,7 +58,11 @@ import androidx.navigation.compose.rememberNavController
 import app.missu.ui.discover.DiscoverScreen
 import app.missu.ui.discover.DiscoverViewModel
 import app.missu.data.api.MissavApi
+import app.missu.data.api.SourceConfig
 import app.missu.data.api.createMissavApi
+import app.missu.data.store.AppLanguage
+import app.missu.data.store.contentLanguage
+import app.missu.data.store.uiLocale
 import app.missu.data.store.CredentialStore
 import app.missu.data.store.ProfileStore
 import app.missu.data.store.HistoryStore
@@ -138,7 +145,8 @@ private fun MissuRoot() {
     }
 
     val context = LocalContext.current
-    val settings = remember { SettingsStore(context.applicationContext).also { it.applyStoredLanguage() } }
+    val settings = remember { SettingsStore(context.applicationContext) }
+    var appLanguage by remember { mutableStateOf(settings.appLanguage()) }
     var themeMode by remember { mutableStateOf(settings.themeMode()) }
     var dynamicColor by remember { mutableStateOf(settings.dynamicColor()) }
     var pureBlack by remember { mutableStateOf(settings.pureBlack()) }
@@ -148,17 +156,41 @@ private fun MissuRoot() {
         ThemeMode.DARK -> true
     }
 
+    // NOTE: 语言在组合期就解析好，并**立刻**写进 SourceConfig——首页的第一次请求就在下面
+    // 的 LaunchedEffect 里发出，晚一步就会用旧语言拉一轮再换（legacy 踩过）。
+    val systemConfiguration = context.resources.configuration
+    val contentLanguage = remember(appLanguage) {
+        appLanguage.contentLanguage(systemConfiguration).also { SourceConfig.contentLanguage = it }
+    }
+    // NOTE: 界面语言用 createConfigurationContext 覆写，不重建 Activity：改设置即重组生效。
+    // 覆写只作用于 Compose 的 LocalContext/LocalConfiguration，系统栏与窗口不受影响。
+    val localizedContext = remember(appLanguage) {
+        val locale = appLanguage.uiLocale(systemConfiguration)
+        val configuration = Configuration(systemConfiguration).apply { setLocale(locale) }
+        context.createConfigurationContext(configuration)
+    }
+
     MissuTheme(darkTheme = darkTheme, dynamicColor = dynamicColor, pureBlack = pureBlack) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             // NOTE: 卡片 → 详情的 container transform 需要共享元素作用域。它必须比 NavHost
             // 更高——两个页面的封面在转场期间同时存在，那层覆盖物由 SharedTransitionLayout 画。
             SharedTransitionLayout {
-                CompositionLocalProvider(LocalSharedTransitionScope provides this) {
+                CompositionLocalProvider(
+                    LocalSharedTransitionScope provides this,
+                    LocalContext provides localizedContext,
+                    LocalConfiguration provides localizedContext.resources.configuration,
+                ) {
                     MissuApp(
                         settings = settings,
+                        appLanguage = appLanguage,
+                        contentLanguage = contentLanguage,
                         themeMode = themeMode,
                         dynamicColor = dynamicColor,
                         pureBlack = pureBlack,
+                        onAppLanguageChange = { value ->
+                            settings.setAppLanguage(value)
+                            appLanguage = value
+                        },
                         onThemeModeChange = { mode ->
                             settings.setThemeMode(mode)
                             themeMode = mode
@@ -194,6 +226,9 @@ private fun MissuApp(
     onThemeModeChange: (ThemeMode) -> Unit,
     onDynamicColorChange: (Boolean) -> Unit,
     onPureBlackChange: (Boolean) -> Unit,
+    appLanguage: AppLanguage,
+    contentLanguage: String,
+    onAppLanguageChange: (AppLanguage) -> Unit,
 ) {
     val navController = rememberNavController()
     val api = rememberApi()
@@ -211,10 +246,9 @@ private fun MissuApp(
     // NOTE: 账户状态整个 App 共用一份：'我的' 与 '登录' 两个页面必须看到同一份状态。
     val auth: AuthViewModel = viewModel(factory = factory { AuthViewModel(api, ProfileStore(context.applicationContext), CredentialStore(context.applicationContext)) })
 
-    // NOTE: 语言必须在第一次请求之前装进 SourceConfig，否则首屏会按默认语言拉一轮再换。
+    // NOTE: 语言已经在 MissuRoot 里装进 SourceConfig 了，这里只是拿内容语言做重载的 key。
     val historyStore = remember { HistoryStore(context.applicationContext) }
     val searchHistory = remember { SearchHistoryStore(context.applicationContext) }
-    var language by remember { mutableStateOf(settings.language()) }
     // NOTE: 页签级的 ViewModel 必须提到 Activity 作用域。放在 composable("home") 里的话，
     // 切走页签时目的地被销毁、ViewModel 一并清掉，切回来就是「新建 VM → Loading → 重新请求」：
     // 用户看到的是先一帧旧画面、再一个转圈，正是"闪一下/像缓存"的来源。提到这里后切页签是纯粹的视图切换。
@@ -225,7 +259,7 @@ private fun MissuApp(
     // NOTE: 语言变了才重拉首页。这个 effect 放在这里（一直处于组合中）而不是 home 目的地里：
     // 放在目的地里的话，每次切回页签都会重新启动 effect → load() → 打回 Loading → 转圈，
     // 也就是「先闪一帧旧画面再加载」的另一半原因。
-    LaunchedEffect(language) { homeViewModel.load() }
+    LaunchedEffect(contentLanguage) { homeViewModel.load() }
     val authState by auth.state.collectAsState()
     val loginState by auth.loginState.collectAsState()
     // 底部导航只在四个一级页面显示；详情/列表/收藏等二级页面全屏展示。
@@ -257,8 +291,8 @@ private fun MissuApp(
                                     }
                                 }
                             },
-                            icon = { Icon(item.icon, contentDescription = item.label) },
-                            label = { Text(item.label) },
+                            icon = { Icon(item.icon, contentDescription = stringResource(item.labelRes)) },
+                            label = { Text(stringResource(item.labelRes)) },
                         )
                     }
                 }
@@ -403,14 +437,11 @@ private fun MissuApp(
             }
             composable("settings") {
                 SettingsScreen(
-                    language = language,
+                    appLanguage = appLanguage,
                     themeMode = themeMode,
                     dynamicColor = dynamicColor,
                     pureBlack = pureBlack,
-                    onLanguageChange = { value ->
-                        settings.setLanguage(value)
-                        language = value
-                    },
+                    onAppLanguageChange = onAppLanguageChange,
                     onThemeModeChange = onThemeModeChange,
                     onDynamicColorChange = onDynamicColorChange,
                     onPureBlackChange = onPureBlackChange,
@@ -421,11 +452,13 @@ private fun MissuApp(
                 route = "list?p={p}&t={t}",
                 arguments = listOf(
                     navArgument("p") { defaultValue = "/latest" },
-                    navArgument("t") { defaultValue = "列表" },
+                    // NOTE: 默认标题是空的，由页面用资源兜底——导航参数取不到组合作用域。
+                    navArgument("t") { defaultValue = "" },
                 ),
             ) { entry ->
                 val path = Uri.decode(entry.arguments?.getString("p").orEmpty())
                 val title = Uri.decode(entry.arguments?.getString("t").orEmpty())
+                    .ifEmpty { stringResource(R.string.list_default_title) }
                 val viewModel: VideoListViewModel = viewModel(
                     key = "list-$path",
                     factory = factory { VideoListViewModel(api, path) },
@@ -599,19 +632,19 @@ private fun MissuApp(
     }
 }
 
-/** 底部导航的一级页面。 */
+/** 底部导航的一级页面。NOTE: 标签存资源 id——它是文件级常量，取不到组合作用域。 */
 private data class TopLevel(
     val route: String,
-    val label: String,
+    @param:StringRes val labelRes: Int,
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
 )
 
 // NOTE: 搜索不再单独占一个页签——「发现」顶部就是搜索入口，结果页仍在（search 路由），
 // 底部只留三个一级页面：首页 / 发现 / 我的。
 private val topLevels = listOf(
-    TopLevel("home", "首页", Icons.Filled.Home),
-    TopLevel("discover", "发现", Icons.AutoMirrored.Filled.List),
-    TopLevel("account", "我的", Icons.Filled.Person),
+    TopLevel("home", R.string.nav_home, Icons.Filled.Home),
+    TopLevel("discover", R.string.nav_discover, Icons.AutoMirrored.Filled.List),
+    TopLevel("account", R.string.nav_account, Icons.Filled.Person),
 )
 
 /**

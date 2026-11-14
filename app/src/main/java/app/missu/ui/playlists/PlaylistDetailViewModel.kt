@@ -1,12 +1,11 @@
-package app.missu.ui.playlists
+﻿package app.missu.ui.playlists
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import app.missu.data.api.ChallengeException
-import app.missu.data.api.HttpStatusException
 import app.missu.data.api.MissavApi
-import app.missu.data.api.SessionExpiredException
 import app.missu.data.model.VideoSummary
+import app.missu.ui.common.UiMessage
+import app.missu.ui.common.toUiMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,7 +14,7 @@ import kotlinx.coroutines.launch
 sealed interface PlaylistDetailUiState {
     data object Loading : PlaylistDetailUiState
     data object Empty : PlaylistDetailUiState
-    data class Error(val message: String) : PlaylistDetailUiState
+    data class Error(val message: UiMessage) : PlaylistDetailUiState
     data class Content(
         val name: String,
         val videos: List<VideoSummary>,
@@ -33,8 +32,8 @@ class PlaylistDetailViewModel(
     val state: StateFlow<PlaylistDetailUiState> = _state.asStateFlow()
 
     /** 移除失败的一次性提示；成功时保持为空。 */
-    private val _message = MutableStateFlow<String?>(null)
-    val message: StateFlow<String?> = _message.asStateFlow()
+    private val _message = MutableStateFlow<UiMessage?>(null)
+    val message: StateFlow<UiMessage?> = _message.asStateFlow()
 
     fun load() {
         viewModelScope.launch {
@@ -47,7 +46,7 @@ class PlaylistDetailViewModel(
                     PlaylistDetailUiState.Content(detail.name.ifEmpty { id }, detail.videos)
                 }
             } catch (error: Exception) {
-                PlaylistDetailUiState.Error(describe(error))
+                PlaylistDetailUiState.Error(error.toUiMessage())
             }
         }
     }
@@ -71,7 +70,7 @@ class PlaylistDetailViewModel(
                     api.removePlaylistItem(id, videoId)
                 } catch (error: Exception) {
                     failed += videoId
-                    if (failed.size == 1) _message.value = describe(error)
+                    if (failed.size == 1) _message.value = error.toUiMessage()
                 }
             }
 
@@ -83,16 +82,9 @@ class PlaylistDetailViewModel(
                 content.copy(videos = rest, removingIds = emptySet())
             }
             if (failed.isNotEmpty()) {
-                _message.value = "有 ${failed.size} 部没移除成功，可以再试一次"
+                _message.value = UiMessage.PartialRemoveFailed(failed.size)
             }
         }
     }
 
-    private fun describe(error: Exception): String = when (error) {
-        is ChallengeException -> "站点要求人机验证，请重试"
-        is HttpStatusException -> "请求失败（HTTP ${error.status}）"
-        is SessionExpiredException -> "登录已失效，请重新登录"
-        is java.io.IOException -> "网络连接中断，请重试"
-        else -> error.message ?: error::class.simpleName ?: "未知错误"
-    }
 }
