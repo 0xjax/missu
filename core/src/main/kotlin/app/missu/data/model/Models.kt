@@ -35,6 +35,14 @@ data class AccountUser(
 data class VideoList(
     val videos: List<VideoSummary>,
     val nextPage: Int? = null,
+    /**
+     * 站点自己认为这一页当前的排序（从页面头部的「排序: X」+ 下拉取值解析出来的）。
+     *
+     * NOTE: 站点**没有「默认」这一项**，它总把某个具体排序显示为当前项；所以「默认」不是一个
+     * 独立档位，而是「没传参数时的顺序」——两者可能在个别页面上并不相同（`/new` 实测其默认序
+     * 不等于任何取值），因此这个字段只用于**显示**，不让调用方据此补发 `?sort=`。
+     */
+    val sort: app.missu.data.api.VideoListOptions.Sort? = null,
 )
 
 /** 详情页信息行的一个值；`path` 非空表示可点击跳列表。 */

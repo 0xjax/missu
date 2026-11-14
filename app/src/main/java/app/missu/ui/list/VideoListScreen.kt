@@ -59,6 +59,7 @@ fun VideoListScreen(
     state: VideoListUiState,
     sort: VideoListOptions.Sort?,
     filter: VideoListOptions.Filter?,
+    detectedSort: VideoListOptions.Sort?,
     sorts: List<VideoListOptions.Sort>,
     filters: List<VideoListOptions.Filter>,
     onSortChange: (VideoListOptions.Sort?) -> Unit,
@@ -75,6 +76,7 @@ fun VideoListScreen(
         ListControls(
             sort = sort,
             filter = filter,
+            detectedSort = detectedSort,
             sorts = sorts,
             filters = filters,
             onSortChange = onSortChange,
@@ -103,12 +105,15 @@ fun VideoListScreen(
 private fun ListControls(
     sort: VideoListOptions.Sort?,
     filter: VideoListOptions.Filter?,
+    detectedSort: VideoListOptions.Sort?,
     sorts: List<VideoListOptions.Sort>,
     filters: List<VideoListOptions.Filter>,
     onSortChange: (VideoListOptions.Sort?) -> Unit,
     onFilterChange: (VideoListOptions.Filter?) -> Unit,
 ) {
     var sortMenuOpen by remember { mutableStateOf(false) }
+    // 站点点明了它自己当前的排序（页面头部「排序: X」），所以「默认」不再是一档：直接显示那一项。
+    val current = sort ?: detectedSort
 
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
@@ -118,25 +123,19 @@ private fun ListControls(
         Box {
             AssistChip(
                 onClick = { sortMenuOpen = true },
-                label = { Text(sortLabel(sort), maxLines = 1) },
+                label = { Text(sortLabel(current), maxLines = 1) },
                 trailingIcon = {
                     Icon(imageVector = Icons.Filled.ArrowDropDown, contentDescription = null)
                 },
             )
             DropdownMenu(expanded = sortMenuOpen, onDismissRequest = { sortMenuOpen = false }) {
-                // 「默认」是独立一档：站点的默认序不等于任何一个 sort 取值。
-                DropdownMenuItem(
-                    text = { Text(sortLabel(null), color = sortColor(selected = sort == null)) },
-                    onClick = {
-                        onSortChange(null)
-                        sortMenuOpen = false
-                    },
-                )
                 sorts.forEach { option ->
                     DropdownMenuItem(
-                        text = { Text(sortLabel(option), color = sortColor(selected = option == sort)) },
+                        text = { Text(sortLabel(option), color = sortColor(selected = option == current)) },
                         onClick = {
-                            onSortChange(option)
+                            // 选中已是当前项时不重发请求：站点默认序与显式 `?sort=` 未必同序，
+                            // 白白换一次数据只会让用户觉得"点了反而乱了"。
+                            if (option != current) onSortChange(option)
                             sortMenuOpen = false
                         },
                     )
