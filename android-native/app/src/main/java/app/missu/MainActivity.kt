@@ -226,6 +226,8 @@ private fun MissuApp() {
                 val states by viewModel.states.collectAsState()
                 val sort by viewModel.sort.collectAsState()
                 val filters by viewModel.filters.collectAsState()
+                // NOTE: 每次回到发现页都重读历史，搜索完返回就能看到新词。
+                val recentSearches = remember(backStackEntry) { searchHistory.recent() }
 
                 DiscoverScreen(
                     states = states,
@@ -236,12 +238,21 @@ private fun MissuApp() {
                     onOpen = { path, title ->
                         navController.navigate("list?p=${Uri.encode(path)}&t=${Uri.encode(title)}")
                     },
+                    recentSearches = recentSearches,
+                    onSearchEntry = { navController.navigate("search") },
+                    onRecentSearch = { keyword ->
+                        navController.navigate("search?q=" + Uri.encode(keyword))
+                    },
                     onSortChange = viewModel::setSort,
                     onFilterChange = viewModel::setFilter,
                     onResetFilters = viewModel::resetFilters,
                 )
             }
-            composable("search") {
+            composable(
+                route = "search?q={q}",
+                arguments = listOf(navArgument("q") { defaultValue = "" }),
+            ) { entry ->
+                val initialKeyword = Uri.decode(entry.arguments?.getString("q").orEmpty())
                 val viewModel: SearchViewModel = viewModel(factory = factory { SearchViewModel(api, searchHistory) })
                 val state by viewModel.state.collectAsState()
                 val recent by viewModel.recent.collectAsState()
@@ -254,6 +265,7 @@ private fun MissuApp() {
                     onBack = { navController.popBackStack() },
                     recent = recent,
                     onClearHistory = viewModel::clearHistory,
+                    initialKeyword = initialKeyword,
                 )
             }
 
@@ -447,17 +459,18 @@ private fun MissuApp() {
     }
 }
 
-/** 底部导航的四个一级页面。 */
+/** 底部导航的一级页面。 */
 private data class TopLevel(
     val route: String,
     val label: String,
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
 )
 
+// NOTE: 搜索不再单独占一个页签——「发现」顶部就是搜索入口，结果页仍在（search 路由），
+// 底部只留三个一级页面：首页 / 发现 / 我的。
 private val topLevels = listOf(
     TopLevel("home", "首页", Icons.Filled.Home),
     TopLevel("discover", "发现", Icons.Filled.List),
-    TopLevel("search", "搜索", Icons.Filled.Search),
     TopLevel("account", "我的", Icons.Filled.Person),
 )
 
