@@ -172,6 +172,8 @@ fun PlaylistDetailScreen(
                             VideoGridCard(
                                 video = video,
                                 onClick = { if (managing) toggle() else onOpen(video.id, video.thumbnailUrl) },
+                                // 整理模式下长按预览会和「选中」打架。
+                                previewOnLongPress = !managing,
                             )
                             if (managing) {
                                 SelectionBadge(

@@ -100,6 +100,9 @@ import app.missu.ui.playlists.PlaylistEditViewModel
 import app.missu.ui.playlists.PlaylistDetailViewModel
 import app.missu.ui.playlists.PlaylistsScreen
 import app.missu.ui.playlists.PlaylistsViewModel
+import app.missu.ui.preview.LocalVideoPreview
+import app.missu.ui.preview.VideoPreviewHost
+import app.missu.ui.preview.VideoPreviewState
 import app.missu.ui.saved.SavedScreen
 import app.missu.ui.saved.SavedViewModel
 import app.missu.ui.search.SearchBody
@@ -157,6 +160,9 @@ private fun MissuRoot() {
 
     val context = LocalContext.current
     val settings = remember { SettingsStore(context.applicationContext) }
+    // NOTE: 长按预览的宿主挂在根部：卡片离它十几层，用 CompositionLocal 传下去比逐层加参数省。
+    // 它自己是一层 Dialog，所以放在导航/底栏之外也能盖住它们。
+    val previewState = remember { VideoPreviewState() }
     var appLanguage by remember { mutableStateOf(settings.appLanguage()) }
     var themeMode by remember { mutableStateOf(settings.themeMode()) }
     var colorSource by remember { mutableStateOf(settings.colorSource()) }
@@ -205,6 +211,7 @@ private fun MissuRoot() {
                     LocalSharedTransitionScope provides this,
                     LocalContext provides localizedContext,
                     LocalConfiguration provides localizedContext.resources.configuration,
+                    LocalVideoPreview provides previewState,
                 ) {
                     MissuApp(
                         settings = settings,
@@ -234,6 +241,7 @@ private fun MissuRoot() {
                             pureBlack = enabled
                         },
                     )
+                    VideoPreviewHost(state = previewState)
                 }
             }
         }
