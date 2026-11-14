@@ -47,14 +47,17 @@ D:\Android\Sdk\platform-tools\adb.exe start-server
 
 在 `Enter pairing code:` 提示后输入配对码。配对码不得写入项目文件或提交到 Git。
 
-4. 配对成功后，返回“无线调试”主页，查看连接地址，然后执行：
+4. 配对成功后先看设备列表——**通常不需要再 `adb connect`**：
 
 ```powershell
-.\adb connect 手机IP:连接端口
 .\adb devices -l
 ```
 
-**配对端口与连接端口通常不同。** 配对端口来自配对弹窗，一般每次配对都会变化；连接端口来自无线调试主页，重启手机或重新开启无线调试后也可能变化。不要复用上一次记录的端口。
+配对信息（电脑的 `~/.android/adbkey` 与手机记下的公钥）是一次性的。之后只要无线调试开着，adb server 就会通过 mDNS
+自动发现并连上，serial 形如 `adb-<设备ID>-<随机后缀>._adb-tls-connect._tcp`。只有 mDNS 不可用时（见下文「重开无线调试为什么能自动恢复」）
+才需要按“无线调试”主页的地址手动 `.\adb connect 手机IP:连接端口`。
+
+**配对端口与连接端口通常不同。** 配对端口来自配对弹窗，一般每次配对都会变化；连接端口来自无线调试主页，**每次重新开启无线调试都会变**。不要复用上一次记录的端口。
 
 `devices -l` 可能同时显示 IP 地址和 mDNS 名称两个条目，它们可能属于同一台手机，见下节「设备身份」。按输出中的 `transport_id` 指定设备，以下示例使用 `2`，实际替换为当前值：
 
@@ -82,6 +85,27 @@ adb 按 serial（传输）记账，不按硬件去重。无线调试下同一台
 
 - 默认用自动发现：删手动那条 —— `.\adb disconnect <IP>:<端口>`
 - 手动模式（已设 `ADB_MDNS_AUTO_CONNECT=0`）：删 mDNS 那条 —— `.\adb disconnect adb-<设备ID>-<随机后缀>._adb-tls-connect._tcp`
+
+## 重开无线调试为什么能自动恢复
+
+手机每次打开“无线调试”都会重新在 mDNS 上注册 `_adb-tls-connect._tcp`：**端口每次都变**（实测例：`192.168.1.4:41953`），
+实例名后缀（serial 里最后一段）也可能跟着变。adb server 常驻并持续浏览这个服务类型，看到即连——所以关掉再打开
+**不需要任何重连操作**：重连是 server 做的，不是人做的。配对键一直有效，也不会再要求配对码。
+
+实测（2026-11-14/15，platform-tools 37.0.1 / adb 1.0.41）：
+
+- `adb kill-server` 之后只跑 `adb start-server`、**不发任何 `connect`**，1.5 秒内设备自己回来，`transport_id` 换成新的（20 → 1）；
+- 想看手机到底广播了什么地址：`adb mdns services`（比在手机上翻 IP 快）；
+- 端口每次都变 ⇒ **不要在任何脚本、笔记、命令历史里记端口**，用 `adb devices` 现查 serial。
+
+自动发现失效时只能回到手动 `adb connect 手机IP:端口`，**此时不会自愈**：路由器/系统防火墙挡了组播、VPN 虚拟网卡抢了路由、
+删了 `~/.android/adbkey` 或在手机上撤销了调试授权（后者要重新配对）。主动设 `ADB_MDNS_AUTO_CONNECT=0` 是关掉自动连，不是故障。
+
+**`adb devices` 显示 `device` ≠ 链路真的通**：长时间 idle 后 transport 可能还挂在 server 里但已经死了。判断链路要做一次真实往返：
+
+```powershell
+.\adb -s adb-<设备ID>-<随机后缀>._adb-tls-connect._tcp shell echo alive
+```
 
 ## DSH 的 Android 插件
 
