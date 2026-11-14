@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,10 +42,11 @@ import app.missu.data.model.VideoSummary
 import app.missu.ui.components.VideoGridCard
 
 /**
- * 片单详情：标题 + 影片网格 + 每张卡片的「移除」。
+ * 片单详情：标题 + 影片网格，页头「管理」打开后才在卡片上显示「移除」。
  *
- * NOTE: 移除是破坏性但可逆的操作，按 DESIGN.md 的做法弹一次确认对话框（站点自己也会 confirm），
- * 不做滑动删除，也不把入口藏进长按。
+ * NOTE: 移除入口不常驻——常驻的角标会压住封面，也容易误触。按 DESIGN.md 的做法做成
+ * 「管理」/「完成」二态 + 二次确认对话框（站点自己也会 confirm），不做滑动删除、不藏进长按。
+ * NOTE: 管理模式里点卡片不再进详情，避免想移除却跳走了。
  */
 @Composable
 fun PlaylistDetailScreen(
@@ -58,11 +60,13 @@ fun PlaylistDetailScreen(
     onRemove: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    val title = when (state) {
-        is PlaylistDetailUiState.Content -> state.name
-        else -> fallbackTitle
-    }
+    val content = state as? PlaylistDetailUiState.Content
+    val title = content?.name ?: fallbackTitle
     var pendingRemove by remember { mutableStateOf<VideoSummary?>(null) }
+    // NOTE: 用 saveable —— 轮屏或系统回收后回来仍停在管理模式，不会让入口突然消失。
+    var managing by rememberSaveable { mutableStateOf(false) }
+    // 列表空了就没有可移除的东西，管理模式自动退出。
+    if (content == null && managing) managing = false
 
     Column(modifier.fillMaxSize()) {
         Row(
@@ -78,6 +82,11 @@ fun PlaylistDetailScreen(
                 modifier = Modifier.padding(start = 4.dp),
             )
             Spacer(Modifier.weight(1f))
+            if (content != null) {
+                TextButton(onClick = { managing = !managing }) {
+                    Text(if (managing) "完成" else "管理")
+                }
+            }
             TextButton(onClick = onEdit) { Text("编辑") }
         }
 
@@ -108,12 +117,17 @@ fun PlaylistDetailScreen(
             ) {
                 items(items = state.videos, key = { it.id + it.pageUrl }) { video ->
                     Box {
-                        VideoGridCard(video = video, onClick = { onOpen(video.id) })
-                        RemoveButton(
-                            removing = state.removingId == video.id,
-                            onClick = { pendingRemove = video },
-                            modifier = Modifier.align(Alignment.TopEnd).padding(6.dp),
+                        VideoGridCard(
+                            video = video,
+                            onClick = { if (!managing) onOpen(video.id) },
                         )
+                        if (managing) {
+                            RemoveButton(
+                                removing = state.removingId == video.id,
+                                onClick = { pendingRemove = video },
+                                modifier = Modifier.align(Alignment.TopEnd).padding(6.dp),
+                            )
+                        }
                     }
                 }
             }
