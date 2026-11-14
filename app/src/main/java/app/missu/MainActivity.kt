@@ -4,11 +4,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -36,6 +33,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -59,6 +57,8 @@ import app.missu.data.store.SearchHistoryStore
 import app.missu.data.store.SettingsStore
 import app.missu.data.store.ThemeMode
 import app.missu.ui.history.HistoryScreen
+import android.content.res.Configuration
+import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import app.missu.ui.history.HistoryViewModel
 import app.missu.ui.list.VideoListScreen
@@ -84,15 +84,31 @@ import app.missu.ui.search.SearchHost
 import app.missu.ui.search.SearchUiState
 import app.missu.ui.search.SearchViewModel
 import app.missu.ui.theme.MissuTheme
+import app.missu.ui.theme.themeBackgroundColor
 import coil3.ImageLoader
 import coil3.compose.setSingletonImageLoaderFactory
 import coil3.request.crossfade
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        // NOTE: 窗口底色必须在第一帧之前就跟上主题。XML 里写死的是 #000000（当年只有深色），
+        // 用户切到浅色后，任何透明帧都会露出纯黑 = 转场时"闪一下"。之后由 MissuTheme 持续同步。
+        applyWindowBackground()
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent { MissuRoot() }
+    }
+
+    /** 按持久化的明暗模式（含「跟随系统」）先给窗口铺上与页面一致的底色。 */
+    private fun applyWindowBackground() {
+        val settings = SettingsStore(applicationContext)
+        val nightMask = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        val darkTheme = when (settings.themeMode()) {
+            ThemeMode.SYSTEM -> nightMask == Configuration.UI_MODE_NIGHT_YES
+            ThemeMode.LIGHT -> false
+            ThemeMode.DARK -> true
+        }
+        window.setBackgroundDrawable(ColorDrawable(themeBackgroundColor(darkTheme).toArgb()))
     }
 }
 
@@ -211,43 +227,18 @@ private fun MissuApp(
             }
         },
     ) { innerPadding ->
-        val tabRoutes = topLevels.map { it.route }.toSet()
         NavHost(
             navController = navController,
             startDestination = "home",
             modifier = Modifier.padding(innerPadding),
-            // NOTE: 转场按「有没有层级关系」分两种，默认那种两边**同时**淡入淡出（700ms）会让退出中的
-            // 旧页面盖在新页面上，看起来就是残影。
-            //  · 底栏页签之间是平级：fade through（旧 90ms 淡出、新延迟 90ms 再 210ms 淡入），两段不重叠；
-            //  · 推进/返回有层级：整页横滑（全程不透明，同样不叠影），并给出方向感。
-            enterTransition = {
-                if (isTabSwitch(initialState, targetState, tabRoutes)) {
-                    fadeIn(animationSpec = tween(durationMillis = 210, delayMillis = 90))
-                } else {
-                    slideInHorizontally(animationSpec = tween(durationMillis = 300)) { it / 4 }
-                }
-            },
-            exitTransition = {
-                if (isTabSwitch(initialState, targetState, tabRoutes)) {
-                    fadeOut(animationSpec = tween(durationMillis = 90))
-                } else {
-                    slideOutHorizontally(animationSpec = tween(durationMillis = 300)) { -it / 4 }
-                }
-            },
-            popEnterTransition = {
-                if (isTabSwitch(initialState, targetState, tabRoutes)) {
-                    fadeIn(animationSpec = tween(durationMillis = 210, delayMillis = 90))
-                } else {
-                    slideInHorizontally(animationSpec = tween(durationMillis = 300)) { -it / 4 }
-                }
-            },
-            popExitTransition = {
-                if (isTabSwitch(initialState, targetState, tabRoutes)) {
-                    fadeOut(animationSpec = tween(durationMillis = 90))
-                } else {
-                    slideOutHorizontally(animationSpec = tween(durationMillis = 300)) { it / 4 }
-                }
-            },
+            // NOTE: 导航转场全部关掉。之前试过 fade through 与「按层级分转场」，真机抓帧都能看到
+            // 两页内容叠加或整屏空白的那一帧——因为这两类页面都是整屏内容，任何 alpha 过渡都会
+            // 让旧页在新页上留一帧残影，观感就是「闪一下、亮度不一致」。页面自身的三态交接
+            // （PageStateTransition）仍在，那是在同一页内部做的，不会暴露上一层。
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { ExitTransition.None },
         ) {
             composable("home") {
                 val viewModel: HomeViewModel = viewModel(factory = factory { HomeViewModel(api) })
@@ -533,18 +524,6 @@ private val topLevels = listOf(
     TopLevel("discover", "发现", Icons.AutoMirrored.Filled.List),
     TopLevel("account", "我的", Icons.Filled.Person),
 )
-
-/**
- * 两个目的地都是底栏一级页 → 这次切换是「平级」的。
- *
- * NOTE: 平级切换只做淡入淡出（fade through），不做横滑：页签之间没有先后关系，滑动会暗示层级。
- * 推进到详情/列表这类有层级的跳转才用横滑，顺带给出方向感。
- */
-private fun isTabSwitch(
-    initial: NavBackStackEntry,
-    target: NavBackStackEntry,
-    tabRoutes: Set<String>,
-): Boolean = initial.destination.route in tabRoutes && target.destination.route in tabRoutes
 
 private inline fun <reified T : ViewModel> factory(crossinline create: () -> T): ViewModelProvider.Factory =
     object : ViewModelProvider.Factory {
