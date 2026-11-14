@@ -35,8 +35,14 @@ object HomeParser {
     /** 头部「排序: X」那行文本（X 是站点当前排序的显示名）。 */
     private val SORT_HEADER = Regex(""">([^<>]{1,40})</span>\s*<svg[^>]*showDropdown !== 'sort'""")
 
-    /** 排序下拉里的一项：`<a href="…?sort=value" …>显示名</a>`。 */
-    private val SORT_ITEM = Regex("""<a\s[^>]*?href="([^"]*[?&]sort=([a-z_]+)[^"]*)"[^>]*>\s*([^<>]{1,24}?)\s*</a>""")
+    /**
+     * 排序下拉里的一项：`<a href="…?sort=value" …>显示名</a>`。
+     *
+     * NOTE: 只看取值、不看参数顺序。筛选生效时站点把 `sort=` 挤到第二个参数、并用 `&amp;` 转义
+     * （`…?filters=chinese-subtitle&amp;sort=today_views`，2026-11-15 实测）——所以前缀既可能是
+     * `?` / `&`，也可能是 HTML 实体化的 `&amp;`。
+     */
+    private val SORT_ITEM = Regex("""<a\s[^>]*?href="([^"]*(?:[?&]|&amp;)sort=([a-z_]+)[^"]*)"[^>]*>\s*([^<>]{1,24}?)\s*</a>""")
 
     fun parseHome(html: String): List<HomeSection> {
         val doc = Jsoup.parse(html, SourceConfig.BASE_URL)
