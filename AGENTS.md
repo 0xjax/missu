@@ -13,14 +13,14 @@
 
 ```powershell
 # 原生工程（唯一现役构建；仓库根就是 Gradle 根，不用 cd）
-.\build.ps1              # debug APK
-.\build.ps1 install      # 构建 + 装到设备
-.\build.ps1 release      # release（沿用 debug 签名，仅自用侧载）
+.\scripts\build.ps1              # debug APK
+.\scripts\build.ps1 install      # 构建 + 装到设备
+.\scripts\build.ps1 release      # release（沿用 debug 签名，仅自用侧载）
 ```
 
-`build.ps1` 会配好 `JAVA_HOME`（自动选 `D:\Android\jdk-N`；AS 已卸载，构建不依赖它）、`ANDROID_HOME`（`D:\Android\Sdk`）、`ANDROID_USER_HOME`、`TMP/TEMP`。自动化采集输出时加 `MISSU_NO_DAEMON=1`——Gradle daemon 会一直占着 stdout，管道等不到 EOF。
+`scripts/build.ps1` 会配好 `JAVA_HOME`（自动选 `D:\Android\jdk-N`；AS 已卸载，构建不依赖它）、`ANDROID_HOME`（`D:\Android\Sdk`）、`ANDROID_USER_HOME`、`TMP/TEMP`。自动化采集输出时加 `MISSU_NO_DAEMON=1`——Gradle daemon 会一直占着 stdout，管道等不到 EOF。
 
-工具链：SDK `D:\Android\Sdk`、JDK = 独立 Temurin 21（`D:\Android\jdk-21`，`build.ps1` 自动发现 `jdk-*` 取最高版本）；Android Studio 已卸载，构建不依赖它。Gradle 缓存 `%USERPROFILE%\.gradle`、Gradle 发行包 9.6.0（wrapper，腾讯镜像）。
+工具链：SDK `D:\Android\Sdk`、JDK = 独立 Temurin 21（`D:\Android\jdk-21`，`scripts/build.ps1` 自动发现 `jdk-*` 取最高版本）；Android Studio 已卸载，构建不依赖它。Gradle 缓存 `%USERPROFILE%\.gradle`、Gradle 发行包 9.6.0（wrapper，腾讯镜像）。
 
 ## 开发流程
 
@@ -98,7 +98,7 @@
 
 ## Verification
 
-- 原生工程：`.\build.ps1`（或 `install`）必须 `BUILD SUCCESSFUL`；这是唯一的验收命令。
+- 原生工程：`.\scripts\build.ps1`（或 `install`）必须 `BUILD SUCCESSFUL`；这是唯一的验收命令。
 - `legacy/expo/` 不参与验证（不构建、不跑 lint）；它只是参照实现。
 - 构建环境的已知坑（`native-platform.dll`、`%TEMP%` 拒写、JVM 被按程序拦截、PS 5.1 需要 BOM）见 `docs/android-native.md` 的「已知坑」。
 - **升级 SDK / JDK 等环境依赖前，先查 Android CLI 最新情况**：Google 正在把 `sdkmanager` 迁到原生的 `android sdk`，新版 bundle 自带的 JRE 可能未签名，而本机 Windows 11 Smart App Control 处于强制模式（`VerifiedAndReputablePolicyState = 1`）会拒绝加载未签名代码。按 `docs/android-native.md`「升级 SDK 环境依赖前」的检查清单确认后再动，并把结论写回那里。

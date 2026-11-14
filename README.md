@@ -6,7 +6,7 @@ Expo / React Native 的旧实现已归档到 [`legacy/expo/`](legacy/expo/)，�
 ## 快速开始
 
 ```powershell
-.\build.ps1 install          # 构建 debug APK 并装到已连接的设备
+.\scripts\build.ps1 install          # 构建 debug APK 并装到已连接的设备
 adb shell am start -n app.missu/.MainActivity
 ```
 
@@ -17,7 +17,7 @@ adb shell am start -n app.missu/.MainActivity
 ```
 app/                  Android 应用模块（UI + 平台适配）→ 交付包 app.missu
 core/                 纯 JVM 模块（取数 / 解析 / 模型，不许 android.* / androidx.*）
-build.ps1             构建脚本（配好 JDK / SDK / ANDROID_USER_HOME / 临时目录）
+scripts/build.ps1             构建脚本（配好 JDK / SDK / ANDROID_USER_HOME / 临时目录）
 settings.gradle.kts   Gradle 根配置（:app + :core）
 gradlew(.bat)         Gradle wrapper 9.6.0
 
