@@ -41,7 +41,7 @@ enum class ColorSource {
  * NOTE: 语言必须在**第一次网络请求之前**装进 [SourceConfig]，否则首屏会按默认语言拉一轮再换，
  * legacy 就是先读完偏好再挂载界面（见 `src/stores/language.tsx`）。现在这一步由 `MissuRoot`
  * 在组合期算好（见 [AppLanguage.contentLanguage]），本类只负责持久化。
- * TODO: 设置项增加后（播放器默认倍速、列表列数…）统一放这里。
+ * TODO: 还有设置项要加时（列表列数…）统一放这里。
  */
 class SettingsStore(context: Context) {
 
@@ -112,6 +112,22 @@ class SettingsStore(context: Context) {
         prefs.edit().putBoolean(KEY_PURE_BLACK, enabled).apply()
     }
 
+    /**
+     * 播放倍速（1f = 原速）。全局一个值，对所有影片生效。
+     *
+     * NOTE: legacy 就把它放在偏好里（`stores/preferences.tsx` 的 `playbackRate`，值域 `PLAYBACK_RATES`），
+     * 原生这边一度只存在播放器的组合里——换一部片就静默回到 1.0x，等于丢设置。
+     * NOTE: 用 `putFloat` 存取：SharedPreferences 存的是 float 的位模式，`0.75f` 这类值能原样读回。
+     * 菜单高亮要跟 `SPEEDS` 里的字面量比较，位模式一致才不会因为差 1 个 ulp 而高亮不上。
+     * NOTE: 值域由 `SPEEDS`（`ui/player/PlayerControls.kt`）定，本类不校验。哪天真删掉一档，存着旧值的
+     * 人会看到菜单里没有高亮项——点任一档即可恢复，不是卡死状态。
+     */
+    fun playbackSpeed(): Float = prefs.getFloat(KEY_PLAYBACK_SPEED, 1f)
+
+    fun setPlaybackSpeed(value: Float) {
+        prefs.edit().putFloat(KEY_PLAYBACK_SPEED, value).apply()
+    }
+
     private companion object {
         const val KEY_APP_LANGUAGE = "appLanguage"
         const val KEY_THEME_MODE = "themeMode"
@@ -120,5 +136,6 @@ class SettingsStore(context: Context) {
         const val KEY_COLOR_SOURCE = "colorSource"
         const val KEY_FOLLOW_THEME_ICON = "followThemeIcon"
         const val KEY_PURE_BLACK = "pureBlack"
+        const val KEY_PLAYBACK_SPEED = "playbackSpeed"
     }
 }

@@ -30,6 +30,7 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.compose.material3.PlayerDefaults
 import app.missu.data.api.AndroidCookieJar
 import app.missu.data.api.SourceConfig
+import app.missu.data.store.SettingsStore
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.delay
 import okhttp3.OkHttpClient
@@ -75,7 +76,11 @@ fun ExoVideoPlayer(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var controlsVisible by remember { mutableStateOf(true) }
     var isPlaying by remember { mutableStateOf(false) }
-    var speed by remember { mutableStateOf(1f) }
+    // NOTE: 倍速是**全局设置**，不是本次播放的临时状态：它跟着偏好走，所以每部片的播放器
+    // 建起来就按它设好（见下面 player 的 apply）。1.0x 只是没存过值时的默认。
+    val settings = remember(context) { SettingsStore(context.applicationContext) }
+    val initialSpeed = remember { settings.playbackSpeed() }
+    var speed by remember { mutableStateOf(initialSpeed) }
     var speedMenuOpen by remember { mutableStateOf(false) }
     // NOTE: 控件只在第一帧出画之后才允许出现。加载中就把进度条和播放键摆出来，
     // 等于在"还没有东西可控"的时候先给一堆控件——那正是详情页打开时最脏的一帧。
@@ -99,6 +104,8 @@ fun ExoVideoPlayer(
             .setSeekBackIncrementMs(SEEK_STEP_MS)
             .setSeekForwardIncrementMs(SEEK_STEP_MS)
             .build()
+            // 播放参数挂在 player 实例上：在这里设一次，之后换集/重试都还在。
+            .apply { setPlaybackSpeed(initialSpeed) }
     }
 
     // 观看进度上报：每 5 秒一次 + 退出时一次，交给历史存储。
@@ -214,6 +221,8 @@ fun ExoVideoPlayer(
                 onSpeedChange = { value ->
                     player.setPlaybackSpeed(value)
                     speed = value
+                    // 立刻落盘：用户在这里改的其实是「以后都按这个速度放」。
+                    settings.setPlaybackSpeed(value)
                     speedMenuOpen = false
                 },
             )
