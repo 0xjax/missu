@@ -148,6 +148,12 @@
     <string name="discover_section_actresses">女优</string>
     <string name="discover_section_genres">类型</string>
     <string name="discover_section_makers">厂商</string>
+    <string name="discover_section_hot">热门</string>
+
+    <!-- 热门（三个周期都是站点直出的列表页） -->
+    <string name="hot_today">今日热门</string>
+    <string name="hot_weekly">本周热门</string>
+    <string name="hot_monthly">本月热门</string>
 
     <!-- 女优排序与筛选（选项值在 :core，文案在这里） -->
     <string name="sort_videos">影片</string>

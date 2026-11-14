@@ -2,6 +2,7 @@
 
 package app.missu.ui.discover
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -25,10 +26,12 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.toShape
@@ -107,9 +110,9 @@ fun DiscoverScreen(
             }
         }
 
-        // 切到某个目录时才去拉它，省一次请求。
+        // 切到某个目录时才去拉它，省一次请求。「热门」不是目录，没有请求。
         LaunchedEffect(tab.kind) {
-            if (states[tab.kind] == null) onLoad(tab.kind)
+            if (tab.isDirectory && states[tab.kind] == null) onLoad(tab.kind)
         }
 
         // 排序与筛选只有女优目录有（站点对类型目录不提供 sort / 筛选参数）。
@@ -153,7 +156,19 @@ fun DiscoverScreen(
             }
         }
 
-        when (val state = states[tab.kind]) {
+        if (tab == DiscoverTab.HOT) {
+            // NOTE: 「热门」不是目录，是三个周期列表的入口——它们都落在现成的 `/list` 路由上，
+            // 所以这里没有取数、没有状态机，改周期就是换一个 path。
+            Column(
+                modifier = Modifier.fillMaxSize().padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                HotPeriod.entries.forEach { period ->
+                    val label = stringResource(period.labelRes)
+                    HotEntryRow(label = label, onClick = { onOpen(period.path, label) })
+                }
+            }
+        } else when (val state = states[tab.kind]) {
             null, DirectoryUiState.Loading -> LoadingHint()
 
             DirectoryUiState.Empty -> EmptyHint(
@@ -206,6 +221,41 @@ fun DiscoverScreen(
                 filters = filters,
                 onFilterChange = onFilterChange,
                 onDismiss = { filterSheetOpen = false },
+            )
+        }
+    }
+}
+
+/** 热门三个周期：站点首页导航直出的三个普通列表页（证据：fixture `home-cn.html`）。 */
+private enum class HotPeriod(val path: String, @param:StringRes val labelRes: Int) {
+    TODAY("/today-hot", R.string.hot_today),
+    WEEKLY("/weekly-hot", R.string.hot_weekly),
+    MONTHLY("/monthly-hot", R.string.hot_monthly),
+}
+
+/**
+ * 「热门」页签里的一行：周期名 + 箭头。
+ *
+ * NOTE: 用 `Surface(onClick)` 而不是自己拼 `Row + clickable`——容器色、圆角、涟漪与
+ * 「整行可点」的无障碍语义都由它给。
+ */
+@Composable
+private fun HotEntryRow(label: String, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text = label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
