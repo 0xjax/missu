@@ -1,6 +1,6 @@
 # Android 真机调试与自动化
 
-用 Android Platform-Tools 的 ADB 控制手机，无需完整 Android Studio。**现役应用是 Kotlin 工程（`android-native/`）**：改代码 → Gradle 编译 → `adb install` → 重启 Activity，没有 Metro 与 Fast Refresh。文末的「legacy Expo」一节只记录不再使用的旧流程与仍然成立的结论。
+用 Android Platform-Tools 的 ADB 控制手机，无需完整 Android Studio。**现役应用是 Kotlin 工程（仓库根；Gradle 根 = 仓库根）**：改代码 → Gradle 编译 → `adb install` → 重启 Activity，没有 Metro 与 Fast Refresh。文末的「legacy Expo」一节只记录不再使用的旧流程与仍然成立的结论。
 
 ## adb 在哪（只有一份）
 
@@ -105,7 +105,7 @@ adb 按 serial（传输）记账，不按硬件去重。无线调试下同一台
 ## 构建、安装与迭代
 
 ```powershell
-cd D:\missu\android-native
+cd D:\missu
 .\build.ps1            # debug APK
 .\build.ps1 install    # 构建并直接装到当前设备
 adb shell am start -n app.missu/.MainActivity
@@ -113,13 +113,13 @@ adb shell am start -n app.missu/.MainActivity
 
 - 增量构建通常 10–30 秒；**没有 Fast Refresh**，改完必须重新编译装机才能看到效果。
 - 自动化采集输出时设 `MISSU_NO_DAEMON=1`，否则 Gradle daemon 会占着 stdout，管道等不到 EOF（命令看起来"卡死"，其实构建早已结束）。
-- `build.ps1` 里固定了 `JAVA_HOME`、`ANDROID_HOME`、`ANDROID_USER_HOME`、`TMP/TEMP`；这些不是可选项，原因见 `android-native/README.md` 的「已知坑」。
+- `build.ps1` 里固定了 `JAVA_HOME`、`ANDROID_HOME`、`ANDROID_USER_HOME`、`TMP/TEMP`；这些不是可选项，原因见 `docs/android-native.md` 的「已知坑」。
 
 独立 release 包：
 
 ```powershell
 .\build.ps1 release
-# 产物：android-native\app\build\outputs\apk\release\app-release.apk
+# 产物：app\build\outputs\apk\release\app-release.apk
 ```
 
 release 沿用 debug 证书，仅适合自用侧载；换成正式 keystore 后，已安装的旧包必须先卸载才能覆盖安装。
@@ -185,4 +185,4 @@ Expo 版已停止构建与运行（`node_modules` 已删）。以下结论仍然
 - **Expo Go 的自动检测靠 mDNS 组播**：WLAN 为「公用网络」或有 VPN 虚拟网卡时可能发现不到，但 TCP 8081 仍通——「自动检测不到」不等于「连不上」，直接开 `exp://<电脑局域网IP>:8081`。
 - **电脑 IP 是 DHCP**：地址一变，URL 与「最近项目」同时失效；根治靠路由器 MAC 绑定固定 IP，或 `adb reverse`。
 - **底部导航栏错位**：从二级页快速连按两次返回（间隔 ≤600ms）回到 tab 页时，底栏会落到屏幕中间、约 2 秒自愈。成因是 `useFocusEffect` 在原生栈转场中重渲染导致重新测量；修法是把焦点刷新延后到转场结束（400ms）。Kotlin 版没有这条链路，但**同类教训适用**：不要在导航转场进行中触发整树重新测量。
-- **测试登录（已废弃）**：Expo 版靠 `bun scripts/dev-test-login.js` 读 `.env`、经 `adb reverse tcp:8787` 把凭据送进 Debug 构建——那套链路已删除。Kotlin 版改用「记住账号」：第一次手动输入后凭据用 Android Keystore 加密存在设备上，会话失效时自动重登（见 `android-native/README.md`）。凭据仍然 MUST NOT 进命令行、日志或仓库。
+- **测试登录（已废弃）**：Expo 版靠 `bun scripts/dev-test-login.js` 读 `.env`、经 `adb reverse tcp:8787` 把凭据送进 Debug 构建——那套链路已删除。Kotlin 版改用「记住账号」：第一次手动输入后凭据用 Android Keystore 加密存在设备上，会话失效时自动重登（见 `android-native.md`）。凭据仍然 MUST NOT 进命令行、日志或仓库。

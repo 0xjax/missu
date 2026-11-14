@@ -1,4 +1,4 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+﻿# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
 
 # dependencies
 node_modules/
@@ -17,8 +17,7 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
-# 构建产物：APK 走 GitHub Release 附件，不进仓库
-*.apk
+# 鏋勫缓浜х墿锛欰PK 璧?GitHub Release 闄勪欢锛屼笉杩涗粨搴?*.apk
 
 # Metro
 .metro-health-check*
@@ -63,11 +62,10 @@ example
 /ios
 /android
 
-# Kotlin native project (android-native/)
-android-native/build/
-android-native/**/build/
-android-native/.gradle/
-android-native/.kotlin/
-android-native/local.properties
-android-native/.idea/
+# Gradle / Kotlin 构建产物（仓库根就是 Gradle 工程根）
+build/
+.gradle/
+.kotlin/
+local.properties
+.idea/
 *.iml

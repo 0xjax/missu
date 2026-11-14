@@ -85,7 +85,7 @@
 ## 构建
 
 ```powershell
-cd D:\missu\android-native
+cd D:\missu
 .\build.ps1            # debug APK
 .\build.ps1 install    # 构建 + 装到设备
 .\build.ps1 release    # release（沿用 debug 签名，仅自用侧载）
@@ -184,7 +184,7 @@ $sm = "$sdk\cmdline-tools\latest\bin\sdkmanager.bat"
 
 **4. Gradle 不用装**：`gradlew.bat` 首次运行会自动下载 wrapper 指定的 9.6.0（腾讯镜像），之后走 `%USERPROFILE%\.gradle` 缓存。
 
-**5. 验证**：`cd android-native; .\build.ps1 install` → `BUILD SUCCESSFUL` + App 装到手机。
+**5. 验证**：`.\build.ps1 install` → `BUILD SUCCESSFUL` + App 装到手机。
 
 > WARNING: **本机只能用 cmdline-tools 19.0；新版 Android CLI 在 SAC 强制下跑不了**。实测根因：
 >
@@ -245,7 +245,7 @@ Get-ChildItem <解压目录>\lib -Filter 'sdklib*.jar'
 
 ## Android Studio 设置（仅当你重新安装 AS 时）
 
-1. **Open** → 选 `D:\missu\android-native`（不要选父目录 `D:\missu`，那是 Expo 工程）。
+1. **Open** → 选 `D:\missu`（仓库根就是 Gradle 根；`legacy/expo/` 是归档的 Expo 工程，不要当 Android 工程打开）。
 2. Settings → Languages & Frameworks → **Android SDK** → Android SDK Location = `D:\Android\Sdk`
    - 只应有：Android API 37.1（37.0 已卸载）、Build-Tools 36、Platform-Tools
    - 不要装 NDK、CMake、system-image、Emulator、旧 API（本工程无原生代码，只跑真机）
@@ -325,7 +325,7 @@ app/           Android 应用（UI + 平台适配）
 ## 测试
 
 ```powershell
-cd android-native
+cd D:\missu
 .\gradlew.bat :core:test      # 29 个离线测试（另有 2 个联网测试默认跳过）
 ```
 

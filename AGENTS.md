@@ -4,16 +4,15 @@
 
 | 目录 | 状态 | 说明 |
 |---|---|---|
-| `android-native/` | **现役** | Kotlin + Jetpack Compose 原生工程，唯一交付目标 |
-| 仓库根（`src/`、`app.json`…） | **legacy** | Expo SDK 58 的 React Native 实现，只作参照实现与设计规格，**不再构建、不再运行** |
+| 仓库根（`app/`、`core/`、`gradlew`…） | **现役 / 基线** | Kotlin + Jetpack Compose 原生工程；Gradle 根就是仓库根，是标准规范路径的唯一实现 |
+| `legacy/expo/` | **legacy** | Expo SDK 58 的 React Native 实现，只作参照实现与设计规格，**不再构建、不再运行** |
 
-交付包名 `app.missu`，应用名 `Missu`，仅 Android（真机验收）。设计语言见 @DESIGN.md，原生工程的构建细节见 `android-native/README.md`。
+交付包名 `app.missu`，应用名 `Missu`，仅 Android（真机验收）。设计语言见 @DESIGN.md，原生工程的构建细节见 `docs/android-native.md`。
 
 ## 命令
 
 ```powershell
-# 原生工程（唯一现役构建）
-cd android-native
+# 原生工程（唯一现役构建；仓库根就是 Gradle 根，不用 cd）
 .\build.ps1              # debug APK
 .\build.ps1 install      # 构建 + 装到设备
 .\build.ps1 release      # release（沿用 debug 签名，仅自用侧载）
@@ -30,7 +29,7 @@ cd android-native
 - 真机调试（无线 ADB、截图、日志、uiautomator）见 `docs/android-debugging.md`。
 - 真机上**纯操作、不需要读屏判断的长链路**（如建片单→加影片→移除→复原）→ 直接把步骤交给我，别逐步调工具；需要看截图/读 UI 才能判断的（布局、文案、状态是否真的变了）才自己驱动。
 - 卡巴斯基会拦 DSH 子进程与 `java.exe` 的写入：工作区 `D:\missu` 在排除列表里，构建临时目录也因此落在 `.tmp-gradle`，不要改回 `%TEMP%`。
-- legacy 的 Expo 侧没有 `node_modules`（已删）；需要对照或重跑时先 `bun install`。
+- legacy 的 Expo 侧已归档到 `legacy/expo/`，没有 `node_modules`（已删）；需要对照或重跑时先在那个目录 `bun install`。
 
 ## 依赖选择（不许靠猜）
 
@@ -52,7 +51,7 @@ cd android-native
 
 - **不许猜端点或参数**。参数名与取值必须来自：站点脚本/表单、legacy 代码、或真机抓到的响应；三者都没有就说明「无法确认」，不要实现。
 - **不许靠抓页面推断存在哪些接口**。筛选参数这类由前端脚本拼 query 的能力，页面上根本没有普通链接（女优筛选就是实例）——必须读站点脚本或 legacy 的请求构造。
-- 走到第 2/3 级时必须三件事齐全：① 代码里 `NOTE`/`WARNING` 写明「站点无 JSON 接口，只能解析」+ 依据；② 用真实或真实结构的 fixture 写离线测试锁住规则；③ 在 `android-native/README.md`「已知坑 · 站点契约」记录结论。
+- 走到第 2/3 级时必须三件事齐全：① 代码里 `NOTE`/`WARNING` 写明「站点无 JSON 接口，只能解析」+ 依据；② 用真实或真实结构的 fixture 写离线测试锁住规则；③ 在 `docs/android-native.md`「已知坑 · 站点契约」记录结论。
 - 判断「要不要做」看**脆弱面 × 使用频率**，不看其他功能是否高效：低频 + 依赖解析的操作（如新建片单），优先考虑不做。
 
 ## WebView 兜底（受限使用）
@@ -78,7 +77,7 @@ cd android-native
 - Comment tags: `CRITICAL` = errors/crashes/data-loss; `WARNING` = risks/edge cases/side effects; `TODO` = incomplete work/tech debt; `NOTE` = non-obvious design decisions.
 - Round to business precision before float compare/accumulate/chain; NEVER raw `==` on floats.
 - 代码注释用中文；提交信息用英文并遵循 Conventional Commits。
-- Kotlin 侧包名 `app.missu`，源码在 `android-native/app/src/main/java/app/missu/`。
+- Kotlin 侧包名 `app.missu`，源码在 `app/src/main/java/app/missu/`。
 
 ## Git Workflow
 
@@ -101,8 +100,8 @@ cd android-native
 
 ## Verification
 
-- 原生工程：`cd android-native; .\build.ps1`（或 `install`）必须 `BUILD SUCCESSFUL`；这是唯一的验收命令。
+- 原生工程：`.\build.ps1`（或 `install`）必须 `BUILD SUCCESSFUL`；这是唯一的验收命令。
 - legacy Expo 代码不做验证（不再构建）；`bun check`（bun 原生检查器）只在需要检查 legacy TS 时用。
-- 构建环境的已知坑（`native-platform.dll`、`%TEMP%` 拒写、JVM 被按程序拦截、PS 5.1 需要 BOM）见 `android-native/README.md` 的「已知坑」。
-- **升级 SDK / JDK 等环境依赖前，先查 Android CLI 最新情况**：Google 正在把 `sdkmanager` 迁到原生的 `android sdk`，新版 bundle 自带的 JRE 可能未签名，而本机 Windows 11 Smart App Control 处于强制模式（`VerifiedAndReputablePolicyState = 1`）会拒绝加载未签名代码。按 `android-native/README.md`「升级 SDK 环境依赖前」的检查清单确认后再动，并把结论写回那里。
-- After structural changes, update stale descriptions in AGENTS.md / DESIGN.md / android-native/README.md proactively.
+- 构建环境的已知坑（`native-platform.dll`、`%TEMP%` 拒写、JVM 被按程序拦截、PS 5.1 需要 BOM）见 `docs/android-native.md` 的「已知坑」。
+- **升级 SDK / JDK 等环境依赖前，先查 Android CLI 最新情况**：Google 正在把 `sdkmanager` 迁到原生的 `android sdk`，新版 bundle 自带的 JRE 可能未签名，而本机 Windows 11 Smart App Control 处于强制模式（`VerifiedAndReputablePolicyState = 1`）会拒绝加载未签名代码。按 `docs/android-native.md`「升级 SDK 环境依赖前」的检查清单确认后再动，并把结论写回那里。
+- After structural changes, update stale descriptions in AGENTS.md / DESIGN.md / docs/android-native.md proactively.
