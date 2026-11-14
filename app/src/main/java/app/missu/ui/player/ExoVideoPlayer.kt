@@ -63,6 +63,9 @@ fun ExoVideoPlayer(
     // NOTE: 第一帧真正出画。上层（详情页）要靠它决定什么时候撤掉封面：
     // 在它之前容器里必须一直有画面，否则"长大到位"的封面会凭空消失一下。
     onFirstFrameRendered: () -> Unit = {},
+    // NOTE: 播放失败也要通知上层。上层的封面画在播放器**之上**，不撤掉的话错误层永远被挡住——
+    // 用户只会看到一张虚焦封面和一个永远在转的环。
+    onPlaybackFailed: () -> Unit = {},
 ) {
     val context = LocalContext.current
 
@@ -102,6 +105,7 @@ fun ExoVideoPlayer(
     }
     // NOTE: 监听器在 DisposableEffect 里只装一次，回调必须走 rememberUpdatedState 才不会拿到旧 lambda。
     val notifyFirstFrame = rememberUpdatedState { onFirstFrameRendered() }
+    val notifyPlaybackFailed = rememberUpdatedState { onPlaybackFailed() }
 
     DisposableEffect(player) {
         val listener = object : Player.Listener {
@@ -118,6 +122,7 @@ fun ExoVideoPlayer(
             override fun onPlayerError(error: PlaybackException) {
                 Log.e(TAG, "playback failed: ${error.errorCodeName} / ${error.message}", error)
                 errorMessage = "${error.errorCodeName}: ${error.message}"
+                notifyPlaybackFailed.value()
             }
         }
         player.addListener(listener)
