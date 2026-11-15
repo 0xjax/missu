@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.dp
 /** 设置、账号与详情共用的分组容器。 */
 @Composable
 fun GroupSurface(
-    modifier: Modifier = Modifier.padding(horizontal = 16.dp),
+    modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Surface(

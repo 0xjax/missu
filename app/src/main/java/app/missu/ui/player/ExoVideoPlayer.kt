@@ -26,6 +26,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -122,14 +123,14 @@ fun ExoVideoPlayer(
     // NOTE: 画面比例（宽/高）。TextureView 不像 `PlayerView` 那样自带 `AspectRatioFrameLayout`：
     // 它把解码缓冲**拉伸**到自己的尺寸，16:9 的片子铺进 20:9 的横屏就是横向拉宽（实机可见）。
     // 所以按真实比例给视频层定尺寸、居中，多出来的部分由黑底垫住；0 表示还不知道。
-    var videoAspect by remember { mutableStateOf(0f) }
+    var videoAspect by remember { mutableFloatStateOf(0f) }
     // NOTE: 倍速是**全局设置**，不是本次播放的临时状态：它跟着偏好走，所以每部片的播放器
     // 建起来就按它设好（见下面 player 的 apply）。1.0x 只是没存过值时的默认。
     val settings = remember(context) { SettingsStore(context.applicationContext) }
     // 内嵌播放器是否把宽银幕片子裁满框（偏好，见 SettingsStore.fillScreen）。
     var fillScreen by remember { mutableStateOf(settings.fillScreen()) }
     val initialSpeed = remember { settings.playbackSpeed() }
-    var speed by remember { mutableStateOf(initialSpeed) }
+    var speed by remember { mutableFloatStateOf(initialSpeed) }
     // NOTE: 播放器设置面板（当前只有倍速一项）。不叫 speedMenu 了：倍速已经收进设置项里。
     var settingsOpen by remember { mutableStateOf(false) }
     // NOTE: 控件只在第一帧出画之后才允许出现。加载中就把进度条和播放键摆出来，

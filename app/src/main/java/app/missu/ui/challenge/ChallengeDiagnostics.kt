@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.util.Log
 import android.view.View
+import androidx.core.graphics.createBitmap
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -51,7 +52,7 @@ internal object ChallengeDiagnostics {
         val height = view.height
         if (width <= 0 || height <= 0) return null
         return runCatching {
-            Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            createBitmap(width, height)
                 .also { bitmap -> view.draw(Canvas(bitmap)) }
         }.getOrNull()
     }

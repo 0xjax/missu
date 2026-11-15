@@ -1,6 +1,7 @@
 package app.missu.data.store
 
 import android.content.Context
+import androidx.core.content.edit
 import app.missu.data.api.SourceConfig
 
 /** 明暗模式：跟随系统 / 强制浅色 / 强制深色。 */
@@ -55,13 +56,13 @@ class SettingsStore(context: Context) {
     fun appLanguage(): AppLanguage = AppLanguage.fromKey(prefs.getString(KEY_APP_LANGUAGE, null))
 
     fun setAppLanguage(value: AppLanguage) {
-        prefs.edit().putString(KEY_APP_LANGUAGE, value.name).apply()
+        prefs.edit { putString(KEY_APP_LANGUAGE, value.name) }
     }
 
     fun themeMode(): ThemeMode = ThemeMode.fromKey(prefs.getString(KEY_THEME_MODE, null))
 
     fun setThemeMode(value: ThemeMode) {
-        prefs.edit().putString(KEY_THEME_MODE, value.name).apply()
+        prefs.edit { putString(KEY_THEME_MODE, value.name) }
     }
 
     /**
@@ -77,7 +78,7 @@ class SettingsStore(context: Context) {
     }
 
     fun setColorSource(value: ColorSource) {
-        prefs.edit().putString(KEY_COLOR_SOURCE, value.name).remove(KEY_DYNAMIC_COLOR).apply()
+        prefs.edit { putString(KEY_COLOR_SOURCE, value.name).remove(KEY_DYNAMIC_COLOR) }
     }
 
     /**
@@ -97,7 +98,7 @@ class SettingsStore(context: Context) {
     fun followThemeIcon(): Boolean = prefs.getBoolean(KEY_FOLLOW_THEME_ICON, false)
 
     fun setFollowThemeIcon(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_FOLLOW_THEME_ICON, enabled).apply()
+        prefs.edit { putBoolean(KEY_FOLLOW_THEME_ICON, enabled) }
     }
 
     /**
@@ -109,7 +110,7 @@ class SettingsStore(context: Context) {
     fun pureBlack(): Boolean = prefs.getBoolean(KEY_PURE_BLACK, false)
 
     fun setPureBlack(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_PURE_BLACK, enabled).apply()
+        prefs.edit { putBoolean(KEY_PURE_BLACK, enabled) }
     }
 
     /**
@@ -125,7 +126,7 @@ class SettingsStore(context: Context) {
     fun playbackSpeed(): Float = prefs.getFloat(KEY_PLAYBACK_SPEED, 1f)
 
     fun setPlaybackSpeed(value: Float) {
-        prefs.edit().putFloat(KEY_PLAYBACK_SPEED, value).apply()
+        prefs.edit { putFloat(KEY_PLAYBACK_SPEED, value) }
     }
 
     /**
@@ -137,7 +138,7 @@ class SettingsStore(context: Context) {
     fun autoplay(): Boolean = prefs.getBoolean(KEY_AUTOPLAY, true)
 
     fun setAutoplay(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_AUTOPLAY, enabled).apply()
+        prefs.edit { putBoolean(KEY_AUTOPLAY, enabled) }
     }
 
     /**
@@ -147,7 +148,7 @@ class SettingsStore(context: Context) {
     fun fillScreen(): Boolean = prefs.getBoolean(KEY_FILL_SCREEN, false)
 
     fun setFillScreen(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_FILL_SCREEN, enabled).apply()
+        prefs.edit { putBoolean(KEY_FILL_SCREEN, enabled) }
     }
 
     private companion object {

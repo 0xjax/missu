@@ -1,6 +1,7 @@
 package app.missu.data.store
 
 import android.content.Context
+import androidx.core.content.edit
 import app.missu.data.model.AccountUser
 
 /**
@@ -19,14 +20,14 @@ class ProfileStore(context: Context) {
     }
 
     fun write(user: AccountUser) {
-        prefs.edit()
-            .putString(KEY_EMAIL, user.email)
-            .putString(KEY_USERNAME, user.username)
-            .apply()
+        prefs.edit {
+            putString(KEY_EMAIL, user.email)
+            putString(KEY_USERNAME, user.username)
+        }
     }
 
     fun clear() {
-        prefs.edit().clear().apply()
+        prefs.edit { clear() }
     }
 
     private companion object {

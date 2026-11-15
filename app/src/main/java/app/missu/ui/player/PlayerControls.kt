@@ -59,6 +59,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -109,7 +111,7 @@ const val SEEK_STEP_SECONDS = 10
  * NOTE: 快进/快退没有按钮，改成**双击画面左右半边**（对齐 legacy）。
  * NOTE: 压在画面上的东西一律**黑底 + 白内容**，和倍速那颗 `OverlayChip` 同一个约定。
  */
-@OptIn(UnstableApi::class)
+@UnstableApi
 @Composable
 fun PlayerOverlay(
     player: Player,
@@ -339,8 +341,8 @@ private fun SeekBar(
     val thumbRadius = if (fullscreen) FullscreenThumbRadius else InlineThumbRadius
     val bandHeight = if (fullscreen) FullscreenBarHeight else ProgressBarReservedHeight
     var dragging by remember { mutableStateOf(false) }
-    var dragFraction by remember { mutableStateOf(0f) }
-    var widthPx by remember { mutableStateOf(1) }
+    var dragFraction by remember { mutableFloatStateOf(0f) }
+    var widthPx by remember { mutableIntStateOf(1) }
     // NOTE: 松手后不能立刻切回「轮询到的位置」——播放器要过一会儿才报新位置，中间那一两帧
     // 会按旧位置算，看起来就是「进度条闪回一下再跳过去」。所以先挂一个待生效目标，等轮询到的
     // 位置真的接近它（或超时兜底）再交还给轮询。

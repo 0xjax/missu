@@ -4,6 +4,7 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import androidx.core.content.edit
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -24,7 +25,7 @@ class CredentialStore(context: Context) {
 
     fun save(email: String, password: String) {
         val encrypted = encrypt("$email\n$password") ?: return
-        prefs.edit().putString(KEY_CREDENTIALS, encrypted).apply()
+        prefs.edit { putString(KEY_CREDENTIALS, encrypted) }
     }
 
     fun load(): Pair<String, String>? {
@@ -37,7 +38,7 @@ class CredentialStore(context: Context) {
     }
 
     fun clear() {
-        prefs.edit().remove(KEY_CREDENTIALS).apply()
+        prefs.edit { remove(KEY_CREDENTIALS) }
     }
 
     private fun encrypt(plain: String): String? = runCatching {

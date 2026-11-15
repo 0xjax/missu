@@ -1,5 +1,6 @@
 package app.missu.ui.player
 
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import app.missu.data.api.AndroidCookieJar
@@ -14,6 +15,7 @@ import okhttp3.OkHttpClient
  * NOTE: `Referer` / `User-Agent` 也是必须的。预览片在站点自己的 CDN（`fourhoi.com`），
  * 不带这两个头同样被拒；两个播放器都在同一个函数里取，就不存在「一个能放一个放不了」。
  */
+@UnstableApi
 fun mediaDataSourceFactory(): DataSource.Factory {
     val callFactory = OkHttpClient.Builder()
         .cookieJar(AndroidCookieJar())

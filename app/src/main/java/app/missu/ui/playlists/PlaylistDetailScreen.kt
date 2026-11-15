@@ -47,6 +47,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -77,9 +78,9 @@ fun PlaylistDetailScreen(
     onRetry: () -> Unit,
     onOpen: (id: String, thumbnail: String?) -> Unit,
     onBack: () -> Unit,
+    modifier: Modifier = Modifier,
     onEdit: () -> Unit = {},
     onRemove: (List<String>) -> Unit = {},
-    modifier: Modifier = Modifier,
 ) {
     val content = state as? PlaylistDetailUiState.Content
     val title = content?.name ?: fallbackTitle
@@ -271,7 +272,7 @@ fun PlaylistDetailScreen(
         AlertDialog(
             onDismissRequest = { pendingRemove = emptyList() },
             title = { Text(stringResource(R.string.playlist_remove_dialog_title)) },
-            text = { Text(stringResource(R.string.playlist_remove_dialog_body, pendingRemove.size, title)) },
+            text = { Text(pluralStringResource(R.plurals.playlist_remove_dialog_body, pendingRemove.size, pendingRemove.size, title)) },
             confirmButton = {
                 TextButton(onClick = {
                     val ids = pendingRemove

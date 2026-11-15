@@ -87,7 +87,7 @@ fun SettingsScreen(
         ) {
             SectionLabel(stringResource(R.string.settings_appearance))
 
-            GroupSurface {
+            GroupSurface(modifier = Modifier.padding(horizontal = 16.dp)) {
                 ThemeMode.entries.forEachIndexed { index, mode ->
                     if (index > 0) GroupDivider()
                     val selected = mode == themeMode
@@ -108,7 +108,7 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(8.dp))
 
-            GroupSurface {
+            GroupSurface(modifier = Modifier.padding(horizontal = 16.dp)) {
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
                 ) {
@@ -176,7 +176,7 @@ fun SettingsScreen(
 
             // NOTE: 播放相关只有这一项。默认开——本 App 的核心是「点开就看」，关掉是给
             // 「不想在公共场合突然出声」的人一个开关，不是默认体验。
-            GroupSurface {
+            GroupSurface(modifier = Modifier.padding(horizontal = 16.dp)) {
                 ListItem(
                     modifier = Modifier.toggleable(
                         value = autoplay,
@@ -204,7 +204,7 @@ fun SettingsScreen(
             // NOTE: 一个设置项同时决定**界面语言与站点内容语言**。不拆成两项：详情页的信息行标签
             // 是站点按内容语言返回的，两个轴分开就会出现「中文界面 + 英文标签」的混排。
             // NOTE: 列表里只出现有 UI 翻译的语言；「跟随系统」时界面回退英文、内容按系统语言走。
-            GroupSurface {
+            GroupSurface(modifier = Modifier.padding(horizontal = 16.dp)) {
                 AppLanguage.entries.forEachIndexed { index, option ->
                     if (index > 0) GroupDivider()
                     val selected = option == appLanguage

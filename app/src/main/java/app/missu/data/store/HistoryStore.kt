@@ -1,6 +1,7 @@
 package app.missu.data.store
 
 import android.content.Context
+import androidx.core.content.edit
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -35,7 +36,7 @@ class HistoryStore(context: Context) {
         writeAll(next)
     }
 
-    fun clear() = prefs.edit().remove(KEY).apply()
+    fun clear() = prefs.edit { remove(KEY) }
 
     private fun readAll(): List<HistoryEntry> {
         val raw = prefs.getString(KEY, null) ?: return emptyList()
@@ -70,7 +71,7 @@ class HistoryStore(context: Context) {
                 },
             )
         }
-        prefs.edit().putString(KEY, array.toString()).apply()
+        prefs.edit { putString(KEY, array.toString()) }
     }
 
     private companion object {
