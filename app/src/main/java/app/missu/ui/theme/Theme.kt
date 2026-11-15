@@ -3,7 +3,6 @@ package app.missu.ui.theme
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
-import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
@@ -19,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.WindowCompat
 import app.missu.data.store.ColorSource
 
@@ -59,7 +59,7 @@ private fun WindowBackground(color: Color) {
     val view = LocalView.current
     if (view.isInEditMode) return
     val window = view.context.findActivity()?.window ?: return
-    SideEffect { window.setBackgroundDrawable(ColorDrawable(color.toArgb())) }
+    SideEffect { window.setBackgroundDrawable(color.toArgb().toDrawable()) }
 }
 
 /**

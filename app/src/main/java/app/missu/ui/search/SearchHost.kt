@@ -85,9 +85,9 @@ fun SearchHost(
     onLoadMore: () -> Unit,
     onOpen: (id: String, thumbnail: String?) -> Unit,
     onClear: () -> Unit,
+    modifier: Modifier = Modifier,
     recent: List<String> = emptyList(),
     onClearHistory: () -> Unit = {},
-    modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val searchBarState = rememberSearchBarState()

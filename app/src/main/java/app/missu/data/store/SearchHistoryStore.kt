@@ -1,6 +1,7 @@
 package app.missu.data.store
 
 import android.content.Context
+import androidx.core.content.edit
 import org.json.JSONArray
 
 /**
@@ -31,12 +32,12 @@ class SearchHistoryStore(context: Context) {
         write(next)
     }
 
-    fun clear() = prefs.edit().remove(KEY).apply()
+    fun clear() = prefs.edit { remove(KEY) }
 
     private fun write(entries: List<String>) {
         val array = JSONArray()
         entries.forEach { array.put(it) }
-        prefs.edit().putString(KEY, array.toString()).apply()
+        prefs.edit { putString(KEY, array.toString()) }
     }
 
     private companion object {

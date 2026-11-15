@@ -61,10 +61,10 @@ fun PlaylistsScreen(
     onRetry: () -> Unit,
     onOpen: (PlaylistSummary) -> Unit,
     onBack: () -> Unit,
+    modifier: Modifier = Modifier,
     createMessage: UiMessage? = null,
     creating: Boolean = false,
     onCreate: (name: String, isPublic: Boolean, onSuccess: () -> Unit) -> Unit = { _, _, _ -> },
-    modifier: Modifier = Modifier,
 ) {
     var dialogOpen by rememberSaveable { mutableStateOf(false) }
     var fabExpanded by rememberSaveable { mutableStateOf(false) }

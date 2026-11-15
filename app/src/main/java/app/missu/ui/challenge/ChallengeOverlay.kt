@@ -47,6 +47,8 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
+import androidx.core.net.toUri
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
@@ -230,8 +232,8 @@ fun ChallengeOverlayHost(state: ChallengeState) {
 
 /** 站点的镜像段 `/dmNNN` 会插在语言段前（`/dm247/cn`），比较路径前先剥掉。 */
 private fun samePath(actual: String, expected: String): Boolean {
-    val a = android.net.Uri.parse(actual).path.orEmpty()
-    val b = android.net.Uri.parse(expected).path.orEmpty()
+    val a = actual.toUri().path.orEmpty()
+    val b = expected.toUri().path.orEmpty()
     return a.replace(Regex("/dm\\d+(?=/)"), "") == b.replace(Regex("/dm\\d+(?=/)"), "")
 }
 
@@ -363,9 +365,11 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
     // 页面自己不带背景（实测 html/body 的 background 都是 rgba(0,0,0,0)），底色由这层给；
     // 明暗再通过 `color-scheme` 交回浏览器的默认值（见 applyColorScheme）。
     val darkTheme = LocalDarkTheme.current
-    val title = context.getString(R.string.challenge_title)
-    val cancel = context.getString(R.string.common_cancel)
-    val passedText = context.getString(R.string.challenge_passed)
+    val title = stringResource(R.string.challenge_title)
+    val cancel = stringResource(R.string.common_cancel)
+    val passedText = stringResource(R.string.challenge_passed)
+    val openingText = stringResource(R.string.challenge_opening)
+    val waitingText = stringResource(R.string.challenge_waiting)
 
     // NOTE: 先不显形——只有确认「这是真挑战页」才淡入。见 poll 循环里的 revealed 判定。
     var revealed by remember(request) { mutableStateOf(false) }
@@ -374,7 +378,7 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
         animationSpec = tween(FADE_MS),
         label = "challengeAlpha",
     )
-    var status by remember(request) { mutableStateOf(context.getString(R.string.challenge_opening)) }
+    var status by remember(request, openingText) { mutableStateOf(openingText) }
     var attempts by remember(request) { mutableIntStateOf(0) }
     var finished by remember(request) { mutableStateOf(false) }
     // WebView 在 factory 里创建、在 LaunchedEffect 里被轮询读：用普通引用而不是 Compose 状态，
@@ -425,7 +429,7 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
         onFinish(passed, html)
     }
 
-    LaunchedEffect(request) {
+    LaunchedEffect(request, waitingText) {
         delay(FIRST_CHECK_MS)
         while (!finished) {
             attempts += 1
@@ -454,7 +458,7 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
             }
             // 预览：页面是本地 fixture，永远等不到 clearance，也不该自己关掉——只做样式注入与取证。
             if (request.previewUrl != null) {
-                status = context.getString(R.string.challenge_waiting)
+                status = waitingText
                 delay(POLL_MS)
                 continue
             }
@@ -481,7 +485,7 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
                 !challengePage && attempts >= GIVE_UP_ATTEMPTS -> finish(passed = true, html = null)
                 attempts >= MAX_ATTEMPTS -> finish(passed = false, html = null)
                 else -> {
-                    status = context.getString(R.string.challenge_waiting)
+                    status = waitingText
                     delay(POLL_MS)
                 }
             }

@@ -46,6 +46,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -112,7 +113,7 @@ fun DiscoverScreen(
     onResetFilters: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var tabIndex by rememberSaveable { mutableStateOf(0) }
+    var tabIndex by rememberSaveable { mutableIntStateOf(0) }
     var filterSheetOpen by rememberSaveable { mutableStateOf(false) }
     val tabs = DiscoverTab.entries
     val tab = tabs[tabIndex]

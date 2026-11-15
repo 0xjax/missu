@@ -5,7 +5,9 @@
   NOTE: 故意不提供 <monochrome> 层。这个图标的身分就是背景色本身，系统主题化图标会把它抹成单色；
   Android 16 QPR 2 起系统会为没有 monochrome 层的应用自动上色，那是系统的选择，我们接受。
 -->
-<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="MonochromeLauncherIcon">
     <background android:drawable="@color/ic_launcher_background_brand" />
     <foreground android:drawable="@drawable/ic_launcher_foreground" />
 </adaptive-icon>

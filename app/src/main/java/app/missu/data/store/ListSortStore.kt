@@ -1,6 +1,7 @@
 package app.missu.data.store
 
 import android.content.Context
+import androidx.core.content.edit
 import app.missu.data.api.VideoListOptions
 import app.missu.data.api.videoListSortGroup
 
@@ -27,6 +28,6 @@ class ListSortStore(context: Context) {
         VideoListOptions.Sort.entries.firstOrNull { it.name == prefs.getString(videoListSortGroup(path), null) }
 
     fun put(path: String, sort: VideoListOptions.Sort) {
-        prefs.edit().putString(videoListSortGroup(path), sort.name).apply()
+        prefs.edit { putString(videoListSortGroup(path), sort.name) }
     }
 }

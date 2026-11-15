@@ -82,7 +82,7 @@ fun AccountScreen(
                     onAction = onLogin,
                     modifier = Modifier.weight(1f),
                 )
-                GroupSurface {
+                GroupSurface(modifier = Modifier.padding(horizontal = 16.dp)) {
                     MenuRow(Icons.Filled.Settings, stringResource(R.string.account_settings), onSettings)
                 }
                 Spacer(Modifier.height(16.dp))
@@ -96,7 +96,7 @@ fun AccountScreen(
                 ProfileCard(user = state.user)
                 Spacer(Modifier.height(16.dp))
 
-                GroupSurface {
+                GroupSurface(modifier = Modifier.padding(horizontal = 16.dp)) {
                     MenuRow(Icons.Filled.Favorite, stringResource(R.string.account_saved), onSaved)
                     GroupDivider(start = 56.dp)
                     MenuRow(Icons.AutoMirrored.Filled.List, stringResource(R.string.account_playlists), onPlaylists)
@@ -108,7 +108,7 @@ fun AccountScreen(
 
                 Spacer(Modifier.height(12.dp))
 
-                GroupSurface {
+                GroupSurface(modifier = Modifier.padding(horizontal = 16.dp)) {
                     MenuRow(
                         icon = Icons.AutoMirrored.Filled.ExitToApp,
                         label = stringResource(R.string.account_logout),

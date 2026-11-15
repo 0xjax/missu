@@ -172,7 +172,7 @@ object HomeParser {
             val title = card.selectFirst("a.text-secondary")?.text()?.trim().orEmpty().ifEmpty { id }
 
             val rawImage = image.attr("data-src").takeIf { it.isNotEmpty() } ?: image.attr("src")
-            val thumbnailUrl = rawImage?.takeIf { it.isNotEmpty() && !it.startsWith("data:") }?.let { absolute(it) }
+            val thumbnailUrl = rawImage.takeIf { it.isNotEmpty() && !it.startsWith("data:") }?.let { absolute(it) }
 
             // NOTE: 卡片同时直出一段静音预览片（`<video class="preview" data-src="…/preview.mp4">`），
             // 站点在桌面端移入鼠标时就是拿它换掉封面。我们原样取这个值，不按番号拼 URL——

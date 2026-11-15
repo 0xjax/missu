@@ -1,6 +1,7 @@
 package app.missu.ui.common
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import app.missu.R
 import app.missu.data.api.ChallengeException
@@ -56,6 +57,6 @@ fun UiMessage.text(): String = when (this) {
     UiMessage.LoginFailed -> stringResource(R.string.error_login_failed)
     UiMessage.NoVideoId -> stringResource(R.string.error_no_video_id)
     UiMessage.PlaylistNameEmpty -> stringResource(R.string.error_playlist_name_empty)
-    is UiMessage.PartialRemoveFailed -> stringResource(R.string.error_partial_remove, count)
+    is UiMessage.PartialRemoveFailed -> pluralStringResource(R.plurals.error_partial_remove, count, count)
     UiMessage.Unknown -> stringResource(R.string.error_unknown)
 }

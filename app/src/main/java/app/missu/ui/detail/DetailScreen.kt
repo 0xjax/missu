@@ -65,6 +65,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -94,7 +95,9 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 import androidx.compose.ui.zIndex
 import app.missu.R
 
@@ -312,7 +315,10 @@ fun DetailScreen(
                 // offset 只是整体下移，框本身还是严丝合缝的 16:9。
                 // CRITICAL: 只有内嵌才让出状态栏。全屏时系统栏是隐藏的，可它一旦被算进 inset
                 // （比如全屏里开了抽屉、那个窗口抢走焦点），这里再 offset 就会把整块画面顶下去。
-                .offset(y = if (fullscreen) 0.dp else statusBarInset)
+                .offset {
+                    val top = if (fullscreen) 0.dp else statusBarInset
+                    IntOffset(0, top.toPx().roundToInt())
+                }
                 .zIndex(1f)
                 .then(dragModifier),
         )
@@ -424,7 +430,7 @@ private fun DetailBody(
     // 底下滑进去的，再按滚动状态给 6dp 阴影，边界就自然读得出来。不滚动时没有阴影，不留痕迹。
     val listState = rememberLazyListState()
     val scrolled by remember { derivedStateOf { listState.canScrollBackward } }
-    var headerHeightPx by remember { mutableStateOf(0) }
+    var headerHeightPx by remember { mutableIntStateOf(0) }
     val headerHeight = with(LocalDensity.current) { headerHeightPx.toDp() }
     val headerShadow by animateDpAsState(
         targetValue = if (scrolled) 6.dp else 0.dp,

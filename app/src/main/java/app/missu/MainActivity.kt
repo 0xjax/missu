@@ -4,12 +4,12 @@ package app.missu
 
 import android.app.Activity
 import android.content.res.Configuration
-import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.core.graphics.drawable.toDrawable
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
@@ -36,6 +36,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
@@ -98,7 +99,7 @@ class MainActivity : ComponentActivity() {
             ThemeMode.DARK -> true
         }
         val color = themeBackgroundColor(applicationContext, darkTheme, settings.colorSource())
-        window.setBackgroundDrawable(ColorDrawable(color.toArgb()))
+        window.setBackgroundDrawable(color.toArgb().toDrawable())
     }
 }
 
@@ -131,7 +132,7 @@ private fun MissuRoot() {
     }
 
     // 在第一次请求前同步内容语言；localizedContext 同时跟踪系统配置与全屏旋转。
-    val systemConfiguration = context.resources.configuration
+    val systemConfiguration = LocalConfiguration.current
     val contentLanguage = remember(appLanguage) {
         appLanguage.contentLanguage(systemConfiguration).also { SourceConfig.contentLanguage = it }
     }

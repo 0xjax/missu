@@ -4,7 +4,7 @@
   中文在 `values-zh/`，日文在 `values-ja/`。加一种语言 = 加一个目录 + 语言设置里一行。
 -->
 <resources>
-    <string name="app_name">Missu</string>
+    <string name="app_name" translatable="false">Missu</string>
 
     <!-- 通用 -->
     <string name="common_retry">Retry</string>
@@ -144,7 +144,10 @@
     <string name="playlist_remove">Remove</string>
     <string name="playlist_remove_n">Remove %1$d</string>
     <string name="playlist_remove_dialog_title">Remove the selected videos?</string>
-    <string name="playlist_remove_dialog_body">Removes %1$d selected videos from “%2$s”. The videos themselves are not deleted.</string>
+    <plurals name="playlist_remove_dialog_body">
+        <item quantity="one">Removes %1$d selected video from “%2$s”. The video itself is not deleted.</item>
+        <item quantity="other">Removes %1$d selected videos from “%2$s”. The videos themselves are not deleted.</item>
+    </plurals>
     <string name="playlist_remove_action">Remove</string>
     <string name="playlist_selected">Selected</string>
     <string name="playlist_unselected">Not selected</string>
@@ -217,7 +220,10 @@
     <string name="error_login_failed">Sign-in failed</string>
     <string name="error_no_video_id">No video id — cannot save</string>
     <string name="error_playlist_name_empty">Playlist name cannot be empty</string>
-    <string name="error_partial_remove">%1$d videos could not be removed — try again</string>
+    <plurals name="error_partial_remove">
+        <item quantity="one">%1$d video could not be removed — try again</item>
+        <item quantity="other">%1$d videos could not be removed — try again</item>
+    </plurals>
     <string name="error_unknown">Unknown error</string>
 
     <!-- 人机验证 -->
@@ -225,5 +231,4 @@
     <string name="challenge_opening">Opening the site…</string>
     <string name="challenge_passed">Verified, reading the page…</string>
     <string name="challenge_waiting">Waiting for the site…</string>
-    <string name="challenge_blocked">The site is still checking. Tap Cancel and try again, or switch network.</string>
 </resources>

@@ -12,7 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import android.os.Build
@@ -72,7 +72,7 @@ fun PageSurface(
 
     content: @Composable () -> Unit,
 ) {
-    var shrink by remember { mutableStateOf(1f) }
+    var shrink by remember { mutableFloatStateOf(1f) }
     val carded = card && shrink < 0.999f
     // 圆角**不做过渡**：页面一开始缩小就是最终圆角，整个拖动过程里它不变。
     // （之前用 spring 从 0 长到 24dp，手一推圆角还在长，看起来就是「先尖后钝」。）

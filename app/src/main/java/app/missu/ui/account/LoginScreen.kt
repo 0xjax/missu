@@ -12,13 +12,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedSecureTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -31,7 +32,6 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import app.missu.R
 import app.missu.ui.common.text
@@ -51,10 +51,11 @@ fun LoginScreen(
     modifier: Modifier = Modifier,
 ) {
     var email by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
+    val passwordState = rememberTextFieldState()
     val keyboard = LocalSoftwareKeyboardController.current
     val loading = state is LoginUiState.Loading
     val submit = {
+        val password = passwordState.text.toString()
         if (email.isNotBlank() && password.isNotBlank()) {
             keyboard?.hide()
             onSubmit(email, password)
@@ -92,19 +93,16 @@ fun LoginScreen(
             )
             Spacer(Modifier.height(12.dp))
 
-            OutlinedTextField(
-                value = password,
-                onValueChange = { password = it },
+            OutlinedSecureTextField(
+                state = passwordState,
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text(stringResource(R.string.login_password)) },
-                singleLine = true,
                 enabled = !loading,
-                visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password,
                     imeAction = ImeAction.Done,
                 ),
-                keyboardActions = KeyboardActions(onDone = { submit() }),
+                onKeyboardAction = { submit() },
             )
 
             // NOTE: 登录接口自身的 401 表示「账号或密码错」，与会话失效不同，文案不能混。
