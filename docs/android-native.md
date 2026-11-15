@@ -92,6 +92,17 @@ cd D:\missu
 .\scripts\build.ps1 release    # release（沿用 debug 签名，仅自用侧载）
 ```
 
+- **产物与留档**：`app/build/outputs/apk/release/app-release.apk`。按版本复制一份到 `.local/`（已 gitignore，与 GitHub Release 附件共用同一个名字），版本号从 `app/build.gradle.kts` 读，别写死：
+
+  ```powershell
+  $raw = Get-Content app\build.gradle.kts -Raw
+  $version = [regex]::Match($raw, 'versionName\s*=\s*"([^"]+)"').Groups[1].Value
+  Copy-Item app\build\outputs\apk\release\app-release.apk ".local\Missu-$version-universal.apk"
+  Get-FileHash ".local\Missu-$version-universal.apk" -Algorithm SHA256 | Select-Object Hash
+  ```
+
+- **后缀用 `universal` 而不是 ABI**：这个 APK 里只有一个 native 库 `libandroidx.graphics.path.so`（每个 ABI 7–12 KB），分 ABI 只能省不到 30 KB，一个全 ABI 包最省事。legacy 时代的 `-arm64-v8a` 是因为 Expo 构建真的只打了 arm64。要分 ABI 就在 `app/build.gradle.kts` 里开 `splits.abi`（或 `androidComponents` 的 ABI 过滤），**不要靠改文件名冒充**——签名覆盖整个包，删别的 ABI 目录会让签名失效。
+
 自动化场景（需要采集输出）加环境变量 `MISSU_NO_DAEMON=1`：**Gradle daemon 会一直占着 stdout，管道等不到 EOF，命令看起来"卡死"**——构建其实早就结束了。
 
 - **首次**构建要下载 Gradle 9.6.0（腾讯镜像）+ 全部依赖（阿里云），冷启动约几分钟；之后增量约 10–30 秒。
