@@ -82,7 +82,7 @@
 | 排序切换 | `ToggleButton` 连通组 | 女优排序（影片 / 出道 / **本月排行**）；首尾 `connected*ButtonShapes()` 咬合，语义 `Role.RadioButton`；`SegmentedButton` 已退役。第三档不是 `?sort=` 取值——站点把月榜做成独立页面 `/actresses/ranking`（现行标题「女优排行 NOV 2026」），而那一页不吃 height/cup/age/debut，所以选中它时「筛选」与「清空」都藏起来（留着就会得到点完没反应的胶囊） |
 | 列表页口径（视频列表） | `AssistChip`（排序）+ 一排 `FilterChip`（过滤） | 页头一行：左边排序（7 档 + 「默认」收进 `DropdownMenu`），右边过滤（全部 / 单人 / 多人 / 中文字幕，互斥单选、可横向滚动）。换口径只换数据、页面结构不动；规则与收敛判据见「列表口径」一节 |
 | 详情页动作条 | `FlexibleBottomAppBar` + `SplitButtonLayout` | 左半是主操作「收藏 / 已收藏」，右半「+」打开加入片单面板；动作常驻底部，不再插在正文中间 |
-| 搜索栏 | M3E `SearchBar`（slot + `SearchBarState`），**就地展开** | 首页顶部直接是这条真 `SearchBar`（56dp 胶囊 + 搜索图标），点一下在当前页展开成全屏 `ExpandedFullScreenSearchBar`，提交后同一屏收成带返回箭头的折叠态显示结果——搜索不再是独立路由，没有页面切换、没有键盘重启、输入框不会换样式 |
+| 搜索栏 | M3E `SearchBar`（slot + `SearchBarState`），**就地展开** | 首页顶部直接是这条真 `SearchBar`（56dp 胶囊 + 搜索图标），点一下在当前页展开成全屏 `ExpandedFullScreenSearchBar`，提交后同一屏收成带返回箭头的折叠态显示结果——搜索不再是独立路由，没有页面切换、没有键盘重启、输入框不会换样式。几何上它落在内容栅格上（左右 16dp，与卡片同一条边线），顶端停在**状态栏 + 8dp**：那正是 material3 展开态给输入框的落点（`SearchBarVerticalPadding`），折叠态也对齐这里，展开全程输入框的 y 才是恒定的。展开的动效分层见「动效」一节的搜索展开条目 |
 | 我的片单操作 | `FloatingActionButtonMenu` | 右下 FAB 展开「新建片单 / 刷新列表」；FAB 与菜单项容器色显式取 `primary`（默认 `primaryContainer` 是紫色，与粉色 accent 不搭）；主操作不再占顶栏动作位 |
 | 片单内移除影片 | 右下 `ToggleFloatingActionButton` + `HorizontalFloatingToolbar` | 未整理时只有一个「整理」FAB（编辑图标，点开 morph）；整理模式里点卡片是选中/取消（不进详情），浮条里是连体 `ButtonGroup`「全选 / 移出 N 部」，少见动作「取消选择 / 完成」放进 `AppBarRow` 溢出容器；二次确认后逐条 `DELETE /api/playlists/{片单id}/{影片id}`，成功只删本地这几条（删空转空态） |
 | 页面三态 | `LoadingIndicator` / `EmptyHint` / `ErrorHint` | 统一在 `ui/components/PageStates.kt`：空态 = 降对比度图标 + 标题 + 说明 + 可选 `FilledTonalButton`；错误态必须可重试（M3E 要求），不做「错误但没有出路」的页面 |
@@ -175,6 +175,7 @@
 | 同页内的显隐（播放器控件、提示） | fade | 150ms | 播放器覆盖层 |
 | 列表页口径切换（排序 / 过滤） | fade through | 90 + 210，两段不重叠 | `VideoListBody` 的 `PageStateTransition` |
 | 组件内部（按压、展开、形态变化） | 交给 `MotionScheme.expressive()` | 官方 spring | `MaterialExpressiveTheme` |
+| 搜索栏展开 | 官方 container transform（矩形插值），**不叠第二层** | 官方 spring（`SearchBarState` 自己的 spec） | `ExpandedFullScreenSearchBar` |
 
 三条硬规则：
 
@@ -183,6 +184,9 @@
 3. **两种等待必须长得不一样**：界面取数用页面级 `LoadingIndicator`（形变团块），媒体流缓冲用 `CircularWavyProgressIndicator`（波浪环）。同一形状家族会让「网站在响应」和「视频在起播」混成一件事。
 
 `MotionScheme.expressive()` 管的是官方组件内部动效，页面转场它不管——两层的时长与曲线得各自定，不能指望前者给后者提供节奏。实现层的坑（组合期约束、`isCurrent` 判离开、`remember` 的 key 不能是派生值）记在 `docs/android-native.md`「已知坑」，不在这里重复。
+
+**搜索栏展开的几何事实**：`ExpandedFullScreenSearchBar` 是矩形插值——顶边从药丸顶端升到窗口顶部、底边从药丸底端降到屏底，两者用的是**同一个** progress。1260×2800 的机器上这两段分别是 161px 与 2443px，所以底边的瞬时速度是顶边的 15 倍。这不是参数没调好，是这个容器形变的本性：**输入框是锚点，两条边各自负责把面板拉到位**——顶边那一小段同时在替输入框补上状态栏的 inset（`SearchBarVerticalPadding` 那条 `lerp`），所以输入框全程不动。想只让底边动，就得把顶边那 161px 提前变成面板色；试过在状态栏那条加一层按 progress 淡入的同色遮罩，实机看是「一个面板 + 一条另加上去的横带」，比原样更杂乱，已撤掉。真要"顶边一步到位"只能自己接管展开容器（焦点、输入法、返回、预测式返回都得重接），收益不值这个成本。
+这条也解释了药丸顶端为什么必须压在「状态栏 + 8dp」：差这 8dp，输入框自己会在展开中途往下滑一次，那才是真的多出一种速度。
 
 「首页更多 → 完整页」这条**不做**逐点共享元素（卡片飞到列表项）。方向本身成立——两边数据同源、位置本来可以对齐——但实际条件凑不齐：两边条数不同、进入后要落到真实滚动位置、而且可能带着筛选，逐项动画必然参差，反而比一次干净的页面转场更吵。
 

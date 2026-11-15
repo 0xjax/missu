@@ -124,7 +124,15 @@ fun SearchHost(
     }
 
     Column(modifier.fillMaxSize()) {
-        SearchBar(state = searchBarState, inputField = inputField)
+        // NOTE: 左右 16dp 与内容栅格同一条边线（首页/列表的卡片留白也是 16dp）；之前是通屏，
+        // 药丸比下面所有卡片都宽出去 16dp，看起来像没做完。
+        // NOTE: 顶部 8dp 不是审美值，是 material3 展开态给输入框的落点（SearchBarVerticalPadding）：
+        // 折叠态也停在「状态栏 + 8dp」，展开全程输入框的 y 才是恒定的（少这 8dp 它会中途往下滑一次）。
+        SearchBar(
+            state = searchBarState,
+            inputField = inputField,
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
+        )
         content()
     }
 
