@@ -4,6 +4,7 @@ package app.missu
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.StringRes
@@ -434,6 +435,13 @@ private fun MissuApp(
                 // 底栏属于它们本身，所以返回预览里进入的页面自带底栏，切页签时底栏也不动。
                 // 页签状态在 MissuApp（详情页要用它决定共享元素命名空间）。
                 val navScope = this
+                // NOTE: 页签是这个目的地**内部**的状态，返回栈上没有它们——不接管返回键的话，
+                // 在「发现」「我的」按返回会直接结束 Activity。按 Android 的约定退一层：非起始
+                // 页签先回到起始页签，到了起始页签再按才是退出应用。
+                // NOTE: 只在「不在起始页签」时启用，否则它会抢走首页那层的返回键（搜索态的
+                // BackHandler 在 SearchHost 里，见那儿）。
+                val startTab = topLevels.first().route
+                BackHandler(enabled = tabRoute != startTab) { tabRoute = startTab }
                 Scaffold(
                     // NOTE: 预测返回时把这一页压暗（详情/列表等二级页都从这一页被揭开），
                     // 见 `underScrim`。挂在 Scaffold 自己的绘制上，底栏一起盖。
@@ -887,8 +895,8 @@ private data class TopLevel(
     val icon: androidx.compose.ui.graphics.vector.ImageVector,
 )
 
-// NOTE: 搜索不再单独占一个页签——「发现」顶部就是搜索入口，结果页仍在（search 路由），
-// 底部只留三个一级页面：首页 / 发现 / 我的。
+// NOTE: 底部三个一级页面：首页 / 发现 / 我的。搜索不占页签，也**不是**独立目的地——它是首页
+// 目的地内部的一个状态（见 SearchHost），所以它的返回键得由它自己接管。
 private const val TABS_ROUTE = "tabs"
 
 private val topLevels = listOf(
