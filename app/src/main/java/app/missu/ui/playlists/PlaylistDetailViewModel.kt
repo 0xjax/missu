@@ -6,6 +6,8 @@ import app.missu.data.api.MissavApi
 import app.missu.data.model.VideoSummary
 import app.missu.ui.common.UiMessage
 import app.missu.ui.common.toUiMessage
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,9 +36,11 @@ class PlaylistDetailViewModel(
     /** 移除失败的一次性提示；成功时保持为空。 */
     private val _message = MutableStateFlow<UiMessage?>(null)
     val message: StateFlow<UiMessage?> = _message.asStateFlow()
+    private var operationJob: Job? = null
 
     fun load() {
-        viewModelScope.launch {
+        operationJob?.cancel()
+        operationJob = viewModelScope.launch {
             _state.value = PlaylistDetailUiState.Loading
             _state.value = try {
                 val detail = api.getPlaylistDetail(id)
@@ -47,6 +51,8 @@ class PlaylistDetailViewModel(
                     // （站点可能把同一部影片列两次）。
                     PlaylistDetailUiState.Content(detail.name.ifEmpty { id }, detail.videos.distinctBy { it.id + it.pageUrl })
                 }
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Exception) {
                 PlaylistDetailUiState.Error(error.toUiMessage())
             }
@@ -64,12 +70,15 @@ class PlaylistDetailViewModel(
         if (content.removingIds.isNotEmpty() || videoIds.isEmpty()) return
 
         _message.value = null
+        operationJob?.cancel()
         _state.value = content.copy(removingIds = videoIds.toSet())
-        viewModelScope.launch {
+        operationJob = viewModelScope.launch {
             val failed = mutableListOf<String>()
             for (videoId in videoIds) {
                 try {
                     api.removePlaylistItem(id, videoId)
+                } catch (error: CancellationException) {
+                    throw error
                 } catch (error: Exception) {
                     failed += videoId
                     if (failed.size == 1) _message.value = error.toUiMessage()

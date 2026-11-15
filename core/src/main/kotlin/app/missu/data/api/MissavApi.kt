@@ -16,6 +16,9 @@ import app.missu.data.parse.PlaylistEditPage
 import app.missu.data.parse.PlaylistFormParser
 import app.missu.data.parse.PlaylistParser
 import app.missu.data.parse.HomeParser
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.booleanOrNull
@@ -30,7 +33,7 @@ import kotlinx.serialization.json.put
  * 人机验证：站点用 Cloudflare 挡非浏览器客户端（实测 403 + `cf-mitigated: challenge`）。
  * 命中时交给 [challenge] 让用户过一遍，`cf_clearance` 写进共享 Cookie 后重试一次。
  *
- * TODO: 目前只有 `getHome`，后续按迁移顺序补 getVideos / getVideoDetail / searchVideos 等。
+ * NOTE: 网络在 IO 调度器执行；Jsoup 与打包脚本解包是 CPU 工作，统一由 [parsePage] 放到 Default。
  */
 class MissavApi(
     private val client: MissavClient = MissavClient(),
@@ -39,7 +42,7 @@ class MissavApi(
 ) {
 
     /** 首页板块。站点直出 HTML，直接 Jsoup 解析，不需要 WebView。 */
-    suspend fun getHome(): List<HomeSection> = HomeParser.parseHome(fetchPage("/"))
+    suspend fun getHome(): List<HomeSection> = parsePage("/", HomeParser::parseHome)
 
     /**
      * 站点导航里的分组入口（「频道」页签的数据源）。
@@ -47,16 +50,22 @@ class MissavApi(
      * NOTE: 与 [getHome] 是同一份首页 HTML，只是解析另一段；站点没有独立的导航接口。
      * 分组与条目都由站点给，我们不维护频道清单——它的编辑菜单变了就自动跟上。
      */
-    suspend fun getNavGroups(): List<NavGroup> = HomeParser.parseNav(fetchPage("/"))
+    suspend fun getNavGroups(): List<NavGroup> = parsePage("/", HomeParser::parseNav)
 
     /**
      * 详情页。播放地址从内联打包脚本里解出来（见 [app.missu.data.parse.DetailParser.extractPlaybackUrl]）。
      * NOTE: 顺带查收藏状态，查不到就当「未收藏」——详情页不该因为收藏接口抖动而整体失败。
      */
     suspend fun getVideoDetail(id: String): VideoDetail {
-        val detail = DetailParser.parse(fetchPage("/$id"), id)
+        val detail = parsePage("/$id") { DetailParser.parse(it, id) }
         val internalId = detail.internalId ?: return detail
-        val saved = runCatching { isSaved(internalId) }.getOrDefault(false)
+        val saved = try {
+            isSaved(internalId)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            false
+        }
         return detail.copy(saved = saved)
     }
 
@@ -198,6 +207,8 @@ class MissavApi(
         return try {
             login(remembered.first, remembered.second)
             true
+        } catch (error: CancellationException) {
+            throw error
         } catch (error: Exception) {
             if (error is InvalidCredentialsException) credentials.clear()
             false
@@ -213,8 +224,8 @@ class MissavApi(
      */
     suspend fun createPlaylist(name: String, isPublic: Boolean = false, description: String? = null) {
         val form = withAuthRetry {
-            val html = fetchPage(CREATE_PLAYLIST_PATH)
-            PlaylistFormParser.parseCreate(html) ?: throw IllegalStateException("新建片单页没有找到表单")
+            parsePage(CREATE_PLAYLIST_PATH, PlaylistFormParser::parseCreate)
+                ?: throw IllegalStateException("Playlist create form not found")
         }
 
         val fields = form.fields.toMutableMap()
@@ -231,8 +242,8 @@ class MissavApi(
     }
     /** 读取「修改片单」页：当前值 + 更新表单 + 删除表单（站点没有对应 JSON 接口）。 */
     suspend fun getPlaylistEdit(id: String): PlaylistEditPage = withAuthRetry {
-        val html = fetchPage("/playlists/$id/edit")
-        PlaylistFormParser.parseEdit(html) ?: throw IllegalStateException("修改片单页没有找到表单")
+        parsePage("/playlists/$id/edit", PlaylistFormParser::parseEdit)
+            ?: throw IllegalStateException("Playlist edit form not found")
     }
 
     /** 更新片单（名称 / 描述 / 是否公开）。表单 action 为空表示提交回编辑页自身。 */
@@ -266,12 +277,12 @@ class MissavApi(
      * WARNING: 该页对游客返回 200 + 空列表，调用方要用 `reloginWithRemembered()` 确认会话。
      */
     suspend fun getPlaylists(): List<PlaylistSummary> = withAuthRetry {
-        PlaylistParser.parsePlaylists(fetchPage("/playlists"))
+        parsePage("/playlists", PlaylistParser::parsePlaylists)
     }
 
     /** 片单详情（`/playlists/{id}`）：标题 + 影片列表。同样只能解析 HTML。 */
     suspend fun getPlaylistDetail(id: String): PlaylistDetail = withAuthRetry {
-        PlaylistParser.parsePlaylistDetail(fetchPage("/playlists/$id"))
+        parsePage("/playlists/$id", PlaylistParser::parsePlaylistDetail)
     }
     /**
      * 目录页（`/actresses`、`/genres`、`/makers`），分页 `?page=N`，可选排序 `?sort=`。
@@ -286,7 +297,7 @@ class MissavApi(
             if (page > 1) add("page=$page")
         }
         val path = if (params.isEmpty()) "/$kind" else "/$kind?" + params.joinToString("&")
-        return DirectoryParser.parse(fetchPage(path), kind, page)
+        return parsePage(path) { DirectoryParser.parse(it, kind, page) }
     }
 
     /**
@@ -300,7 +311,7 @@ class MissavApi(
      */
     suspend fun getActressRanking(page: Int = 1): DirectoryList {
         val path = if (page > 1) "/actresses/ranking?page=$page" else "/actresses/ranking"
-        return DirectoryParser.parse(fetchPage(path), "actresses", page)
+        return parsePage(path) { DirectoryParser.parse(it, "actresses", page) }
     }
 
     /**
@@ -319,7 +330,7 @@ class MissavApi(
             if (page > 1) add("page=$page")
         }
         val path = if (params.isEmpty()) "/actresses" else "/actresses?" + params.joinToString("&")
-        return DirectoryParser.parse(fetchPage(path), "actresses", page)
+        return parsePage(path) { DirectoryParser.parse(it, "actresses", page) }
     }
     /**
      * 通用视频列表页（`/new`、`/today-hot`、`/genres/{名}`、频道页…），分页用 `?page=N`。
@@ -333,14 +344,13 @@ class MissavApi(
         page: Int = 1,
         sort: VideoListOptions.Sort? = null,
         filter: VideoListOptions.Filter? = null,
-    ): VideoList = HomeParser.parseVideoList(
-        fetchPage(videoListPath(path, page, sort, filter)),
-        page,
-    )
+    ): VideoList = parsePage(videoListPath(path, page, sort, filter)) {
+        HomeParser.parseVideoList(it, page)
+    }
     /** 收藏列表：`/saved`，分页 `?page=N`。未登录会 302 回首页，交给 [withAuthRetry] 自动重登。 */
     suspend fun getSaved(page: Int = 1): VideoList = withAuthRetry {
         val path = if (page > 1) "/saved?page=$page" else "/saved"
-        HomeParser.parseVideoList(fetchPage(path), page)
+        parsePage(path) { HomeParser.parseVideoList(it, page) }
     }
 
     /**
@@ -350,13 +360,13 @@ class MissavApi(
     suspend fun searchVideos(keyword: String, page: Int = 1): VideoList {
         val encoded = java.net.URLEncoder.encode(keyword, "UTF-8").replace("+", "%20")
         val path = if (page > 1) "/search/$encoded?page=$page" else "/search/$encoded"
-        return HomeParser.parseVideoList(fetchPage(path), page)
+        return parsePage(path) { HomeParser.parseVideoList(it, page) }
     }
 
     /**
      * 受保护请求的包装：拿到 [SessionExpiredException] 时用记住的凭据自动重登一次再重试。
      * NOTE: 重登被拒（改过密码）就清掉凭据并抛原始错误，避免死循环。
-     * TODO: 收藏/片单这些接口迁移过来时统一走这里。
+     * 收藏、片单与其它受保护接口统一走这里。
      */
     suspend fun <T> withAuthRetry(block: suspend () -> T): T =
         try {
@@ -371,6 +381,12 @@ class MissavApi(
             }
             block()
         }
+
+    /** 页面传输在 IO 完成；HTML/DOM 与脚本解包在 Default 完成，避免占用 UI 调用方的主线程。 */
+    private suspend fun <T> parsePage(path: String, parser: (String) -> T): T {
+        val html = fetchPage(path)
+        return withContext(Dispatchers.Default) { parser(html) }
+    }
 
     private companion object {
         const val CREATE_PLAYLIST_PATH = "/playlists/create"

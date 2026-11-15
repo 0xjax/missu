@@ -5,6 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Cookie
 import okhttp3.CookieJar
+import okhttp3.FormBody
 import okhttp3.HttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -15,7 +16,7 @@ import java.util.concurrent.TimeUnit
 /**
  * 内存 Cookie 罐。会话与 `cf_clearance` 都靠它维持。
  *
- * TODO: 接 WebView 人机验证时，必须让系统 `CookieManager` 与本罐双向同步，
+ * NOTE: JVM 测试使用本罐；Android 使用系统 `CookieManager` 的适配器，与 WebView 双向同步，
  * 否则验证过了请求仍然 403（legacy 已踩过这个坑）。
  */
 class MemoryCookieJar : ClearableCookieJar {
@@ -29,7 +30,7 @@ class MemoryCookieJar : ClearableCookieJar {
     override fun loadForRequest(url: HttpUrl): List<Cookie> =
         store[url.host]?.values?.filter { it.matches(url) } ?: emptyList()
 
-    override fun clear() = store.clear()
+    override suspend fun clear() = store.clear()
 }
 
 /** 站点 HTTP 客户端：UA、超时、Cookie，外加把人机验证响应翻译成 [ChallengeException]。 */
@@ -128,9 +129,9 @@ class MissavClient(
     suspend fun postForm(path: String, fields: Map<String, String>): String = withContext(Dispatchers.IO) {
         val referer = SourceConfig.BASE_URL +
             if (SourceConfig.contentLanguage == "tw") "/" else "/${SourceConfig.contentLanguage}/"
-        val body = fields.entries.joinToString("&") { (key, value) ->
-            "${java.net.URLEncoder.encode(key, "UTF-8")}=${java.net.URLEncoder.encode(value, "UTF-8")}"
-        }
+        val body = FormBody.Builder().apply {
+            fields.forEach { (key, value) -> add(key, value) }
+        }.build()
         val request = Request.Builder()
             // NOTE: 片单删除表单的 action 是绝对 URL（含语言前缀），不能再走 localizedUrl，
             // 否则会拼成 /cn/https://… 直接 404（实测踩过）。只有相对路径才加语言前缀。
@@ -139,7 +140,7 @@ class MissavClient(
             .header("Accept", "text/html,application/xhtml+xml")
             .header("Origin", SourceConfig.BASE_URL)
             .header("Referer", referer)
-            .post(body.toRequestBody(FORM_MEDIA_TYPE))
+            .post(body)
             .build()
 
         client.newCall(request).execute().use { response ->
@@ -155,8 +156,8 @@ class MissavClient(
             text
         }
     }
-    /** 清空 Cookie 罐（登录前必须调用，见 [ClearableCookieJar]）。 */
-    fun clearCookies() {
+    /** 清空 Cookie 罐并等待具体实现完成（登录前必须调用，见 [ClearableCookieJar]）。 */
+    suspend fun clearCookies() {
         (cookieJar as? ClearableCookieJar)?.clear()
     }
 
@@ -164,6 +165,5 @@ class MissavClient(
         val CHALLENGE_TITLE = Regex("<title>\\s*Just a moment\\.\\.\\.\\s*</title>", RegexOption.IGNORE_CASE)
         const val HOME_PATH = "/"
         val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
-        val FORM_MEDIA_TYPE = "application/x-www-form-urlencoded; charset=utf-8".toMediaType()
     }
 }

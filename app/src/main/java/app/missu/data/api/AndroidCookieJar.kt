@@ -1,8 +1,10 @@
 package app.missu.data.api
 
 import android.webkit.CookieManager
+import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Cookie
 import okhttp3.HttpUrl
+import kotlin.coroutines.resume
 
 /**
  * 直接以系统 [CookieManager] 为存储的 CookieJar。
@@ -27,13 +29,14 @@ class AndroidCookieJar : ClearableCookieJar {
 
     /**
      * 清空整罐。登录前必须调用（站点拒绝带旧会话的登录）。
-     * NOTE: `removeAllCookies(Callback)` 在 API 30+ 标记废弃，但没有等价的同步 API 可用；
-     * 这里不需要回调结果，传 null 即可。
+     * NOTE: `removeAllCookies` 异步执行，`flush()` 只负责落盘，不能替代删除完成回调。
      */
     @Suppress("DEPRECATION")
-    override fun clear() {
+    override suspend fun clear() {
         val manager = CookieManager.getInstance()
-        manager.removeAllCookies(null)
+        suspendCancellableCoroutine { continuation ->
+            manager.removeAllCookies { continuation.resume(Unit) }
+        }
         manager.flush()
     }
 }

@@ -29,7 +29,7 @@ object DetailParser {
             releaseDate = meta(doc, "og:video:release_date"),
             actors = doc.select("meta[property=og:video:actor]")
                 .mapNotNull { it.attr("content").trim().ifEmpty { null } },
-            playbackUrl = extractPlaybackUrl(html),
+            playbackUrl = extractPlaybackUrl(doc),
             internalId = INTERNAL_ID.find(html)?.groupValues?.get(1),
             info = parseInfo(doc),
         )
@@ -65,8 +65,11 @@ object DetailParser {
      * 播放地址藏在页面内联的 Dean Edwards packed 脚本里：先解包，再从结果里挑 `.m3u8`。
      * NOTE: 段位常量与 legacy 一字不差；改这里必须能对上真实页面（`core/src/test/resources/detail.html`）。
      */
-    fun extractPlaybackUrl(html: String): String? {
-        val scripts = Jsoup.parse(html, SourceConfig.BASE_URL).select("script")
+    fun extractPlaybackUrl(html: String): String? =
+        extractPlaybackUrl(Jsoup.parse(html, SourceConfig.BASE_URL))
+
+    private fun extractPlaybackUrl(doc: Element): String? {
+        val scripts = doc.select("script")
         for (script in scripts) {
             for (match in PACKED_PATTERN.findAll(script.data())) {
                 val unpacked = unpack(match.groupValues[1], match.groupValues[2].toInt(), match.groupValues[3].toInt(), match.groupValues[4])

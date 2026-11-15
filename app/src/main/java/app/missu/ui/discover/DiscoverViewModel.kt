@@ -12,6 +12,8 @@ import app.missu.data.model.NavGroup
 import app.missu.ui.common.LoadMoreState
 import app.missu.ui.common.UiMessage
 import app.missu.ui.common.toUiMessage
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -123,6 +125,8 @@ class DiscoverViewModel(private val api: MissavApi) : ViewModel() {
     private val _channels = MutableStateFlow<ChannelsUiState>(ChannelsUiState.Loading)
     val channels: StateFlow<ChannelsUiState> = _channels.asStateFlow()
     private var channelsRequested = false
+    private var channelsJob: Job? = null
+    private val directoryJobs = mutableMapOf<String, Job>()
 
     /**
      * 取一页目录。三个调用点共用，避免把「女优有两条取数路径」这件事抄三遍。
@@ -143,8 +147,9 @@ class DiscoverViewModel(private val api: MissavApi) : ViewModel() {
 
     fun load(kind: String) {
         if (_states.value[kind] is DirectoryUiState.Loading) return
+        directoryJobs[kind]?.cancel()
         update(kind, DirectoryUiState.Loading)
-        viewModelScope.launch {
+        directoryJobs[kind] = viewModelScope.launch {
             update(
                 kind,
                 try {
@@ -154,6 +159,8 @@ class DiscoverViewModel(private val api: MissavApi) : ViewModel() {
                     } else {
                         DirectoryUiState.Content(page.items, page.nextPage)
                     }
+                } catch (error: CancellationException) {
+                    throw error
                 } catch (error: Exception) {
                     DirectoryUiState.Error(error.toUiMessage())
                 },
@@ -170,11 +177,14 @@ class DiscoverViewModel(private val api: MissavApi) : ViewModel() {
     fun loadChannels(force: Boolean = false) {
         if (channelsRequested && !force) return
         channelsRequested = true
+        channelsJob?.cancel()
         _channels.value = ChannelsUiState.Loading
-        viewModelScope.launch {
+        channelsJob = viewModelScope.launch {
             _channels.value = try {
                 val groups = toChannels(api.getNavGroups())
                 if (groups.isEmpty()) ChannelsUiState.Empty else ChannelsUiState.Content(groups)
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Exception) {
                 ChannelsUiState.Error(error.toUiMessage())
             }
@@ -197,8 +207,9 @@ class DiscoverViewModel(private val api: MissavApi) : ViewModel() {
      */
     fun refresh(kind: String) {
         if (kind in _refreshing.value) return
+        directoryJobs[kind]?.cancel()
         _refreshing.value = _refreshing.value + kind
-        viewModelScope.launch {
+        directoryJobs[kind] = viewModelScope.launch {
             try {
                 val page = fetch(kind, page = 1)
                 update(
@@ -209,6 +220,8 @@ class DiscoverViewModel(private val api: MissavApi) : ViewModel() {
                         DirectoryUiState.Content(page.items, page.nextPage)
                     },
                 )
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Exception) {
                 if (_states.value[kind] !is DirectoryUiState.Content) {
                     update(kind, DirectoryUiState.Error(error.toUiMessage()))
@@ -226,23 +239,26 @@ class DiscoverViewModel(private val api: MissavApi) : ViewModel() {
         // 由界面的 enabled 挡住，所以失败之后不会靠滚动偷偷重试。
         if (current.more == LoadMoreState.Loading) return
 
+        directoryJobs[kind]?.cancel()
         update(kind, current.copy(more = LoadMoreState.Loading))
-        viewModelScope.launch {
+        directoryJobs[kind] = viewModelScope.launch {
             update(
                 kind,
                 try {
                     val page = fetch(kind, page = next)
                     current.copy(
                         // CRITICAL: 必须按 `path` 去重再拼。站点的分页会重叠（下一页开头又出现上一页的条目），
-                    // 而列表的 key 就是 path——重复 key 会让 LazyVerticalGrid 直接抛
-                    // `Key "…" was already used` 崩溃（真机踩过：/actresses/柊もみじ）。
-                    items = (current.items + page.items).distinctBy { it.path },
+                        // 而列表的 key 就是 path——重复 key 会让 LazyVerticalGrid 直接抛
+                        // `Key "…" was already used` 崩溃（真机踩过：/actresses/柊もみじ）。
+                        items = (current.items + page.items).distinctBy { it.path },
                         nextPage = page.nextPage,
                         more = LoadMoreState.Idle,
                     )
+                } catch (error: CancellationException) {
+                    throw error
                 } catch (error: Exception) {
-                // WARNING: 不能静默复位成 Idle——那一页没取到，界面必须留一个重试入口，
-                // 否则列表就在底部无声卡住，用户分不清「已经到底」和「坏了」。
+                    // WARNING: 不能静默复位成 Idle——那一页没取到，界面必须留一个重试入口，
+                    // 否则列表就在底部无声卡住，用户分不清「已经到底」和「坏了」。
                     current.copy(more = LoadMoreState.Failed)
                 },
             )

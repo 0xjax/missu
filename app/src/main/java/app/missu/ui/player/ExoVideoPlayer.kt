@@ -44,6 +44,9 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.compose.material3.PlayerDefaults
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.missu.data.store.SettingsStore
 import kotlin.math.abs
 import kotlinx.coroutines.Job
@@ -212,18 +215,37 @@ fun ExoVideoPlayer(
         }
     }
 
-    // 离开栈顶就静音停走；回到栈顶（预测性返回被取消）再续上。
-    var pausedByLeaving by remember { mutableStateOf(false) }
-    LaunchedEffect(active) {
-        if (!active) {
-            if (player.playWhenReady) {
-                player.playWhenReady = false
-                pausedByLeaving = true
-            }
-        } else if (pausedByLeaving) {
-            pausedByLeaving = false
+    // 离开栈顶或应用进入后台都暂停；只恢复由这类中断暂停的播放，不替用户重新按下播放键。
+    var pausedByInterruption by remember { mutableStateOf(false) }
+    fun pauseForInterruption() {
+        if (player.playWhenReady) {
+            player.playWhenReady = false
+            pausedByInterruption = true
+        }
+    }
+
+    fun resumeAfterInterruption() {
+        if (pausedByInterruption && active) {
+            pausedByInterruption = false
             player.playWhenReady = true
         }
+    }
+
+    LaunchedEffect(active) {
+        if (active) resumeAfterInterruption() else pauseForInterruption()
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(player, lifecycleOwner, active) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_STOP -> pauseForInterruption()
+                Lifecycle.Event.ON_START -> resumeAfterInterruption()
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     // 播放中 3 秒无操作隐藏控件。
