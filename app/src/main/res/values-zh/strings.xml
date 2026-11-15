@@ -85,7 +85,10 @@
     <string name="detail_saved">已收藏</string>
     <string name="detail_save">收藏</string>
     <string name="detail_add_to_playlist">加入片单</string>
+    <string name="detail_playlist">片单</string>
     <string name="detail_no_playlists">还没有片单，去网页端新建一个吧</string>
+    <string name="detail_expand">展开</string>
+    <string name="detail_collapse">收起</string>
 
     <!-- 播放器 -->
     <string name="player_fullscreen">全屏</string>

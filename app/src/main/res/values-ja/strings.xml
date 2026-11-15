@@ -85,7 +85,10 @@
     <string name="detail_saved">お気に入り済み</string>
     <string name="detail_save">お気に入り</string>
     <string name="detail_add_to_playlist">プレイリストに追加</string>
+    <string name="detail_playlist">プレイリスト</string>
     <string name="detail_no_playlists">プレイリストがありません。ウェブで作成してください</string>
+    <string name="detail_expand">もっと見る</string>
+    <string name="detail_collapse">折りたたむ</string>
 
     <!-- プレイヤー -->
     <string name="player_fullscreen">全画面</string>

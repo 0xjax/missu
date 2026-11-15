@@ -91,7 +91,10 @@
     <string name="detail_saved">Saved</string>
     <string name="detail_save">Save</string>
     <string name="detail_add_to_playlist">Add to playlist</string>
+    <string name="detail_playlist">Playlist</string>
     <string name="detail_no_playlists">No playlists yet — create one on the website</string>
+    <string name="detail_expand">Show more</string>
+    <string name="detail_collapse">Show less</string>
 
     <!-- 播放器 -->
     <string name="player_fullscreen">Fullscreen</string>

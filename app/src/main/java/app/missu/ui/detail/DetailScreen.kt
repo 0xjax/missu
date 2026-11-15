@@ -9,29 +9,44 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.foundation.clickable
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FlexibleBottomAppBar
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SplitButtonDefaults
 import androidx.compose.material3.SplitButtonLayout
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -47,10 +62,16 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.missu.R
 import app.missu.data.model.DetailInfoRow
@@ -62,7 +83,6 @@ import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.PageStateTransition
 import app.missu.ui.common.UiMessage
 import app.missu.ui.common.text
-import app.missu.ui.components.PageTopBar
 import app.missu.ui.components.heroKeyFor
 import app.missu.ui.components.videoHero
 import coil3.compose.AsyncImage
@@ -103,8 +123,29 @@ fun DetailScreen(
     val poster = posterUrl ?: detail?.thumbnailUrl
 
     Column(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        // 返回行：只有一颗返回键，没有标题、也不是 `TopAppBar`——40dp 按钮 + 上下各 4dp，
+        // 视频就从这个高度之下开始。
+        // NOTE: 不做「浮在画面左上角」的沉浸式：那颗键会实实在在挡住画面（2026-11-15 实机否掉）。
         if (!fullscreen) {
-            PageTopBar(title = "", onBack = onBack)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 8.dp, top = 4.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                FilledIconButton(
+                    onClick = onBack,
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                    ),
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.common_back),
+                    )
+                }
+            }
         }
 
         DetailHero(
@@ -354,6 +395,11 @@ private fun DetailHero(
  * NOTE: 播放器不在这里——它由 [DetailHero] 固定在页首，本函数只负责剩余内容。
  * NOTE: 这里自己开一个 Column：它是 [PageStateTransition] 的内容，拿不到外层的 ColumnScope，
  * 所以 `weight(1f)` 只能由这一层的 Column 提供。
+ * NOTE: 版式跟设置页 / 我的同一套：标题是 `titleMedium`，其余内容装进**分组容器**
+ * （`DetailGroup`），行间用 `outlineVariant` 分隔线，内外边距 16dp。之前这里是一串裸
+ * `bodySmall` 文字，密度和其余页面差一档，读起来像另一个 App。
+ * NOTE: 收藏 / 片单那一行固定在**本函数最上面**（也就是视频正下方），不随正文滚动；
+ * 下面才是滚动的内容（标题 / 信息卡 / 简介）。
  */
 @Composable
 private fun DetailBody(
@@ -369,67 +415,29 @@ private fun DetailBody(
     // NOTE: 触觉只用来确认「状态改变」，不用在导航与滚动上（见 DESIGN.md「Motion」）。收藏要等一次
     // 网络请求，界面上的文字与颜色都要等到结果回来才变——按下去这一下是它唯一即时的回应。
     val haptics = LocalHapticFeedback.current
+    // 读屏用的「已收藏」说明：按钮上的文字固定是「收藏」，状态只能从这里出去。
+    val savedText = stringResource(R.string.detail_saved)
 
     Column(Modifier.fillMaxSize()) {
-        LazyColumn(
-            modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            item(key = "title") {
-                Text(
-                    text = detail.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
-            }
-
-            item(key = "meta") {
-                Text(
-                    text = listOfNotNull(detail.duration, detail.releaseDate).joinToString(" · "),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                )
-            }
-
-            // NOTE: 收藏 / 片单两个动作搬到页面底部的 FlexibleBottomAppBar 里（SplitButton：
-            // 左半是主操作「收藏」，右半是「加入片单」），内容区不再被一行按钮打断。
-            message?.let { notice ->
-                item(key = "message") {
-                    Text(
-                        text = notice.text(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    )
-                }
-            }
-
-            items(detail.info, key = { row -> row.label }) { row ->
-                InfoRow(row = row, onOpenPath = onOpenPath)
-            }
-
-            detail.description?.let { description ->
-                item(key = "description") {
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    )
-                }
-            }
-        }
-
-        // NOTE: M3E 的底栏动作区：左半是主操作（收藏），右半是次要入口（加入片单）。
+        // NOTE: 动作条贴在**视频正下方**（视频和它都是固定不滚的），不是常驻底栏。
+        // 理由：这两个动作属于「这个视频」，玩家和它们是同一个决策块；而视频本身不滚，
+        // 贴着它同样一屏可见，还省掉了底部那条栏：信息卡可以一直滚到屏幕底，也不存在
+        // 「底栏容器色 vs 卡片容器色」的色阶问题（2026-11-15 实机）。
         // NOTE: 收藏状态来自 /api/items/{id}/view；401 会先自动重登一次（见 withAuthRetry）。
         // NOTE: 它和正文一起走 fade through——动作条属于「内容到达」，不该比文字先到或后到。
-        FlexibleBottomAppBar {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                // NOTE: 上下都留 12dp：这一行上下各是「视频」和「标题」，间距必须相等，
+                // 所以下面的列表不再吃顶部内边距（见下面 `contentPadding` 的 top = 0）。
+                .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
+        ) {
             SplitButtonLayout(
-                modifier = Modifier.weight(1f),
                 leadingButton = {
-                    SplitButtonDefaults.LeadingButton(
+                    // NOTE: 用 **tonal** 变体而不是默认填充：容器色落成 `secondaryContainer`
+                    // （这套色板里是柔和玫瑰），和页面其余部分（surface 系 + 色阶）同一档，
+                    // 不会出现一块高饱和的蓝压在内容中间（DESIGN.md 的 Anti-references）。
+                    SplitButtonDefaults.TonalLeadingButton(
                         onClick = {
                             // 语义按「这次点击会把它变成什么」给：已收藏 → ToggleOff。
                             haptics.performHapticFeedback(
@@ -438,15 +446,126 @@ private fun DetailBody(
                             onToggleSaved()
                         },
                     ) {
-                        Text(if (detail.saved) stringResource(R.string.detail_saved) else stringResource(R.string.detail_save))
+                        // NOTE: 文字固定「收藏」不随状态变（`detail_saved` 会多一个字，左右半的宽度
+                        // 会跟着跳、右半跟着位移）；状态由**爱心**表达：空心 = 未收藏，实心红 = 已收藏。
+                        // NOTE: 图标自己不带标签（文字已经是动作名），收藏态通过 `stateDescription`
+                        // 交给读屏，否则“已收藏”这个状态对无障碍用户不可见。
+                        Row(
+                            modifier = Modifier.semantics {
+                                if (detail.saved) stateDescription = savedText
+                            },
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                imageVector = if (detail.saved) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                contentDescription = null,
+                                tint = if (detail.saved) FavoriteRed else LocalContentColor.current,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.detail_save))
+                        }
                     }
                 },
                 trailingButton = {
-                    SplitButtonDefaults.TrailingButton(onClick = onOpenPlaylists) {
-                        Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.detail_add_to_playlist))
+                    // NOTE: `SplitButtonDefaults` 没有「tonal + 普通点击」的尾半（TonalTrailingButton
+                    // 只有开关变体，带 checked/onCheckedChange），所以尾半保留默认按钮、只把
+                    // 颜色换成 tonal——两半的容器色就一致了。
+                    SplitButtonDefaults.TrailingButton(
+                        onClick = onOpenPlaylists,
+                        colors = ButtonDefaults.filledTonalButtonColors(),
+                    ) {
+                        // NOTE: 右半也带文字：两半都只有文字或都只有图标才"整齐"；左半有字、右半裸图标
+                        // 会读成两个不同层级的控件。图标 18dp 与左半对齐，标签就是动作名，图标不再另挂
+                        // contentDescription（按钮会把文字作为无障碍名）。
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = PlaylistAddIcon,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            // NOTE: 标签是「片单」两个字，不是「加入片单」——和左半的「收藏」等长，
+                            // 两半才齐整；动词由图标 + 位置表达。完整的「加入片单」留给片单面板标题。
+                            Text(stringResource(R.string.detail_playlist))
+                        }
                     }
                 },
             )
+        }
+
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            // NOTE: top 必须是 0——上方的动作条已经自带 12dp 下边距，再叠一层列表内边距就会
+            // 「上面紧、下面松」（实机：标题离按钮的距离是视频离按钮的三倍）。
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            item(key = "title") {
+                // NOTE: 标题最多 3 行，超出折成省略号：站点标题常常带整句番号+剧情梗概，
+                // 不限行时一屏会被它吃掉（2026-11-15 实机）。
+                // NOTE: 时长不再重复在这里——播放器控件条右侧已经显示总时长，两处一样的信息。
+                // NOTE: 装不下的标题可点展开/收起，判断和信息行同一套（看实测排版，不猜内容长度）。
+                var titleExpanded by rememberSaveable(detail.id) { mutableStateOf(false) }
+                var titleOverflowing by remember(detail.id) { mutableStateOf(false) }
+                val titleLabel = stringResource(
+                    if (titleExpanded) R.string.detail_collapse else R.string.detail_expand,
+                )
+                Text(
+                    text = detail.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = if (titleExpanded) Int.MAX_VALUE else 3,
+                    overflow = TextOverflow.Ellipsis,
+                    onTextLayout = { result ->
+                        if (titleExpanded) {
+                            if (result.lineCount > 3) titleOverflowing = true
+                        } else {
+                            titleOverflowing = result.hasVisualOverflow
+                        }
+                    },
+                    modifier = if (titleOverflowing) {
+                        Modifier.clickable(onClickLabel = titleLabel) { titleExpanded = !titleExpanded }
+                    } else {
+                        Modifier
+                    },
+                )
+            }
+
+            // NOTE: 收藏 / 片单两个动作已经挪到视频正下方（`DetailBody` 开头那行 SplitButton），
+            // 这里只剩内容。
+            message?.let { notice ->
+                item(key = "message") {
+                    Text(
+                        text = notice.text(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+
+            if (detail.info.isNotEmpty()) {
+                item(key = "info") {
+                    DetailGroup {
+                        detail.info.forEachIndexed { index, row ->
+                            if (index > 0) GroupDivider()
+                            InfoRow(row = row, onOpenPath = onOpenPath)
+                        }
+                    }
+                }
+            }
+
+            detail.description?.let { description ->
+                item(key = "description") {
+                    DetailGroup {
+                        Text(
+                            text = description,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(16.dp),
+                        )
+                    }
+                }
+            }
         }
     }
 
@@ -495,23 +614,20 @@ private fun PlaylistSheet(
                         )
                     }
                     state.items.forEach { item ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onToggle(item) }
-                                .padding(horizontal = 16.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                        ListItem(
+                            modifier = Modifier.clickable { onToggle(item) },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            trailingContent = {
+                                // NOTE: 整行已经可点，勾选框不再接一次点击——否则读屏会看到两个节点
+                                // （与设置页的单选行同一处理）。
+                                Checkbox(
+                                    checked = item.added,
+                                    onCheckedChange = null,
+                                    enabled = state.pendingKey == null || state.pendingKey == item.key,
+                                )
+                            },
                         ) {
-                            Checkbox(
-                                checked = item.added,
-                                onCheckedChange = { onToggle(item) },
-                                enabled = state.pendingKey == null || state.pendingKey == item.key,
-                            )
-                            Text(
-                                text = item.name,
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(start = 8.dp),
-                            )
+                            Text(text = item.name, style = MaterialTheme.typography.bodyLarge)
                         }
                     }
                 }
@@ -519,30 +635,127 @@ private fun PlaylistSheet(
         }
     }
 }
+/**
+ * 收藏心形的红。**语义色**，不属于主题色板（和卡片角标那几档同性质）：收藏的红在浅色/深色
+ * 主题里都该是同一个可识别的心形红，跟着主题变就不是「收藏」了。
+ */
+private val FavoriteRed = Color(0xFFE5484D)
+
+/**
+ * 「加入片单」图标（Material 的 `playlist_add`：三条横线 + 右侧一个加号）。
+ *
+ * NOTE: 自己画，不引 `material-icons-extended`——为了一个图标把整套图标塞进 APK 不值得，
+ * 本工程一直只用 `material-icons-core`（见 `app/build.gradle.kts` 里那条注释）。
+ * 几何按 24×24 视口画成实心矩形，`Icon` 的 tint 照常生效。
+ */
+private val PlaylistAddIcon: ImageVector = ImageVector.Builder(
+    name = "PlaylistAdd",
+    defaultWidth = 24.dp,
+    defaultHeight = 24.dp,
+    viewportWidth = 24f,
+    viewportHeight = 24f,
+).apply {
+    path(fill = SolidColor(Color.Black)) {
+        // 三条横线（x 2..13，线宽 2，行距 5）
+        moveTo(2f, 6f); horizontalLineToRelative(11f); verticalLineToRelative(2f); horizontalLineToRelative(-11f); close()
+        moveTo(2f, 11f); horizontalLineToRelative(11f); verticalLineToRelative(2f); horizontalLineToRelative(-11f); close()
+        moveTo(2f, 16f); horizontalLineToRelative(11f); verticalLineToRelative(2f); horizontalLineToRelative(-11f); close()
+        // 右侧加号：中心 (18.5, 13)，横竖各 7×2 / 2×7
+        moveTo(15f, 12f); horizontalLineToRelative(7f); verticalLineToRelative(2f); horizontalLineToRelative(-7f); close()
+        moveTo(17.5f, 9.5f); horizontalLineToRelative(2f); verticalLineToRelative(7f); horizontalLineToRelative(-2f); close()
+    }
+}.build()
+
+/**
+ * 详情页的分组容器（与设置页 / 我的同一份规格：`surfaceContainer` + `largeIncreased` 圆角）。
+ *
+ * NOTE: 不用 `surfaceContainerLow`——它在纯黑底上会画成纯黑（实测），容器会看不见。
+ */
+@Composable
+private fun DetailGroup(content: @Composable ColumnScope.() -> Unit) {
+    Surface(
+        shape = MaterialTheme.shapes.largeIncreased,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(content = content)
+    }
+}
+
+/** 分组容器里的行间分隔线：从内容左边缘起，与设置页一致。 */
+@Composable
+private fun GroupDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(horizontal = 16.dp),
+        color = MaterialTheme.colorScheme.outlineVariant,
+    )
+}
+
+/**
+ * 信息块的一行：标签固定占三成，值在右侧自动换行（`FlowRow`，长标签/长值都不会挤坏）。
+ *
+ * NOTE: 值默认**折成一行**，装不下才给展开。判断不做内容猜测（不按长度、不按标点、更不按
+ * 标签文案——标签随内容语言变），直接看**实测排版**：`Text` 在 `maxLines = 1` 下
+ * `hasVisualOverflow` 为真，说明这一行放不下。所以站点那条整句的「标题」也是「一行 + 展开」，
+ * 而不是被删掉，也不会把卡片撑到一屏放不下。
+ * NOTE: 多值的行（类型、标签）每颗值各自一行、靠 `FlowRow` 换行——它们不会被折起来。
+ */
 @Composable
 private fun InfoRow(row: DetailInfoRow, onOpenPath: (path: String, title: String) -> Unit) {
+    // key 用标签：同一部影片的信息块里标签唯一，切片时状态自然重置。
+    var expanded by rememberSaveable(row.label) { mutableStateOf(false) }
+    // 「装不下」是粘性的：展开之后排在多行，`hasVisualOverflow` 会变 false，
+    // 那正是要收起的时候——所以展开态改用「行数 > 1」判断。
+    var overflowing by remember(row.label) { mutableStateOf(false) }
+    val label = if (expanded) {
+        stringResource(R.string.detail_collapse)
+    } else {
+        stringResource(R.string.detail_expand)
+    }
+
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                // 只有装不下的行才可点（否则整行都是无效命中区）。
+                if (overflowing) {
+                    Modifier.clickable(onClickLabel = label) { expanded = !expanded }
+                } else {
+                    Modifier
+                },
+            )
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.Top,
     ) {
         Text(
             // NOTE: 标签在页面里自带冒号（如「发行日期:」），这里只补一个空格。
             text = row.label + " ",
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(0.34f),
         )
         // NOTE: 带 path 的值（女优/类型/厂商…）可点，跳到对应的 /latest 列表页。
-        androidx.compose.foundation.layout.FlowRow(
-            modifier = Modifier.weight(1f),
+        FlowRow(
+            modifier = Modifier.weight(0.66f),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             row.values.forEach { value ->
                 // NOTE: 先取成局部变量——跨模块的 data class 属性在 lambda 里不会被智能转换。
                 val path = value.path
                 Text(
                     text = value.text,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = if (path != null) MaterialTheme.colorScheme.primary else Color.Unspecified,
+                    maxLines = if (expanded) Int.MAX_VALUE else 1,
+                    overflow = TextOverflow.Ellipsis,
+                    onTextLayout = { result ->
+                        if (expanded) {
+                            if (result.lineCount > 1) overflowing = true
+                        } else {
+                            overflowing = result.hasVisualOverflow
+                        }
+                    },
                     modifier = if (path != null) {
                         Modifier.clickable { onOpenPath(path, value.text) }
                     } else {
@@ -550,6 +763,14 @@ private fun InfoRow(row: DetailInfoRow, onOpenPath: (path: String, title: String
                     },
                 )
             }
+        }
+        if (overflowing) {
+            Icon(
+                imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 4.dp).size(20.dp),
+            )
         }
     }
 }
