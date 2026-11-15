@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -26,6 +27,8 @@ import androidx.compose.material3.carousel.CarouselDefaults
 import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,6 +49,7 @@ import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.PageStateTransition
 import app.missu.ui.components.VideoGridCard
 import app.missu.ui.components.videoHero
+import app.missu.ui.search.LocalSearchBarInset
 import coil3.compose.AsyncImage
 
 /**
@@ -103,17 +107,35 @@ private fun HomeContent(
     onOpenList: (path: String, title: String) -> Unit,
     modifier: Modifier,
 ) {
+    // NOTE: 搜索胶囊浮在内容之上（见 SearchHost），下拉刷新的指示器得让开它那一条，
+    // 否则转圈会被胶囊盖住。
+    val barInset = LocalSearchBarInset.current
+    val pullState = rememberPullToRefreshState()
     PullToRefreshBox(
         isRefreshing = refreshing,
         onRefresh = onRefresh,
+        state = pullState,
         modifier = modifier.fillMaxSize(),
+        indicator = {
+            PullToRefreshDefaults.Indicator(
+                state = pullState,
+                isRefreshing = refreshing,
+                modifier = Modifier.align(Alignment.TopCenter).offset(y = barInset),
+            )
+        },
     ) {
         LazyVerticalGrid(
             modifier = Modifier.fillMaxSize(),
             columns = GridCells.Fixed(2),
-            // NOTE: 没有 top 内边距——与搜索栏之间的那 12dp 由栏自己的 `bottom` 给（见 SearchHost），
-            // 这样滚动中裁到顶部的那一行也不会贴着栏的下沿。
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
+            // NOTE: 顶部让出搜索胶囊那一条（见 `LocalSearchBarInset`）：胶囊浮在内容之上、
+            // 不占布局，静止时第一行靠这份内边距落在它下面，滚动时内边距跟着内容滚掉、
+            // 卡片从胶囊底下穿过去。
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = barInset,
+                bottom = 32.dp,
+            ),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
