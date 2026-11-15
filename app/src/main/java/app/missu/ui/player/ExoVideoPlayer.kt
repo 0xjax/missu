@@ -361,10 +361,9 @@ fun ExoVideoPlayer(
         )
 
         // 设置面板放在控件层之外：控件被自动隐藏时它仍然存在。
-        // NOTE: 全屏用**贴着齿轮的悬浮菜单**，内嵌（16:9 那点高度）仍用底部抽屉。
-        // CRITICAL: 全屏绝不能用抽屉：`ModalBottomSheet` 是独立窗口，它一出现系统栏就跟着那个窗口
-        // 重新可见——状态栏冒出来、页面重新 inset，画面整块被顶下去（实机可见）。
-        if (settingsOpen && !isFullscreen) {
+        // NOTE: 内嵌和全屏都用同一个**原生** `ModalBottomSheet`（YouTube 的横屏也这么做）；
+        // 全屏时抽屉会在自己的窗口里再藏一次系统栏（见 PlayerSettingsSheet 的 immersive）。
+        if (settingsOpen) {
             PlayerSettingsSheet(
                 speed = speed,
                 fill = fillScreen,
@@ -375,21 +374,6 @@ fun ExoVideoPlayer(
                     fillScreen = value
                     settings.setFillScreen(value)
                 },
-            )
-        }
-        AnimatedVisibility(
-            visible = settingsOpen && isFullscreen,
-            modifier = Modifier.align(Alignment.TopEnd),
-            // 从齿轮那一角长出来（transformOrigin 打在右上角），和面板贴着的锚点对得上。
-            enter = fadeIn(tween(120)) +
-                scaleIn(tween(120), initialScale = 0.92f, transformOrigin = TransformOrigin(1f, 0f)),
-            exit = fadeOut(tween(90)),
-        ) {
-            PlayerSettingsMenu(
-                speed = speed,
-                onSpeedChange = ::applySpeed,
-                // 齿轮下面那颗键的圆底 32dp + 上下留白，面板顶边就落在它下面。
-                modifier = Modifier.padding(top = 56.dp, end = 8.dp),
             )
         }
 

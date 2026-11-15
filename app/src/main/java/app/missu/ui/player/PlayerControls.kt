@@ -1,9 +1,14 @@
 package app.missu.ui.player
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.Canvas
@@ -18,6 +23,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,22 +32,28 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SelectableChipColors
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -49,6 +61,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,6 +77,7 @@ import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -72,8 +86,10 @@ import androidx.compose.ui.unit.sp
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import app.missu.R
+import app.missu.ui.components.MissuBottomSheet
 import kotlin.math.abs
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /** 双击快进/快退的档位（秒）：与 legacy、以及播放器 `seekBack/ForwardIncrementMs` 一致。 */
 const val SEEK_STEP_SECONDS = 10
@@ -499,8 +515,13 @@ private val PauseIcon: ImageVector = materialIcon("Pause") {
 }
 
 /**
- * 播放器设置面板：倍速收进这里当**一个设置项**（不再是一颗直接摆在画面上的倍速胶囊）。
+ * 播放器设置面板：**两级**。
  *
+ * 一级只列设置项（倍速 / 画面），每行右边是当前值；点进去才在同一个抽屉里展开那一组选项
+ * 并给一个返回箭头。一级永远只有两行高，绝不把六档倍速铺在一级里——那样光倍速就占掉半个
+ * 屏幕（2026-11-16 反复反馈）。
+ *
+ * NOTE: 抽屉本身**窄**（`PlayerSheetMaxWidth`），不是横屏整条白板。
  * NOTE: 由播放器持有、不放进控件层——放在会被自动隐藏的控件树里会跟着一起被销毁
  * （实测「菜单一闪就关」）。
  */
@@ -510,143 +531,191 @@ fun PlayerSettingsSheet(
     speed: Float,
     onDismiss: () -> Unit,
     onSpeedChange: (Float) -> Unit,
-    // 内嵌播放器的画面填充（比 16:9 更宽的片子裁满框）。全屏不跟随它，所以这里也不提供。
     fill: Boolean,
     onFillChange: (Boolean) -> Unit,
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                // NOTE: 横屏只有 360dp 高，标题 + 六档倍速一定装不下；不给滚动就会被屏幕直接裁掉
-                // （实机：只露得出 0.5x 一行，其余全在屏幕外）。
-                .verticalScroll(rememberScrollState())
-                .padding(bottom = 24.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.settings_title),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-            )
-            Text(
-                text = stringResource(R.string.player_speed),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 24.dp, top = 8.dp, bottom = 4.dp),
-            )
-            // 单选行（和设置页同一套：整行可点，行尾 RadioButton 不接点击）。
-            SPEEDS.forEach { option ->
-                val selected = option == speed
-                ListItem(
-                    modifier = Modifier.selectable(
-                        selected = selected,
-                        role = Role.RadioButton,
-                        onClick = { onSpeedChange(option) },
-                    ),
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    trailingContent = { RadioButton(selected = selected, onClick = null) },
-                ) {
-                    Text(text = formatSpeed(option), style = MaterialTheme.typography.bodyLarge)
-                }
-            }
+    // 一个抽屉、两级内容。切换只做「共享轴 X」：水平滑 1/10 屏宽 + 交叉淡入淡出，
+    // 规范从 `MaterialTheme.motionScheme` 取（不写死时长，见 md3e 的动效规则）。
+    // 为什么不是一个抽屉滑下去再升一个：竖屏里整块出进又慢又晃，用户否过。
+    var level by remember { mutableStateOf(PlayerSection.Root) }
+    // 系统返回键：二级时先回一级（标准的下钻行为），一级时交给抽屉自己关闭。
+    BackHandler(enabled = level != PlayerSection.Root) { level = PlayerSection.Root }
 
-            // 画面：适应 / 填充。
-            // NOTE: 选完**不关面板**——画面比例和倍速经常一起调，关掉再点开一层太烦。
-            Text(
-                text = stringResource(R.string.player_aspect),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 24.dp, top = 16.dp, bottom = 4.dp),
-            )
-            ASPECT_OPTIONS.forEach { (value, labelRes) ->
-                val selected = value == fill
-                ListItem(
-                    modifier = Modifier.selectable(
-                        selected = selected,
-                        role = Role.RadioButton,
-                        onClick = { onFillChange(value) },
-                    ),
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    trailingContent = { RadioButton(selected = selected, onClick = null) },
-                ) {
-                    Text(text = stringResource(labelRes), style = MaterialTheme.typography.bodyLarge)
-                }
-            }
-        }
-    }
-}
-
-/**
- * 全屏时的设置菜单：**贴着设置键展开的悬浮面板**（YouTube 移动端那颗齿轮的形态），
- * 不再是底部抽屉。
- *
- * NOTE: 全屏**不能**用 `ModalBottomSheet`。它是独立窗口：一打开系统栏就跟着那个窗口重新可见
- * （状态栏冒出来，页面被重新 inset、画面整块缩下去）；而且横屏只有 360dp 高，抽屉只能盖住半条
- * 画面。菜单画在播放器自己的组合里，窗口状态栏一点没动。
- * NOTE: 面板画在控件层**之外**、播放器**之内**：控件 3 秒自动隐藏时它还得在（见调用方）。
- */
-@Composable
-fun PlayerSettingsMenu(
-    speed: Float,
-    onSpeedChange: (Float) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier
-            .width(FullscreenMenuWidth)
-            // 面板上的点击不要穿到画面上去（穿过去就会把控件切一次）。
-            .pointerInput(Unit) { detectTapGestures { } },
-        shape = RoundedCornerShape(20.dp),
-        // NOTE: 和播放器所有悬浮件同一套语言：黑底 + 白内容（画面亮的时候也读得清）。
-        color = Color.Black.copy(alpha = 0.78f),
+    MissuBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetMaxWidth = PlayerSheetMaxWidth,
     ) {
-        Column(Modifier.padding(vertical = 8.dp)) {
-            Text(
-                text = stringResource(R.string.player_speed),
-                style = MaterialTheme.typography.labelLarge,
-                color = Color.White.copy(alpha = 0.7f),
-                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 4.dp),
-            )
-            SPEEDS.forEach { option ->
-                val selected = option == speed
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 4.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .selectable(
-                            selected = selected,
-                            role = Role.RadioButton,
-                            onClick = { onSpeedChange(option) },
-                        )
-                        .padding(horizontal = 12.dp)
-                        .height(40.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = formatSpeed(option),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (selected) MaterialTheme.colorScheme.primary else Color.White,
-                        modifier = Modifier.weight(1f),
-                    )
-                    if (selected) {
-                        Icon(
-                            imageVector = Icons.Filled.Check,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(16.dp),
-                        )
+        Column(Modifier.fillMaxWidth().height(PlayerSheetHeight)) {
+                // NOTE: spec 必须在 @Composable 作用域里取好——transitionSpec 那个 lambda 不是
+                // Composable，里面读 MaterialTheme 会编译不过。
+                val spatialSpec = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
+                val effectsSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+                Box(Modifier.fillMaxWidth().weight(1f)) {
+                    AnimatedContent(
+                        targetState = level,
+                        transitionSpec = {
+                            val forward = targetState.ordinal > initialState.ordinal
+                            val direction = if (forward) 1 else -1
+                            (
+                                slideInHorizontally(spatialSpec) { width -> direction * width / 10 } +
+                                    fadeIn(effectsSpec)
+                                ).togetherWith(
+                                slideOutHorizontally(spatialSpec) { width -> -direction * width / 10 } +
+                                    fadeOut(effectsSpec),
+                            )
+                        },
+                        label = "playerSection",
+                    ) { section ->
+                        Column(Modifier.fillMaxSize()) {
+                            when (section) {
+                                PlayerSection.Root -> {
+                                    PlayerSettingRow(
+                                        label = stringResource(R.string.player_speed),
+                                        value = formatSpeed(speed),
+                                        onClick = { level = PlayerSection.Speed },
+                                    )
+                                    PlayerSettingRow(
+                                        label = stringResource(R.string.player_aspect),
+                                        value = stringResource(
+                                            if (fill) {
+                                                R.string.player_aspect_fill
+                                            } else {
+                                                R.string.player_aspect_fit
+                                            },
+                                        ),
+                                        onClick = { level = PlayerSection.Aspect },
+                                    )
+                                }
+
+                                PlayerSection.Speed -> {
+                                    PlayerSectionHeader(
+                                        title = stringResource(R.string.player_speed),
+                                        onBack = { level = PlayerSection.Root },
+                                    )
+                                    OptionChips(
+                                        options = SPEEDS.map { it to formatSpeed(it) },
+                                        selected = speed,
+                                        onSelect = {
+                                            onSpeedChange(it)
+                                            onDismiss()
+                                        },
+                                        colors = FilterChipDefaults.filterChipColors(),
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                }
+
+                                PlayerSection.Aspect -> {
+                                    PlayerSectionHeader(
+                                        title = stringResource(R.string.player_aspect),
+                                        onBack = { level = PlayerSection.Root },
+                                    )
+                                    OptionChips(
+                                        options = ASPECT_OPTIONS.map { (value, labelRes) ->
+                                            value to stringResource(labelRes)
+                                        },
+                                        selected = fill,
+                                        onSelect = {
+                                            onFillChange(it)
+                                            onDismiss()
+                                        },
+                                        colors = FilterChipDefaults.filterChipColors(),
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
-            }
         }
     }
 }
+
+/** 设置面板的层级。一级只列项目，二级才给选项。 */
+private enum class PlayerSection { Root, Speed, Aspect }
+
+/** 一级的一行：标签 + 当前值 + 右边箭头（表示"点进去"）。 */
+@Composable
+private fun PlayerSettingRow(label: String, value: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick)
+            .padding(start = 24.dp, end = 16.dp, top = 14.dp, bottom = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(text = label, style = MaterialTheme.typography.bodyLarge)
+        Spacer(Modifier.weight(1f))
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
+    }
+}
+
+/** 二级的标题行：返回箭头 + 这一组的名字。返回键和系统返回都只回一级。 */
+@Composable
+private fun PlayerSectionHeader(title: String, onBack: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 8.dp, end = 16.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = onBack) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = stringResource(R.string.common_back),
+            )
+        }
+        Text(text = title, style = MaterialTheme.typography.titleMedium)
+    }
+}
+
+/** 设置抽屉的宽度：一级只是两行设置项，不该占满横屏（YouTube 的一级抽屉也是窄的一列）。 */
+private val PlayerSheetMaxWidth = 360.dp
+
+/** 抽屉的固定高度：一级/二级切换时高度不变，同时给将来新增的设置项留出余量。 */
+private val PlayerSheetHeight = 240.dp
+
 
 private fun formatSpeed(speed: Float): String =
     if (speed == speed.toInt().toFloat()) "${speed.toInt()}.0x" else "${speed}x"
 
 private val SPEEDS = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f)
+
+/** 一组单选胶囊（不带标签）。宽度由调用方给，换行由 `FlowRow` 负责。 */
+@Composable
+private fun <T> OptionChips(
+    options: List<Pair<T, String>>,
+    selected: T,
+    onSelect: (T) -> Unit,
+    colors: SelectableChipColors,
+    modifier: Modifier = Modifier,
+) {
+    FlowRow(
+        modifier = modifier.padding(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        options.forEach { (value, text) ->
+            FilterChip(
+                selected = value == selected,
+                onClick = { onSelect(value) },
+                colors = colors,
+                label = { Text(text) },
+                // NOTE: 选中态只靠容器色表达，不加勾：勾会让选中的那颗变宽，一选整排就重排。
+            )
+        }
+    }
+}
 
 /** 画面比例的两个选项：false = 适应（完整画面），true = 填充（裁满内嵌框）。 */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -703,8 +772,6 @@ private val FullscreenTrackThickness = 5.dp
 private val FullscreenThumbRadius = 8.dp
 private val FullscreenBarHeight = 20.dp
 
-/** 全屏设置面板的宽度：六档倍速（"0.75x" + 勾）够用，又不至于把画面挡住。 */
-private val FullscreenMenuWidth = 176.dp
 
 /** 顶部挡板高度：给右上角的设置图标垫一层，亮画面上也读得清。 */
 private val TopScrimHeight = 56.dp
