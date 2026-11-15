@@ -434,6 +434,10 @@ private fun MissuApp(
                     modifier = Modifier.underScrim(
                         scope = navScope,
                         covered = backStackEntry?.id != entry.id,
+                        // NOTE: 详情页的返回是 container transform，下层是淡入的；那种揭示不压暗
+                        // （见 `underScrim` 的 fadingIn）。这里用「栈顶是不是详情页」来判断——
+                        // 预测手势还没提交时它仍然在栈顶。
+                        fadingIn = backStackEntry?.destination?.route?.startsWith("detail/") == true,
                     ),
                     // NOTE: 这里不能再吃状态栏内边距——每个页签页自己已经让过一次
                     // （`PageSurface` / `SearchHost`）。重复让就会在顶部多出一条状态栏高度的空白。
