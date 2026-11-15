@@ -3,6 +3,9 @@
 package app.missu.ui.search
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -123,7 +126,9 @@ fun SearchHost(
         )
     }
 
-    Column(modifier.fillMaxSize()) {
+    // NOTE: 顶部状态栏内边距在这里（不在外层 Scaffold）：页面底色要铺到状态栏底下，
+    // 页面缩小成卡片时才会把状态栏一起带上。
+    Column(modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars)) {
         // NOTE: 左右 16dp 与内容栅格同一条边线（首页/列表的卡片留白也是 16dp）；之前是通屏，
         // 药丸比下面所有卡片都宽出去 16dp，看起来像没做完。
         // NOTE: 顶部 8dp 不是审美值，是 material3 展开态给输入框的落点（SearchBarVerticalPadding）：
