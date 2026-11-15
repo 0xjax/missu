@@ -1,7 +1,6 @@
 package app.missu.ui.player
 
 import android.util.Log
-import android.view.TextureView
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -11,11 +10,8 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.TransformOrigin
@@ -36,18 +32,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
-import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.compose.ui.layout.ContentScale
+import androidx.media3.ui.compose.ContentFrame
+import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
 import androidx.media3.ui.compose.material3.PlayerDefaults
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import app.missu.data.api.LocalAppDependencies
 import app.missu.data.store.SettingsStore
 import kotlin.math.abs
 import kotlinx.coroutines.Job
@@ -116,14 +114,12 @@ fun ExoVideoPlayer(
     onPlaybackFailed: () -> Unit = {},
 ) {
     val context = LocalContext.current
+    val httpClient = LocalAppDependencies.current.httpClient
 
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var controlsVisible by remember { mutableStateOf(true) }
     var isPlaying by remember { mutableStateOf(false) }
-    // NOTE: 画面比例（宽/高）。TextureView 不像 `PlayerView` 那样自带 `AspectRatioFrameLayout`：
-    // 它把解码缓冲**拉伸**到自己的尺寸，16:9 的片子铺进 20:9 的横屏就是横向拉宽（实机可见）。
-    // 所以按真实比例给视频层定尺寸、居中，多出来的部分由黑底垫住；0 表示还不知道。
-    var videoAspect by remember { mutableFloatStateOf(0f) }
+    // 原生 ContentFrame 监听视频尺寸并按 ContentScale 布局，不再手工计算 TextureView 尺寸。
     // NOTE: 倍速是**全局设置**，不是本次播放的临时状态：它跟着偏好走，所以每部片的播放器
     // 建起来就按它设好（见下面 player 的 apply）。1.0x 只是没存过值时的默认。
     val settings = remember(context) { SettingsStore(context.applicationContext) }
@@ -141,7 +137,7 @@ fun ExoVideoPlayer(
     var seekingUntil by remember { mutableLongStateOf(0L) }
     val player = remember {
         ExoPlayer.Builder(context)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(mediaDataSourceFactory()))
+            .setMediaSourceFactory(DefaultMediaSourceFactory(mediaDataSourceFactory(httpClient)))
             .setSeekBackIncrementMs(SEEK_STEP_MS)
             .setSeekForwardIncrementMs(SEEK_STEP_MS)
             .build()
@@ -169,12 +165,6 @@ fun ExoVideoPlayer(
                 isPlaying = playing
                 // NOTE: 这里**不**点亮控件层。控件显隐只由用户操作驱动（初始可见 + 3 秒自动隐藏
                 // + 单击唤出），否则 seek/缓冲引起的 false→true 会把整层控件唤出来。
-            }
-
-            override fun onVideoSizeChanged(videoSize: VideoSize) {
-                // NOTE: 要按像素宽高比折算——变形宽银幕的片子 `width/height` 不是画面比例。
-                val width = videoSize.width * videoSize.pixelWidthHeightRatio
-                if (videoSize.height > 0 && width > 0f) videoAspect = width / videoSize.height
             }
 
             override fun onRenderedFirstFrame() {
@@ -338,34 +328,12 @@ fun ExoVideoPlayer(
     Box(modifier.background(Color.Black)) {
         // 画面：适应 = 整幅都显示（多出来的地方垫黑）；填充 = 撑满容器，溢出的一边被裁掉。
         // 两种模式在**内嵌和全屏都生效**——容器不一样，规则是同一个。
-        BoxWithConstraints(Modifier.fillMaxSize().clipToBounds(), contentAlignment = Alignment.Center) {
-            // NOTE: 填充必须用**布局**去撑（requiredSize），不能用 graphicsLayer 缩放：interop 的
-            // AndroidView 对 graphicsLayer 缩放不可靠（实机：切了「填充」画面一点没变）。
-            val containerAspect = if (maxHeight > 0.dp) maxWidth / maxHeight else 16f / 9f
-            val target = when {
-                videoAspect <= 0.01f -> Modifier.fillMaxSize()
-                !fillScreen -> Modifier.aspectRatio(videoAspect)
-                // 比容器更宽：按高度撑满，左右溢出。
-                videoAspect >= containerAspect -> Modifier.requiredSize(
-                    width = maxHeight * videoAspect,
-                    height = maxHeight,
-                )
-                // 比容器更窄（或 4:3 这类）：按宽度撑满，上下溢出。
-                else -> Modifier.requiredSize(
-                    width = maxWidth,
-                    height = maxWidth / videoAspect,
-                )
-            }
-            AndroidView(
-                modifier = target,
-                factory = { ctx ->
-                    TextureView(ctx).apply {
-                        player.setVideoTextureView(this)
-                    }
-                },
-                onRelease = { texture -> player.clearVideoTextureView(texture) },
-            )
-        }
+        ContentFrame(
+            player = player,
+            modifier = Modifier.fillMaxSize().clipToBounds(),
+            surfaceType = SURFACE_TYPE_TEXTURE_VIEW,
+            contentScale = if (fillScreen) ContentScale.Crop else ContentScale.Fit,
+        )
 
         // 点击层：单击显隐控件，双击左右半边快进/快退。放在画面之上、控件之下——
         // 控件自己的按钮（播放键、进度条、全屏…）仍然优先命中。
