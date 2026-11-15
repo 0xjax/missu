@@ -313,6 +313,7 @@ private fun MissuApp(
     onAppLanguageChange: (AppLanguage) -> Unit,
 ) {
     val navController = rememberNavController()
+
     val api = rememberApi(challengeState)
     val context = LocalContext.current
 
@@ -322,6 +323,7 @@ private fun MissuApp(
      * NOTE: 封面必须从卡片传过去：详情数据要等一次请求，而共享容器首帧就得有东西可长——
      * 少了这张图，点卡片时封面会长进一块空灰面。
      */
+
     fun openDetail(id: String, thumbnail: String?) {
         navController.navigate("detail/$id?img=${Uri.encode(thumbnail.orEmpty())}")
     }
@@ -405,6 +407,9 @@ private fun MissuApp(
                 var tab by rememberSaveable { mutableStateOf("home") }
                 val navScope = this
                 Scaffold(
+                    // NOTE: 这里不能再吃状态栏内边距——每个页签页自己已经让过一次
+                    // （`PageSurface` / `SearchHost`）。重复让就会在顶部多出一条状态栏高度的空白。
+                    contentWindowInsets = WindowInsets(0, 0, 0, 0),
                     bottomBar = {
                         ShortNavigationBar {
                             topLevels.forEach { item ->
@@ -452,7 +457,7 @@ private fun MissuApp(
                         onClear = searchViewModel::clear,
                     ) {
                         if (searchState is SearchUiState.Idle) {
-                            PageSurface {
+                            PageSurface(card = false) {
                                 HomeScreen(
                                     state = state,
                                     refreshing = refreshing,
@@ -503,7 +508,7 @@ private fun MissuApp(
                     if (hotState is VideoListUiState.Loading) hotViewModel.load()
                 }
 
-                PageSurface {
+                PageSurface(card = false) {
                     DiscoverScreen(
                         states = states,
                         sort = sort,
@@ -534,7 +539,7 @@ private fun MissuApp(
                 }
                             }
                             "account" -> {
-                PageSurface {
+                PageSurface(card = false) {
                     AccountScreen(
                         state = authState,
                         onLogin = { navController.navigate("login") },
