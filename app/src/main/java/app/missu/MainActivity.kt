@@ -48,10 +48,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import app.missu.data.api.ChallengeHandler
-import app.missu.data.api.MissavApi
+import app.missu.data.api.AppDependencies
+import app.missu.data.api.LocalAppDependencies
 import app.missu.data.api.SourceConfig
-import app.missu.data.api.createMissavApi
 import app.missu.data.store.AppLanguage
 import app.missu.data.store.ColorSource
 import app.missu.data.store.CredentialStore
@@ -75,6 +74,7 @@ import app.missu.ui.theme.LauncherIcons
 import app.missu.ui.theme.MissuTheme
 import app.missu.ui.theme.themeBackgroundColor
 import coil3.ImageLoader
+import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.compose.setSingletonImageLoaderFactory
 import coil3.request.crossfade
 
@@ -106,14 +106,19 @@ class MainActivity : ComponentActivity() {
 /** 主题、语言和全局浮层的唯一持有者。 */
 @Composable
 private fun MissuRoot() {
-    setSingletonImageLoaderFactory { context ->
-        ImageLoader.Builder(context).crossfade(true).build()
-    }
-
     val context = LocalContext.current
     val settings = remember { SettingsStore(context.applicationContext) }
     val previewState = remember { VideoPreviewState() }
     val challengeState = remember { ChallengeState() }
+    val dependencies = remember { AppDependencies(context.applicationContext, challengeState) }
+    setSingletonImageLoaderFactory { imageContext ->
+        ImageLoader.Builder(imageContext)
+            .components {
+                add(OkHttpNetworkFetcherFactory(callFactory = { dependencies.httpClient }))
+            }
+            .crossfade(true)
+            .build()
+    }
     LaunchedEffect(challengeState) {
         if (!ChallengeDiagnostics.enabled(context)) return@LaunchedEffect
         val activity = context as? Activity ?: return@LaunchedEffect
@@ -162,6 +167,7 @@ private fun MissuRoot() {
                     LocalConfiguration provides localizedContext.resources.configuration,
                     LocalResources provides localizedContext.resources,
                     LocalVideoPreview provides previewState,
+                    LocalAppDependencies provides dependencies,
                 ) {
                     MissuApp(
                         settings = settings,
@@ -202,12 +208,6 @@ private fun MissuRoot() {
 }
 
 @Composable
-private fun rememberApi(challenge: ChallengeHandler): MissavApi {
-    val context = LocalContext.current
-    return remember { createMissavApi(context.applicationContext, challenge) }
-}
-
-@Composable
 private fun MissuApp(
     settings: SettingsStore,
     challengeState: ChallengeState,
@@ -226,7 +226,7 @@ private fun MissuApp(
     val navController = rememberNavController()
     var buttonPopId by remember { mutableStateOf<String?>(null) }
     var tabRoute by rememberSaveable { mutableStateOf("home") }
-    val api = rememberApi(challengeState)
+    val api = LocalAppDependencies.current.api
     val context = LocalContext.current
 
     fun openDetail(id: String, thumbnail: String?, heroTag: String) {
