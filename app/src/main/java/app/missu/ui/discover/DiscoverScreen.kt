@@ -65,6 +65,7 @@ import app.missu.data.api.VideoListOptions
 import app.missu.data.model.DirectoryItem
 import app.missu.data.model.NavGroup
 import app.missu.data.model.NavItem
+import app.missu.ui.components.MissuBottomSheet
 import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadMoreFooter
@@ -254,7 +255,7 @@ fun DiscoverScreen(
     }
 
     if (filterSheetOpen) {
-        ModalBottomSheet(onDismissRequest = { filterSheetOpen = false }) {
+        MissuBottomSheet(onDismissRequest = { filterSheetOpen = false }) {
             FilterSheet(
                 filters = filters,
                 onFilterChange = onFilterChange,

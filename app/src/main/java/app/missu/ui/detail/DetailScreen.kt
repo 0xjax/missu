@@ -99,6 +99,7 @@ import app.missu.data.model.VideoPlaylist
 import app.missu.ui.player.ExoVideoPlayer
 import app.missu.ui.player.FullscreenEffect
 import app.missu.ui.components.ErrorHint
+import app.missu.ui.components.MissuBottomSheet
 import app.missu.ui.components.PageStateTransition
 import app.missu.ui.common.UiMessage
 import app.missu.ui.common.text
@@ -296,7 +297,9 @@ fun DetailScreen(
                 // CRITICAL: 这里只能 offset，**不能** padding。padding 在 modifier 链上会缩掉
                 // 播放器自己的可用高度（16:9 的框被压成 16:9 - 状态栏高，实机量出来是 2.07:1），
                 // offset 只是整体下移，框本身还是严丝合缝的 16:9。
-                .offset(y = statusBarInset)
+                // CRITICAL: 只有内嵌才让出状态栏。全屏时系统栏是隐藏的，可它一旦被算进 inset
+                // （比如全屏里开了抽屉、那个窗口抢走焦点），这里再 offset 就会把整块画面顶下去。
+                .offset(y = if (fullscreen) 0.dp else statusBarInset)
                 .zIndex(1f)
                 .then(dragModifier),
         )
@@ -828,7 +831,7 @@ private fun PlaylistSheet(
     onDismiss: () -> Unit,
     onToggle: (VideoPlaylist) -> Unit,
 ) {
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    MissuBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
             Text(
                 text = stringResource(R.string.detail_add_to_playlist),
