@@ -7,10 +7,18 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.StringRes
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -89,6 +97,7 @@ import android.content.res.Configuration
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import app.missu.ui.history.HistoryViewModel
+import app.missu.ui.components.PageSurface
 import app.missu.ui.list.VideoListQuery
 import app.missu.ui.list.VideoListScreen
 import app.missu.ui.list.VideoListUiState
@@ -341,44 +350,22 @@ private fun MissuApp(
     // 底部导航只在四个一级页面显示；详情/列表/收藏等二级页面全屏展示。
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
-    val showBottomBar = topLevels.any { it.route == currentRoute }
+    // NOTE: 顶栏/底栏的归属见 TABS_ROUTE；这里只保留「这个 entry 是否已离开返回栈」。
 
     // NOTE: 系统栏、刘海、输入法的内边距只在这里处理一次，各页面只负责内容布局。
     // 底部由 NavigationBar 自己处理导航栏 inset，所以内容区只吃顶部与左右。
     Scaffold(
+        // NOTE: 不给顶部内边距——顶部让给页面自己（PageSurface 铺满整屏、内容让出状态栏），
+        // 否则返回手势把页面缩成卡片时，状态栏那条会留在卡片外面。
         contentWindowInsets = WindowInsets.safeDrawing.only(
-            WindowInsetsSides.Top + WindowInsetsSides.Horizontal,
+            WindowInsetsSides.Horizontal,
         ),
-        bottomBar = {
-            if (showBottomBar) {
-                // NOTE: M3E 的紧凑底栏（ShortNavigationBar）替代基线 NavigationBar——3 个目的地正合适，
-                // 高度更矮、指示器是药丸形。大屏场景的 WideNavigationRail 暂不需要（只交付手机）。
-                ShortNavigationBar {
-                    topLevels.forEach { item ->
-                        ShortNavigationBarItem(
-                            selected = currentRoute == item.route,
-                            onClick = {
-                                if (currentRoute != item.route) {
-                                    navController.navigate(item.route) {
-                                        // 切一级页签时保留各自的滚动位置与已加载内容。
-                                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                }
-                            },
-                            icon = { Icon(item.icon, contentDescription = stringResource(item.labelRes)) },
-                            label = { Text(stringResource(item.labelRes)) },
-                        )
-                    }
-                }
-            }
-        },
+        // NOTE: 底栏不在这里——它在 TABS_ROUTE 那个页面内部（三个页签是一个页面的三种形态）。
     ) { innerPadding ->
         val tabOrder = topLevels.map { it.route }
         NavHost(
             navController = navController,
-            startDestination = "home",
+            startDestination = TABS_ROUTE,
             modifier = Modifier.padding(innerPadding),
             // NOTE: 整幅横滑（1:1 位移），像 ViewPager2 那样「两页接成一张长纸」前后推。
             // 为什么是它：alpha 过渡在整屏内容上必然出问题——交叉淡入 = 两页文字叠在一起，
@@ -403,22 +390,47 @@ private fun MissuApp(
                     slideOutHorizontally(animationSpec = tween(durationMillis = 300)) { if (forward) -it else it }
                 }
             },
-            popEnterTransition = {
-                if (involvesDetail(initialState, targetState)) {
-                    heroEnter()
-                } else {
-                    slideInHorizontally(animationSpec = tween(durationMillis = 300)) { -it }
-                }
-            },
-            popExitTransition = {
-                if (involvesDetail(initialState, targetState)) {
-                    heroExit()
-                } else {
-                    slideOutHorizontally(animationSpec = tween(durationMillis = 300)) { it }
-                }
-            },
+            popEnterTransition = { missuPopEnter() },
+            popExitTransition = { missuPopExit() },
+            // NOTE: 预测式返回（侧滑还没松手）走的是这两个，签名是 `Scope.(swipeEdge) -> …`。
+            // 默认值是 fadeIn(spring) + scaleOut(0.7)：两页不透明地叠在一起，实测文字重影。
+            // 两段各管一段：手势期间只缩放，松手后才平移离开（见下面 missuPopEnter/Exit）
+            // 接着放完的那段，中间没有"预览一个、落地另一个"的换挡。
+            predictivePopEnterTransition = { missuPopEnter() },
+            predictivePopExitTransition = { missuPopExit() },
         ) {
-            composable("home") {
+            composable(TABS_ROUTE) { entry ->
+                // NOTE: 三个页签是**一个页面**的三种形态，不是三个可返回的目的地：
+                // 底栏属于它们本身，所以返回预览里进入的页面自带底栏，切页签时底栏也不动。
+                var tab by rememberSaveable { mutableStateOf("home") }
+                val navScope = this
+                Scaffold(
+                    bottomBar = {
+                        ShortNavigationBar {
+                            topLevels.forEach { item ->
+                                ShortNavigationBarItem(
+                                    selected = tab == item.route,
+                                    onClick = { if (tab != item.route) tab = item.route },
+                                    icon = { Icon(item.icon, contentDescription = stringResource(item.labelRes)) },
+                                    label = { Text(stringResource(item.labelRes)) },
+                                )
+                            }
+                        }
+                    },
+                ) { tabPadding ->
+                    AnimatedContent(
+                        targetState = tab,
+                        modifier = Modifier.padding(tabPadding),
+                        transitionSpec = {
+                            val forward = topLevels.indexOfFirst { it.route == targetState } >
+                                topLevels.indexOfFirst { it.route == initialState }
+                            slideInHorizontally(animationSpec = tween(durationMillis = 300)) { if (forward) it else -it } togetherWith
+                                slideOutHorizontally(animationSpec = tween(durationMillis = 300)) { if (forward) -it else it }
+                        },
+                        label = "tab",
+                    ) { current ->
+                        when (current) {
+                            "home" -> {
                 val viewModel = homeViewModel
                 val state by viewModel.state.collectAsState()
                 val refreshing by viewModel.refreshing.collectAsState()
@@ -429,7 +441,7 @@ private fun MissuApp(
                 // NOTE: 用 loadIfNeeded 而不是 load：切回页签时不要把已有内容打回 Loading。
                 LaunchedEffect(Unit) { viewModel.loadIfNeeded() }
 
-                ProvideHeroVisibility(this, namespace = "home") {
+                ProvideHeroVisibility(navScope, namespace = "home") {
                     SearchHost(
                         state = searchState,
                         recent = recent,
@@ -440,16 +452,18 @@ private fun MissuApp(
                         onClear = searchViewModel::clear,
                     ) {
                         if (searchState is SearchUiState.Idle) {
-                            HomeScreen(
-                                state = state,
-                                refreshing = refreshing,
-                                onRefresh = viewModel::refresh,
-                                onRetry = viewModel::load,
-                                onOpen = ::openDetail,
-                                onOpenList = { path, title ->
-                                    navController.navigate("list?p=${Uri.encode(path)}&t=${Uri.encode(title)}")
-                                },
-                            )
+                            PageSurface {
+                                HomeScreen(
+                                    state = state,
+                                    refreshing = refreshing,
+                                    onRefresh = viewModel::refresh,
+                                    onRetry = viewModel::load,
+                                    onOpen = ::openDetail,
+                                    onOpenList = { path, title ->
+                                        navController.navigate("list?p=${Uri.encode(path)}&t=${Uri.encode(title)}")
+                                    },
+                                )
+                            }
                         } else {
                             SearchBody(
                                 state = searchState,
@@ -461,9 +475,8 @@ private fun MissuApp(
                         }
                     }
                 }
-            }
-
-            composable("discover") {
+                            }
+                            "discover" -> {
                 val viewModel = discoverViewModel
                 val states by viewModel.states.collectAsState()
                 val sort by viewModel.sort.collectAsState()
@@ -490,81 +503,93 @@ private fun MissuApp(
                     if (hotState is VideoListUiState.Loading) hotViewModel.load()
                 }
 
-                DiscoverScreen(
-                    states = states,
-                    sort = sort,
-                    filters = filters,
-                    refreshingKinds = refreshingKinds,
-                    hotSort = hotSort,
-                    hotFilter = hotFilter,
-                    hotDetectedSort = hotDetectedSort,
-                    hotState = hotState,
-                    channels = channels,
-                    onLoad = viewModel::load,
-                    onLoadMore = viewModel::loadMore,
-                    onRefresh = viewModel::refresh,
-                    onChannelsLoad = { viewModel.loadChannels() },
-                    onChannelsRetry = { viewModel.loadChannels(force = true) },
-                    onHotSortChange = { hotSort = it },
-                    onHotFilterChange = { hotFilter = it },
-                    onHotLoadMore = hotViewModel::loadMore,
-                    onHotRetry = hotViewModel::load,
-                    onOpen = { path, title ->
-                        navController.navigate("list?p=${Uri.encode(path)}&t=${Uri.encode(title)}")
-                    },
-                    onOpenVideo = { id, thumbnail -> openDetail(id, thumbnail) },
-                    onSortChange = viewModel::setSort,
-                    onFilterChange = viewModel::setFilter,
-                    onResetFilters = viewModel::resetFilters,
-                )
-            }
-            composable("account") {
-                AccountScreen(
-                    state = authState,
-                    onLogin = { navController.navigate("login") },
-                    onSaved = { navController.navigate("saved") },
-                    onHistory = { navController.navigate("history") },
-                    onPlaylists = { navController.navigate("playlists") },
-                    onSettings = { navController.navigate("settings") },
-                    onLogout = auth::logout,
-                )
+                PageSurface {
+                    DiscoverScreen(
+                        states = states,
+                        sort = sort,
+                        filters = filters,
+                        refreshingKinds = refreshingKinds,
+                        hotSort = hotSort,
+                        hotFilter = hotFilter,
+                        hotDetectedSort = hotDetectedSort,
+                        hotState = hotState,
+                        channels = channels,
+                        onLoad = viewModel::load,
+                        onLoadMore = viewModel::loadMore,
+                        onRefresh = viewModel::refresh,
+                        onChannelsLoad = { viewModel.loadChannels() },
+                        onChannelsRetry = { viewModel.loadChannels(force = true) },
+                        onHotSortChange = { hotSort = it },
+                        onHotFilterChange = { hotFilter = it },
+                        onHotLoadMore = hotViewModel::loadMore,
+                        onHotRetry = hotViewModel::load,
+                        onOpen = { path, title ->
+                            navController.navigate("list?p=${Uri.encode(path)}&t=${Uri.encode(title)}")
+                        },
+                        onOpenVideo = { id, thumbnail -> openDetail(id, thumbnail) },
+                        onSortChange = viewModel::setSort,
+                        onFilterChange = viewModel::setFilter,
+                        onResetFilters = viewModel::resetFilters,
+                    )
+                }
+                            }
+                            "account" -> {
+                PageSurface {
+                    AccountScreen(
+                        state = authState,
+                        onLogin = { navController.navigate("login") },
+                        onSaved = { navController.navigate("saved") },
+                        onHistory = { navController.navigate("history") },
+                        onPlaylists = { navController.navigate("playlists") },
+                        onSettings = { navController.navigate("settings") },
+                        onLogout = auth::logout,
+                    )
+                }
+                            }
+                        }
+                    }
+                }
             }
 
-            composable("login") {
-                LoginScreen(
-                    state = loginState,
-                    onSubmit = { email, password ->
-                        auth.login(email, password) { navController.popBackStack() }
-                    },
-                    onBack = {
-                        auth.clearLoginError()
-                        navController.popBackStack()
-                    },
-
-                )
+            composable("login") { entry ->
+                PageSurface {
+                    LoginScreen(
+                        state = loginState,
+                        onSubmit = { email, password ->
+                            auth.login(email, password) { navController.popBackStack() }
+                        },
+                        onBack = {
+                            auth.clearLoginError()
+                            navController.popBackStack()
+                        },
+    
+                    )
+                }
             }
-            composable("settings") {
+            composable("settings") { entry ->
                 // NOTE: 自动播放只有播放器和这一行用到，不必像主题那样提到根部；进入设置页时
                 // 从偏好读一次，改完立即写回（播放器下次创建时自然读到新值）。
                 var autoplay by remember { mutableStateOf(settings.autoplay()) }
-                SettingsScreen(
-                    appLanguage = appLanguage,
-                    themeMode = themeMode,
-                    colorSource = colorSource,
-                    followThemeIcon = followThemeIcon,
-                    pureBlack = pureBlack,
-                    autoplay = autoplay,
-                    onAppLanguageChange = onAppLanguageChange,
-                    onThemeModeChange = onThemeModeChange,
-                    onColorSourceChange = onColorSourceChange,
-                    onFollowThemeIconChange = onFollowThemeIconChange,
-                    onPureBlackChange = onPureBlackChange,
-                    onAutoplayChange = { enabled ->
-                        settings.setAutoplay(enabled)
-                        autoplay = enabled
-                    },
-                    onBack = { navController.popBackStack() },
-                )
+                PageSurface {
+                    SettingsScreen(
+                        appLanguage = appLanguage,
+                        themeMode = themeMode,
+                        colorSource = colorSource,
+                        followThemeIcon = followThemeIcon,
+                        pureBlack = pureBlack,
+                        autoplay = autoplay,
+                        onAppLanguageChange = onAppLanguageChange,
+                        onThemeModeChange = onThemeModeChange,
+                        onColorSourceChange = onColorSourceChange,
+                        onFollowThemeIconChange = onFollowThemeIconChange,
+                        onPureBlackChange = onPureBlackChange,
+                        onAutoplayChange = { enabled ->
+                            settings.setAutoplay(enabled)
+                            autoplay = enabled
+                        },
+                        onBack = { navController.popBackStack() },
+                    )
+                }
             }
             composable(
                 route = "list?p={p}&t={t}",
@@ -600,24 +625,26 @@ private fun MissuApp(
                 }
 
                 ProvideHeroVisibility(this, namespace = "list") {
-                    VideoListScreen(
-                        title = title,
-                        state = state,
-                        sort = sort,
-                        filter = filter,
-                        detectedSort = detectedSort,
-                        sorts = VideoListOptions.Sort.entries,
-                        filters = VideoListOptions.Filter.entries,
-                        onSortChange = { sort = it },
-                        onFilterChange = { filter = it },
-                        onRetry = viewModel::load,
-                        onLoadMore = viewModel::loadMore,
-                        onOpen = ::openDetail,
-                        onBack = { navController.popBackStack() },
-                    )
+                    PageSurface {
+                        VideoListScreen(
+                            title = title,
+                            state = state,
+                            sort = sort,
+                            filter = filter,
+                            detectedSort = detectedSort,
+                            sorts = VideoListOptions.Sort.entries,
+                            filters = VideoListOptions.Filter.entries,
+                            onSortChange = { sort = it },
+                            onFilterChange = { filter = it },
+                            onRetry = viewModel::load,
+                            onLoadMore = viewModel::loadMore,
+                            onOpen = ::openDetail,
+                            onBack = { navController.popBackStack() },
+                        )
+                    }
                 }
             }
-            composable("history") {
+            composable("history") { entry ->
                 val viewModel: HistoryViewModel = viewModel(
                     factory = factory { HistoryViewModel(historyStore) },
                 )
@@ -625,30 +652,34 @@ private fun MissuApp(
                 LaunchedEffect(Unit) { viewModel.load() }
 
                 ProvideHeroVisibility(this, namespace = "history") {
-                    HistoryScreen(
-                        entries = entries,
-                        onOpen = ::openDetail,
-                        onClear = viewModel::clear,
-                        onBack = { navController.popBackStack() },
-                    )
+                    PageSurface {
+                        HistoryScreen(
+                            entries = entries,
+                            onOpen = ::openDetail,
+                            onClear = viewModel::clear,
+                            onBack = { navController.popBackStack() },
+                        )
+                    }
                 }
             }
-            composable("playlists") {
+            composable("playlists") { entry ->
                 val viewModel: PlaylistsViewModel = viewModel(factory = factory { PlaylistsViewModel(api) })
                 val state by viewModel.state.collectAsState()
                 val createMessage by viewModel.createMessage.collectAsState()
                 LaunchedEffect(Unit) { viewModel.load() }
 
-                PlaylistsScreen(
-                    state = state,
-                    onRetry = viewModel::load,
-                    onOpen = { playlist ->
-                        navController.navigate("playlist/${playlist.id}?n=${Uri.encode(playlist.name)}")
-                    },
-                    onBack = { navController.popBackStack() },
-                    createMessage = createMessage,
-                    onCreate = viewModel::create,
-                )
+                PageSurface {
+                    PlaylistsScreen(
+                        state = state,
+                        onRetry = viewModel::load,
+                        onOpen = { playlist ->
+                            navController.navigate("playlist/${playlist.id}?n=${Uri.encode(playlist.name)}")
+                        },
+                        onBack = { navController.popBackStack() },
+                        createMessage = createMessage,
+                        onCreate = viewModel::create,
+                    )
+                }
             }
 
             composable(
@@ -669,16 +700,18 @@ private fun MissuApp(
                 LaunchedEffect(id) { viewModel.load() }
 
                 ProvideHeroVisibility(this, namespace = "playlist") {
-                    PlaylistDetailScreen(
-                        fallbackTitle = fallbackTitle,
-                        state = state,
-                        message = message,
-                        onRetry = viewModel::load,
-                        onOpen = ::openDetail,
-                        onBack = { navController.popBackStack() },
-                        onEdit = { navController.navigate("playlist/$id/edit") },
-                        onRemove = viewModel::removeAll,
-                    )
+                    PageSurface {
+                        PlaylistDetailScreen(
+                            fallbackTitle = fallbackTitle,
+                            state = state,
+                            message = message,
+                            onRetry = viewModel::load,
+                            onOpen = ::openDetail,
+                            onBack = { navController.popBackStack() },
+                            onEdit = { navController.navigate("playlist/$id/edit") },
+                            onRemove = viewModel::removeAll,
+                        )
+                    }
                 }
             }
 
@@ -696,31 +729,35 @@ private fun MissuApp(
                 // 保存或删除成功后回到列表：列表会重新加载，详情页的旧名字也不会残留。
                 fun backToList() { navController.popBackStack("playlists", inclusive = false) }
 
-                PlaylistEditScreen(
-                    state = state,
-                    message = message,
-                    busy = busy,
-                    onSave = { name, description, isPublic ->
-                        viewModel.save(name, description, isPublic) { backToList() }
-                    },
-                    onDelete = { viewModel.delete { backToList() } },
-                    onRetry = viewModel::load,
-                    onBack = { navController.popBackStack() },
-                )
+                PageSurface {
+                    PlaylistEditScreen(
+                        state = state,
+                        message = message,
+                        busy = busy,
+                        onSave = { name, description, isPublic ->
+                            viewModel.save(name, description, isPublic) { backToList() }
+                        },
+                        onDelete = { viewModel.delete { backToList() } },
+                        onRetry = viewModel::load,
+                        onBack = { navController.popBackStack() },
+                    )
+                }
             }
-            composable("saved") {
+            composable("saved") { entry ->
                 val viewModel: SavedViewModel = viewModel(factory = factory { SavedViewModel(api) })
                 val state by viewModel.state.collectAsState()
                 LaunchedEffect(Unit) { viewModel.load() }
 
                 ProvideHeroVisibility(this, namespace = "saved") {
-                    SavedScreen(
-                        state = state,
-                        onRetry = viewModel::load,
-                        onLoadMore = viewModel::loadMore,
-                        onOpen = ::openDetail,
-                        onBack = { navController.popBackStack() },
-                    )
+                    PageSurface {
+                        SavedScreen(
+                            state = state,
+                            onRetry = viewModel::load,
+                            onLoadMore = viewModel::loadMore,
+                            onOpen = ::openDetail,
+                            onBack = { navController.popBackStack() },
+                        )
+                    }
                 }
             }
             composable(
@@ -754,27 +791,29 @@ private fun MissuApp(
                     ?: "home"
 
                 ProvideHeroVisibility(this, namespace = heroSource) {
-                    DetailScreen(
-                        state = state,
-                        onRetry = viewModel::load,
-                        onBack = { navController.popBackStack() },
-                        videoId = id,
-                        posterUrl = poster.ifEmpty { null },
-                        // NOTE: 返回时这一项会先变 false（popBackStack 是同步的），
-                        // 详情页据此在转场第一帧就把容器换回封面、停掉音频。
-                        isCurrent = backStackEntry?.id == entry.id,
-                        message = message,
-                        onToggleSaved = viewModel::toggleSaved,
-                        startPositionMs = viewModel.startPositionMs,
-                        onPositionReport = viewModel::reportProgress,
-                        playlists = playlists,
-                        onOpenPlaylists = viewModel::openPlaylists,
-                        onClosePlaylists = viewModel::closePlaylists,
-                        onTogglePlaylist = viewModel::togglePlaylist,
-                        onOpenPath = { path, title ->
-                            navController.navigate("list?p=${Uri.encode(path)}&t=${Uri.encode(title)}")
-                        },
-                    )
+                    PageSurface {
+                        DetailScreen(
+                            state = state,
+                            onRetry = viewModel::load,
+                            onBack = { navController.popBackStack() },
+                            videoId = id,
+                            posterUrl = poster.ifEmpty { null },
+                            // NOTE: 返回时这一项会先变 false（popBackStack 是同步的），
+                            // 详情页据此在转场第一帧就把容器换回封面、停掉音频。
+                            isCurrent = backStackEntry?.id == entry.id,
+                            message = message,
+                            onToggleSaved = viewModel::toggleSaved,
+                            startPositionMs = viewModel.startPositionMs,
+                            onPositionReport = viewModel::reportProgress,
+                            playlists = playlists,
+                            onOpenPlaylists = viewModel::openPlaylists,
+                            onClosePlaylists = viewModel::closePlaylists,
+                            onTogglePlaylist = viewModel::togglePlaylist,
+                            onOpenPath = { path, title ->
+                                navController.navigate("list?p=${Uri.encode(path)}&t=${Uri.encode(title)}")
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -790,6 +829,8 @@ private data class TopLevel(
 
 // NOTE: 搜索不再单独占一个页签——「发现」顶部就是搜索入口，结果页仍在（search 路由），
 // 底部只留三个一级页面：首页 / 发现 / 我的。
+private const val TABS_ROUTE = "tabs"
+
 private val topLevels = listOf(
     TopLevel("home", R.string.nav_home, Icons.Filled.Home),
     TopLevel("discover", R.string.nav_discover, Icons.AutoMirrored.Filled.List),
@@ -822,6 +863,77 @@ private fun isForward(
 private fun involvesDetail(initial: NavBackStackEntry, target: NavBackStackEntry): Boolean =
     initial.destination.route?.startsWith("detail/") == true ||
         target.destination.route?.startsWith("detail/") == true
+
+/**
+ * 返回转场的数值，取自官方「预测性返回 · 全屏 Surface」Motion 规范：退出缩到 **90%**、
+ * 进入从 **110%** 落回 100%。
+ *
+ * 唯一偏离规范的是**时间分布**：规范把缩放和淡出都压在前 35% 进度里，我们把缩放铺满整段、
+ * 淡出放到最后 20%。原因：规范那 35% 的交接假设「退场页底下另有一个窗口」（系统动画底下是
+ * 桌面或上一个 Activity），两页同时不可见时看到的是那个窗口；本工程是单 Activity、页面下方
+ * 就是窗口底色。照搬只有两种结果——按规范淡完再淡入，拖到 1/3 处整屏空底色；让退场页盖着
+ * 不淡的上一页淡出，两页文字叠在一起。两种都在实机上抓到了帧，所以改成：预览区间内退场页
+ * 不透明，缩多少由手指给多少。
+ */
+/**
+ * 返回转场的数值。
+ *
+ * 两段：手势阶段（`predictivePop*`）只有缩放，松手后（`pop*`）由页面自己播固定时长的平移。
+ * 缩放取官方「预测性返回 · 全屏 Surface」的 90%；**时间线放到 600ms**——它同时决定了
+ * 「拉满 = 缩到底」和「松手后转场还剩多少时间可以走完平移动画」。
+ */
+/**
+ * 返回转场的数值（官方「预测性返回 · 全屏 Surface」的 90%）。
+ *
+ * 手势与松手共用同一条 500ms 时间线：前 60% 只缩放（跟手指），后 40% 向右平移并提亮下层。
+ */
+private object PopMotion {
+    const val TOTAL_MS = 500
+
+    /** 退场页缩到 90%。 */
+    const val EXIT_SCALE = 0.9f
+
+    /** 下层在预览期间压到的亮度；松手后提亮回 1。 */
+    const val UNDER_ALPHA = 0.88f
+
+    /** 平移在 60% 进度后才起手：手势期间只缩放，松手后它才把页面推出去。 */
+    const val SLIDE_DELAY_MS = 300
+
+    /** 平移自身的时长。 */
+    const val SLIDE_MS = 200
+}
+
+/** 详情页走 container transform（规范：用 Navigation 组件时不要缩放整屏）。 */
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.missuPopEnter(): EnterTransition =
+    if (involvesDetail(initialState, targetState)) {
+        heroEnter()
+    } else {
+        fadeIn(
+            animationSpec = keyframes {
+                durationMillis = PopMotion.TOTAL_MS
+                PopMotion.UNDER_ALPHA at 0
+                PopMotion.UNDER_ALPHA at PopMotion.SLIDE_DELAY_MS
+                1f at PopMotion.TOTAL_MS
+            },
+            initialAlpha = PopMotion.UNDER_ALPHA,
+        )
+    }
+
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.missuPopExit(): ExitTransition =
+    if (involvesDetail(initialState, targetState)) {
+        heroExit()
+    } else {
+        scaleOut(
+            animationSpec = tween(durationMillis = PopMotion.TOTAL_MS),
+            targetScale = PopMotion.EXIT_SCALE,
+        ) + slideOutHorizontally(
+            // 60% 之后才起手：拖动期间不会看到它挪动，松手后它就是「推出去」那一下。
+            animationSpec = tween(
+                durationMillis = PopMotion.SLIDE_MS,
+                delayMillis = PopMotion.SLIDE_DELAY_MS,
+            ),
+        ) { it }
+    }
 
 private inline fun <reified T : ViewModel> factory(crossinline create: () -> T): ViewModelProvider.Factory =    object : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
