@@ -853,7 +853,6 @@ private fun MissuApp(
                         DetailScreen(
                             state = state,
                             onRetry = viewModel::load,
-                            onBack = { goBack() },
                             videoId = id,
                             heroTag = heroTag,
                             posterUrl = poster.ifEmpty { null },
