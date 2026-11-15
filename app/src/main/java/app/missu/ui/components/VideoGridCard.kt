@@ -47,6 +47,8 @@ fun VideoGridCard(
     onClick: () -> Unit,
     // NOTE: 整理模式下卡片是「选中/取消」，长按再弹预览会和选择手势打架，由调用方关掉。
     previewOnLongPress: Boolean = true,
+    // NOTE: 同一页里可能重复出现同一部影片时（首页多板块）带上来源标签，见 [heroKeyFor]。
+    heroTag: String = "",
 ) {
     val preview = LocalVideoPreview.current
 
@@ -73,7 +75,7 @@ fun VideoGridCard(
                 .aspectRatio(16f / 9f)
                 // NOTE: 封面就是详情页播放器框的共享容器——点卡片时它自己长成播放器，
                 // 所以共享 bounds 挂在这一层，而不是整张卡片上（文字不参与这次转场）。
-                .videoHero(video.id, MaterialTheme.shapes.medium)
+                .videoHero(heroKeyFor(heroTag, video.id), MaterialTheme.shapes.medium)
                 .clip(MaterialTheme.shapes.medium)
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh),
         ) {
