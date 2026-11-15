@@ -3,6 +3,7 @@
 # 用法：  .\scripts\build.ps1            （只构建 debug APK）
 #         .\scripts\build.ps1 install    （构建 + 装到已连接的设备）
 #         .\scripts\build.ps1 release    （构建 release APK，沿用 debug 签名）
+#         .\scripts\build.ps1 check      （核心/应用测试 + lint + debug 构建）
 # 环境：  MISSU_NO_DAEMON=1       （不保留 Gradle daemon；自动化采集输出时必须开，
 #                                  否则 daemon 会一直占着 stdout，管道等不到 EOF）
 # NOTE: 本文件必须保存为 UTF-8 **带 BOM**——Windows PowerShell 5.1 对无 BOM 的 UTF-8 按 ANSI 解码，
@@ -48,11 +49,16 @@ try {
     switch ($Task) {
         "install" { & .\gradlew.bat :app:assembleDebug :app:installDebug @extra }
         "release" { & .\gradlew.bat :app:assembleRelease @extra }
+        "check"   { & .\gradlew.bat :core:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug @extra }
         default   { & .\gradlew.bat ":app:$Task" @extra }
     }
     if ($LASTEXITCODE -ne 0) { throw "Gradle 退出码 $LASTEXITCODE" }
 
-    $apk = Join-Path $root 'app\build\outputs\apk\debug\app-debug.apk'
+    $apk = if ($Task -eq 'release') {
+        Join-Path $root 'app\build\outputs\apk\release\app-release.apk'
+    } else {
+        Join-Path $root 'app\build\outputs\apk\debug\app-debug.apk'
+    }
     if (Test-Path $apk) { "APK: $apk ($([math]::Round((Get-Item $apk).Length/1MB,2)) MB)" }
 } finally {
     Pop-Location
