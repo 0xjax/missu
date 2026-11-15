@@ -2,6 +2,7 @@
 
 package app.missu.ui.search
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBars
@@ -33,6 +34,7 @@ import androidx.compose.material3.ExpandedFullScreenSearchBar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SearchBarValue
 import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.SuggestionChip
@@ -109,6 +111,14 @@ fun SearchHost(
         textFieldState.edit { replace(0, length, "") }
         scope.launch { searchBarState.animateToCollapsed() }
         onClear()
+    }
+
+    // NOTE: 搜索态是**同一个目的地里的第二层**（栏就地展开、结果是同一屏的内容替换），返回栈上
+    // 没有它的条目。不接管返回键的话，系统返回会一路走到 Activity，也就是「从搜索结果页直接退出
+    // 应用」。这里让它退一层：先回到首页内容，首页再按才是退出。
+    // NOTE: 展开但还没提交查询也算一层——栏开着就说明用户进入了搜索模式，返回应当先收起。
+    BackHandler(enabled = searching || searchBarState.targetValue == SearchBarValue.Expanded) {
+        exit()
     }
 
     val inputField = @Composable {
