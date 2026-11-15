@@ -32,6 +32,15 @@
 - adb server 报 `cannot open ...\adb.log: Permission denied` 时是**完整性级别**问题（adb 以 Low IL 运行、`%TEMP%` 是 Medium）：给 `%TEMP%\adb.log` 预建空文件并 `icacls ... /setintegritylevel L` 即可，不需要覆盖 `TMP/TEMP`（也不是杀软）。详见 `docs/android-native.md`「已知坑」。
 - legacy 的 Expo 侧已归档到 `legacy/expo/`，没有 `node_modules`（已删）；需要对照或重跑时先在那个目录 `bun install`。
 
+## 真机权限边界
+
+无线 adb 有整机控制权：**默认禁止，只放行这份清单**；清单以外先问。
+
+- 放行（不打断你，也不打扰我）：`build.ps1 install`（`-r` 覆盖）、启动/停止本应用（`am start -n app.missu/…`、`am force-stop`、`monkey -p app.missu`）、本应用界面上的 `input tap/swipe/text` 与留在本应用的 `keyevent`、只读 `screencap`/`uiautomator`/`dumpsys`/`logcat`（尽量 `--pid`）。动手前 `dumpsys window | grep mCurrentFocus` 里必须是 `app.missu`。
+- 清单以外先问一句：做什么、为什么、做完怎么回。典型：`svc`/`settings`/`wm`/`cmd`、`pm`/`am` 指向别处、`pm clear`/`uninstall` 本应用（丢数据）、`keyevent HOME/RECENTS/POWER`、系统弹窗 / 桌面 / 通知栏。
+- 误落到别处（桌面、锁屏、别的应用）→ 直接 `am start -n app.missu/.MainActivity` 回来，不算违规、不用问。
+- NEVER 整机级：`reboot`、`fastboot`、`su`、`pm disable-user`、分区 / 格式化。解锁、授权、连网、点系统弹窗 → 交给用户。
+
 ## 依赖选择（不许靠猜）
 
 - 原生侧 UI 一律 **Material 3 Expressive + 自己写的 Compose**，不引入第三方 UI 组件库；需要行为可控时宁可自绘，也不要在别人的默认值上反复试参数。
