@@ -103,6 +103,7 @@ fun ExoVideoPlayer(
     onToggleFullscreen: () -> Unit = {},
     initialPositionMs: Long = 0L,
     onPositionReport: ((Long) -> Unit)? = null,
+    onPlayerAvailable: (Player?) -> Unit = {},
     // NOTE: 第一帧真正出画。上层（详情页）要靠它决定什么时候撤掉封面：
     // 在它之前容器里必须一直有画面，否则"长大到位"的封面会凭空消失一下。
     onFirstFrameRendered: () -> Unit = {},
@@ -152,8 +153,10 @@ fun ExoVideoPlayer(
     // NOTE: 监听器在 DisposableEffect 里只装一次，回调必须走 rememberUpdatedState 才不会拿到旧 lambda。
     val notifyFirstFrame = rememberUpdatedState { onFirstFrameRendered() }
     val notifyPlaybackFailed = rememberUpdatedState { onPlaybackFailed() }
+    val notifyPlayerAvailable = rememberUpdatedState(onPlayerAvailable)
 
     DisposableEffect(player) {
+        notifyPlayerAvailable.value(player)
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(playing: Boolean) {
                 // WARNING: seek 窗口内播放器报的 paused 是加载、不是用户暂停——忽略它，
@@ -184,6 +187,7 @@ fun ExoVideoPlayer(
         player.addListener(listener)
         onDispose {
             reportPosition.value(player.currentPosition)
+            notifyPlayerAvailable.value(null)
             player.removeListener(listener)
             player.release()
         }

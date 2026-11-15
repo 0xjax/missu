@@ -95,6 +95,13 @@
     <string name="player_fullscreen">全画面</string>
     <string name="player_exit_fullscreen">全画面を終了</string>
     <string name="player_seek_hint">%1$s%2$d 秒</string>
+    <string name="player_rewind_10_minutes">10 分巻き戻す</string>
+    <string name="player_forward_10_minutes">10 分早送り</string>
+    <string name="player_rewind_1_minute">1 分巻き戻す</string>
+    <string name="player_forward_1_minute">1 分早送り</string>
+    <string name="player_seek_minutes_compact">%1$s%2$d&#10;分</string>
+    <string name="player_show_seek_controls">シーク操作を表示</string>
+    <string name="player_hide_seek_controls">シーク操作を閉じる</string>
     <string name="player_speed">再生速度</string>
     <string name="player_aspect">画面</string>
     <string name="player_aspect_fit">フィット</string>
