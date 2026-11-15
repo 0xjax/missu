@@ -6,10 +6,12 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
@@ -33,6 +35,7 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularWavyProgressIndicator
@@ -54,7 +57,9 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -64,10 +69,13 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
@@ -93,6 +101,7 @@ import app.missu.ui.components.heroKeyFor
 import app.missu.ui.components.videoHero
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun DetailScreen(
@@ -131,11 +140,113 @@ fun DetailScreen(
     // 是同一张（容器长到位时画面不会变），而且它已经在 Coil 的内存缓存里（不会从纯色淡入）。
     val poster = posterUrl ?: detail?.thumbnailUrl
 
-    Column(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        // NOTE: 详情页**没有返回行**（2026-11-16 定的）：这一页的全部内容就是视频，返回行是纯 chrome，
-        // 白白占掉播放器上方 56dp。退出一律用系统返回（侧滑 / 三键 / 预测性返回的手势预览）。
+    // 上滑进全屏 / 下滑退全屏：跟手进度 0..1。转屏本身没法跟手（那是另一套窗口配置），
+    // 所以松手过阈值之后再交给系统转，跟手这一段负责「越拖越大 / 越拖越缩」。
+    var dragProgress by remember { mutableFloatStateOf(0f) }
+    val animationScope = rememberCoroutineScope()
+
+    // NOTE: 播放器必须和正文**并列**在一个 Box 里，不能只是 Column 的兄弟：上滑放大时它要长到
+    // 正文上面去，而 Column 中后一个孩子会把前一个盖住。所以正文让出播放器高度的占位，
+    // 播放器自己绝对定位在顶部、zIndex 抬到最上面。
+    BoxWithConstraints(
+        modifier
+            .fillMaxSize()
+            .background(if (fullscreen) Color.Black else MaterialTheme.colorScheme.background),
+    ) {
+        // 内嵌播放器的高度：整宽 16:9。正文从这个高度之下开始。
+        val videoHeight = maxWidth * 9f / 16f
+        val screenHeightPx = with(LocalDensity.current) { maxHeight.toPx() }
+        // 提交阈值：竖屏浅、横屏深（理由见 DragCommitPortrait / Landscape）。
+        val commitThresholdPx = screenHeightPx * if (fullscreen) DragCommitLandscape else DragCommitPortrait
+
+        val dragModifier = Modifier.pointerInput(fullscreen, commitThresholdPx) {
+            var accumulated = 0f
+            fun amountOf(): Float = if (fullscreen) accumulated else -accumulated
+            detectVerticalDragGestures(
+                onDragStart = { accumulated = 0f },
+                onVerticalDrag = { change, dy ->
+                    change.consume()
+                    accumulated += dy
+                    // 竖屏只认上滑，横屏只认下滑；反方向一律不跟手。
+                    val amount = amountOf()
+                    dragProgress = if (amount > 0f) {
+                        (amount / commitThresholdPx).coerceIn(0f, 1f)
+                    } else {
+                        0f
+                    }
+                },
+                onDragEnd = {
+                    if (amountOf() >= commitThresholdPx) {
+                        animationScope.launch {
+                            animate(initialValue = dragProgress, targetValue = 1f, animationSpec = tween(DragCommitMs)) { value, _ ->
+                                dragProgress = value
+                            }
+                            // 交出去：转屏由系统做，布局换成全屏后进度归零。
+                            fullscreen = !fullscreen
+                            dragProgress = 0f
+                        }
+                    } else {
+                        animationScope.launch {
+                            animate(initialValue = dragProgress, targetValue = 0f, animationSpec = tween(DragCancelMs)) { value, _ ->
+                                dragProgress = value
+                            }
+                        }
+                    }
+                },
+                onDragCancel = {
+                    animationScope.launch {
+                        animate(initialValue = dragProgress, targetValue = 0f, animationSpec = tween(DragCancelMs)) { value, _ ->
+                            dragProgress = value
+                        }
+                    }
+                },
+            )
+        }
+
+        if (!fullscreen) {
+            Column(Modifier.fillMaxSize()) {
+                // 播放器的位置占位（播放器本身在下面绝对定位，见上）。
+                Spacer(Modifier.height(videoHeight))
+
+                // NOTE: 正文（标题/信息行）和底部动作条本来只有在详情数据回来之后才存在。
+                // 详情请求常在整页淡入窗口（90–300ms）**之后**才返回，那时把这两块直接摆上去
+                // 就是一次硬切——而页签里的其它页面全都有 fade through 兜这一下。所以这里也走
+                // `PageStateTransition`：同一个语言，快慢网的行为也一致（快网时它就是跟着整页淡入）。
+                PageStateTransition(
+                    state = state,
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                ) { current ->
+                    when (current) {
+                        // 加载态不在正文里放转圈——进度统一收在播放器框里（封面 + 延迟出现的
+                        // 指示器），否则页面上会同时有两个"正在加载"。
+                        DetailUiState.Loading -> Unit
+
+                        is DetailUiState.Error -> ErrorHint(current.message.text(), onRetry)
+
+                        is DetailUiState.Content -> DetailBody(
+                            detail = current.detail,
+                            message = message,
+                            onToggleSaved = onToggleSaved,
+                            playlists = playlists,
+                            onOpenPlaylists = onOpenPlaylists,
+                            onClosePlaylists = onClosePlaylists,
+                            onTogglePlaylist = onTogglePlaylist,
+                            onOpenPath = onOpenPath,
+                        )
+                    }
+                }
+            }
+        }
+
+        // 上滑跟手时整页压暗（YouTube：视频在放大、后面那页变暗）。全屏那边底本来就是黑的。
+        if (!fullscreen && dragProgress > 0.001f) {
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f * dragProgress)))
+        }
+
+        // NOTE: 详情页**没有返回行**（2026-11-16 定的）：这一页的全部内容就是视频，返回行是纯
+        // chrome，白占掉播放器上方 56dp。退出一律用系统返回（侧滑 / 三键 / 预测性返回的手势预览）。
         // NOTE: 也不做「浮在画面左上角」的那颗键——它会实实在在挡住画面（2026-11-15 实机否掉），
-        // 所以这次是整行去掉，不是把它挪进画面里。
+        // 所以那次是整行去掉，不是把它挪进画面里。
         DetailHero(
             state = state,
             poster = poster,
@@ -145,39 +256,27 @@ fun DetailScreen(
             startPositionMs = startPositionMs,
             onPositionReport = onPositionReport,
             onToggleFullscreen = { fullscreen = !fullscreen },
+            dragProgress = dragProgress,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .zIndex(1f)
+                .then(dragModifier),
         )
-
-        if (!fullscreen) {
-            // NOTE: 正文（标题/信息行）和底部动作条本来只有在详情数据回来之后才存在。
-            // 详情请求常在整页淡入窗口（90–300ms）**之后**才返回，那时把这两块直接摆上去
-            // 就是一次硬切——而页签里的其它页面全都有 fade through 兜这一下。所以这里也走
-            // `PageStateTransition`：同一个语言，快慢网的行为也一致（快网时它就是跟着整页淡入）。
-            PageStateTransition(
-                state = state,
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-            ) { current ->
-                when (current) {
-                    // 加载态不在正文里放转圈——进度统一收在播放器框里（封面 + 延迟出现的
-                    // 指示器），否则页面上会同时有两个"正在加载"。
-                    DetailUiState.Loading -> Unit
-
-                    is DetailUiState.Error -> ErrorHint(current.message.text(), onRetry)
-
-                    is DetailUiState.Content -> DetailBody(
-                        detail = current.detail,
-                        message = message,
-                        onToggleSaved = onToggleSaved,
-                        playlists = playlists,
-                        onOpenPlaylists = onOpenPlaylists,
-                        onClosePlaylists = onClosePlaylists,
-                        onTogglePlaylist = onTogglePlaylist,
-                        onOpenPath = onOpenPath,
-                    )
-                }
-            }
-        }
     }
 }
+
+/**
+ * 切换全屏的提交阈值：整屏高度的几分之几。
+ *
+ * NOTE: 两个方向**不是**同一个值：竖屏是"想看大画面"的主动动作，给低一点（滑一点就进）；
+ * 横屏的下滑要更刻意才退出——否则看片时手一动就掉回竖屏。
+ */
+private const val DragCommitPortrait = 0.12f
+private const val DragCommitLandscape = 0.26f
+
+/** 过阈值后先把跟手进度补完再交出去；没到阈值就回弹。 */
+private const val DragCommitMs = 120
+private const val DragCancelMs = 180
 
 /** 视频出画时封面淡出的时长；与控件出现是同一段，看起来像「画面显影」。 */
 private const val POSTER_FADE_MS = 200
@@ -227,6 +326,9 @@ private fun DetailHero(
     startPositionMs: Long,
     onPositionReport: (Long) -> Unit,
     onToggleFullscreen: () -> Unit,
+    modifier: Modifier = Modifier,
+    /** 上滑 / 下滑切换全屏的跟手进度（0..1）。转屏那一下没法跟手，这一段负责"越拖越大 / 越拖越缩"。 */
+    dragProgress: Float = 0f,
 ) {
     val detail = (state as? DetailUiState.Content)?.detail
     val playbackUrl = detail?.playbackUrl
@@ -295,6 +397,16 @@ private fun DetailHero(
         } else {
             Modifier.fillMaxWidth().aspectRatio(16f / 9f)
         })
+            .then(modifier)
+            .graphicsLayer {
+                // 跟手：竖屏里放大（从顶边往下长），横屏里缩小并下移——两个方向都只改绘制，
+                // 不参与布局，所以正文不会因为拖动而抖动。
+                val scale = if (fullscreen) 1f - 0.12f * dragProgress else 1f + 0.35f * dragProgress
+                scaleX = scale
+                scaleY = scale
+                translationY = (if (fullscreen) 64.dp else -24.dp).toPx() * dragProgress
+                transformOrigin = TransformOrigin(0.5f, 0f)
+            }
             .videoHero(heroKey, RectangleShape)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh),
         contentAlignment = Alignment.Center,
