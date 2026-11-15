@@ -6,7 +6,8 @@ Expo / React Native 的旧实现已归档到 [`legacy/expo/`](legacy/expo/)，�
 ## 快速开始
 
 ```powershell
-.\scripts\build.ps1 install          # 构建 debug APK 并装到已连接的设备
+.\scripts\build.ps1 check           # 测试 + lint + debug 构建
+.\scripts\build.ps1 install         # 构建 debug APK 并装到已连接的设备
 adb shell am start -n app.missu/.MainActivity
 ```
 

@@ -53,9 +53,7 @@ D:\Android\Sdk\platform-tools\adb.exe start-server
 .\adb devices -l
 ```
 
-配对信息（电脑的 `~/.android/adbkey` 与手机记下的公钥）是一次性的。之后只要无线调试开着，adb server 就会通过 mDNS
-自动发现并连上，serial 形如 `adb-<设备ID>-<随机后缀>._adb-tls-connect._tcp`。只有 mDNS 不可用时（见下文「重开无线调试为什么能自动恢复」）
-才需要按“无线调试”主页的地址手动 `.\adb connect 手机IP:连接端口`。
+配对只需一次。成功后先看设备列表，通常不需要再 `adb connect`；自动发现机制见「重开无线调试为什么能自动恢复」。
 
 **配对端口与连接端口通常不同。** 配对端口来自配对弹窗，一般每次配对都会变化；连接端口来自无线调试主页，**每次重新开启无线调试都会变**。不要复用上一次记录的端口。
 
@@ -107,38 +105,20 @@ adb 按 serial（传输）记账，不按硬件去重。无线调试下同一台
 .\adb -s adb-<设备ID>-<随机后缀>._adb-tls-connect._tcp shell echo alive
 ```
 
-## DSH 的 Android 插件
-
-装的是 `@zseven-w/dsh-android`（第三方 bundle），提供 20 个 `android_*` 工具：`android_devices`、`android_boot`、`android_screenshot`、`android_ui_tree`、`android_tap_element`、`android_interact`、`android_logs`、`android_build_run` 等；安装后还会注册 `android-ui-automation` skill（工具用法说明，按需加载）。
-
-它通过环境变量 `ADB` 找 adb：
-
-```powershell
-[Environment]::SetEnvironmentVariable('ADB', 'D:\platform-tools\adb.exe', 'User')
-```
-
-该变量只在 DSH 进程启动时读一次，改完必须重启 DSH；否则工具报 `adb is unavailable`。
-
 ## 安全软件会拦子进程和写入
 
-卡巴斯基有两条互相独立的拦截，踩过多次：
-
-1. **PDM（系统监控）拦 DSH 的子进程**：DSH 启动 `powershell.exe`、批量改文件权限时会报 `PDM:Exploit.Win32.Generic`，工具侧表现为 `spawn EPERM`。
-   处理：受信任应用程序里加 `C:\Users\user\AppData\Local\Programs\DeepSeek Harness\DeepSeek Harness.exe`，勾「不监控应用程序活动」「不监控子应用程序活动」（递归）；排除项目录加 `D:\missu`、`C:\Users\user\.dsh`。
-2. **按可执行文件拦写入**：某个 `java.exe` 即使被加进"受信任应用程序"，写工作区外目录仍可能被拒（当年 `D:\Android\jdk-17` 就是这样，而当时 AS 自带的 JBR 正常）。
-   判别方法：同一个文件分别用 PowerShell 和 JVM 写一次，只有 JVM 被拒 = 程序级拦截，不是文件权限。
-   处理：构建用 `D:\Android\jdk-21`（Temurin，`scripts/build.ps1` 自动发现）；换 JDK 前先确认它的 `java.exe` 能正常跑。
+JVM 写目录被拒但 PowerShell 可写时，用同一文件分别测试；只有 JVM 失败即程序级拦截。构建固定使用 `D:\Android\jdk-21`，换 JDK 后先验证 `java.exe` 可执行且可写。
 
 ## 构建、安装与迭代
 
 ```powershell
 cd D:\missu
-.\scripts\build.ps1            # debug APK
-.\scripts\build.ps1 install    # 构建并直接装到当前设备
+.\scripts\build.ps1 check     # 测试 + lint + debug 构建
+.\scripts\build.ps1 install   # 构建并直接装到当前设备
 adb shell am start -n app.missu/.MainActivity
 ```
 
-- 增量构建通常 10–30 秒；**没有 Fast Refresh**，改完必须重新编译装机才能看到效果。
+- 增量构建通常 10–30 秒；装机启动后默认交由用户验收，确认后再提交，不自动追加点击与截图。
 - 自动化采集输出时设 `MISSU_NO_DAEMON=1`，否则 Gradle daemon 会占着 stdout，管道等不到 EOF（命令看起来"卡死"，其实构建早已结束）。
 - `scripts/build.ps1` 里固定了 `JAVA_HOME`、`ANDROID_HOME`、`ANDROID_USER_HOME`；这些不是可选项，原因见 `docs/android-native.md` 的「已知坑」。（`TMP/TEMP` 已不再覆盖。）
 
@@ -153,7 +133,7 @@ release 沿用 debug 证书，仅适合自用侧载；换成正式 keystore 后�
 
 ## 常用自动化命令
 
-> Agent 侧优先用 DSH 的 `android_*` 工具（`android_screenshot` / `android_ui_tree` / `android_tap_element` / `android_logs`），一次调用完成定位、点击并返回截图；下面这些 adb 命令是人工兜底。
+> 仅在用户明确要求的真机操作或视觉诊断中使用；默认流程在装机启动后交由用户验收。
 
 ```powershell
 # 返回
