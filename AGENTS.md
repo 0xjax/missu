@@ -1,117 +1,67 @@
 # missu
 
-仓库里有两个工程：
-
 | 目录 | 状态 | 说明 |
 |---|---|---|
-| 仓库根（`app/`、`core/`、`gradlew`…） | **现役 / 基线** | Kotlin + Jetpack Compose 原生工程；Gradle 根就是仓库根，是标准规范路径的唯一实现 |
-| `legacy/expo/` | **legacy** | Expo SDK 58 的 React Native 实现，只作参照实现与设计规格，**不再构建、不再运行** |
+| 仓库根 | **现役 / 基线** | Kotlin + Jetpack Compose；Gradle 根就是仓库根 |
+| `legacy/expo/` | **legacy** | Expo SDK 58 参照实现与设计规格；不构建、不运行，需要对照时先 `bun install` |
 
-交付包名 `app.missu`，应用名 `Missu`，仅 Android（真机验收）。设计语言见 @DESIGN.md，原生工程的构建细节见 `docs/android-native.md`。
+交付包名 `app.missu`，应用名 `Missu`，仅 Android。设计语言见 `DESIGN.md`，构建与调试见 `docs/`。
 
 ## 命令
 
 ```powershell
-# 原生工程（唯一现役构建；仓库根就是 Gradle 根，不用 cd）
 .\scripts\build.ps1              # debug APK
 .\scripts\build.ps1 install      # 构建 + 装到设备
-.\scripts\build.ps1 release      # release（R8 + 资源压缩，沿用 debug 签名，仅自用侧载）
+.\scripts\build.ps1 release      # R8 + 资源压缩，沿用 debug 签名，仅自用侧载
 .\scripts\build.ps1 check        # core/app 测试 + lint + debug 构建
 ```
 
-`scripts/build.ps1` 会配好 `JAVA_HOME`（自动选 `D:\Android\jdk-N`；AS 已卸载，构建不依赖它）、`ANDROID_HOME`（`D:\Android\Sdk`）、`ANDROID_USER_HOME`。自动化采集输出时加 `MISSU_NO_DAEMON=1`——Gradle daemon 会一直占着 stdout，管道等不到 EOF。
-
-工具链：SDK `D:\Android\Sdk`、JDK = 独立 Temurin 21（`D:\Android\jdk-21`，`scripts/build.ps1` 自动发现 `jdk-*` 取最高版本）；Android Studio 已卸载，构建不依赖它。Gradle 缓存 `%USERPROFILE%\.gradle`、Gradle 发行包 9.6.0（wrapper，腾讯镜像）。
+`scripts/build.ps1` 自动配置 JDK（`D:\Android\jdk-*` 取最高版本）、`ANDROID_HOME=D:\Android\Sdk` 和项目级 `ANDROID_USER_HOME`。自动化采集输出加 `MISSU_NO_DAEMON=1`，避免 daemon 占住 stdout。Gradle wrapper 9.6.0；Android Studio 不是构建依赖。
 
 ## 开发流程
 
-- **没有 Metro / Fast Refresh**。改 Kotlin 代码 → 重新编译装机（增量约 10–30 秒）→ `adb shell am start -n app.missu/.MainActivity`。
-- 业务模块：`:core` 是**纯 JVM**（取数/解析/模型，不许 `android.*` / `androidx.*`），`:app` 是 Android UI 与平台适配；`:app` 依赖 `:core`，反向禁止。`:baselineprofile` 仅是独立启动 Profile 生成器，不进交付 APK。统一检查用 `.\scripts\build.ps1 check`。
-- 真机调试（无线 ADB、截图、日志、uiautomator）见 `docs/android-debugging.md`。
-- 真机上**纯操作、不需要读屏判断的长链路**（如建片单→加影片→移除→复原）→ 直接把步骤交给我，别逐步调工具；需要看截图/读 UI 才能判断的（布局、文案、状态是否真的变了）才自己驱动。
-- 观感类缺陷（闪一下、抖、跳）**先量化再改**：`adb shell screencap` 抓中间帧比对亮度/像素，定位到层（窗口底色 / 转场 / 状态机 / 组合生命周期）。**同一层连续两次调参仍复现 → 停止调参、换层排查**，不要在参数上反复试。
-- adb server 报 `cannot open ...\adb.log: Permission denied` 时是**完整性级别**问题（adb 以 Low IL 运行、`%TEMP%` 是 Medium）：给 `%TEMP%\adb.log` 预建空文件并 `icacls ... /setintegritylevel L` 即可，不需要覆盖 `TMP/TEMP`（也不是杀软）。详见 `docs/android-native.md`「已知坑」。
-- legacy 的 Expo 侧已归档到 `legacy/expo/`，没有 `node_modules`（已删）；需要对照或重跑时先在那个目录 `bun install`。
+- 业务模块：`:core` 为纯 JVM 取数/解析/模型，禁止 `android.*` / `androidx.*`；`:app` 为 UI 与平台适配，单向依赖 `:core`。`:baselineprofile` 仅生成启动 Profile，不进交付 APK。
+- 默认终点：`build.ps1 check` → `build.ps1 install` → `adb shell am start -n app.missu/.MainActivity` → **用户验收后再提交**。
+- 未经用户明确要求，构建装机后**不继续点击、截屏、dump UI 或抓日志**；视觉缺陷诊断和用户指定的真机操作除外。
+- 观感缺陷先量化并定位到窗口底色 / 转场 / 状态机 / 组合生命周期；同层连续两次调参仍复现 → 换层排查。
+- 真机纯操作长链路交给用户；需要读屏判断的操作才由 agent 明确驱动。调试细节见 `docs/android-debugging.md`。
+- adb 的 `%TEMP%\adb.log` 拒写 → 预建文件并 `icacls <file> /setintegritylevel L`，不要覆盖 `TMP/TEMP`。
 
 ## 真机权限边界
 
-无线 adb 有整机控制权：**默认禁止，只放行这份清单**；清单以外先问。
+无线 adb 默认禁止，仅放行：
 
-- 放行（不打断你，也不打扰我）：`build.ps1 install`（`-r` 覆盖）、启动/停止本应用（`am start -n app.missu/…`、`am force-stop`、`monkey -p app.missu`）、本应用界面上的 `input tap/swipe/text` 与留在本应用的 `keyevent`、只读 `screencap`/`uiautomator`/`dumpsys`/`logcat`（尽量 `--pid`）。动手前 `dumpsys window | grep mCurrentFocus` 里必须是 `app.missu`。
-- 清单以外先问一句：做什么、为什么、做完怎么回。典型：`svc`/`settings`/`wm`/`cmd`、`pm`/`am` 指向别处、`pm clear`/`uninstall` 本应用（丢数据）、`keyevent HOME/RECENTS/POWER`、系统弹窗 / 桌面 / 通知栏。
-- 误落到别处（桌面、锁屏、别的应用）→ 直接 `am start -n app.missu/.MainActivity` 回来，不算违规、不用问。
-- NEVER 整机级：`reboot`、`fastboot`、`su`、`pm disable-user`、分区 / 格式化。解锁、授权、连网、点系统弹窗 → 交给用户。
+- `build.ps1 install`；启动/停止本应用；本应用内的 `input tap/swipe/text` 与留在本应用的 `keyevent`；只读 `screencap` / `uiautomator` / `dumpsys` / `logcat`（尽量 `--pid`）。
+- 操作前 `dumpsys window | grep mCurrentFocus` 必须指向 `app.missu`；误落别处可直接启动本应用返回。
+- 其他操作先说明目的与恢复方式：系统设置、`cmd`、指向别处的 `pm/am`、`pm clear` / `uninstall`、HOME/RECENTS/POWER、系统弹窗、桌面、通知栏。
+- 解锁、授权、连网、点系统弹窗交给用户。禁止 `reboot`、`fastboot`、`su`、`pm disable-user`、分区或格式化。
 
-## 依赖选择（不许靠猜）
+## 工程约束
 
-- 原生侧 UI 一律 **Material 3 Expressive + 自己写的 Compose**，不引入第三方 UI 组件库；需要行为可控时宁可自绘，也不要在别人的默认值上反复试参数。
-- MD3E 的版本门、配方、API 签名、**动效与转场选型**先查 `.agents/skills/md3e`（从 `references/version-baseline.md` 起手），别靠记忆：本工程走 **material3 1.5.0-rc01** 全套 M3E，退役组件（`SegmentedButton` / `NavigationBar` / `Medium|LargeTopAppBar`）不用于新代码。
-- 不用「行为/动画封在内部、只能靠猜默认值调参」的组件。遗留反面案例：Expo 侧的 `NativeTabs`（底层 RNS → Material `BottomNavigationView`）、`@expo/ui`（Compose 控件不可配，且 Expo Go 与 npm 版本错配时两次把环境搞崩）。
-- 引入任何依赖前先确认：它的可配置面能否覆盖设计需求？不能就自绘或换库。
-- 「社区推荐」不是引入理由：状态管理、查询缓存、绘图库当前都没有实测需求；要用先给出具体问题与实测数据。
+- UI 使用 **Material 3 Expressive + 自己的 Compose**，不引第三方 UI 组件库；行为不可配置的组件宁自绘或换库。
+- MD3E 选型先查 `.agents/skills/md3e`；当前 material3 `1.5.0-rc01`，不用 `SegmentedButton` / `NavigationBar` / `Medium|LargeTopAppBar`。
+- 不做无实测需求的状态管理、查询缓存、绘图库或抽象；优先简单实现，不顺手改相邻代码。
+- 版本与插件坐标统一在 `gradle/libs.versions.toml`；站点、播放器、Coil 共享 `AppDependencies` 的 OkHttp 基础设施，各自保留请求头、Cookie 与超时。
+- 播放画面和进度状态优先 Media3 Compose 原生 API；控件外观与手势按 `DESIGN.md` 自绘。
+- 仅适配 Android；注释用中文，提交信息用英文 Conventional Commits；注释标签只用 `CRITICAL` / `WARNING` / `TODO` / `NOTE`。
+- 浮点比较、累计或链式计算前先按业务精度舍入，禁止原始 `==`。
+- 界面文案走 `res/values/strings.xml` 及三个翻译目录；`:core` 只放值，ViewModel 存 `UiMessage`，不存拼好的字符串。
+- Kotlin 包名 `app.missu`，源码在 `app/src/main/java/app/missu/`。
 
-## 站点取数（API 优先，解析是最后手段）
+## 站点取数
 
-取数方式有明确优先级，**不能跳过前一级**：
+优先级：**站点 JSON 接口 → HTML 解析 → Blade 表单 POST**，不得跳级。
 
-1. **站点自己的 JSON 接口**（首选）。证据来源：站点页面内联脚本与 JS bundle 里的 `axios/fetch` 调用，或归档实现 `legacy/expo/src/api/missav.ts` 的请求构造。例：`GET /api/items/{id}/view`、`POST /api/playlists/add`。
-2. **HTML 解析**（次选，仅在确认没有 JSON 接口时）。必须先确认第 1 级不存在，并在代码里写明依据。
-3. **Blade 表单 POST**（最后手段）。要读 `_token`、字段名、跳转语义，脆弱面最大。
+- 端点、参数与取值只能来自站点脚本/表单、legacy 请求构造或真实响应；无法确认就不实现。不得靠页面链接猜测前端脚本能力。
+- 使用 HTML / 表单时：代码 `NOTE` 或 `WARNING` 写明无 JSON 接口及依据；真实结构 fixture 离线测试锁定；结论记入 `docs/android-native.md`「已知坑 · 站点契约」。
+- 按“脆弱面 × 使用频率”决定是否实现，不因其他功能高效就引入解析。
+- WebView 只用于人机验证：组合根部 `ChallengeOverlayHost` 获取 `cf_clearance` 后重试原请求，必须共享系统 `CookieManager`；不做通用浏览或表单兜底。
 
-强制约束：
+## Git / Secrets / Tools
 
-- **不许猜端点或参数**。参数名与取值必须来自：站点脚本/表单、legacy 代码、或真机抓到的响应；三者都没有就说明「无法确认」，不要实现。
-- **不许靠抓页面推断存在哪些接口**。筛选参数这类由前端脚本拼 query 的能力，页面上根本没有普通链接（女优筛选就是实例）——必须读站点脚本或 legacy 的请求构造。
-- 走到第 2/3 级时必须三件事齐全：① 代码里 `NOTE`/`WARNING` 写明「站点无 JSON 接口，只能解析」+ 依据；② 用真实或真实结构的 fixture 写离线测试锁住规则；③ 在 `docs/android-native.md`「已知坑 · 站点契约」记录结论。
-- 判断「要不要做」看**脆弱面 × 使用频率**，不看其他功能是否高效：低频 + 依赖解析的操作（如新建片单），优先考虑不做。
-
-## WebView（只用于人机验证）
-
-- 唯一用途：站点要求人机验证时由组合根部的一层 `Dialog`（`ChallengeOverlayHost`）打开网页，拿到 `cf_clearance` 后自动重试原请求。
-- 不再用它兜「表单操作」：新建片单已经走原生表单（读 `_token` + urlencoded POST）。
-- 必须复用系统 `CookieManager`（与 OkHttp 同一份 Cookie），否则验证过了请求仍然 403。
-- 不做通用浏览模式；这条链路坏掉不能影响其余原生功能。
-
-## Anti-Over-Engineering
-
-- Only make changes directly requested or clearly necessary; no extra features, refactors, or adjacent improvements.
-- State ambiguity explicitly; NEVER silently pick one interpretation over another.
-- Surface tradeoffs and push back if a simpler approach exists.
-- No abstractions for single-use code or error handling for impossible scenarios.
-- Match existing style; don't "improve" adjacent formatting.
-
-## Code Constraints
-
-- 仅适配 Android；iOS / Web 不是交付目标。
-- Comment tags: `CRITICAL` = errors/crashes/data-loss; `WARNING` = risks/edge cases/side effects; `TODO` = incomplete work/tech debt; `NOTE` = non-obvious design decisions.
-- Round to business precision before float compare/accumulate/chain; NEVER raw `==` on floats.
-- **界面文案一律走 `res/values/strings.xml`**（英文是 base，中文 `values-zh/`、繁體 `values-b+zh+Hant/`、日文 `values-ja/`），不写死在 Compose 里；`:core` 没有资源系统，只放**值**、文案在 app 侧组合；ViewModel 状态里放 `UiMessage`（类型 + 参数），不存拼好的字符串。语言是**一个**设置项（界面 + 站点内容同轴），见 `docs/android-native.md`「多语言」。
-- 代码注释用中文；提交信息用英文并遵循 Conventional Commits。
-- Kotlin 侧包名 `app.missu`，源码在 `app/src/main/java/app/missu/`。
-
-## Git Workflow
-
-- 直接在当前分支提交；不建 PR、不建 worktree。
-- git writes → 逐命令确认，批准不跨命令继承；历史改写（rebase/reset/amend 非 HEAD）→ 每次单独确认精确命令+范围。
-- NEVER 把一个文件的改动拆进两个提交。
-
-## Secrets
-
-- MUST NOT read `.env`, `.env.*`, or any secrets file.
-- MUST NOT expose secrets in logs, comments, commits, or tool output.
-- MUST NOT put secrets in command arguments.
-- When env var values are needed, ask the user to provide them directly.
-
-## Tool Selection
-
-- **Grep** over `rg`, `grep`, `findstr`, `Select-String`; **Glob** over `find`, `dir /s`, `Get-ChildItem -Recurse`.
-- **Read** over `cat`, `type`, `Get-Content`, `head`, `tail`; **Edit** over `sed`, `awk`; **Write** over `echo >`, `Set-Content`, `Out-File`.
-- Read/Edit long files in batches — NEVER load entire file at once.
-
-## Verification
-
-- 原生工程：`.\scripts\build.ps1 check` 必须 `BUILD SUCCESSFUL`；改动安装链路或播放器时，另跑 `.\scripts\build.ps1 install` 做真机验收。
-- `legacy/expo/` 不参与验证（不构建、不跑 lint）；它只是参照实现。
-- 构建环境的已知坑（`native-platform.dll`、adb 的 `%TEMP%` 拒写、JVM 被按程序拦截、PS 5.1 需要 BOM）见 `docs/android-native.md` 的「已知坑」。
-- **升级 SDK / JDK 等环境依赖前，先查 Android CLI 最新情况**：Google 正在把 `sdkmanager` 迁到原生的 `android sdk`，新版 bundle 自带的 JRE 可能未签名，而本机 Windows 11 Smart App Control 处于强制模式（`VerifiedAndReputablePolicyState = 1`）会拒绝加载未签名代码。按 `docs/android-native.md`「升级 SDK 环境依赖前」的检查清单确认后再动，并把结论写回那里。
-- After structural changes, update stale descriptions in AGENTS.md / DESIGN.md / docs/android-native.md proactively.
+- 当前分支提交，不建 PR 或 worktree；用户验收后再提交。git writes 逐命令确认，批准不跨命令继承；历史改写每次单独确认精确命令与范围；不得把一个文件的改动拆进两个提交。
+- 禁止读取 `.env*`、SSH 私钥等秘密文件；禁止在日志、注释、提交、工具输出或命令参数中暴露秘密。需要环境变量值时直接向用户索取。
+- 内容搜索用 Grep，文件定位用 Glob，读写编辑用 Read / Edit / Write；长文件分批处理。
+- `legacy/expo/` 不参与验证。结构变化后同步 `AGENTS.md` / `DESIGN.md` / `docs/android-native.md`。
+- 验收以 `build.ps1 check` 成功为基线；默认真机流程见「开发流程」。
+- 升级 SDK / JDK 前按 `docs/android-native.md` 检查 Android CLI 与 Smart App Control 兼容性，并回写结论。
