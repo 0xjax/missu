@@ -24,15 +24,22 @@ private const val UNDER_DIM_MS = 120
  * 只剩四周一条边，12% 也好 30% 也好都看不出来。要的是**盖在上面的一层黑**。
  * NOTE: 这层必须画在下层页面里（退场页在它上面、由 NavHost 后画），所以它挂在页面自己的绘制上：
  * `drawWithContent { drawContent(); drawRect(black) }` 连底栏一起盖，不用把整页再包一层 Box。
- * NOTE: 只在「下层正被揭开」时存在。判断有两步：
+ * NOTE: 只在「下层正被揭开」时存在。判断有三步：
  * 1. 转场方向——只有被揭开时目标状态才是 [EnterExitState.Visible]（被盖住时目标是 `PostExit`）；
  * 2. [covered]——我上面还压着另一个目的地（预测手势还没提交时它仍是栈顶，反之为 false）。
- *    少了第 2 步，松手落地之后 `currentState` 才变可见，那 200ms 里会补压一次再提亮（闪一下）。
+ *    少了第 2 步，松手落地之后 `currentState` 才变可见，那 200ms 里会补压一次再提亮（闪一下）；
+ * 3. [fadingIn]——这一趟下层是**淡入**进来的（详情页的 container transform）。这种返回不能压暗：
+ *    压暗层画在页面里，跟着它的 alpha 走，页面大半透明时看着亮、越不透明越黑，读起来就是
+ *    「先亮后暗」地抖一下。缩放/平移那种揭示（列表、收藏、设置…）下层是实心露出来的，压暗才成立。
  */
 @Composable
-fun Modifier.underScrim(scope: AnimatedVisibilityScope, covered: Boolean): Modifier {
+fun Modifier.underScrim(
+    scope: AnimatedVisibilityScope,
+    covered: Boolean,
+    fadingIn: Boolean,
+): Modifier {
     val transition = scope.transition
-    val revealing = covered &&
+    val revealing = covered && !fadingIn &&
         transition.targetState == EnterExitState.Visible &&
         transition.currentState != EnterExitState.Visible
     val dim by animateFloatAsState(
