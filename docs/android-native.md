@@ -26,7 +26,7 @@
 - ✅ **我的片单**：`/playlists` 列表（名字 · 可见性 · 更新时间）+ 片单详情网格；真实页面 fixture 测试锁住解析规则
 - ✅ **片单内移除影片（批量）**：右下角「整理」`ToggleFloatingActionButton` 进入多选 → M3E `HorizontalFloatingToolbar` 里「全选 / 移出 N 部」（连体 `ButtonGroup`），少见动作「取消选择 / 完成」放进 `AppBarRow` 溢出容器 → 二次确认 → 逐条 `DELETE /api/playlists/{片单id}/{影片id}`；实测 8→7 条且重进仍是 7 条（服务端生效），批量弹窗计数正确
 - ✅ **我的片单操作**：`FloatingActionButtonMenu` 收纳「新建片单 / 刷新列表」，替代原来的顶栏「新建」按钮（M3E 里主操作用 FAB）
-- ✅ **详情页动作条**：底部 `FlexibleBottomAppBar` + `SplitButtonLayout`（左半「收藏/已收藏」、右半「加入片单」），内容区不再被一行按钮打断
+- ✅ **详情页动作条**：播放器正下方固定 `SplitButtonLayout`（收藏 / 片单）+ 可展开的 ±1/±10 分钟进度调节；动作与标题不随信息卡滚动
 - ✅ **片单整理入口**：右下角 `ToggleFloatingActionButton`（编辑图标 ⇄ ×）；进整理模式后「取消选择 / 完成」走 `AppBarRow` 溢出容器（放不下自动收进菜单）
 - ✅ **搜索栏**：M3E slot + `SearchBarState`，**就地展开**——首页顶部直接是这条真 `SearchBar`，点一下在当前页展开成全屏 `ExpandedFullScreenSearchBar`（放最近搜索），提交后同一屏收成带返回箭头的折叠态显示结果。搜索不再是独立路由：之前首页那只 44dp/10dp 圆角的假框跳到一个 56dp 胶囊的搜索页，是"割裂感"的来源
 - ✅ **新建片单**：站点只有 Blade 表单（`/playlists/create`），先 GET 读 `_token` 与字段名再 urlencoded POST；实测建出 `test` 后列表自动刷新
@@ -72,10 +72,10 @@
 | material3 / ui / ui-tooling-preview / debug ui-tooling | 由 BOM 决定 | UI；M3E 组件（Carousel / ShortNavigationBar / LoadingIndicator / ToggleButton 组）也在这里 |
 | material-icons-core | 由 BOM 决定 | 底部导航 4 个图标（不引 `icons-extended`，体积大） |
 | activity-compose | 1.13.0 | `setContent` / `enableEdgeToEdge` |
-| lifecycle-viewmodel-compose | 2.11.0 | `viewModel()` |
+| lifecycle-viewmodel-compose / lifecycle-runtime-compose | 2.11.0 | `viewModel()` / 生命周期感知的 `collectAsStateWithLifecycle()` |
 | navigation-compose | 2.10.2 | `NavHost` 单 Activity 路由 |
 | media3-exoplayer + media3-exoplayer-hls | 1.11.1 | 播放；HLS 必须单独加（见已知坑） |
-| media3-ui-compose-material3 | 1.11.1 | 官方 Material3 播放器控件（`PlayerDefaults`） |
+| media3-ui-compose-material3 | 1.11.1 | 只使用官方 `PlayerDefaults.ErrorOverlay`；其余播放控件自绘 |
 | media3-datasource-okhttp | 1.11.1 | ExoPlayer 走 OkHttp（默认 HttpURLConnection 被媒体主机 403） |
 | Coil 3（coil-compose + coil-network-okhttp） | 3.6.3 | 封面图 |
 | coroutines-android | 1.11.0 | 主线程调度 |
@@ -117,7 +117,6 @@ cd D:\missu
 |---|---|---|
 | `JAVA_HOME` | 自动选 `D:\Android\jdk-N`（N 最大） | 独立 JDK；AS 已卸载，构建不依赖它（脚本仍保留 AS `jbr` 作为回落，装回 AS 时可用） |
 | `ANDROID_HOME` / `ANDROID_SDK_ROOT` | `D:\Android\Sdk` | 与 `local.properties` 的 `sdk.dir` 一致 |
-| `ANDROID_USER_HOME` | `.local/android-home` | `~/.android` 被拒写 |
 | `ANDROID_USER_HOME` | `.local/android-home` | `~/.android` 被拒写 |
 
 `TMP` / `TEMP` **不再覆盖**。2026-11-14 实测：`gradlew :app:assembleDebug --rerun-tasks --no-build-cache` 在系统默认 `%TEMP%` 下 `BUILD SUCCESSFUL`，Gradle 不需要工作区临时目录。唯一还需要可写临时目录的是 `adb server`（见「已知坑」）。
@@ -303,8 +302,12 @@ core/          纯 JVM 库（非 UI 层）——**不许出现 android.* / andro
 
 app/           Android 应用（UI + 平台适配）
   src/main/java/app/missu/
-    MainActivity.kt        壳层：Scaffold + 底部导航 + NavHost（所有路由集中在这里）
-    ui/home · ui/detail · ui/player · ui/search · ui/discover · ui/saved · ui/playlists ·
+    MainActivity.kt        应用根：主题 / 语言 / 全局浮层 / NavHost 装配
+    TabsHost.kt            首页 / 发现 / 我的三个一级页签与底部导航
+    SecondaryDestinations.kt  详情 / 列表 / 设置 / 片单等二级路由
+    NavMotion.kt           前进、返回与预测式返回转场
+    ViewModelFactories.kt  Lifecycle initializer 工厂
+    ui/home · ui/detail（DetailHero / PlaylistSheet / DetailInfo 已拆分）· ui/player · ui/search · ui/discover · ui/saved · ui/playlists ·
     ui/history · ui/settings · ui/account · ui/list · ui/components · ui/theme · ui/challenge
     data/api/              AndroidCookieJar（CookieManager 适配）· AndroidApi（把 ChallengeState 注入取数层）
     data/store/            ProfileStore（邮箱）· CredentialStore（Keystore 加密的账号密码）·
@@ -313,6 +316,9 @@ app/           Android 应用（UI + 平台适配）
 ```
 
 **边界规则**：`:app` 依赖 `:core`，反向禁止。取数、解析、模型都只在 `:core`，因此它们能在纯 JVM 上跑测试，将来也能被服务端复用。
+网络在 `Dispatchers.IO`，Jsoup / 打包脚本解包统一经 `MissavApi.parsePage` 放到 `Dispatchers.Default`，详情页复用同一份 DOM。
+ViewModel 用 `Job` 取消过期请求，正常 `CancellationException` 不转成界面错误；UI 用 `collectAsStateWithLifecycle()` 收集状态。
+Android 的清 Cookie 操作等待 `CookieManager.removeAllCookies` 的完成回调后再继续登录，不能把 `flush()` 当成删除完成。
 
 ## 桌面图标
 
@@ -418,7 +424,7 @@ fixture 都是**真机抓的真实页面**（`home-cn.html` / `detail.html` / `s
 | Expo 版 | Kotlin 版 |
 |---|---|
 | `expo-router` | Navigation Compose（单 Activity） |
-| `expo-video` | Media3 ExoPlayer（`media3-ui-compose-material3` 控件） |
+| `expo-video` | Media3 ExoPlayer（自绘控件 + `PlayerDefaults.ErrorOverlay`） |
 | `react-native-webview` | 系统 `WebView` + `CookieManager` |
 | `node-html-parser` | Jsoup |
 | `expo-sqlite/kv-store` | SharedPreferences（`ProfileStore` / `SettingsStore` / `HistoryStore`） |
@@ -711,7 +717,7 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
 
 **播放器（Media3）**
 
-- **播放器生命周期**：详情页留在回退栈里时 ExoPlayer 实例会一直挂着，离开必须 `release()`。
+- **播放器生命周期**：详情页留在回退栈里时 ExoPlayer 实例会一直挂着，离开必须 `release()`；离开栈顶或应用 `ON_STOP` 时暂停，只恢复由中断暂停的播放。内嵌进度条在控件隐藏后仍按 200ms 更新，全屏才随控件停止轮询。
 - **Media3 1.x 不含 HLS**：只加 `media3-exoplayer` 会在 `setMediaItem` 时抛
   `ClassNotFoundException: HlsMediaSource$Factory`，必须同时加 `media3-exoplayer-hls`。
 - **ExoPlayer 默认数据源会被媒体主机 403**：`HttpURLConnection`（JDK TLS 指纹）被 `surrit.com` 拒绝；
@@ -719,8 +725,7 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
   「同一个人在浏览器里能过，换 HTTP 栈就 403」。
 - **画面输出不能用 SurfaceView**：`PlayerView` 默认的 SurfaceView 直接画在窗口最上层，
   Compose 自绘控件会被它整个盖住（实测：控件完全不显示）。用 `TextureView` + `player.setVideoTextureView`。
-- **interop View 会吃掉触摸**：画面上的「点一下切换控件」不能靠 Compose 层的 `clickable`——事件到不了，
-  必须挂在 `TextureView.setOnTouchListener` 上。
+- **画面手势由独立 Compose 层接管**：`TextureView` 之上、控件之下放一层 `detectTapGestures`，单击显隐、左右双击 seek；不要依赖会被 interop View 吃掉的 `clickable`，也不再使用 `TextureView.setOnTouchListener`。
 - **弹层不能放在会被自动隐藏的控件树里**：倍速菜单挂在控件层内时，3 秒自动隐藏会把整棵树销毁，
   菜单一闪就关。菜单本体要由播放器持有，并在菜单展开期间暂停自动隐藏。
 - **「等首帧再创建 view」是死锁**：长按预览第一版写成 `if (ready) AndroidView(...)`，`ready` 等

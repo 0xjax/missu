@@ -17,7 +17,7 @@ adb shell am start -n app.missu/.MainActivity
 ```
 app/                  Android 应用模块（UI + 平台适配）→ 交付包 app.missu
 core/                 纯 JVM 模块（取数 / 解析 / 模型，不许 android.* / androidx.*）
-scripts/build.ps1             构建脚本（配好 JDK / SDK / ANDROID_USER_HOME / 临时目录）
+scripts/build.ps1             构建脚本（配好 JDK / SDK / ANDROID_USER_HOME）
 settings.gradle.kts   Gradle 根配置（:app + :core）
 gradlew(.bat)         Gradle wrapper 9.6.0
 

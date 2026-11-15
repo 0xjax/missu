@@ -74,12 +74,12 @@
 | 视频卡封面角标 | `VideoGridCard` | 左下变体标签（中文字幕 / 无码影片），右下时长；标签取自卡片 HTML，不新增请求 |
 | 卡片长按预览 | 全屏 `Dialog` 浮层 + 第二个静音循环 `ExoPlayer` | 卡片 HTML 自带 `preview.mp4` 的 `data-src`（站点在桌面端移入鼠标时就是拿它换封面），**不按番号拼地址、不额外请求**；长按 500ms（`combinedClickable` 的默认阈值，触觉由它自己发）弹出，86% 黑幕 + 居中 16:9 预览片 + 两行标题 + 「点击空白处关闭」。封面垫底、视频层始终在（透明）等 `onRenderedFirstFrame` 再显形——「等首帧再建 view」是死锁（没有 view 就没有首帧）。点空白或返回键关闭，关闭走 150ms 淡出（Dialog 从组合里消失是硬切，所以留住最后一个目标等淡出走完）。整理模式下关掉，避免与「选中」手势打架 |
 | 详情信息块 | 详情页内联行 | 8 行（发行日期/番号/标题/女优/类型/系列/发行商/标籤），文案随内容语言变化不硬编码；标签 `onSurfaceVariant` 与值同行，可点击值用 accent 色跳 `/latest?source=path`。不用下划线：Android 嵌套 `Text` 的下划线会错位成漂浮短线 |
-| 详情页片单 | 收藏旁「片单」按钮 + `MissuBottomSheet` | 打开时 `GET /api/playlists/{dvdId}`；点行或勾选框乐观切换再 `POST /api/playlists/add\|remove`；超过 6 行面板内滚动；「新建片单」就地展开单行输入框，提交后重新拉列表；未登录先跳登录 |
+| 详情页片单 | 收藏旁「片单」按钮 + `MissuBottomSheet` | 打开时 `GET /api/playlists/{dvdId}`；点行或勾选框切换再 `POST /api/playlists/add\|remove`；超过 6 行面板内滚动，失败可重试；新建片单统一从「我的片单」FAB 进入；未登录先跳登录 |
 | 详情页版式 | 无顶栏：播放器直接顶到页首 | **没有返回行**，退出一律用系统返回（侧滑 / 三键 / 预测性返回）。理由：这一页的全部内容就是视频，返回行是纯 chrome，白占播放器上方 56dp；也不做「浮在画面左上角」的返回键（会实实在在挡住画面，2026-11-15 实机否掉）。顶部那条状态栏是**黑的**：页面自己画一条 `statusBarInset` 高的黑条，播放器用 `offset` 下移同样高度——**不能用 padding**，padding 会缩掉播放器的可用高度、把 16:9 压成 2.07:1（实机量出来的）。状态栏图标在这一页强制浅色，离开时按当前主题还原。播放器与正文是 **Box 并列**、不是 Column 兄弟：上滑放大时要能长到正文上面去 |
 | 上下滑切换全屏 | 播放器区域内的竖向拖动（跟手） | 竖屏**上滑**：画面从 1 放大到 1.35、整页压暗 55%×进度，拖过 **12% 屏高**松手才提交，没到就回弹；横屏**下滑**：画面缩到 0.88 并下移 64dp，过 **26% 屏高**提交（比竖屏深，避免看片时手一动就退出去）。轴是锁死的：竖屏只认上滑、横屏只认下滑，反方向完全不跟手；正文的竖向滚动与进度条的横向拖动互不影响。变换只走 `graphicsLayer`（不参与布局，正文不会抖）。提交后交给系统转屏——**转屏本身没法跟手**，那是另一套窗口配置，只能在松手后整块转 |
 | 详情页固定头部 | 动作条 + 标题浮在正文之上（`zIndex`），随滚动给 6dp 阴影 | 内容从头部下方 16dp 处开始、往上滚时从头部**底下**穿过（不是上下拼接：拼接时内容被看不见的边硬切断）。只有列表能往上滚（`canScrollBackward`）时才给阴影，200ms 渐变，回顶部就消失。间距按**视觉等距**调：动作条上 12dp / 下 6dp（标题行身框自带一截上边距，12/12 排下来标题那侧会宽一档），头部自身 4dp 下边距，列表顶部再让 8dp（4 + 8 + descent ≈ 卡片之间的 16dp） |
 | 剧情梗概 | 卡片内折叠 3 行 + 右对齐「展开 / 收起」 | 只有真的溢出（`onTextLayout` 的 `hasVisualOverflow`）才出现控件，短梗概原样全显示；「装不下」是粘性的（展开后改用行数判断，否则一展开按钮就消失）。控件必须**可见**——正文里的一段文字不会让人觉得可以点；且**居右**——信息卡里 `InfoRow` 的展开箭头本来就在右边，整页只讲一种语言，居左会和正文首行抢起跑线 |
-| 底部抽屉 | 统一用 `ui/components/BottomSheet.kt` 的 `MissuBottomSheet` | 抽屉本色透明 + 关掉自带把手（`containerColor = Transparent`、`dragHandle = null`），内部是一张 28dp 圆角卡片，**左右各 16dp、底部 12dp**：四周都透出底下的页面，读起来是「浮在上面的一层」而不是「切了一页」。自己的拖拽条 32×4dp、`onSurfaceVariant` 40%。`skipPartiallyExpanded = true`——否则卡片停在半高锚点、内容下半截被裁。拖动关闭 / 点外面关闭 / 返回键关闭都还是原生的。**新增抽屉一律用它**，不要再直接 `ModalBottomSheet` |
+| 底部抽屉 | 统一用 `ui/components/BottomSheet.kt` 的 `MissuBottomSheet` | 抽屉本色透明 + 关掉自带把手（`containerColor = Transparent`、`dragHandle = null`），内部是一张 28dp 圆角卡片，**左右各 16dp、底部 12dp**：四周都透出底下的页面，读起来是「浮在上面的一层」而不是「切了一页」。自己的拖拽条 32×4dp、`onSurfaceVariant` 40%。状态统一用 `rememberBottomSheetState(initialValue = SheetValue.Hidden)`，拖动关闭 / 点外面关闭 / 返回键关闭都还是原生的。**新增抽屉一律用它**，不要再直接 `ModalBottomSheet` |
 | 删除片单 | 片单详情页页头「编辑」→ 编辑页内「删除片单」 | `AlertDialog` 二次确认（destructive）；确认后提交站点「修改片单」页里的删除表单（`_method=delete` + `_token`），成功后返回列表；列表页不放破坏性入口（滑动露出删除这类方案同理不采用）。改名/描述/公开与删除同在这一个编辑页，站点上它们本就是同一张表单 |
 | 二级页顶栏 | `TopAppBar` + `PageTopBar` | up 图标 + 标题 + 动作槽；返回图标挂 `PlainTooltip`；容器色取 `background`（默认 surface 在纯黑底上会露灰边）；`onBack` 可空——「我的」这类一级页签只借它放标题，不伪造返回键 |
 | 返回键的分层 | 页面级走返回栈，**页内层自己接管** | 目的地（详情 / 列表 / 设置 / 片单 …）由 `NavHost` 弹栈，什么都不用做；但页内的第二层不是目的地、返回栈上没有条目，**不接管就是直接退出应用**——所以每出现一个页内层就配一个 `BackHandler`（`SearchHost` 的搜索态、`TABS_ROUTE` 里非起始页签回首页、详情页全屏、播放器设置二级）。判定标准：它是「另一张页面」还是「同一张页面的另一种形态」——后者（页签组、展开/收起）不算层，不要给它造返回历史。预测返回只接**真正的退层**（二级 → 一级：详情 / 列表那些由 `NavHost` 提供，跟手）；**同级切换不接**——页签之间本来就没有可预览的东西，松手才切是对的，给同级做跟手位移反而制造「这一下要退出去」的错误预期（YouTube / Telegram 同此）。`BackHandler` 属于「普通回调」，平台对这种回调不播任何窗口预览，所以页内层的手势期间屏幕是静止的，这也是正常的 |
@@ -88,6 +88,7 @@
 | 排序切换 | `ToggleButton` 连通组 | 女优排序（影片 / 出道 / **本月排行**）；首尾 `connected*ButtonShapes()` 咬合，语义 `Role.RadioButton`；`SegmentedButton` 已退役。第三档不是 `?sort=` 取值——站点把月榜做成独立页面 `/actresses/ranking`（现行标题「女优排行 NOV 2026」），而那一页不吃 height/cup/age/debut，所以选中它时「筛选」与「清空」都藏起来（留着就会得到点完没反应的胶囊） |
 | 列表页口径（视频列表） | `AssistChip`（排序）+ 一排 `FilterChip`（过滤） | 页头一行：左边排序（7 档 + 「默认」收进 `DropdownMenu`），右边过滤（全部 / 单人 / 多人 / 中文字幕，互斥单选、可横向滚动）。换口径只换数据、页面结构不动；规则与收敛判据见「列表口径」一节 |
 | 详情页动作条 | `SplitButtonLayout`（**tonal**，两半都是图标 + 文字），贴在**视频正下方**（固定不滚） | 容器色 `secondaryContainer`（这套色板里是柔和玫瑰）而不是默认填充色——整块高饱和色压在内容中间属于 Anti-references。注意 `SplitButtonDefaults` 的 tonal **尾半只有开关变体**（带 `checked`），所以尾半用默认 `TrailingButton` + `ButtonDefaults.filledTonalButtonColors()` 对齐容器色。左半「爱心 + 收藏」：文字固定为「收藏」**不随状态变**（换文案会让左半宽度跳、右半跟着位移），状态只由爱心表达——空心 = 未收藏、实心红 `#E5484D` = 已收藏（红是**语义色**，不跟主题走）。右半「`playlist_add` 图标 + 片单」（三横线+加号是自绘 `ImageVector`——为 1 个图标不引 `material-icons-extended`；标签是 `detail_playlist` 的「片单」两个字，**不是**「加入片单」，和左半的「收藏」等长才齐整，动词由图标+位置表达；完整的「加入片单」只用作片单面板标题）。图标 18dp、间距 8dp，两半统一；收藏态对读屏通过 `stateDescription` 给出（`detail_saved`）。放在玩家下面而不是常驻底栏：这两个动作属于「这个视频」，玩家与它们是同一个决策块，而视频本身不滚，贴着它同样一屏可见；底部那条栏会让信息卡滚到底时与栏同色、边界消失，也白白吃掉 80dp |
+| 详情页进度调节 | 动作条右侧展开按钮 + 共享轴/淡入面板 | 默认收起，不挤占首屏；展开后覆盖标题区，提供 ±1 分钟与 ±10 分钟四档，动画期间不接收重复点击；播放器未就绪时禁用。保留标题测量高度，展开/收起不会推动正文 |
 | 搜索栏 | M3E `SearchBar`（slot + `SearchBarState`），**就地展开** | 首页顶部直接是这条真 `SearchBar`（56dp 胶囊 + 搜索图标），点一下在当前页展开成全屏 `ExpandedFullScreenSearchBar`，提交后同一屏收成带返回箭头的折叠态显示结果——搜索不再是独立路由，没有页面切换、没有键盘重启、输入框不会换样式。几何上它落在内容栅格上（左右 16dp，与卡片同一条边线），顶端停在**状态栏 + 8dp**：那正是 material3 展开态给输入框的落点（`SearchBarVerticalPadding`），折叠态也对齐这里，展开全程输入框的 y 才是恒定的。**胶囊固定不动**（不跟随滚动、不收起、不归位）：它只是悬在页面顶部的一层栏，卡片从它底下滚过去；内容顶部那 76dp 是栅格的 `contentPadding.top`（`LocalSearchBarInset`）让出来的。层级**只靠 6dp 阴影**（试过 1dp 描边，读起来像贴纸，已否；也没给胶囊垫渐变挡板——那等于把图片洗成一块脏污）。配套的「沉浸状态栏」只在首页：状态栏那块是页面底色 70% 的纯色半透明，从状态栏下沿到**胶囊中线**再接一段 70% → 全透明的渐隐（近似 1−t²，上面掉得慢、下面掉得快），两段都画在胶囊之下，所以胶囊自己始终清晰。展开的动效分层见「动效」一节的搜索展开条目 |
 | 我的片单操作 | `FloatingActionButtonMenu` | 右下 FAB 展开「新建片单 / 刷新列表」；FAB 与菜单项容器色显式取 `primary`（默认 `primaryContainer` 是紫色，与粉色 accent 不搭）；主操作不再占顶栏动作位 |
 | 片单内移除影片 | 右下 `ToggleFloatingActionButton` + `HorizontalFloatingToolbar` | 未整理时只有一个「整理」FAB（编辑图标，点开 morph）；整理模式里点卡片是选中/取消（不进详情），浮条里是连体 `ButtonGroup`「全选 / 移出 N 部」，少见动作「取消选择 / 完成」放进 `AppBarRow` 溢出容器；二次确认后逐条 `DELETE /api/playlists/{片单id}/{影片id}`，成功只删本地这几条（删空转空态） |
@@ -179,7 +180,7 @@
 | 卡片 → 详情播放器 | container transform（封面自己长成播放器框）+ 页面 fade through | 容器 `tween` 300ms；旧页 90ms 淡出、新页延迟 90ms 用 210ms 淡入 | `ui/components/HeroMotion.kt` |
 | 页面三态（加载 / 空 / 错 / 内容） | fade through | 90 + 210，两段不重叠 | `PageStateTransition` |
 | 返回（手势 + 按钮） | **全程不透明**：手势阶段上层只缩到 90%、下层压暗到 88%；松手后同一段时间线的后 40% 把上层**向右平移出屏**、下层提亮回 100% | 500ms 一条时间线（缩放 0–100%，平移 300–500ms） | `missuPopEnter` / `missuPopExit`，卡片外观在 `PageSurface` |
-| 其余页面切换 | shared axis X（整幅横滑，1:1 位移） | 300ms `tween` | `MainActivity` 的 nav 转场 |
+| 其余页面切换 | shared axis X（整幅横滑，1:1 位移） | 300ms `tween` | `NavMotion.kt` + `MainActivity` 的 NavHost |
 | 同页内的显隐（播放器控件、提示） | fade | 150ms | 播放器覆盖层 |
 | 列表页口径切换（排序 / 过滤） | fade through | 90 + 210，两段不重叠 | `VideoListBody` 的 `PageStateTransition` |
 | 组件内部（按压、展开、形态变化） | 交给 `MotionScheme.expressive()` | 官方 spring | `MaterialExpressiveTheme` |
@@ -218,7 +219,7 @@
 
 ## Design Tokens
 
-- **圆角**：只用 `MaterialTheme.shapes`（M3E 八档）。封面/缩略图 `medium`(12dp)、分组容器 `largeIncreased`(20dp)、资料卡 `extraLarge`(28dp)、角标 `extraSmall`(4dp)
+- **圆角**：只用 `MaterialTheme.shapes`（M3E 八档）。封面/缩略图 `medium`(12dp)、分组容器 `largeIncreased`(20dp)、资料卡 `extraLarge`(28dp)、角标 `extraSmall`(4dp)；设置 / 我的 / 详情共用 `ui/components/GroupSurface.kt` 的 `GroupSurface` 与 `GroupDivider`
 - **间距**：4 / 8 / 12 / 16 / 20 / 24 / 32；页面左右留白固定 16dp，分组之间 8–12dp
 - **色板**：每套都由种子色推导——固定色相，按 M3 的 tone（`L*`）取各角色，超出 sRGB 色域时降饱和度：
   - 深色（主体验）`primary` 钉在该色相的 **tone 55**（品牌粉本身正好是这个音调），白字压它 **3.7:1**：够图形/大字的 3:1，不够正文级 4.5:1，所以强调色只做图形强调（FAB、选中态、进度条），不做小字正文底色
@@ -247,7 +248,7 @@
 - 详情页「相关推荐」不在 HTML 里：由页面内 Vue 组件向 Recombee（`client-rapi-missav.recombee.com`，带 `frontend_sign`）请求后渲染，原生 HTML 只有空壳，因此未实现；要做就是新增第三方请求与签名逻辑，不是解析问题。信息块本身是服务端直出，可直接解析
 - 首页顶部「推荐给你」与详情页「相关推荐」同源：站点用 Recombee 个性化接口（原生 HTML 只有占位骨架和 `x-for` 模板），未实现，首页用「今日热门」替代
 - 片单接口挂在根路径（`/api/playlists/...`），没有语言前缀；其它接口是 `/cn/api/...`。请求层因此带 `rawPath` 开关，写错前缀会 404「route cn/api/playlists/... could not be found」
-- 新建/删除片单没有 JSON 接口，是服务端直出的网页表单（新建页 `/playlists/create/{dvdId}`，删除表单在「修改片单」页 `/playlists/{id}/edit`，`_method=delete` + `_token`，POST 到片单自身 URL）。直接取 HTML 实测就能拿到表单，WebView 只作回退
+- 新建/删除片单没有 JSON 接口，是服务端直出的网页表单（新建页 `/playlists/create/{dvdId}`，删除表单在「修改片单」页 `/playlists/{id}/edit`，`_method=delete` + `_token`，POST 到片单自身 URL）。直接取 HTML 实测就能拿到表单；WebView 只用于人机验证，不兜底表单操作
 
 > Expo 时代的已知限制（RN `Modal` 遮罩、RNGH 手势、`expo-sqlite` 存储那些）见 [`legacy/expo/DESIGN-legacy.md`](legacy/expo/DESIGN-legacy.md)。
 

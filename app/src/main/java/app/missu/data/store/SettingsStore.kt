@@ -141,11 +141,8 @@ class SettingsStore(context: Context) {
     }
 
     /**
-     * 内嵌播放器把比 16:9 更宽的片子**裁满**框（zoom to fill），默认关（适应，保留完整画面）。
-     *
-     * NOTE: 只在内嵌（竖屏）生效，而且只在源画面**真的比 16:9 更宽**时才裁——16:9 与 4:3 的片子
-     * 在开与不开下画面完全一样，所以这个偏好开着也不会误伤它们。
-     * NOTE: 全屏**不**跟随它：横屏本来就是大画面，再裁会切掉内容。
+     * 播放器是否裁满容器（zoom to fill），默认关（适应，保留完整画面）。
+     * 内嵌与全屏共用同一偏好：按真实比例铺满，溢出的一边裁掉，另一边不留黑边。
      */
     fun fillScreen(): Boolean = prefs.getBoolean(KEY_FILL_SCREEN, false)
 
