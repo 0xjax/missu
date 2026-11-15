@@ -471,7 +471,10 @@ private fun MissuApp(
                         onClear = searchViewModel::clear,
                     ) {
                         if (searchState is SearchUiState.Idle) {
-                            PageSurface(card = false) {
+                            // NOTE: `contentInset = false` 是「沉浸状态栏」的一半：首页内容从 y=0 开始，
+                            // 状态栏那一条由 SearchHost 的纯色半透明盖住；其它页面保持默认（让开状态栏），
+                            // 所以它们的顶部一个像素都不变。
+                            PageSurface(card = false, contentInset = false) {
                                 HomeScreen(
                                     state = state,
                                     refreshing = refreshing,
