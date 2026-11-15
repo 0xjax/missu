@@ -52,6 +52,9 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.missu.R
 import app.missu.data.model.VideoSummary
 import app.missu.ui.player.mediaDataSourceFactory
@@ -223,8 +226,20 @@ private fun PreviewMedia(video: VideoSummary) {
                 }
         }
 
-        DisposableEffect(player) {
-            onDispose { player.release() }
+        val lifecycleOwner = LocalLifecycleOwner.current
+        DisposableEffect(player, lifecycleOwner) {
+            val observer = LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_STOP -> player.playWhenReady = false
+                    Lifecycle.Event.ON_START -> player.playWhenReady = true
+                    else -> Unit
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose {
+                lifecycleOwner.lifecycle.removeObserver(observer)
+                player.release()
+            }
         }
 
         // NOTE: 监听器只装一次，回调里的 snapshot state 写的是同一个 `ready`（remember(url) 重建）。

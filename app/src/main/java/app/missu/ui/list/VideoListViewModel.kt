@@ -9,6 +9,8 @@ import app.missu.data.store.ListSortStore
 import app.missu.ui.common.LoadMoreState
 import app.missu.ui.common.UiMessage
 import app.missu.ui.common.toUiMessage
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -61,9 +63,11 @@ class VideoListViewModel(
      */
     private val _detectedSort = MutableStateFlow(sortStore.get(query.path))
     val detectedSort: StateFlow<VideoListOptions.Sort?> = _detectedSort.asStateFlow()
+    private var requestJob: Job? = null
 
     fun load() {
-        viewModelScope.launch {
+        requestJob?.cancel()
+        requestJob = viewModelScope.launch {
             _state.value = VideoListUiState.Loading
             _state.value = try {
                 val page = fetch(1)
@@ -76,6 +80,8 @@ class VideoListViewModel(
                 } else {
                     VideoListUiState.Content(page.videos, page.nextPage)
                 }
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Exception) {
                 VideoListUiState.Error(error.toUiMessage())
             }
@@ -89,8 +95,9 @@ class VideoListViewModel(
         // 由界面的 enabled 挡住，所以失败之后不会靠滚动偷偷重试。
         if (current.more == LoadMoreState.Loading) return
 
+        requestJob?.cancel()
         _state.value = current.copy(more = LoadMoreState.Loading)
-        viewModelScope.launch {
+        requestJob = viewModelScope.launch {
             _state.value = try {
                 val page = fetch(next)
                 current.copy(
@@ -99,6 +106,8 @@ class VideoListViewModel(
                     nextPage = page.nextPage,
                     more = LoadMoreState.Idle,
                 )
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Exception) {
                 // WARNING: 不能静默复位成 Idle——那一页没取到，界面必须留一个重试入口，
                 // 否则列表就在底部无声卡住，用户分不清「已经到底」和「坏了」。

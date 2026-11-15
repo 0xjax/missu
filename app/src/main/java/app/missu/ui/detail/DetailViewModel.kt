@@ -10,6 +10,8 @@ import app.missu.data.model.VideoDetail
 import app.missu.data.model.VideoPlaylist
 import app.missu.ui.common.UiMessage
 import app.missu.ui.common.toUiMessage
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,13 +45,19 @@ class DetailViewModel(
 
     private val _playlists = MutableStateFlow<PlaylistUiState>(PlaylistUiState.Hidden)
     val playlists: StateFlow<PlaylistUiState> = _playlists.asStateFlow()
+    private var playlistJob: Job? = null
+    private var loadJob: Job? = null
+    private var savedJob: Job? = null
 
     fun openPlaylists() {
         val detail = (_state.value as? DetailUiState.Content)?.detail ?: return
+        playlistJob?.cancel()
         _playlists.value = PlaylistUiState.Loading
-        viewModelScope.launch {
+        playlistJob = viewModelScope.launch {
             _playlists.value = try {
                 PlaylistUiState.Content(api.getVideoPlaylists(detail.id))
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Exception) {
                 PlaylistUiState.Error(error.toUiMessage())
             }
@@ -57,6 +65,7 @@ class DetailViewModel(
     }
 
     fun closePlaylists() {
+        playlistJob?.cancel()
         _playlists.value = PlaylistUiState.Hidden
     }
 
@@ -67,7 +76,8 @@ class DetailViewModel(
         if (current.pendingKey != null) return
 
         _playlists.value = current.copy(pendingKey = item.key)
-        viewModelScope.launch {
+        playlistJob?.cancel()
+        playlistJob = viewModelScope.launch {
             try {
                 api.setPlaylistMembership(detail.id, item.key, !item.added)
                 _playlists.value = current.copy(
@@ -76,6 +86,8 @@ class DetailViewModel(
                     },
                     pendingKey = null,
                 )
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Exception) {
                 _playlists.value = current.copy(pendingKey = null)
                 _message.value = error.toUiMessage()
@@ -106,10 +118,13 @@ class DetailViewModel(
     val message: StateFlow<UiMessage?> = _message.asStateFlow()
 
     fun load() {
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             _state.value = DetailUiState.Loading
             _state.value = try {
                 DetailUiState.Content(api.getVideoDetail(id))
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Exception) {
                 DetailUiState.Error(error.toUiMessage())
             }
@@ -122,6 +137,7 @@ class DetailViewModel(
      * 到这里还抛 [SessionExpiredException]，说明重登也失败，只能提示重新登录。
      */
     fun toggleSaved() {
+        if (savedJob?.isActive == true) return
         val content = _state.value as? DetailUiState.Content ?: return
         val internalId = content.detail.internalId
         if (internalId == null) {
@@ -132,11 +148,13 @@ class DetailViewModel(
         val target = !content.detail.saved
         _message.value = null
         Log.w(TAG, "toggleSaved: internalId=$internalId target=$target")
-        viewModelScope.launch {
+        savedJob = viewModelScope.launch {
             try {
                 api.setSaved(internalId, target)
                 Log.w(TAG, "toggleSaved: ok saved=$target")
                 _state.value = DetailUiState.Content(content.detail.copy(saved = target))
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Exception) {
                 Log.w(TAG, "toggleSaved: failed ${error::class.simpleName}: ${error.message}")
                 _message.value = error.toUiMessage()

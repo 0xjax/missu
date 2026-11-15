@@ -9,6 +9,8 @@ import app.missu.data.store.CredentialStore
 import app.missu.data.store.ProfileStore
 import app.missu.ui.common.UiMessage
 import app.missu.ui.common.toUiMessage
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,6 +45,7 @@ class AuthViewModel(
 
     private val _loginState = MutableStateFlow<LoginUiState>(LoginUiState.Idle)
     val loginState: StateFlow<LoginUiState> = _loginState.asStateFlow()
+    private var authJob: Job? = null
 
     init {
         restore()
@@ -70,7 +73,8 @@ class AuthViewModel(
     fun login(email: String, password: String, onSuccess: () -> Unit) {
         if (_loginState.value is LoginUiState.Loading) return
         _loginState.value = LoginUiState.Loading
-        viewModelScope.launch {
+        authJob?.cancel()
+        authJob = viewModelScope.launch {
             try {
                 val user = api.login(email.trim(), password)
                 store.write(user)
@@ -78,6 +82,8 @@ class AuthViewModel(
                 _state.value = AuthUiState.LoggedIn(user)
                 _loginState.value = LoginUiState.Idle
                 onSuccess()
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Exception) {
                 _loginState.value = LoginUiState.Error(error.toUiMessage())
             }
@@ -85,7 +91,8 @@ class AuthViewModel(
     }
 
     fun logout() {
-        viewModelScope.launch {
+        authJob?.cancel()
+        authJob = viewModelScope.launch {
             api.logout()
             store.clear()
             credentials.clear()

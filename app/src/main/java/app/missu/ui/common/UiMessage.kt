@@ -26,7 +26,7 @@ sealed interface UiMessage {
     data object NoVideoId : UiMessage
     data object PlaylistNameEmpty : UiMessage
     data class PartialRemoveFailed(val count: Int) : UiMessage
-    data class Other(val detail: String?) : UiMessage
+    data object Unknown : UiMessage
 }
 
 /**
@@ -42,7 +42,7 @@ fun Throwable.toUiMessage(): UiMessage = when (this) {
     is SessionExpiredException -> UiMessage.SessionExpired
     is InvalidCredentialsException -> UiMessage.InvalidCredentials
     is IOException -> UiMessage.Network
-    else -> UiMessage.Other(message)
+    else -> UiMessage.Unknown
 }
 
 /** 按当前界面语言取文案。所有显示消息的地方都必须经过它。 */
@@ -57,5 +57,5 @@ fun UiMessage.text(): String = when (this) {
     UiMessage.NoVideoId -> stringResource(R.string.error_no_video_id)
     UiMessage.PlaylistNameEmpty -> stringResource(R.string.error_playlist_name_empty)
     is UiMessage.PartialRemoveFailed -> stringResource(R.string.error_partial_remove, count)
-    is UiMessage.Other -> detail ?: stringResource(R.string.error_unknown)
+    UiMessage.Unknown -> stringResource(R.string.error_unknown)
 }

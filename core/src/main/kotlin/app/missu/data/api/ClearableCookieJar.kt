@@ -8,5 +8,5 @@ import okhttp3.CookieJar
  * 这个能力由具体实现提供（Android 用系统 CookieManager，测试用内存实现）。
  */
 interface ClearableCookieJar : CookieJar {
-    fun clear()
+    suspend fun clear()
 }
