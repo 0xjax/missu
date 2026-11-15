@@ -1,7 +1,6 @@
 package app.missu.ui.preview
 
 import android.util.Log
-import android.view.TextureView
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.MutableTransitionState
@@ -52,10 +51,13 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.ui.compose.ContentFrame
+import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.missu.R
+import app.missu.data.api.LocalAppDependencies
 import app.missu.data.model.VideoSummary
 import app.missu.ui.player.mediaDataSourceFactory
 import coil3.compose.AsyncImage
@@ -214,10 +216,11 @@ private fun PreviewMedia(video: VideoSummary) {
 
         val url = video.previewUrl ?: return@Box
         val context = LocalContext.current
+        val httpClient = LocalAppDependencies.current.httpClient
         var ready by remember(url) { mutableStateOf(false) }
         val player = remember(url) {
             ExoPlayer.Builder(context)
-                .setMediaSourceFactory(DefaultMediaSourceFactory(mediaDataSourceFactory()))
+                .setMediaSourceFactory(DefaultMediaSourceFactory(mediaDataSourceFactory(httpClient)))
                 .build()
                 .apply {
                     // 与网页上的预览一致：静音、循环、自动播放。
@@ -265,14 +268,13 @@ private fun PreviewMedia(video: VideoSummary) {
 
         // NOTE: 视频层必须**一直在**（先透明）：`onRenderedFirstFrame` 要等一个 surface 才可能发生，
         // 而"等首帧再建 view"就是死锁——没有 view 就没有首帧，没有首帧就永远不建 view（实测踩过）。
-        AndroidView(
+        ContentFrame(
+            player = player,
             modifier = Modifier
                 .fillMaxSize()
                 .alpha(if (ready) 1f else 0f),
-            factory = { ctx ->
-                TextureView(ctx).apply { player.setVideoTextureView(this) }
-            },
-            onRelease = { texture -> player.clearVideoTextureView(texture) },
+            surfaceType = SURFACE_TYPE_TEXTURE_VIEW,
+            contentScale = ContentScale.Crop,
         )
     }
 }

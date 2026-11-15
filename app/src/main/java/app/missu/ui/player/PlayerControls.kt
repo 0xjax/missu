@@ -1,3 +1,5 @@
+@file:androidx.media3.common.util.UnstableApi
+
 package app.missu.ui.player
 
 import androidx.activity.compose.BackHandler
@@ -58,7 +60,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -92,6 +93,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.ui.compose.state.ProgressStateWithTickInterval
+import androidx.media3.ui.compose.state.rememberProgressStateWithTickInterval
 import app.missu.R
 import app.missu.ui.components.MissuBottomSheet
 import kotlin.math.abs
@@ -127,7 +130,7 @@ fun PlayerOverlay(
 ) {
     // 内嵌进度条常显，所以控件隐藏后仍要更新；全屏才随控件停止轮询。
     // 状态只在时间文本与进度条内部读取，避免每 200ms 重组整个控件层。
-    val progress = remember(player) { PlaybackProgressState() }
+    val progress = rememberProgressStateWithTickInterval(player, 200L)
     // NOTE: 全屏时进度条必须离屏幕边缘留一点：圆球有半径，条贴在物理边上时它下半截会被屏幕裁掉，
     // 两端位置（0% / 100%）也会被左右裁掉一半。内嵌时相反——球**故意**骑在视频下沿上，所以留 0。
     // NOTE: 全屏的条已经和控件一起显示/隐藏，就是控件组的一员：左右内缩跟齿轮、时间胶囊、全屏键
@@ -138,11 +141,7 @@ fun PlayerOverlay(
     val barBand = if (isFullscreen) FullscreenBarHeight else ProgressBarReservedHeight
     LaunchedEffect(player, visible, isFullscreen) {
         if (isFullscreen && !visible) return@LaunchedEffect
-        while (true) {
-            progress.positionMs = player.currentPosition.coerceAtLeast(0L)
-            progress.durationMs = player.duration.coerceAtLeast(0L)
-            delay(200)
-        }
+        progress.observe()
     }
 
     Box(modifier.fillMaxSize()) {
@@ -312,12 +311,7 @@ fun PlayerOverlay(
     }
 }
 
-private class PlaybackProgressState {
-    var positionMs by mutableLongStateOf(0L)
-    var durationMs by mutableLongStateOf(0L)
-}
-
-/**
+/** 进度条：自己画的细条，**贴在视频最底边**、一直可见（YouTube 移动端那种）。
  * 进度条：自己画的细条，**贴在视频最底边**、一直可见（YouTube 移动端那种）。
  *
  * NOTE: 控件隐藏时只藏圆球、细线照画——看进度不需要唤出控件，双击快进快退时条直接跳，
@@ -328,14 +322,14 @@ private class PlaybackProgressState {
  */
 @Composable
 private fun SeekBar(
-    progress: PlaybackProgressState,
+    progress: ProgressStateWithTickInterval,
     showThumb: Boolean,
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier,
     /** 全屏的条**更粗**、球更大：横屏是一整屏，3dp 的细线在大画面上轻得像根毛。 */
     fullscreen: Boolean = false,
 ) {
-    val positionMs = progress.positionMs
+    val positionMs = progress.currentPositionMs
     val durationMs = progress.durationMs
     val thickness = if (fullscreen) FullscreenTrackThickness else InlineTrackThickness
     val thumbRadius = if (fullscreen) FullscreenThumbRadius else InlineThumbRadius
@@ -439,8 +433,8 @@ private fun SeekBar(
 
 /** 「当前 / 总时长」胶囊：黑底 40% + 白字，和播放/暂停那颗圆底是同一个悬浮语言。 */
 @Composable
-private fun PlaybackTimePill(progress: PlaybackProgressState) {
-    TimePill("${formatTime(progress.positionMs)} / ${formatTime(progress.durationMs)}")
+private fun PlaybackTimePill(progress: ProgressStateWithTickInterval) {
+    TimePill("${formatTime(progress.currentPositionMs)} / ${formatTime(progress.durationMs)}")
 }
 
 @Composable
