@@ -21,7 +21,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.only
 import androidx.compose.material.icons.Icons
@@ -215,7 +215,10 @@ private fun MissuRoot() {
     }
     // NOTE: 界面语言用 createConfigurationContext 覆写，不重建 Activity：改设置即重组生效。
     // 覆写只作用于 Compose 的 LocalContext/LocalConfiguration，系统栏与窗口不受影响。
-    val localizedContext = remember(appLanguage) {
+    // NOTE: key 里要带上系统 configuration。播放器全屏会让 Activity 转到横屏（`configChanges` 挡住
+    // 重建，组合不重启），只按语言缓存的话，横屏里 `LocalConfiguration`/`LocalResources` 还是竖屏
+    // 那一份——按屏宽/屏高算尺寸的组件（倍速面板这类）会拿错尺寸。
+    val localizedContext = remember(appLanguage, systemConfiguration) {
         val locale = appLanguage.uiLocale(systemConfiguration)
         val configuration = Configuration(systemConfiguration).apply { setLocale(locale) }
         context.createConfigurationContext(configuration)
@@ -381,7 +384,10 @@ private fun MissuApp(
     Scaffold(
         // NOTE: 不给顶部内边距——顶部让给页面自己（PageSurface 铺满整屏、内容让出状态栏），
         // 否则返回手势把页面缩成卡片时，状态栏那条会留在卡片外面。
-        contentWindowInsets = WindowInsets.safeDrawing.only(
+        // NOTE: 左右只取**系统栏**，不取 `safeDrawing`：横屏时刘海会变成左右一条 104px 的
+        // 挖孔内边距，播放器全屏就少一条、露页面底色（实机可见）。竖屏下两者左右都是 0，
+        // 所以这个取舍只影响横屏播放——而那正是画面必须铺到物理边缘的场合。
+        contentWindowInsets = WindowInsets.systemBars.only(
             WindowInsetsSides.Horizontal,
         ),
         // NOTE: 底栏不在这里——它在 TABS_ROUTE 那个页面内部（三个页签是一个页面的三种形态）。

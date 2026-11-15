@@ -2,13 +2,18 @@ package app.missu.ui.player
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -25,6 +30,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,6 +41,7 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -99,6 +106,9 @@ fun PlayerOverlay(
     // 不这样取的话 play/pause 图标和进度条都不会动。
     var positionMs by remember { mutableLongStateOf(0L) }
     var durationMs by remember { mutableLongStateOf(0L) }
+    // NOTE: 全屏时进度条必须离屏幕边缘留一点：圆球半径 6dp，条贴在物理边上时它下半截会被屏幕裁掉，
+    // 两端位置（0% / 100%）也会被左右裁掉一半。内嵌时相反——球**故意**骑在视频下沿上，所以留 0。
+    val barInset = if (isFullscreen) FullscreenBarInset else 0.dp
     LaunchedEffect(player, visible) {
         if (!visible) return@LaunchedEffect
         while (true) {
@@ -195,7 +205,7 @@ fun PlayerOverlay(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 8.dp, bottom = ProgressBarReservedHeight),
+                            .padding(start = 8.dp, bottom = ProgressBarReservedHeight + barInset),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         TimePill("${formatTime(positionMs)} / ${formatTime(durationMs)}")
@@ -213,17 +223,25 @@ fun PlayerOverlay(
             }
         }
 
-        // 进度条：**永远可见**，贴在视频最底边、占满宽度。控件隐藏时只藏圆球（细线还在），
-        // 所以看进度不需要唤出控件；双击快进快退时条会直接跳，也不打扰观看。
-        SeekBar(
-            positionMs = positionMs,
-            durationMs = durationMs,
-            showThumb = visible,
-            onSeek = { target -> player.seekTo(target) },
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth(),
-        )
+        // 进度条：**内嵌时永远可见**，贴在视频最底边、占满宽度——控件隐藏时只藏圆球（细线还在），
+        // 所以看进度不需要唤出控件。**全屏时反过来**：它跟着控件一起淡出（用户实测要求：全屏藏控件
+        // 就得连它一起藏），否则横屏上一条孤零零的线挂在画面下沿很脏。
+        AnimatedVisibility(
+            visible = !isFullscreen || visible,
+            modifier = Modifier.align(Alignment.BottomCenter),
+            enter = fadeIn(tween(150)),
+            exit = fadeOut(tween(150)),
+        ) {
+            SeekBar(
+                positionMs = positionMs,
+                durationMs = durationMs,
+                showThumb = visible,
+                onSeek = { target -> player.seekTo(target) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = barInset, end = barInset, bottom = barInset),
+            )
+        }
 
         // 双击 seek 的提示：控件隐藏时也要看得见，所以放在 AnimatedVisibility 之外。
         val hint = seekHintSeconds
@@ -323,8 +341,9 @@ private fun SeekBar(
             ),
     ) {
         val trackHeight = 3.dp.toPx()
-        // 线贴视频最底边：**圆球故意跨出去**，下半部分压进页面里（YouTube 移动端就是这样，
-        // 球骑在视频与页面的分界上）。所以这里不裁剪、也不为了“不越界”把球上移。
+        // 线贴**自己的**下沿：内嵌时那就是视频最底边，**圆球故意跨出去**、下半部分压进页面里
+        // （YouTube 移动端就是这样，球骑在视频与页面的分界上）。所以这里不裁剪、也不为了
+        // "不越界"把球上移——全屏时屏幕边缘会裁掉它，那由调用方给整条留 inset（见 barInset）。
         val centerY = size.height - trackHeight / 2f
         drawLine(
             color = Color.White.copy(alpha = 0.3f),
@@ -474,7 +493,14 @@ fun PlayerSettingsSheet(
     onSpeedChange: (Float) -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                // NOTE: 横屏只有 360dp 高，标题 + 六档倍速一定装不下；不给滚动就会被屏幕直接裁掉
+                // （实机：只露得出 0.5x 一行，其余全在屏幕外）。
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = 24.dp),
+        ) {
             Text(
                 text = stringResource(R.string.settings_title),
                 style = MaterialTheme.typography.titleMedium,
@@ -505,6 +531,73 @@ fun PlayerSettingsSheet(
     }
 }
 
+/**
+ * 全屏时的设置菜单：**贴着设置键展开的悬浮面板**（YouTube 移动端那颗齿轮的形态），
+ * 不再是底部抽屉。
+ *
+ * NOTE: 全屏**不能**用 `ModalBottomSheet`。它是独立窗口：一打开系统栏就跟着那个窗口重新可见
+ * （状态栏冒出来，页面被重新 inset、画面整块缩下去）；而且横屏只有 360dp 高，抽屉只能盖住半条
+ * 画面。菜单画在播放器自己的组合里，窗口状态栏一点没动。
+ * NOTE: 面板画在控件层**之外**、播放器**之内**：控件 3 秒自动隐藏时它还得在（见调用方）。
+ */
+@Composable
+fun PlayerSettingsMenu(
+    speed: Float,
+    onSpeedChange: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier
+            .width(FullscreenMenuWidth)
+            // 面板上的点击不要穿到画面上去（穿过去就会把控件切一次）。
+            .pointerInput(Unit) { detectTapGestures { } },
+        shape = RoundedCornerShape(20.dp),
+        // NOTE: 和播放器所有悬浮件同一套语言：黑底 + 白内容（画面亮的时候也读得清）。
+        color = Color.Black.copy(alpha = 0.78f),
+    ) {
+        Column(Modifier.padding(vertical = 8.dp)) {
+            Text(
+                text = stringResource(R.string.player_speed),
+                style = MaterialTheme.typography.labelLarge,
+                color = Color.White.copy(alpha = 0.7f),
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 4.dp),
+            )
+            SPEEDS.forEach { option ->
+                val selected = option == speed
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .selectable(
+                            selected = selected,
+                            role = Role.RadioButton,
+                            onClick = { onSpeedChange(option) },
+                        )
+                        .padding(horizontal = 12.dp)
+                        .height(40.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = formatSpeed(option),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (selected) MaterialTheme.colorScheme.primary else Color.White,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (selected) {
+                        Icon(
+                            imageVector = Icons.Filled.Check,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 private fun formatSpeed(speed: Float): String =
     if (speed == speed.toInt().toFloat()) "${speed.toInt()}.0x" else "${speed}x"
 
@@ -523,6 +616,18 @@ private const val PendingSeekTimeoutMs = 1_200L
  *  NOTE: 这个值直接决定「时间胶囊 / 全屏」离下边有多远——条带越矮，它们越贴底；但也不能小于
  *  12dp，否则那两颗按钮的下沿会落进进度条的拖动区，点按钮会变成拖进度。 */
 private val ProgressBarReservedHeight = 12.dp
+
+/**
+ * 全屏时进度条离屏幕边缘的距离（底部与左右各一份）。
+ *
+ * NOTE: 比球半径（6dp）明显大一些：球在 0% / 100% 和屏幕下沿都不能被裁，同时横屏画面本身是
+ * 居中的（左右各有黑边），条再贴边就会和黑边打架——16dp 是"看得出留白但不悬浮"的量级。
+ * NOTE: 底部那一行（时间胶囊 / 全屏键）要跟着抬起同样的高度，否则它会压在进度条上。
+ */
+private val FullscreenBarInset = 16.dp
+
+/** 全屏设置面板的宽度：六档倍速（"0.75x" + 勾）够用，又不至于把画面挡住。 */
+private val FullscreenMenuWidth = 176.dp
 
 /** 顶部挡板高度：给右上角的设置图标垫一层，亮画面上也读得清。 */
 private val TopScrimHeight = 56.dp

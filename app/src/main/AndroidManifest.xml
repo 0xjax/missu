@@ -29,6 +29,13 @@
           是多个可启停的 alias，每个 alias 带自己的 android:icon。MainActivity 不能再挂 LAUNCHER 过滤，
           否则桌面上会出现两个入口。
         -->
+        <!--
+          NOTE: `configChanges` 必须含 orientation|screenSize：播放器全屏会转到横屏，不写这两项
+          就要重建 Activity，正在播的 ExoPlayer 与进度一起没。
+          NOTE: 这里**不锁**横竖屏：全屏进出只改运行期 `requestedOrientation`（进横屏 / 退
+          `UNSPECIFIED`），退出后回不回竖屏由用户自己的旋转锁定决定（见 `FullscreenEffect`）
+          ——App 不替系统定这件事。
+        -->
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize|keyboardHidden|uiMode"
