@@ -16,8 +16,8 @@ import okhttp3.OkHttpClient
  * 不带这两个头同样被拒；两个播放器都在同一个函数里取，就不存在「一个能放一个放不了」。
  */
 @UnstableApi
-fun mediaDataSourceFactory(): DataSource.Factory {
-    val callFactory = OkHttpClient.Builder()
+fun mediaDataSourceFactory(baseClient: OkHttpClient): DataSource.Factory {
+    val callFactory = baseClient.newBuilder()
         .cookieJar(AndroidCookieJar())
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(20, TimeUnit.SECONDS)
