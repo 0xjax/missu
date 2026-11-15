@@ -2,6 +2,7 @@ package app.missu
 
 import android.net.Uri
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,11 +65,11 @@ internal data class AppSettingsActions(
 
 internal fun NavGraphBuilder.secondaryDestinations(
     navController: NavHostController,
-    backStackEntry: NavBackStackEntry?,
-    tabRoute: String,
+    backStackEntry: State<NavBackStackEntry?>,
+    tabRoute: State<String>,
     api: MissavApi,
     settings: SettingsStore,
-    settingsState: AppSettingsState,
+    settingsState: State<AppSettingsState>,
     settingsActions: AppSettingsActions,
     historyStore: HistoryStore,
     listSortStore: ListSortStore,
@@ -93,13 +94,14 @@ internal fun NavGraphBuilder.secondaryDestinations(
 
     composable("settings") {
         var autoplay by remember { mutableStateOf(settings.autoplay()) }
+        val currentSettings = settingsState.value
         PageSurface {
             SettingsScreen(
-                appLanguage = settingsState.appLanguage,
-                themeMode = settingsState.themeMode,
-                colorSource = settingsState.colorSource,
-                followThemeIcon = settingsState.followThemeIcon,
-                pureBlack = settingsState.pureBlack,
+                appLanguage = currentSettings.appLanguage,
+                themeMode = currentSettings.themeMode,
+                colorSource = currentSettings.colorSource,
+                followThemeIcon = currentSettings.followThemeIcon,
+                pureBlack = currentSettings.pureBlack,
                 autoplay = autoplay,
                 onAppLanguageChange = settingsActions.onAppLanguageChange,
                 onThemeModeChange = settingsActions.onThemeModeChange,
@@ -305,7 +307,7 @@ internal fun NavGraphBuilder.secondaryDestinations(
             ?.substringBefore('?')
             ?.substringBefore('/')
         val heroSource = if (previousRoute == TABS_ROUTE || previousRoute.isNullOrEmpty()) {
-            tabRoute
+            tabRoute.value
         } else {
             previousRoute
         }
@@ -318,7 +320,7 @@ internal fun NavGraphBuilder.secondaryDestinations(
                     videoId = id,
                     heroTag = heroTag,
                     posterUrl = poster.ifEmpty { null },
-                    isCurrent = backStackEntry?.id == entry.id,
+                    isCurrent = backStackEntry.value?.id == entry.id,
                     message = message,
                     onToggleSaved = viewModel::toggleSaved,
                     startPositionMs = viewModel.startPositionMs,

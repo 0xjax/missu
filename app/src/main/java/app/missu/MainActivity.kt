@@ -27,6 +27,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -254,14 +255,19 @@ private fun MissuApp(
     val historyStore = remember { HistoryStore(context.applicationContext) }
     val searchHistory = remember { SearchHistoryStore(context.applicationContext) }
     val listSortStore = remember { ListSortStore(context.applicationContext) }
-    val backStackEntry by navController.currentBackStackEntryAsState()
-    val settingsState = AppSettingsState(
-        appLanguage = appLanguage,
-        themeMode = themeMode,
-        colorSource = colorSource,
-        followThemeIcon = followThemeIcon,
-        pureBlack = pureBlack,
-    )
+    val backStackEntry = navController.currentBackStackEntryAsState()
+    val tabRouteState = remember { derivedStateOf { tabRoute } }
+    val settingsState = remember {
+        derivedStateOf {
+            AppSettingsState(
+                appLanguage = appLanguage,
+                themeMode = themeMode,
+                colorSource = colorSource,
+                followThemeIcon = followThemeIcon,
+                pureBlack = pureBlack,
+            )
+        }
+    }
     val settingsActions = AppSettingsActions(
         onAppLanguageChange = onAppLanguageChange,
         onThemeModeChange = onThemeModeChange,
@@ -307,7 +313,7 @@ private fun MissuApp(
                 TabsHost(
                     entry = entry,
                     navScope = this,
-                    backStackEntry = backStackEntry,
+                    backStackEntry = backStackEntry.value,
                     navController = navController,
                     tabRoute = tabRoute,
                     onTabChange = { tabRoute = it },
@@ -323,7 +329,7 @@ private fun MissuApp(
             secondaryDestinations(
                 navController = navController,
                 backStackEntry = backStackEntry,
-                tabRoute = tabRoute,
+                tabRoute = tabRouteState,
                 api = api,
                 settings = settings,
                 settingsState = settingsState,
