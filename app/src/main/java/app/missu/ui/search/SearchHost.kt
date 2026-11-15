@@ -136,7 +136,11 @@ fun SearchHost(
         SearchBar(
             state = searchBarState,
             inputField = inputField,
-            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
+            // NOTE: 底部这 12dp 是**滚动时的留白**，不是审美值：栏下面是列表的裁剪边界，
+            // 没有它的话页面一滚，卡片的上沿就贴着栏的下沿（一点空隙都没有）。
+            // 列表自己的 `contentPadding.top` 也为 0（见 HomeScreen / Results），
+            // 这样「静止」与「滚动中」的间隙是同一个 12dp，不会一处 12 一处 0。
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 12.dp),
         )
         content()
     }
@@ -244,7 +248,8 @@ private fun Results(
     LazyVerticalGrid(
         modifier = Modifier.fillMaxSize(),
         columns = GridCells.Fixed(2),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 32.dp),
+        // NOTE: 同首页栅格：顶部不留内边距，与栏之间的间隙由栏的 `bottom` 给，滚动时才不会贴死。
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
