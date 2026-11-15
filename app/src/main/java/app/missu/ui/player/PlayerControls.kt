@@ -78,7 +78,12 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -118,10 +123,9 @@ fun PlayerOverlay(
     /** 双击 seek 的提示（带符号的秒数，如 -20 / +10）；为空表示不显示。 */
     seekHintSeconds: Int? = null,
 ) {
-    // 进度与播放态：可见时每 200ms 取一次（不可见就不轮询）。media3 的 Player 不是 Compose 状态，
-    // 不这样取的话 play/pause 图标和进度条都不会动。
-    var positionMs by remember { mutableLongStateOf(0L) }
-    var durationMs by remember { mutableLongStateOf(0L) }
+    // 内嵌进度条常显，所以控件隐藏后仍要更新；全屏才随控件停止轮询。
+    // 状态只在时间文本与进度条内部读取，避免每 200ms 重组整个控件层。
+    val progress = remember(player) { PlaybackProgressState() }
     // NOTE: 全屏时进度条必须离屏幕边缘留一点：圆球有半径，条贴在物理边上时它下半截会被屏幕裁掉，
     // 两端位置（0% / 100%）也会被左右裁掉一半。内嵌时相反——球**故意**骑在视频下沿上，所以留 0。
     // NOTE: 全屏的条已经和控件一起显示/隐藏，就是控件组的一员：左右内缩跟齿轮、时间胶囊、全屏键
@@ -130,11 +134,11 @@ fun PlayerOverlay(
     val barSideInset = if (isFullscreen) FullscreenBarSideInset else 0.dp
     // 条占的条带：全屏的球更大，条带也要跟着加高，否则球会压到底部那一行。
     val barBand = if (isFullscreen) FullscreenBarHeight else ProgressBarReservedHeight
-    LaunchedEffect(player, visible) {
-        if (!visible) return@LaunchedEffect
+    LaunchedEffect(player, visible, isFullscreen) {
+        if (isFullscreen && !visible) return@LaunchedEffect
         while (true) {
-            positionMs = player.currentPosition.coerceAtLeast(0L)
-            durationMs = player.duration.coerceAtLeast(0L)
+            progress.positionMs = player.currentPosition.coerceAtLeast(0L)
+            progress.durationMs = player.duration.coerceAtLeast(0L)
             delay(200)
         }
     }
@@ -189,7 +193,11 @@ fun PlayerOverlay(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         // 设置也套一层圆底：和播放键、时间胶囊同一个悬浮语言（裸白图标在亮画面上不稳）。
-                        RoundButton(size = 32.dp, onClick = onSettingsClick) {
+                        RoundButton(
+                            size = 32.dp,
+                            label = stringResource(R.string.player_settings),
+                            onClick = onSettingsClick,
+                        ) {
                             Icon(
                                 imageVector = Icons.Filled.Settings,
                                 contentDescription = null,
@@ -205,6 +213,9 @@ fun PlayerOverlay(
                         RoundButton(
                             size = 56.dp,
                             dim = 0.5f,
+                            label = stringResource(
+                                if (isPlaying) R.string.player_pause else R.string.player_play,
+                            ),
                             // CRITICAL: 点击判定必须按**播放器的意图**（`playWhenReady`），不能用
                             // 上面那个 `isPlaying` 状态——seek 静默窗口会屏蔽 paused 事件，状态可能
                             // 还是「在播」，于是点一下又发 pause()，永远起不来（2026-11-15 实测）。
@@ -237,9 +248,15 @@ fun PlayerOverlay(
                             .padding(start = 8.dp, bottom = barBand + barInset),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        TimePill("${formatTime(positionMs)} / ${formatTime(durationMs)}")
+                        PlaybackTimePill(progress)
                         Spacer(Modifier.weight(1f))
-                        RoundButton(size = 32.dp, onClick = onToggleFullscreen) {
+                        RoundButton(
+                            size = 32.dp,
+                            label = stringResource(
+                                if (isFullscreen) R.string.player_exit_fullscreen else R.string.player_fullscreen,
+                            ),
+                            onClick = onToggleFullscreen,
+                        ) {
                             Icon(
                                 imageVector = if (isFullscreen) FullscreenExitIcon else FullscreenIcon,
                                 contentDescription = null,
@@ -262,8 +279,7 @@ fun PlayerOverlay(
             exit = fadeOut(tween(150)),
         ) {
             SeekBar(
-                positionMs = positionMs,
-                durationMs = durationMs,
+                progress = progress,
                 showThumb = visible,
                 onSeek = { target -> player.seekTo(target) },
                 fullscreen = isFullscreen,
@@ -294,6 +310,11 @@ fun PlayerOverlay(
     }
 }
 
+private class PlaybackProgressState {
+    var positionMs by mutableLongStateOf(0L)
+    var durationMs by mutableLongStateOf(0L)
+}
+
 /**
  * 进度条：自己画的细条，**贴在视频最底边**、一直可见（YouTube 移动端那种）。
  *
@@ -305,14 +326,15 @@ fun PlayerOverlay(
  */
 @Composable
 private fun SeekBar(
-    positionMs: Long,
-    durationMs: Long,
+    progress: PlaybackProgressState,
     showThumb: Boolean,
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier,
     /** 全屏的条**更粗**、球更大：横屏是一整屏，3dp 的细线在大画面上轻得像根毛。 */
     fullscreen: Boolean = false,
 ) {
+    val positionMs = progress.positionMs
+    val durationMs = progress.durationMs
     val thickness = if (fullscreen) FullscreenTrackThickness else InlineTrackThickness
     val thumbRadius = if (fullscreen) FullscreenThumbRadius else InlineThumbRadius
     val bandHeight = if (fullscreen) FullscreenBarHeight else ProgressBarReservedHeight
@@ -342,11 +364,23 @@ private fun SeekBar(
         else -> polledFraction
     }
     val activeColor = MaterialTheme.colorScheme.primary
+    val progressLabel = stringResource(R.string.player_progress)
 
     Canvas(
         modifier
             .fillMaxWidth()
             .height(bandHeight)
+            .semantics {
+                contentDescription = progressLabel
+                progressBarRangeInfo = ProgressBarRangeInfo(current = fraction, range = 0f..1f)
+                setProgress { target ->
+                    if (durationMs <= 0L) return@setProgress false
+                    val coerced = target.coerceIn(0f, 1f)
+                    pendingFraction = coerced
+                    onSeek((coerced * durationMs).toLong())
+                    true
+                }
+            }
             .onSizeChanged { widthPx = it.width.coerceAtLeast(1) }
             .then(
                 if (showThumb) {
@@ -403,6 +437,11 @@ private fun SeekBar(
 
 /** 「当前 / 总时长」胶囊：黑底 40% + 白字，和播放/暂停那颗圆底是同一个悬浮语言。 */
 @Composable
+private fun PlaybackTimePill(progress: PlaybackProgressState) {
+    TimePill("${formatTime(progress.positionMs)} / ${formatTime(progress.durationMs)}")
+}
+
+@Composable
 private fun TimePill(text: String) {
     Text(
         text = text,
@@ -440,6 +479,7 @@ private fun formatTime(ms: Long): String {
 @Composable
 private fun RoundButton(
     size: Dp,
+    label: String,
     dim: Float = 0.42f,
     onClick: () -> Unit,
     content: @Composable BoxScope.() -> Unit,
@@ -447,9 +487,11 @@ private fun RoundButton(
     Box(
         modifier = Modifier
             .size(if (size > 48.dp) size else 48.dp)
+            .semantics { contentDescription = label }
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
+                role = Role.Button,
                 onClick = onClick,
             ),
         contentAlignment = Alignment.Center,

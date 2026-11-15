@@ -268,9 +268,9 @@ fun SearchBody(
         when (current) {
             SearchUiState.Idle -> Unit
 
-            SearchUiState.Loading -> LoadingHint()
+            is SearchUiState.Loading -> LoadingHint()
 
-            SearchUiState.Empty -> EmptyHint(
+            is SearchUiState.Empty -> EmptyHint(
                 icon = Icons.Filled.Search,
                 title = stringResource(R.string.search_empty_title),
                 subtitle = stringResource(R.string.search_empty_subtitle),
@@ -278,7 +278,7 @@ fun SearchBody(
 
             is SearchUiState.Error -> ErrorHint(
                 message = current.message.text(),
-                onRetry = { onRetry(keyword) },
+                onRetry = { onRetry(current.keyword) },
             )
 
             is SearchUiState.Content -> Results(

@@ -6,6 +6,8 @@ import app.missu.data.api.MissavApi
 import app.missu.data.model.PlaylistSummary
 import app.missu.ui.common.UiMessage
 import app.missu.ui.common.toUiMessage
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,9 +28,14 @@ class PlaylistsViewModel(private val api: MissavApi) : ViewModel() {
     /** 新建片单的一次性状态：null=空闲，否则是错误提示。 */
     private val _createMessage = MutableStateFlow<UiMessage?>(null)
     val createMessage: StateFlow<UiMessage?> = _createMessage.asStateFlow()
+    private val _creating = MutableStateFlow(false)
+    val creating: StateFlow<Boolean> = _creating.asStateFlow()
+    private var loadJob: Job? = null
+    private var createJob: Job? = null
 
     fun load() {
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             _state.value = PlaylistsUiState.Loading
             _state.value = try {
                 var playlists = api.getPlaylists()
@@ -42,6 +49,8 @@ class PlaylistsViewModel(private val api: MissavApi) : ViewModel() {
                     // CRITICAL: 列表 key 是 path，重复会让 LazyVerticalGrid 抛重复 key 崩溃（站点可能重复列出同一个片单）。
                     PlaylistsUiState.Content(playlists.distinctBy { it.path })
                 }
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Exception) {
                 PlaylistsUiState.Error(error.toUiMessage())
             }
@@ -51,21 +60,29 @@ class PlaylistsViewModel(private val api: MissavApi) : ViewModel() {
     /**
      * 新建片单。
      * WARNING: 站点只有表单（`/playlists/create`），没有 JSON 接口——内部会先 GET 表单页读 `_token`。
-     * 成功后重新加载列表，失败把错误交给界面显示（不假装成功）。
+     * 成功后重新加载列表并关闭对话框，失败保留输入与错误提示。
      */
-    fun create(name: String, isPublic: Boolean) {
+    fun create(name: String, isPublic: Boolean, onSuccess: () -> Unit) {
         val normalized = name.trim()
+        if (_creating.value) return
         if (normalized.isEmpty()) {
             _createMessage.value = UiMessage.PlaylistNameEmpty
             return
         }
+        _creating.value = true
         _createMessage.value = null
-        viewModelScope.launch {
+        createJob?.cancel()
+        createJob = viewModelScope.launch {
             try {
                 api.createPlaylist(normalized, isPublic)
+                onSuccess()
                 load()
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Exception) {
                 _createMessage.value = error.toUiMessage()
+            } finally {
+                _creating.value = false
             }
         }
     }

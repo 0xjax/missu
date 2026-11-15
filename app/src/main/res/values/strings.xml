@@ -100,6 +100,10 @@
     <!-- 播放器 -->
     <string name="player_fullscreen">Fullscreen</string>
     <string name="player_exit_fullscreen">Exit fullscreen</string>
+    <string name="player_settings">Player settings</string>
+    <string name="player_play">Play</string>
+    <string name="player_pause">Pause</string>
+    <string name="player_progress">Playback progress</string>
     <string name="player_seek_hint">%1$s%2$d s</string>
     <string name="player_rewind_10_minutes">Rewind 10 minutes</string>
     <string name="player_forward_10_minutes">Fast forward 10 minutes</string>
@@ -129,6 +133,7 @@
     <string name="playlist_name">Playlist name</string>
     <string name="playlists_public">Public playlist</string>
     <string name="playlists_create_action">Create</string>
+    <string name="playlists_creating">Creating…</string>
     <string name="playlists_updated">Updated %1$s</string>
 
     <!-- 片单详情 -->
