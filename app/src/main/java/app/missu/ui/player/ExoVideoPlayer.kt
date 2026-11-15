@@ -11,10 +11,13 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
@@ -49,6 +52,7 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "MissavPlayer"
 private const val AUTO_HIDE_MS = 3_000L
+
 private const val SEEK_STEP_MS = 10_000L
 private const val PROGRESS_REPORT_MS = 5_000L
 
@@ -118,6 +122,8 @@ fun ExoVideoPlayer(
     // NOTE: 倍速是**全局设置**，不是本次播放的临时状态：它跟着偏好走，所以每部片的播放器
     // 建起来就按它设好（见下面 player 的 apply）。1.0x 只是没存过值时的默认。
     val settings = remember(context) { SettingsStore(context.applicationContext) }
+    // 内嵌播放器是否把宽银幕片子裁满框（偏好，见 SettingsStore.fillScreen）。
+    var fillScreen by remember { mutableStateOf(settings.fillScreen()) }
     val initialSpeed = remember { settings.playbackSpeed() }
     var speed by remember { mutableStateOf(initialSpeed) }
     // NOTE: 播放器设置面板（当前只有倍速一项）。不叫 speedMenu 了：倍速已经收进设置项里。
@@ -303,19 +309,36 @@ fun ExoVideoPlayer(
     // NOTE: 黑底是**视频层自己的底**：画面按真实比例居中后多出来的部分就是它（横屏时左右两条黑边），
     // 与页面底色无关。竖屏详情页里那个 16:9 的框因此看起来没变，差别只在横屏全屏。
     Box(modifier.background(Color.Black)) {
-        AndroidView(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .then(
-                    if (videoAspect > 0.01f) Modifier.aspectRatio(videoAspect) else Modifier.fillMaxSize(),
-                ),
-            factory = { ctx ->
-                TextureView(ctx).apply {
-                    player.setVideoTextureView(this)
-                }
-            },
-            onRelease = { texture -> player.clearVideoTextureView(texture) },
-        )
+        // 画面：适应 = 整幅都显示（多出来的地方垫黑）；填充 = 撑满容器，溢出的一边被裁掉。
+        // 两种模式在**内嵌和全屏都生效**——容器不一样，规则是同一个。
+        BoxWithConstraints(Modifier.fillMaxSize().clipToBounds(), contentAlignment = Alignment.Center) {
+            // NOTE: 填充必须用**布局**去撑（requiredSize），不能用 graphicsLayer 缩放：interop 的
+            // AndroidView 对 graphicsLayer 缩放不可靠（实机：切了「填充」画面一点没变）。
+            val containerAspect = if (maxHeight > 0.dp) maxWidth / maxHeight else 16f / 9f
+            val target = when {
+                videoAspect <= 0.01f -> Modifier.fillMaxSize()
+                !fillScreen -> Modifier.aspectRatio(videoAspect)
+                // 比容器更宽：按高度撑满，左右溢出。
+                videoAspect >= containerAspect -> Modifier.requiredSize(
+                    width = maxHeight * videoAspect,
+                    height = maxHeight,
+                )
+                // 比容器更窄（或 4:3 这类）：按宽度撑满，上下溢出。
+                else -> Modifier.requiredSize(
+                    width = maxWidth,
+                    height = maxWidth / videoAspect,
+                )
+            }
+            AndroidView(
+                modifier = target,
+                factory = { ctx ->
+                    TextureView(ctx).apply {
+                        player.setVideoTextureView(this)
+                    }
+                },
+                onRelease = { texture -> player.clearVideoTextureView(texture) },
+            )
+        }
 
         // 点击层：单击显隐控件，双击左右半边快进/快退。放在画面之上、控件之下——
         // 控件自己的按钮（播放键、进度条、全屏…）仍然优先命中。
@@ -344,8 +367,14 @@ fun ExoVideoPlayer(
         if (settingsOpen && !isFullscreen) {
             PlayerSettingsSheet(
                 speed = speed,
+                fill = fillScreen,
                 onDismiss = { settingsOpen = false },
                 onSpeedChange = ::applySpeed,
+                onFillChange = { value ->
+                    // 立刻落盘，但不关面板：用户还要在这里对比两种画面。
+                    fillScreen = value
+                    settings.setFillScreen(value)
+                },
             )
         }
         AnimatedVisibility(

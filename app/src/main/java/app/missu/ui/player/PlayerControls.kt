@@ -510,6 +510,9 @@ fun PlayerSettingsSheet(
     speed: Float,
     onDismiss: () -> Unit,
     onSpeedChange: (Float) -> Unit,
+    // 内嵌播放器的画面填充（比 16:9 更宽的片子裁满框）。全屏不跟随它，所以这里也不提供。
+    fill: Boolean,
+    onFillChange: (Boolean) -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
@@ -544,6 +547,29 @@ fun PlayerSettingsSheet(
                     trailingContent = { RadioButton(selected = selected, onClick = null) },
                 ) {
                     Text(text = formatSpeed(option), style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+
+            // 画面：适应 / 填充。
+            // NOTE: 选完**不关面板**——画面比例和倍速经常一起调，关掉再点开一层太烦。
+            Text(
+                text = stringResource(R.string.player_aspect),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 24.dp, top = 16.dp, bottom = 4.dp),
+            )
+            ASPECT_OPTIONS.forEach { (value, labelRes) ->
+                val selected = value == fill
+                ListItem(
+                    modifier = Modifier.selectable(
+                        selected = selected,
+                        role = Role.RadioButton,
+                        onClick = { onFillChange(value) },
+                    ),
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    trailingContent = { RadioButton(selected = selected, onClick = null) },
+                ) {
+                    Text(text = stringResource(labelRes), style = MaterialTheme.typography.bodyLarge)
                 }
             }
         }
@@ -621,6 +647,13 @@ private fun formatSpeed(speed: Float): String =
     if (speed == speed.toInt().toFloat()) "${speed.toInt()}.0x" else "${speed}x"
 
 private val SPEEDS = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f)
+
+/** 画面比例的两个选项：false = 适应（完整画面），true = 填充（裁满内嵌框）。 */
+@OptIn(ExperimentalMaterial3Api::class)
+private val ASPECT_OPTIONS = listOf(
+    false to R.string.player_aspect_fit,
+    true to R.string.player_aspect_fill,
+)
 
 /** 底部挡板高度：正好覆盖进度条那一行，不往画面中间糊。 */
 private val BottomScrimHeight = 72.dp

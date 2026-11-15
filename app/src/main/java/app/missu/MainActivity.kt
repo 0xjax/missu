@@ -849,7 +849,9 @@ private fun MissuApp(
                 }
 
                 ProvideHeroVisibility(this, namespace = heroSource) {
-                    PageSurface {
+                    // NOTE: 详情页自己吃状态栏：顶部要画一条**黑**的（和播放器/全屏的黑底接上，
+                    // 转屏时不闪白条），所以不让 PageSurface 统一让出状态栏内边距。
+                    PageSurface(contentInset = false) {
                         DetailScreen(
                             state = state,
                             onRetry = viewModel::load,

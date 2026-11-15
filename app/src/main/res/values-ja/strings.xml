@@ -95,6 +95,9 @@
     <string name="player_exit_fullscreen">全画面を終了</string>
     <string name="player_seek_hint">%1$s%2$d 秒</string>
     <string name="player_speed">再生速度</string>
+    <string name="player_aspect">画面</string>
+    <string name="player_aspect_fit">フィット</string>
+    <string name="player_aspect_fill">フィル</string>
 
     <!-- カード長押しプレビュー -->
     <string name="preview_open">プレビュー</string>
