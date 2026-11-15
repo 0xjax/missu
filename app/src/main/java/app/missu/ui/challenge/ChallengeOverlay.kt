@@ -125,11 +125,16 @@ class ChallengeState : ChallengeHandler {
     )
 
     override suspend fun verify(path: String): ChallengeResult {
-        // NOTE: 预览占着浮层时不让真实验证抢槽位——否则预览会被应用的请求顶掉，
-        // 而且被取消的那次请求会在界面上冒出一句「Job was cancelled」（只在 debuggable 构建里发生）。
-        if (current?.previewUrl != null) return ChallengeResult(passed = false, html = null)
-        // NOTE: 同一时刻只服务一个验证。后到的把前一个判成取消——让它挂在那里等更糟。
-        current?.deferred?.cancel()
+        val running = current
+        if (running != null) {
+            // NOTE: 预览占着浮层时不让真实验证抢槽位——否则预览会被应用的请求顶掉。
+            if (running.previewUrl != null) return ChallengeResult(passed = false, html = null)
+            // NOTE: 同一时刻只服务一个验证，但后到的**跟着等**这一次，不再把前一次判成取消。
+            // 以前是 `current.deferred.cancel()`：被取消那次请求的界面会冒出一句「Job was cancelled」，
+            // 而且用户明明过完了验证它照样失败。这里把 passed 传下去、HTML 不带（那是别人那条路径的
+            // 页面），调用方拿到 passed 后自己重取——此时 clearance 已经在共享 Cookie 里了。
+            return running.deferred.await().copy(html = null)
+        }
         val request = Request(path, CompletableDeferred())
         current = request
         return try {
@@ -455,14 +460,20 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
                 continue
             }
             when {
-                // 首选结局：clearance 到手，交给 OkHttp 重试，之后所有请求都通。
-                clearance && !challengePage -> finish(passed = true, html = null)
-                // 浏览器根本没被挑战、直接把目标页渲染出来了：把这份 HTML 交回去，
+                // 首选结局：浏览器已经把目标页渲染完，就把这份 HTML 直接交回请求，
                 // 正好治「OkHttp 被挡、浏览器没被挡」那种等不到 cookie 的卡死。
+                // WARNING: 这一条必须排在 clearance 之前。以前是 clearance 优先，于是浏览器手里明明有整页，
+                // 也要放它走、让 OkHttp 再取一次；那次要是又被挡（CF 按 TLS 指纹判、或 cookie 还没落到
+                // 共享存储），界面看到的就是一句「站点要求人机验证，请重试」，浮层不会再来第二遍。
                 !challengePage && ready == "complete" && onTarget -> {
-                    readHtml(view) { html -> finish(passed = true, html = html) }
+                    // NOTE: 空串当没有——`html=""` 会让解析直接失败，而重取一次反而可能成。
+                    readHtml(view) { html ->
+                        finish(passed = true, html = html?.takeIf { it.isNotBlank() })
+                    }
                     return@LaunchedEffect
                 }
+                // 页面还停在中间态：clearance 到手就够了，交给 OkHttp 重试，之后所有请求都通。
+                clearance && !challengePage -> finish(passed = true, html = null)
                 // 页面被导去了别处（例如登录态失效 302 回首页），又没有 clearance：没东西可等。
                 !challengePage && ready == "complete" && !onTarget && attempts >= GIVE_UP_ATTEMPTS ->
                     finish(passed = false, html = null)

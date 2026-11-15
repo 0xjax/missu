@@ -565,8 +565,13 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
     没有再加「资源里出现 `/cdn-cgi/challenge-platform`」这条：它覆盖的资源面比一个标记宽，
     CF 正常页面是否也拉那套脚本我们**没验过**——已验证足够的信号不替换成面更大、未验证的信号。
 - **「看到的是正常页面」不等于误触发**：命中后 `withChallengeRetry` 用 `handler.verify(/)` 抬起浮层，
-  WebView 里通过后显示的就是**真实页面**（所以看起来"直接跳过了"），随后 `cf_clearance` 落进共享 Cookie、
-  浮层自动消失、**重试原请求**（不是拿验证页的 HTML 当结果）。
+  WebView 里通过后显示的就是**真实页面**（所以看起来"直接跳过了"）；页面请求优先把浏览器已经渲染完的
+  那份目标页 HTML 直接交回（省掉一次可能再被 403 的重取），拿不到 HTML 才让 `cf_clearance` 落进共享
+  Cookie、重试原请求。
+- **验证通过后那一次重取也可能再被挡**：以前它把 `ChallengeException` 直接抛给界面，用户只看到一句
+  「站点要求人机验证，请重试」，而浮层不会再来——2026-11-15 的现象就是这个。现在重取再被挡会退回验证
+  再走一轮（`CHALLENGE_ROUNDS = 2`）；同一时刻的并发验证也**共享同一次浮层**：后到者跟着等，不再把前
+  一次判成取消（否则被取消那次的界面会冒出一句 `Job was cancelled`）。
   判读"真的通过"看三处：① 浮层自己消失；② 之后原请求返回了内容；③ `app_webview/Default/Cookies` 里出现 `cf_clearance`。
 - **两个未处理的指纹矛盾（2026-11-15 06:56 实测，改之前先想清楚）**：
   - **UA 与 UA-CH 打架**：`SourceConfig.DEFAULT_USER_AGENT` 把 UA 钉在 `Chrome/131.0.0.0`，
@@ -615,7 +620,7 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
     Android 会对窄视口做字体自动放大，字号凭空大 1.6 倍。
   - 预览只抬浮层：不判通过、不写 cookie、不碰 `cf_clearance`；进出用「取消」或返回键。
   - 这个 extra 只在 debuggable 构建里生效（`MainActivity` 用 `FLAG_DEBUGGABLE` 判断），
-    预览占着浮层时真实验证**不抢槽位**（否则应用的请求会把预览顶掉，还在界面上留一句「Job was cancelled」）。
+    预览占着浮层时真实验证**不抢槽位**（否则应用的请求会把预览顶掉）；真实验证之间不再互相取消，后到的跟着等。
   - **色板只影响外壳**：卡片、标题、暗底、按钮跟主题走；页面内部永远是 CF 自己的颜色（它的浅/深两套与我们无关）。
   - 想预览**真**挑战页：把钩子存下的 `challenge-*.html` 推到 `/sdcard/Android/data/app.missu/files/`，
     再用 `file:///sdcard/Android/data/app.missu/files/challenge-….html` 走同一条命令（debug 构建已放开 `allowFileAccess`）。

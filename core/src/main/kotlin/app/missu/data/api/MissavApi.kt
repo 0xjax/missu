@@ -374,6 +374,9 @@ class MissavApi(
 
     private companion object {
         const val CREATE_PLAYLIST_PATH = "/playlists/create"
+
+        /** 一次请求最多走几轮「抬浮层 → 重试」：2 = 首次 + 一次重来，再多只是让用户白等。 */
+        const val CHALLENGE_ROUNDS = 2
     }
 
     /**
@@ -383,27 +386,51 @@ class MissavApi(
      * 所以浏览器要是没被挑战、直接渲染出了这一页，[ChallengeHandler.verify] 会把 HTML 一起带回来——
      * 直接用，省掉一次注定再被 403 的请求。这正是「OkHttp 被挡、浏览器没被挡」那种卡死的解法。
      */
-    private suspend fun fetchPage(path: String): String =
+    private suspend fun fetchPage(path: String): String = fetchPage(path, CHALLENGE_ROUNDS)
+
+    private suspend fun fetchPage(path: String, rounds: Int): String =
         try {
             client.fetchHtml(path)
         } catch (error: ChallengeException) {
             val handler = challenge ?: throw error
             val result = handler.verify(path)
             if (!result.passed) throw error
-            result.html ?: client.fetchHtml(path)
+            val html = result.html
+            if (html != null) {
+                html
+            } else {
+                // WARNING: 这一次重取也可能再被挡（CF 按 TLS 指纹判、或 clearance 还没落到共享存储
+                // 里）。直接抛给界面的话，用户看到的只有「站点要求人机验证，请重试」，而且**不会再抬
+                // 浮层**——现象就是「站点要验证，界面却只给个重试」。所以退回验证再走一轮。
+                try {
+                    client.fetchHtml(path)
+                } catch (again: ChallengeException) {
+                    if (rounds <= 1) throw again
+                    fetchPage(path, rounds - 1)
+                }
+            }
         }
 
     /**
      * 非页面请求（JSON / 表单）的人机验证包装：只能让浮层去拿 `cf_clearance`，然后重试。
      * NOTE: 这类响应不是可渲染的页面，浏览器代取没有意义，所以 [ChallengeHandler.verify] 只给它首页。
+     * WARNING: 重试仍被挡时同样退回验证再走一轮（理由见 [fetchPage]）。
      */
     private suspend fun <T> withChallengeRetry(block: suspend () -> T): T =
+        withChallengeRetry(block, CHALLENGE_ROUNDS)
+
+    private suspend fun <T> withChallengeRetry(block: suspend () -> T, rounds: Int): T =
         try {
             block()
         } catch (error: ChallengeException) {
             val handler = challenge ?: throw error
             val result = handler.verify("/")
             if (!result.passed) throw error
-            block()
+            try {
+                block()
+            } catch (again: ChallengeException) {
+                if (rounds <= 1) throw again
+                withChallengeRetry(block, rounds - 1)
+            }
         }
 }
