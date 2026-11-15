@@ -55,6 +55,19 @@ val LocalNavAnimatedVisibilityScope = compositionLocalOf<AnimatedVisibilityScope
  */
 val LocalHeroNamespace = compositionLocalOf { "app" }
 
+/**
+ * 卡片的共享 key：页码内可能重复出现的影片，靠 [tag] 区分是哪一张卡片。
+ *
+ * NOTE: 首页是多个板块拼成的一页，同一部影片完全可能同时出现在两个板块里（站点自己的数据就是
+ * 这样）。共享元素只认 key，同一页里两张卡片算出同一个 key 时，配对会落到**另一张**上——
+ * 点 B 板块那张，封面却从 A 板块那张（可能已经滚出屏幕）飞过来，或者飞向屏外。
+ * 普通列表一页里 id 不会重复，那里 [tag] 传空串即可。
+ *
+ * @param tag 卡片来源（首页用板块 id）；详情页从导航参数原样取回，两侧算出同一个 key
+ */
+fun heroKeyFor(tag: String, videoId: String): String =
+    if (tag.isEmpty()) videoId else "$tag/$videoId"
+
 /** 详情页淡入：延迟到旧页淡出之后才开始，避免两层内容叠在一起。 */
 fun heroEnter(): EnterTransition =
     fadeIn(tween(durationMillis = HeroMotion.FADE_IN_MS, delayMillis = HeroMotion.FADE_OUT_MS))

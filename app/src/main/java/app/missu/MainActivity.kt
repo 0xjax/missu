@@ -330,15 +330,24 @@ private fun MissuApp(
      *
      * NOTE: 封面必须从卡片传过去：详情数据要等一次请求，而共享容器首帧就得有东西可长——
      * 少了这张图，点卡片时封面会长进一块空灰面。
+     * NOTE: 共享元素只认 key。首页是多个板块拼成的一页，站点自己就会把同一部影片放进两个板块，
+     * 两张卡片算出同一个 key 时配对会落到另一张上（封面朝屏外飞）。所以首页那张卡片把**来源标签**
+     * 一路带到详情页，两侧用同一个值配对（见 heroKeyFor）；其它页面一页里 id 不会重复。
      */
+    fun openDetail(id: String, thumbnail: String?, heroTag: String) {
+        navController.navigate(
+            "detail/$id?img=${Uri.encode(thumbnail.orEmpty())}&h=${Uri.encode(heroTag)}",
+        )
+    }
+
+    /** 同 [openDetail]，来源一页里不会有重复卡片时用这个（列表 / 收藏 / 历史 / 片单 / 搜索结果）。 */
+    fun openDetail(id: String, thumbnail: String?) {
+        openDetail(id, thumbnail, "")
+    }
 
     fun goBack() {
         buttonPopId = navController.currentBackStackEntry?.id
         navController.popBackStack()
-    }
-
-    fun openDetail(id: String, thumbnail: String?) {
-        navController.navigate("detail/$id?img=${Uri.encode(thumbnail.orEmpty())}")
     }
     // NOTE: 账户状态整个 App 共用一份：'我的' 与 '登录' 两个页面必须看到同一份状态。
     val auth: AuthViewModel = viewModel(factory = factory { AuthViewModel(api, ProfileStore(context.applicationContext), CredentialStore(context.applicationContext)) })
@@ -785,16 +794,20 @@ private fun MissuApp(
                 }
             }
             composable(
-                route = "detail/{id}?img={img}",
+                route = "detail/{id}?img={img}&h={h}",
                 arguments = listOf(
                     navArgument("id") { type = NavType.StringType },
                     // NOTE: 卡片封面。导航参数是唯一在详情数据回来之前就能拿到的画面，
                     // 共享容器（封面 → 播放器）首帧要靠它。
                     navArgument("img") { defaultValue = "" },
+                    // NOTE: 卡片的来源标签（只有首页会带）。首页多板块会把同一部影片放两处，
+                    // 光靠 id 详情页会和另一张卡片配对，见 heroKeyFor。
+                    navArgument("h") { defaultValue = "" },
                 ),
             ) { entry ->
                 val id = entry.arguments?.getString("id").orEmpty()
                 val poster = Uri.decode(entry.arguments?.getString("img").orEmpty())
+                val heroTag = Uri.decode(entry.arguments?.getString("h").orEmpty())
                 // NOTE: key 用 id —— 换一集详情时复用同一个 ViewModel 会显示上一条数据。
                 val viewModel: DetailViewModel = viewModel(
                     key = "detail-$id",
@@ -827,6 +840,7 @@ private fun MissuApp(
                             onRetry = viewModel::load,
                             onBack = { goBack() },
                             videoId = id,
+                            heroTag = heroTag,
                             posterUrl = poster.ifEmpty { null },
                             // NOTE: 返回时这一项会先变 false（popBackStack 是同步的），
                             // 详情页据此在转场第一帧就把容器换回封面、停掉音频。

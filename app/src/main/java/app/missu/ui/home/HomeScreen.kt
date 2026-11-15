@@ -48,6 +48,7 @@ import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.PageStateTransition
 import app.missu.ui.components.VideoGridCard
+import app.missu.ui.components.heroKeyFor
 import app.missu.ui.components.videoHero
 import app.missu.ui.search.LocalSearchBarInset
 import coil3.compose.AsyncImage
@@ -69,7 +70,7 @@ fun HomeScreen(
     refreshing: Boolean,
     onRefresh: () -> Unit,
     onRetry: () -> Unit,
-    onOpen: (id: String, thumbnail: String?) -> Unit,
+    onOpen: (id: String, thumbnail: String?, heroTag: String) -> Unit,
     onOpenList: (path: String, title: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -103,7 +104,7 @@ private fun HomeContent(
     sections: List<HomeSection>,
     refreshing: Boolean,
     onRefresh: () -> Unit,
-    onOpen: (id: String, thumbnail: String?) -> Unit,
+    onOpen: (id: String, thumbnail: String?, heroTag: String) -> Unit,
     onOpenList: (path: String, title: String) -> Unit,
     modifier: Modifier,
 ) {
@@ -167,14 +168,20 @@ private fun HomeContent(
                 // 全是轮播会让首页变成一条横向滑动的长龙，找东西反而更慢。
                 if (index == 0) {
                     item(key = "carousel-${section.id}", span = { GridItemSpan(maxLineSpan) }) {
-                        RecommendedCarousel(videos = section.videos, onOpen = onOpen)
+                        RecommendedCarousel(videos = section.videos, heroTag = section.id, onOpen = onOpen)
                     }
                 } else {
                     items(
                         items = section.videos.take(SECTION_PREVIEW),
                         key = { video -> "${section.id}-${video.id}" },
                     ) { video ->
-                        VideoGridCard(video = video, onClick = { onOpen(video.id, video.thumbnailUrl) })
+                        // NOTE: `heroTag` = 板块 id：同一部影片可能同时在两个板块里，卡片位置不同、
+                        // 共享元素却不能混（见 heroKeyFor）。
+                        VideoGridCard(
+                            video = video,
+                            heroTag = section.id,
+                            onClick = { onOpen(video.id, video.thumbnailUrl, section.id) },
+                        )
                     }
                 }
             }
@@ -190,7 +197,11 @@ private fun HomeContent(
  * 固定宽高比的卡片会被拉伸变形。
  */
 @Composable
-private fun RecommendedCarousel(videos: List<VideoSummary>, onOpen: (id: String, thumbnail: String?) -> Unit) {
+private fun RecommendedCarousel(
+    videos: List<VideoSummary>,
+    heroTag: String,
+    onOpen: (id: String, thumbnail: String?, heroTag: String) -> Unit,
+) {
     if (videos.isEmpty()) return
     // NOTE: itemCount 是 lambda（延迟读，避免每帧重组），preferredItemWidth 才是大项宽度上限。
     val state = rememberCarouselState(itemCount = { videos.size })
@@ -205,10 +216,10 @@ private fun RecommendedCarousel(videos: List<VideoSummary>, onOpen: (id: String,
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .videoHero(video.id, MaterialTheme.shapes.large)
+                .videoHero(heroKeyFor(heroTag, video.id), MaterialTheme.shapes.large)
                 .clip(MaterialTheme.shapes.large)
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                .clickable { onOpen(video.id, video.thumbnailUrl) },
+                .clickable { onOpen(video.id, video.thumbnailUrl, heroTag) },
         ) {
             AsyncImage(
                 model = video.thumbnailUrl,

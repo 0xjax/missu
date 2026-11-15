@@ -1,4 +1,4 @@
-﻿@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
 
 package app.missu.ui.detail
 
@@ -63,6 +63,7 @@ import app.missu.ui.components.PageStateTransition
 import app.missu.ui.common.UiMessage
 import app.missu.ui.common.text
 import app.missu.ui.components.PageTopBar
+import app.missu.ui.components.heroKeyFor
 import app.missu.ui.components.videoHero
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
@@ -75,6 +76,9 @@ fun DetailScreen(
     modifier: Modifier = Modifier,
     // NOTE: 共享容器的 key 与卡片一侧一致（路由里的 id），详情数据还没回来时也拿得到。
     videoId: String = "",
+    // NOTE: 卡片的来源标签：首页同一部影片可能出现在两个板块里，光靠 id 会和另一张卡片配对
+    // （封面往屏外飞）。导航参数原样带过来，两侧用 heroKeyFor 算出同一个 key。
+    heroTag: String = "",
     // NOTE: 卡片封面。详情解析出来之前先用它铺满播放器框——点卡片时那个框就是从这里长过来的。
     posterUrl: String? = null,
     // NOTE: 这个目的地还是不是导航栈顶。返回时它会先变 false，用来在**转场开始那一帧**
@@ -106,7 +110,7 @@ fun DetailScreen(
         DetailHero(
             state = state,
             poster = poster,
-            heroKey = videoId.ifEmpty { detail?.id.orEmpty() },
+            heroKey = heroKeyFor(heroTag, videoId.ifEmpty { detail?.id.orEmpty() }),
             isCurrent = isCurrent,
             fullscreen = fullscreen,
             startPositionMs = startPositionMs,
