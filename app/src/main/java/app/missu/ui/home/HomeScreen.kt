@@ -111,7 +111,9 @@ private fun HomeContent(
         LazyVerticalGrid(
             modifier = Modifier.fillMaxSize(),
             columns = GridCells.Fixed(2),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 32.dp),
+            // NOTE: 没有 top 内边距——与搜索栏之间的那 12dp 由栏自己的 `bottom` 给（见 SearchHost），
+            // 这样滚动中裁到顶部的那一行也不会贴着栏的下沿。
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
