@@ -58,6 +58,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
     // NOTE: ProcessLifecycleOwner 用来判断「应用已经完全不可见」——桌面图标换色只在那之后做，
     // 在前台禁用当前启动入口会结束它所在的 task（见 LauncherIcons）。
     implementation("androidx.lifecycle:lifecycle-process:2.11.0")
@@ -79,8 +80,7 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer-hls:1.11.1")
     // NOTE: 不再需要 media3-ui（View 版 PlayerView）——画面输出用 TextureView + setVideoTextureView，
     // 控件用下面的 Compose 模块，旧 PlayerView 已无任何引用。
-    // 播放器控件用官方 Material3 组件（PlayerDefaults.CenterControls/BottomControls），
-    // 自带 MD3 的按钮尺寸、进度条、渐变底与无障碍语义，比手搓文字字形可控也更一致。
+    // 只保留官方 PlayerDefaults.ErrorOverlay；画面输出与播放控件由本工程自绘。
     implementation("androidx.media3:media3-ui-compose-material3:1.11.1")
     // NOTE: 让 ExoPlayer 走 OkHttp 而不是默认的 HttpURLConnection——媒体主机对后者的 TLS 指纹返回 403（实测）。
     implementation("androidx.media3:media3-datasource-okhttp:1.11.1")
