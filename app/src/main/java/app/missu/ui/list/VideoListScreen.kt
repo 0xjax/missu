@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -38,10 +39,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.missu.R
 import app.missu.data.api.VideoListOptions
+import app.missu.ui.common.LoadMoreState
 import app.missu.ui.common.text
 import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadMoreFooter
+import app.missu.ui.components.LoadMoreOnScroll
 import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.PageStateTransition
 import app.missu.ui.components.PageTopBar
@@ -228,22 +231,32 @@ fun VideoListBody(
 
             is VideoListUiState.Error -> ErrorHint(current.message.text(), onRetry)
 
-            is VideoListUiState.Content -> LazyVerticalGrid(
-                modifier = Modifier.fillMaxSize(),
-                columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 32.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                items(items = current.videos, key = { it.id + it.pageUrl }) { video ->
-                    VideoGridCard(video = video, onClick = { onOpen(video.id, video.thumbnailUrl) })
-                }
+            is VideoListUiState.Content -> {
+                val gridState = rememberLazyGridState()
+                LoadMoreOnScroll(
+                    state = gridState,
+                    enabled = current.more == LoadMoreState.Idle,
+                    onLoadMore = onLoadMore,
+                )
+                LazyVerticalGrid(
+                    state = gridState,
+                    modifier = Modifier.fillMaxSize(),
+                    columns = GridCells.Fixed(2),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 32.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    items(items = current.videos, key = { it.id + it.pageUrl }) { video ->
+                        VideoGridCard(video = video, onClick = { onOpen(video.id, video.thumbnailUrl) })
+                    }
 
-                if (current.nextPage != null) {
+                    // NOTE: 脚注无条件存在（到底时它自己变成「没有更多了」），所以最后一个 item 的
+                    // index 永远是 total-1，自动加载的判定不用为「有没有脚注」分两种情形。
                     item(key = "more", span = { GridItemSpan(maxLineSpan) }) {
                         LoadMoreFooter(
-                            loading = current.loadingMore,
-                            onLoadMore = onLoadMore,
+                            nextPage = current.nextPage,
+                            state = current.more,
+                            onRetry = onLoadMore,
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }

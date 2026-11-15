@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import app.missu.data.api.MissavApi
 import app.missu.data.model.VideoSummary
 import app.missu.data.store.SearchHistoryStore
+import app.missu.ui.common.LoadMoreState
 import app.missu.ui.common.UiMessage
 import app.missu.ui.common.toUiMessage
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,7 +22,7 @@ sealed interface SearchUiState {
         val keyword: String,
         val videos: List<VideoSummary>,
         val nextPage: Int?,
-        val loadingMore: Boolean = false,
+        val more: LoadMoreState = LoadMoreState.Idle,
     ) : SearchUiState
 }
 
@@ -70,13 +71,15 @@ class SearchViewModel(
         _state.value = SearchUiState.Idle
     }
 
-    /** 追加下一页；失败只把 loadingMore 复位并保留已加载结果，不整页报错。 */
+    /** 追加下一页；失败写进 [LoadMoreState.Failed] 并保留已加载结果，不整页报错。 */
     fun loadMore() {
         val current = _state.value as? SearchUiState.Content ?: return
         val next = current.nextPage ?: return
-        if (current.loadingMore) return
+        // NOTE: 只挡 Loading —— Failed 必须能被脚注上的「重试」再调一次；自动加载那边
+        // 由界面的 enabled 挡住，所以失败之后不会靠滚动偷偷重试。
+        if (current.more == LoadMoreState.Loading) return
 
-        _state.value = current.copy(loadingMore = true)
+        _state.value = current.copy(more = LoadMoreState.Loading)
         viewModelScope.launch {
             _state.value = try {
                 val page = api.searchVideos(current.keyword, next)
@@ -84,10 +87,12 @@ class SearchViewModel(
                     // CRITICAL: 按界面 key 去重（同 id 同 pageUrl），分页重叠会让 LazyVerticalGrid 抛重复 key 崩溃。
                     videos = (current.videos + page.videos).distinctBy { it.id + it.pageUrl },
                     nextPage = page.nextPage,
-                    loadingMore = false,
+                    more = LoadMoreState.Idle,
                 )
             } catch (error: Exception) {
-                current.copy(loadingMore = false)
+                // WARNING: 不能静默复位成 Idle——那一页没取到，界面必须留一个重试入口，
+                // 否则列表就在底部无声卡住，用户分不清「已经到底」和「坏了」。
+                current.copy(more = LoadMoreState.Failed)
             }
         }
     }

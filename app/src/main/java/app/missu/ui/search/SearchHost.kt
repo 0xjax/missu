@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material.icons.Icons
@@ -52,10 +53,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.missu.R
+import app.missu.ui.common.LoadMoreState
 import app.missu.ui.common.text
 import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadMoreFooter
+import app.missu.ui.components.LoadMoreOnScroll
 import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.PageStateTransition
 import app.missu.ui.components.VideoGridCard
@@ -331,7 +334,14 @@ private fun Results(
     onLoadMore: () -> Unit,
     onOpen: (id: String, thumbnail: String?) -> Unit,
 ) {
+    val gridState = rememberLazyGridState()
+    LoadMoreOnScroll(
+        state = gridState,
+        enabled = state.more == LoadMoreState.Idle,
+        onLoadMore = onLoadMore,
+    )
     LazyVerticalGrid(
+        state = gridState,
         modifier = Modifier.fillMaxSize(),
         columns = GridCells.Fixed(2),
         // NOTE: 顶部让出搜索胶囊那一条（见 [LocalSearchBarInset]），静止时第一行落在胶囊下面；
@@ -357,14 +367,8 @@ private fun Results(
             VideoGridCard(video = video, onClick = { onOpen(video.id, video.thumbnailUrl) })
         }
 
-        if (state.nextPage != null) {
-            item(key = "more", span = { GridItemSpan(maxLineSpan) }) {
-                LoadMoreFooter(loading = state.loadingMore, onLoadMore = onLoadMore)
-            }
-        } else {
-            item(key = "end", span = { GridItemSpan(maxLineSpan) }) {
-                Spacer(Modifier.height(8.dp))
-            }
+        item(key = "more", span = { GridItemSpan(maxLineSpan) }) {
+            LoadMoreFooter(nextPage = state.nextPage, state = state.more, onRetry = onLoadMore)
         }
     }
 }

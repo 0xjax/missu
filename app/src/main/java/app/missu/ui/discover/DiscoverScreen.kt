@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -69,7 +70,9 @@ import app.missu.ui.components.MissuBottomSheet
 import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadMoreFooter
+import app.missu.ui.components.LoadMoreOnScroll
 import app.missu.ui.components.LoadingHint
+import app.missu.ui.common.LoadMoreState
 import app.missu.ui.common.text
 import app.missu.ui.list.VideoListContent
 import app.missu.ui.list.VideoListUiState
@@ -226,7 +229,14 @@ fun DiscoverScreen(
                 } else {
                     state.items
                 }
+                val gridState = rememberLazyGridState()
+                LoadMoreOnScroll(
+                    state = gridState,
+                    enabled = state.more == LoadMoreState.Idle,
+                    onLoadMore = { onLoadMore(tab.kind) },
+                )
                 LazyVerticalGrid(
+                    state = gridState,
                     modifier = Modifier.fillMaxSize(),
                     columns = GridCells.Fixed(if (actresses) 2 else 3),
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
@@ -241,13 +251,12 @@ fun DiscoverScreen(
                         }
                     }
 
-                    if (state.nextPage != null) {
-                        item(key = "more-${tab.kind}", span = { GridItemSpan(maxLineSpan) }) {
-                            LoadMoreFooter(
-                                loading = state.loadingMore,
-                                onLoadMore = { onLoadMore(tab.kind) },
-                            )
-                        }
+                    item(key = "more-${tab.kind}", span = { GridItemSpan(maxLineSpan) }) {
+                        LoadMoreFooter(
+                            nextPage = state.nextPage,
+                            state = state.more,
+                            onRetry = { onLoadMore(tab.kind) },
+                        )
                     }
                 }
             }

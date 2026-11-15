@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.FilledTonalButton
@@ -25,7 +26,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -33,6 +39,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.missu.R
+import app.missu.ui.common.LoadMoreState
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 /**
  * 页面级三态（加载 / 空 / 错误）的统一表达。
@@ -153,23 +161,85 @@ fun ErrorHint(message: String, onRetry: () -> Unit, modifier: Modifier = Modifie
     }
 }
 
+/** 脚注的固定高度：三态之间切换时列表底部不跟着抖。 */
+private val LoadMoreFooterHeight = 56.dp
+
 /**
- * 分页列表的「加载更多」脚注。
+ * 自动加载的提前量，单位是**格**。
  *
- * NOTE: 加载中不再显示按钮，直接换成 `LoadingIndicator`——按钮留在原地再叠一个转圈会让
- * 布局高度跳变（列表底部跟着抖）。
+ * NOTE: 6 格 ≈ 两到三行（列表两列、目录三列），约半屏，对应 legacy 的
+ * `onEndReachedThreshold={0.5}`。再大就会一进列表连着取好几页。
+ */
+private const val LoadMorePrefetchItems = 6
+
+/**
+ * 分页列表的脚注：加载中 / 没取到可重试 / 已经到底。
+ *
+ * NOTE: 三个状态共用一个固定高度——以前加载时换成转圈、失败时冒出个按钮，高度不一样，
+ * 列表底部会跳一下；固定以后换的只是中间那点内容。
+ * NOTE: 重试用 `TextButton` 而不是 `FilledTonalButton`：脚注里的重试是低强调动作，
+ * 一个实心按钮挂在内容末尾比内容本身还显眼。
  */
 @Composable
-fun LoadMoreFooter(loading: Boolean, onLoadMore: () -> Unit, modifier: Modifier = Modifier) {
+fun LoadMoreFooter(
+    nextPage: Int?,
+    state: LoadMoreState,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Box(
-        modifier = modifier.fillMaxWidth().padding(vertical = 8.dp),
+        modifier = modifier.fillMaxWidth().height(LoadMoreFooterHeight),
         contentAlignment = Alignment.Center,
     ) {
-        if (loading) {
-            LoadingIndicator()
-        } else {
-            FilledTonalButton(onClick = onLoadMore) { Text(stringResource(R.string.common_load_more)) }
+        when {
+            nextPage == null -> Text(
+                text = stringResource(R.string.common_load_end),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            state == LoadMoreState.Loading -> LoadingIndicator()
+
+            state == LoadMoreState.Failed -> TextButton(onClick = onRetry) {
+                Text(stringResource(R.string.common_load_failed))
+            }
+
+            // LoadMoreState.Idle：什么都不放，等滚动触发。高度已经占住，所以不会跳。
         }
+    }
+}
+
+/**
+ * 滑到「只剩最后几格」时自动取下一页。
+ *
+ * NOTE: 以前是底部一个「加载更多」按钮。浏览类列表上它把连续的扫视切成一段段「申请下一屏」，
+ * 每次都要求用户先注意到接缝、停手、瞄准；legacy 实现本来就是自动加载（`onEndReached` +
+ * 0.5 阈值），这里只是把它恢复回来。
+ * NOTE: 内容不满一屏时同一个条件天然成立，不用另写分支——旧按钮时代那会儿，列表只有两条时
+ * 按钮就孤零零地摊在屏幕上等着被点。
+ * WARNING: `enabled` 必须在 Loading / Failed 时为 false，否则失败之后用户每滚一下就是一次
+ * 偷偷的重试，而界面还停在「失败了」的样子。
+ */
+@Composable
+fun LoadMoreOnScroll(
+    state: LazyGridState,
+    enabled: Boolean,
+    onLoadMore: () -> Unit,
+) {
+    val canLoad by rememberUpdatedState(enabled)
+    val load by rememberUpdatedState(onLoadMore)
+    LaunchedEffect(state) {
+        snapshotFlow {
+            val layout = state.layoutInfo
+            layout.totalItemsCount to (layout.visibleItemsInfo.lastOrNull()?.index ?: -1)
+        }
+            .distinctUntilChanged()
+            .collect { (total, last) ->
+                // NOTE: `canLoad` 只在**发信号的那一刻**读一次，不参与信号本身。某一页没加进任何
+                // 内容时 total 不变、信号不重放，就不会在原地循环请求；Loading / Failed 期间它
+                // 自然是 false，所以既不会重入也不会失败后偷偷重试。
+                if (canLoad && total > 0 && total - 1 - last <= LoadMorePrefetchItems) load()
+            }
     }
 }
 
