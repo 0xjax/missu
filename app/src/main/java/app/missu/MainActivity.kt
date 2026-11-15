@@ -12,9 +12,7 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.SharedTransitionLayout
-import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
@@ -107,6 +105,7 @@ import app.missu.ui.components.LocalNavAnimatedVisibilityScope
 import app.missu.ui.components.LocalSharedTransitionScope
 import app.missu.ui.components.ProvideHeroVisibility
 import app.missu.ui.components.heroEnter
+import app.missu.ui.components.underScrim
 import app.missu.ui.components.heroExit
 import app.missu.ui.account.AccountScreen
 import app.missu.ui.account.AuthViewModel
@@ -415,13 +414,13 @@ private fun MissuApp(
                     slideOutHorizontally(animationSpec = tween(durationMillis = 300)) { if (forward) -it else it }
                 }
             },
-            popEnterTransition = { missuPopEnter(button = initialState.id == buttonPopId) },
+            popEnterTransition = { missuPopEnter() },
             popExitTransition = { missuPopExit(button = initialState.id == buttonPopId) },
             // NOTE: 预测式返回（侧滑还没松手）走的是这两个，签名是 `Scope.(swipeEdge) -> …`。
             // 默认值是 fadeIn(spring) + scaleOut(0.7)：两页不透明地叠在一起，实测文字重影。
             // 两段各管一段：手势期间只缩放，松手后才平移离开（见下面 missuPopEnter/Exit）
             // 接着放完的那段，中间没有"预览一个、落地另一个"的换挡。
-            predictivePopEnterTransition = { missuPopEnter(button = false) },
+            predictivePopEnterTransition = { missuPopEnter() },
             predictivePopExitTransition = { missuPopExit(button = false) },
         ) {
             composable(TABS_ROUTE) { entry ->
@@ -430,6 +429,12 @@ private fun MissuApp(
                 // 页签状态在 MissuApp（详情页要用它决定共享元素命名空间）。
                 val navScope = this
                 Scaffold(
+                    // NOTE: 预测返回时把这一页压暗（详情/列表等二级页都从这一页被揭开），
+                    // 见 `underScrim`。挂在 Scaffold 自己的绘制上，底栏一起盖。
+                    modifier = Modifier.underScrim(
+                        scope = navScope,
+                        covered = backStackEntry?.id != entry.id,
+                    ),
                     // NOTE: 这里不能再吃状态栏内边距——每个页签页自己已经让过一次
                     // （`PageSurface` / `SearchHost`）。重复让就会在顶部多出一条状态栏高度的空白。
                     contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -909,36 +914,22 @@ private fun involvesDetail(initial: NavBackStackEntry, target: NavBackStackEntry
         target.destination.route?.startsWith("detail/") == true
 
 /**
- * 返回转场的数值，取自官方「预测性返回 · 全屏 Surface」Motion 规范：退出缩到 **90%**、
- * 进入从 **110%** 落回 100%。
- *
- * 唯一偏离规范的是**时间分布**：规范把缩放和淡出都压在前 35% 进度里，我们把缩放铺满整段、
- * 淡出放到最后 20%。原因：规范那 35% 的交接假设「退场页底下另有一个窗口」（系统动画底下是
- * 桌面或上一个 Activity），两页同时不可见时看到的是那个窗口；本工程是单 Activity、页面下方
- * 就是窗口底色。照搬只有两种结果——按规范淡完再淡入，拖到 1/3 处整屏空底色；让退场页盖着
- * 不淡的上一页淡出，两页文字叠在一起。两种都在实机上抓到了帧，所以改成：预览区间内退场页
- * 不透明，缩多少由手指给多少。
- */
-/**
  * 返回转场的数值。
  *
  * 两段：手势阶段（`predictivePop*`）只有缩放，松手后（`pop*`）由页面自己播固定时长的平移。
- * 缩放取官方「预测性返回 · 全屏 Surface」的 90%；**时间线放到 600ms**——它同时决定了
+ * 缩放取官方「预测性返回 · 全屏 Surface」的 90%；时间线 500ms 同时决定了
  * 「拉满 = 缩到底」和「松手后转场还剩多少时间可以走完平移动画」。
- */
-/**
- * 返回转场的数值（官方「预测性返回 · 全屏 Surface」的 90%）。
+ * 下层页面本身**不动也不淡**——它的压暗由 `underScrim` 单独画（那才是能看出来的暗）。
  *
- * 手势与松手共用同一条 500ms 时间线：前 60% 只缩放（跟手指），后 40% 向右平移并提亮下层。
+ * NOTE: 预览区间内退场页保持不透明，缩多少由手指给多少。官方规范把缩放与淡出压在前 35%，
+ * 但那是假设退场页底下另有一个窗口（系统动画底下是桌面 / 上一个 Activity）；本工程是单
+ * Activity、页面下方就是窗口底色，照搬会拖到 1/3 处整屏空底色（实机抓到过帧）。
  */
 private object PopMotion {
     const val TOTAL_MS = 500
 
     /** 退场页缩到 90%。 */
     const val EXIT_SCALE = 0.9f
-
-    /** 下层在预览期间压到的亮度；松手后提亮回 1。 */
-    const val UNDER_ALPHA = 0.88f
 
     /** 平移在 60% 进度后才起手：手势期间只缩放，松手后它才把页面推出去。 */
     const val SLIDE_DELAY_MS = 300
@@ -950,24 +941,12 @@ private object PopMotion {
     const val BUTTON_MS = 260
 }
 
-/** 详情页走 container transform（规范：用 Navigation 组件时不要缩放整屏）。 */
-private fun AnimatedContentTransitionScope<NavBackStackEntry>.missuPopEnter(button: Boolean): EnterTransition =
-    if (involvesDetail(initialState, targetState)) {
-        heroEnter()
-    } else if (button) {
-        // 按钮返回没有预览阶段：下层不动、也不压暗。
-        EnterTransition.None
-    } else {
-        fadeIn(
-            animationSpec = keyframes {
-                durationMillis = PopMotion.TOTAL_MS
-                PopMotion.UNDER_ALPHA at 0
-                PopMotion.UNDER_ALPHA at PopMotion.SLIDE_DELAY_MS
-                1f at PopMotion.TOTAL_MS
-            },
-            initialAlpha = PopMotion.UNDER_ALPHA,
-        )
-    }
+/**
+ * 详情页走 container transform（规范：用 Navigation 组件时不要缩放整屏）；
+ * 其余返回只由退场页自己演（缩放 + 平移），下层页面保持原样，压暗交给 `underScrim`。
+ */
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.missuPopEnter(): EnterTransition =
+    if (involvesDetail(initialState, targetState)) heroEnter() else EnterTransition.None
 
 private fun AnimatedContentTransitionScope<NavBackStackEntry>.missuPopExit(button: Boolean): ExitTransition =
     if (involvesDetail(initialState, targetState)) {
