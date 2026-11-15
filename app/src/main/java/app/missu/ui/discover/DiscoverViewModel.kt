@@ -9,6 +9,7 @@ import app.missu.R
 import app.missu.data.model.DirectoryItem
 import app.missu.data.model.DirectoryList
 import app.missu.data.model.NavGroup
+import app.missu.ui.common.LoadMoreState
 import app.missu.ui.common.UiMessage
 import app.missu.ui.common.toUiMessage
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -97,7 +98,7 @@ sealed interface DirectoryUiState {
     data class Content(
         val items: List<DirectoryItem>,
         val nextPage: Int?,
-        val loadingMore: Boolean = false,
+        val more: LoadMoreState = LoadMoreState.Idle,
     ) : DirectoryUiState
 }
 
@@ -221,9 +222,11 @@ class DiscoverViewModel(private val api: MissavApi) : ViewModel() {
     fun loadMore(kind: String) {
         val current = _states.value[kind] as? DirectoryUiState.Content ?: return
         val next = current.nextPage ?: return
-        if (current.loadingMore) return
+        // NOTE: 只挡 Loading —— Failed 必须能被脚注上的「重试」再调一次；自动加载那边
+        // 由界面的 enabled 挡住，所以失败之后不会靠滚动偷偷重试。
+        if (current.more == LoadMoreState.Loading) return
 
-        update(kind, current.copy(loadingMore = true))
+        update(kind, current.copy(more = LoadMoreState.Loading))
         viewModelScope.launch {
             update(
                 kind,
@@ -235,10 +238,12 @@ class DiscoverViewModel(private val api: MissavApi) : ViewModel() {
                     // `Key "…" was already used` 崩溃（真机踩过：/actresses/柊もみじ）。
                     items = (current.items + page.items).distinctBy { it.path },
                         nextPage = page.nextPage,
-                        loadingMore = false,
+                        more = LoadMoreState.Idle,
                     )
                 } catch (error: Exception) {
-                    current.copy(loadingMore = false)
+                // WARNING: 不能静默复位成 Idle——那一页没取到，界面必须留一个重试入口，
+                // 否则列表就在底部无声卡住，用户分不清「已经到底」和「坏了」。
+                    current.copy(more = LoadMoreState.Failed)
                 },
             )
         }

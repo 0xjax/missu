@@ -2,7 +2,8 @@
 <resources>
     <!-- 共通 -->
     <string name="common_retry">再試行</string>
-    <string name="common_load_more">さらに読み込む</string>
+    <string name="common_load_failed">読み込みに失敗、再試行</string>
+    <string name="common_load_end">これ以上ありません</string>
     <string name="common_back">戻る</string>
     <string name="common_cancel">キャンセル</string>
     <string name="common_done">完了</string>

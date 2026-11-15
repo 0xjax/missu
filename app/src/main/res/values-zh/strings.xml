@@ -2,7 +2,8 @@
 <resources>
     <!-- 通用 -->
     <string name="common_retry">重试</string>
-    <string name="common_load_more">加载更多</string>
+    <string name="common_load_failed">加载失败，重试</string>
+    <string name="common_load_end">没有更多了</string>
     <string name="common_back">返回</string>
     <string name="common_cancel">取消</string>
     <string name="common_done">完成</string>
