@@ -101,6 +101,13 @@
     <string name="player_fullscreen">Fullscreen</string>
     <string name="player_exit_fullscreen">Exit fullscreen</string>
     <string name="player_seek_hint">%1$s%2$d s</string>
+    <string name="player_rewind_10_minutes">Rewind 10 minutes</string>
+    <string name="player_forward_10_minutes">Fast forward 10 minutes</string>
+    <string name="player_rewind_1_minute">Rewind 1 minute</string>
+    <string name="player_forward_1_minute">Fast forward 1 minute</string>
+    <string name="player_seek_minutes_compact">%1$s%2$d&#10;min</string>
+    <string name="player_show_seek_controls">Show seek controls</string>
+    <string name="player_hide_seek_controls">Hide seek controls</string>
     <string name="player_speed">Playback speed</string>
     <string name="player_aspect">Picture</string>
     <string name="player_aspect_fit">Fit</string>

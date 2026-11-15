@@ -3,11 +3,19 @@
 package app.missu.ui.detail
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,6 +32,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.padding
@@ -43,6 +52,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -87,9 +98,13 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import app.missu.R
@@ -110,6 +125,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import androidx.core.view.WindowCompat
+import androidx.media3.common.Player
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -147,6 +163,7 @@ fun DetailScreen(
     BackHandler(enabled = fullscreen) { fullscreen = false }
 
     val detail = (state as? DetailUiState.Content)?.detail
+    var player by remember { mutableStateOf<Player?>(null) }
     // NOTE: 卡片带过来的那张优先，而不是详情页的 og:image。理由有两个：它和卡片上看到的
     // 是同一张（容器长到位时画面不会变），而且它已经在 Coil 的内存缓存里（不会从纯色淡入）。
     val poster = posterUrl ?: detail?.thumbnailUrl
@@ -262,6 +279,11 @@ fun DetailScreen(
                             detail = current.detail,
                             message = message,
                             onToggleSaved = onToggleSaved,
+                            onSeekBy = player?.let { currentPlayer ->
+                                { deltaMs ->
+                                    currentPlayer.seekTo((currentPlayer.currentPosition + deltaMs).coerceAtLeast(0L))
+                                }
+                            },
                             playlists = playlists,
                             onOpenPlaylists = onOpenPlaylists,
                             onClosePlaylists = onClosePlaylists,
@@ -290,6 +312,7 @@ fun DetailScreen(
             fullscreen = fullscreen,
             startPositionMs = startPositionMs,
             onPositionReport = onPositionReport,
+            onPlayerAvailable = { player = it },
             onToggleFullscreen = { fullscreen = !fullscreen },
             dragProgress = dragProgress,
             modifier = Modifier
@@ -314,6 +337,8 @@ fun DetailScreen(
  */
 private const val DragCommitPortrait = 0.12f
 private const val DragCommitLandscape = 0.26f
+private const val DetailSeekStepShortMs = 60 * 1000L
+private const val DetailSeekStepLongMs = 10 * 60 * 1000L
 
 /** 过阈值后先把跟手进度补完再交出去；没到阈值就回弹。 */
 private const val DragCommitMs = 120
@@ -366,6 +391,7 @@ private fun DetailHero(
     fullscreen: Boolean,
     startPositionMs: Long,
     onPositionReport: (Long) -> Unit,
+    onPlayerAvailable: (Player?) -> Unit,
     onToggleFullscreen: () -> Unit,
     modifier: Modifier = Modifier,
     /** 上滑 / 下滑切换全屏的跟手进度（0..1）。转屏那一下没法跟手，这一段负责"越拖越大 / 越拖越缩"。 */
@@ -461,6 +487,7 @@ private fun DetailHero(
                 onToggleFullscreen = onToggleFullscreen,
                 initialPositionMs = startPositionMs,
                 onPositionReport = onPositionReport,
+                onPlayerAvailable = onPlayerAvailable,
                 onFirstFrameRendered = { revealed = true },
                 // 播放失败：把封面撤掉让错误层露出来（否则它永远被压在最上面）。
                 onPlaybackFailed = { revealed = true },
@@ -541,7 +568,7 @@ private fun DetailHero(
  * NOTE: 时长不在这里重复——播放器控件条右侧已经显示总时长，两处一样的信息。
  */
 @Composable
-private fun DetailTitle(detail: VideoDetail) {
+private fun DetailTitle(detail: VideoDetail, interactionEnabled: Boolean = true) {
     var expanded by rememberSaveable(detail.id) { mutableStateOf(false) }
     var overflowing by remember(detail.id) { mutableStateOf(false) }
     val label = stringResource(if (expanded) R.string.detail_collapse else R.string.detail_expand)
@@ -562,7 +589,7 @@ private fun DetailTitle(detail: VideoDetail) {
             .padding(horizontal = 16.dp)
             // NOTE: clickable 在 padding 之后：命中区只覆盖文字本身，和它当初在列表里时一致。
             .then(
-                if (overflowing) {
+                if (overflowing && interactionEnabled) {
                     Modifier.clickable(onClickLabel = label) { expanded = !expanded }
                 } else {
                     Modifier
@@ -589,6 +616,7 @@ private fun DetailBody(
     detail: VideoDetail,
     message: UiMessage?,
     onToggleSaved: () -> Unit,
+    onSeekBy: ((Long) -> Unit)?,
     playlists: PlaylistUiState,
     onOpenPlaylists: () -> Unit,
     onClosePlaylists: () -> Unit,
@@ -600,6 +628,18 @@ private fun DetailBody(
     val haptics = LocalHapticFeedback.current
     // 读屏用的「已收藏」说明：按钮上的文字固定是「收藏」，状态只能从这里出去。
     val savedText = stringResource(R.string.detail_saved)
+    // 每部影片默认收起；旋转或全屏往返仍保留用户当前选择。
+    var seekControlsOpen by rememberSaveable(detail.id) { mutableStateOf(false) }
+    val seekSizeSpec = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
+    val seekEffectsSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+    val titleVisibility by animateFloatAsState(
+        targetValue = if (seekControlsOpen) 0f else 1f,
+        animationSpec = seekEffectsSpec,
+        label = "detailTitleVisibility",
+    )
+    val titleThreeLineHeight = with(LocalDensity.current) {
+        MaterialTheme.typography.titleMedium.lineHeight.toDp() * 3
+    }
 
     // NOTE: 固定区（动作条 + 标题）**浮在列表上面**，不是和列表上下拼接。拼接时内容滚到标题
     // 下面会被一条看不见的边硬切断（2026-11-16 反馈「直接硬切割」）；浮起来之后卡片是从标题
@@ -682,12 +722,15 @@ private fun DetailBody(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    // 展开面板经过标题上方时，原按钮仍必须在最上层，连续点击才不会落进 +10 分钟。
+                    .zIndex(1f)
                     // NOTE: 上面 12dp、下面只有 6dp，**看起来**才是等距：标题是文字，字身框自带一截
                     // 上边距（titleMedium 24sp 行高里，字形还没开始就已经占了几 dp），按 12/12 排下来
                     // 标题那一侧的视觉间距会明显宽一档（2026-11-16 反馈）。
                     .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 6.dp),
             ) {
                 SplitButtonLayout(
+                    modifier = Modifier.weight(1f),
                     leadingButton = {
                         // NOTE: 用 **tonal** 变体而不是默认填充：容器色落成 `secondaryContainer`
                         // （这套色板里是柔和玫瑰），和页面其余部分（surface 系 + 色阶）同一档，
@@ -747,13 +790,170 @@ private fun DetailBody(
                         }
                     },
                 )
+                Spacer(Modifier.width(8.dp))
+                FilledTonalIconButton(
+                    onClick = { seekControlsOpen = !seekControlsOpen },
+                    enabled = onSeekBy != null || seekControlsOpen,
+                    modifier = Modifier
+                        .padding(vertical = 4.dp)
+                        .size(width = 56.dp, height = 40.dp),
+                ) {
+                    Crossfade(
+                        targetState = seekControlsOpen,
+                        animationSpec = seekEffectsSpec,
+                        label = "seekControlsTrigger",
+                    ) { open ->
+                        Icon(
+                            imageVector = if (open) Icons.Filled.KeyboardArrowUp else SeekControlsIcon,
+                            contentDescription = stringResource(
+                                if (open) R.string.player_hide_seek_controls else R.string.player_show_seek_controls,
+                            ),
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
+                }
             }
-            DetailTitle(detail)
+            Box(Modifier.fillMaxWidth().heightIn(min = titleThreeLineHeight)) {
+                Box(
+                    Modifier
+                        .graphicsLayer {
+                            alpha = titleVisibility
+                            scaleX = 0.96f + 0.04f * titleVisibility
+                            scaleY = 0.96f + 0.04f * titleVisibility
+                            translationY = (1f - titleVisibility) * 8.dp.toPx()
+                        }
+                        .then(
+                            if (seekControlsOpen) Modifier.clearAndSetSemantics { } else Modifier,
+                        ),
+                ) {
+                    DetailTitle(detail, interactionEnabled = !seekControlsOpen)
+                }
+                // NOTE: 标题始终参与测量，面板用 matchParentSize 覆盖；快速反向时两边也只反转、不重排。
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = seekControlsOpen,
+                    modifier = Modifier.matchParentSize(),
+                    enter = fadeIn(seekEffectsSpec) +
+                        expandHorizontally(
+                            animationSpec = seekSizeSpec,
+                            expandFrom = Alignment.End,
+                            initialWidth = { it / 7 },
+                        ) +
+                        expandVertically(
+                            animationSpec = seekSizeSpec,
+                            expandFrom = Alignment.Top,
+                            initialHeight = { it * 2 / 3 },
+                        ),
+                    exit = fadeOut(seekEffectsSpec) +
+                        shrinkHorizontally(
+                            animationSpec = seekSizeSpec,
+                            shrinkTowards = Alignment.End,
+                            targetWidth = { it / 7 },
+                        ) +
+                        shrinkVertically(
+                            animationSpec = seekSizeSpec,
+                            shrinkTowards = Alignment.Top,
+                            targetHeight = { it * 2 / 3 },
+                        ),
+                    label = "seekControlsPanel",
+                ) {
+                    val settled = transition.currentState == EnterExitState.Visible &&
+                        transition.targetState == EnterExitState.Visible
+                    SeekControlPanel(onSeekBy = onSeekBy, interactionsEnabled = settled)
+                }
+            }
         }
     }
 
     if (playlists !is PlaylistUiState.Hidden) {
         PlaylistSheet(state = playlists, onDismiss = onClosePlaylists, onToggle = onTogglePlaylist)
+    }
+}
+
+@Composable
+private fun SeekControlPanel(
+    onSeekBy: ((Long) -> Unit)?,
+    interactionsEnabled: Boolean,
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        shape = MaterialTheme.shapes.largeIncreased,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shadowElevation = 2.dp,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize().padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SeekControlButton(
+                deltaMs = -DetailSeekStepLongMs,
+                sign = "−",
+                minutes = 10,
+                description = stringResource(R.string.player_rewind_10_minutes),
+                onSeekBy = onSeekBy,
+                interactionsEnabled = interactionsEnabled,
+                modifier = Modifier.weight(1f),
+            )
+            SeekControlButton(
+                deltaMs = -DetailSeekStepShortMs,
+                sign = "−",
+                minutes = 1,
+                description = stringResource(R.string.player_rewind_1_minute),
+                onSeekBy = onSeekBy,
+                interactionsEnabled = interactionsEnabled,
+                modifier = Modifier.weight(1f),
+            )
+            SeekControlButton(
+                deltaMs = DetailSeekStepShortMs,
+                sign = "+",
+                minutes = 1,
+                description = stringResource(R.string.player_forward_1_minute),
+                onSeekBy = onSeekBy,
+                interactionsEnabled = interactionsEnabled,
+                modifier = Modifier.weight(1f),
+            )
+            SeekControlButton(
+                deltaMs = DetailSeekStepLongMs,
+                sign = "+",
+                minutes = 10,
+                description = stringResource(R.string.player_forward_10_minutes),
+                onSeekBy = onSeekBy,
+                interactionsEnabled = interactionsEnabled,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SeekControlButton(
+    deltaMs: Long,
+    sign: String,
+    minutes: Int,
+    description: String,
+    onSeekBy: ((Long) -> Unit)?,
+    interactionsEnabled: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    FilledTonalButton(
+        onClick = { if (interactionsEnabled) onSeekBy?.invoke(deltaMs) },
+        enabled = onSeekBy != null,
+        shapes = ButtonDefaults.shapesFor(ButtonDefaults.MinHeight),
+        contentPadding = PaddingValues(horizontal = 8.dp),
+        modifier = modifier
+            .height(ButtonDefaults.MinHeight)
+            .semantics { contentDescription = description },
+    ) {
+        Text(
+            text = stringResource(R.string.player_seek_minutes_compact, sign, minutes),
+            style = MaterialTheme.typography.labelMedium,
+            maxLines = 2,
+            softWrap = false,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.clearAndSetSemantics { },
+        )
     }
 }
 
@@ -889,6 +1089,19 @@ private fun PlaylistSheet(
  * 主题里都该是同一个可识别的心形红，跟着主题变就不是「收藏」了。
  */
 private val FavoriteRed = Color(0xFFE5484D)
+
+private val SeekControlsIcon: ImageVector = ImageVector.Builder(
+    name = "SeekControls",
+    defaultWidth = 24.dp,
+    defaultHeight = 24.dp,
+    viewportWidth = 24f,
+    viewportHeight = 24f,
+).apply {
+    path(fill = SolidColor(Color.Black)) {
+        moveTo(11f, 18f); lineTo(2f, 12f); lineTo(11f, 6f); close()
+        moveTo(13f, 6f); lineTo(22f, 12f); lineTo(13f, 18f); close()
+    }
+}.build()
 
 /**
  * 「加入片单」图标（Material 的 `playlist_add`：三条横线 + 右侧一个加号）。

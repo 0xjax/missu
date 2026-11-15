@@ -15,8 +15,8 @@ android {
         applicationId = "app.missu"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "2.0.0"
+        versionCode = 5
+        versionName = "2.1.0"
         // NOTE: 所有变体（debug / release）都只打 arm64-v8a。包里唯一的 native 库是
         // androidx.graphics.path（每个 ABI 7–12 KB），所以这不是为了省体积，而是让**产物只有
         // 一个确定的架构**：归档名里的 `-arm64-v8a` 必须和包内容对得上，不能靠改名冒充。
