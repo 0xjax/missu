@@ -1,19 +1,23 @@
 package app.missu.ui.player
 
 import android.util.Log
-import android.view.MotionEvent
 import android.view.TextureView
 import androidx.annotation.OptIn
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -28,12 +32,38 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.compose.material3.PlayerDefaults
 import app.missu.data.store.SettingsStore
+import kotlin.math.abs
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private const val TAG = "MissavPlayer"
 private const val AUTO_HIDE_MS = 3_000L
 private const val SEEK_STEP_MS = 10_000L
 private const val PROGRESS_REPORT_MS = 5_000L
+
+/** 连击窗口：只有同侧的两次点击才当成一次双击（对齐 legacy 的 `TAP_CHAIN_WINDOW`）。 */
+private const val TAP_CHAIN_MS = 350L
+
+/** 累加窗口：同方向连续双击在这个窗口内累加，提示里显示累计值（legacy 的 `SEEK_ACCUMULATE_WINDOW`）。 */
+private const val SEEK_ACCUMULATE_MS = 900L
+
+/** 双击 seek 提示的停留时长（legacy 的 `HINT_VISIBLE`）。 */
+private const val SEEK_HINT_MS = 700L
+
+/** seek 之后的静默窗口：这段时间内不认播放器报的 paused（legacy 是 600ms）。 */
+private const val SEEK_SETTLE_MS = 600L
+
+/**
+ * 中间那块「无双击语义」的区域占比（居中，左右各占剩下的部分做 seek）。
+ *
+ * NOTE: 中间**没有**双击动作，所以单击可以**立即**显隐控件、不用等 350ms 去和双击区分。
+ * 控件一出现，第二次点击自然就落在中间的播放/暂停键上——播放暂停因此不需要额外的双击逻辑，
+ * 直接复用了那颗按钮（比另开一套「双击中间 = 播放暂停」更简单，也没有误触 seek 的风险）。
+ * WARNING: 严格说只有落在**那颗键上**（比这块区域窄）的第二次点击才会暂停；落在块内键外
+ * 只是再收一次控件，不会误触 seek。
+ */
+private const val TAP_MIDDLE_FRACTION = 0.30f
 
 /**
  * 播放器：ExoPlayer + 官方 Material3 控件（[PlayerOverlay]）。
@@ -76,11 +106,14 @@ fun ExoVideoPlayer(
     val settings = remember(context) { SettingsStore(context.applicationContext) }
     val initialSpeed = remember { settings.playbackSpeed() }
     var speed by remember { mutableStateOf(initialSpeed) }
-    var speedMenuOpen by remember { mutableStateOf(false) }
+    // NOTE: 播放器设置面板（当前只有倍速一项）。不叫 speedMenu 了：倍速已经收进设置项里。
+    var settingsOpen by remember { mutableStateOf(false) }
     // NOTE: 控件只在第一帧出画之后才允许出现。加载中就把进度条和播放键摆出来，
     // 等于在"还没有东西可控"的时候先给一堆控件——那正是详情页打开时最脏的一帧。
     var ready by remember(url) { mutableStateOf(false) }
-
+    // NOTE: seek 之后的静默窗口（对齐 legacy 的 `seekingRef`）：seek 会让播放器短暂报 paused，
+    // 那是加载不是用户暂停，这段时间内不认它，播放键图标才不会闪。
+    var seekingUntil by remember { mutableLongStateOf(0L) }
     val player = remember {
         ExoPlayer.Builder(context)
             .setMediaSourceFactory(DefaultMediaSourceFactory(mediaDataSourceFactory()))
@@ -103,8 +136,12 @@ fun ExoVideoPlayer(
     DisposableEffect(player) {
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(playing: Boolean) {
+                // WARNING: seek 窗口内播放器报的 paused 是加载、不是用户暂停——忽略它，
+                // 否则双击快进快退时播放键会闪一下 ▶（对齐 legacy 的 seekingRef）。
+                if (!playing && System.currentTimeMillis() < seekingUntil) return
                 isPlaying = playing
-                if (playing) controlsVisible = true
+                // NOTE: 这里**不**点亮控件层。控件显隐只由用户操作驱动（初始可见 + 3 秒自动隐藏
+                // + 单击唤出），否则 seek/缓冲引起的 false→true 会把整层控件唤出来。
             }
 
             override fun onRenderedFirstFrame() {
@@ -160,16 +197,74 @@ fun ExoVideoPlayer(
     }
 
     // 播放中 3 秒无操作隐藏控件。
-    // NOTE: 倍速菜单开着的时候不隐藏——否则菜单会跟着控件一起被销毁。
-    LaunchedEffect(controlsVisible, isPlaying, speedMenuOpen) {
-        if (controlsVisible && isPlaying && !speedMenuOpen) {
+    // NOTE: 设置面板开着的时候不隐藏——否则面板的锚点（控件层）会先消失。
+    LaunchedEffect(controlsVisible, isPlaying, settingsOpen) {
+        if (controlsVisible && isPlaying && !settingsOpen) {
             delay(AUTO_HIDE_MS)
             controlsVisible = false
         }
     }
 
-    val toggleControls = rememberUpdatedState {
-        controlsVisible = !controlsVisible
+    // 双击快进/快退（对齐 legacy）：同侧两次点击在 350ms 内算一次双击；同方向连续双击在 900ms
+    // 内累加（提示显示累计值）。单击要延后 350ms 才显隐控件——否则每次双击都会顺带把控件切一次。
+    val scope = rememberCoroutineScope()
+    var seekHintSeconds by remember { mutableStateOf<Int?>(null) }
+    val tapState = remember { TapState() }
+    var toggleJob by remember { mutableStateOf<Job?>(null) }
+    var hintJob by remember { mutableStateOf<Job?>(null) }
+
+    fun seekStep(direction: Int) {
+        val now = System.currentTimeMillis()
+        tapState.seekTotal = if (
+            tapState.seekDirection == direction && now - tapState.lastSeekAt < SEEK_ACCUMULATE_MS
+        ) {
+            tapState.seekTotal + SEEK_STEP_SECONDS
+        } else {
+            SEEK_STEP_SECONDS
+        }
+        tapState.seekDirection = direction
+        tapState.lastSeekAt = now
+        seekingUntil = now + SEEK_SETTLE_MS
+        if (direction > 0) player.seekForward() else player.seekBack()
+        // NOTE: 不再唤出控件层——底边那条进度一直可见，双击快进快退时它直接跳，提示飘一下即可，
+        // 观看过程完全不被打断（YouTube 移动端就是这个手感）。
+        seekHintSeconds = direction * tapState.seekTotal
+        hintJob?.cancel()
+        hintJob = scope.launch {
+            delay(SEEK_HINT_MS)
+            seekHintSeconds = null
+            tapState.seekTotal = 0
+            tapState.seekDirection = 0
+        }
+    }
+
+    fun handleTap(x: Float, width: Float) {
+        val edge = width * ((1f - TAP_MIDDLE_FRACTION) / 2f)
+        // 中间区：没有双击语义，单击**立即**显隐控件。
+        if (x >= edge && x <= width - edge) {
+            // 清掉两侧可能挂着的延迟 toggle 与连击链，否则跨区连点会「立即切一次 + 0.35s 后再切一次」。
+            toggleJob?.cancel()
+            toggleJob = null
+            tapState.lastTapAt = 0L
+            controlsVisible = !controlsVisible
+            return
+        }
+        // 左右两侧：同一侧 350ms 内两次点击 = 双击 seek；单击延后 350ms 再显隐控件。
+        val direction = if (x < width / 2f) -1 else 1
+        val now = System.currentTimeMillis()
+        val chained = now - tapState.lastTapAt < TAP_CHAIN_MS &&
+            tapState.lastTapZone == direction
+        tapState.lastTapAt = now
+        tapState.lastTapZone = direction
+        toggleJob?.cancel()
+        if (chained) {
+            seekStep(direction)
+        } else {
+            toggleJob = scope.launch {
+                delay(TAP_CHAIN_MS)
+                controlsVisible = !controlsVisible
+            }
+        }
     }
 
     Box(modifier) {
@@ -177,39 +272,43 @@ fun ExoVideoPlayer(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
                 TextureView(ctx).apply {
-                    setOnTouchListener { _, event ->
-                        if (event.actionMasked == MotionEvent.ACTION_UP) {
-                            toggleControls.value()
-                        }
-                        true
-                    }
                     player.setVideoTextureView(this)
                 }
             },
             onRelease = { texture -> player.clearVideoTextureView(texture) },
         )
 
+        // 点击层：单击显隐控件，双击左右半边快进/快退。放在画面之上、控件之下——
+        // 控件自己的按钮（播放键、进度条、全屏…）仍然优先命中。
+        Box(
+            Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectTapGestures { offset -> handleTap(offset.x, size.width.toFloat()) }
+                },
+        )
+
         PlayerOverlay(
             player = player,
             visible = ready && controlsVisible,
-            speed = speed,
+            isPlaying = isPlaying,
             isFullscreen = isFullscreen,
-            onSpeedClick = { speedMenuOpen = true },
+            onSettingsClick = { settingsOpen = true },
             onToggleFullscreen = onToggleFullscreen,
+            seekHintSeconds = seekHintSeconds,
         )
 
-        // 菜单本体放在控件层之外：控件被自动隐藏时它仍然存在。
-        Box(Modifier.align(Alignment.BottomEnd).padding(16.dp)) {
-            SpeedMenu(
-                expanded = speedMenuOpen,
+        // 设置面板放在控件层之外：控件被自动隐藏时它仍然存在。
+        if (settingsOpen) {
+            PlayerSettingsSheet(
                 speed = speed,
-                onDismiss = { speedMenuOpen = false },
+                onDismiss = { settingsOpen = false },
                 onSpeedChange = { value ->
                     player.setPlaybackSpeed(value)
                     speed = value
                     // 立刻落盘：用户在这里改的其实是「以后都按这个速度放」。
                     settings.setPlaybackSpeed(value)
-                    speedMenuOpen = false
+                    settingsOpen = false
                 },
             )
         }
@@ -220,4 +319,18 @@ fun ExoVideoPlayer(
             }
         }
     }
+}
+
+/**
+ * 连击与累加的记账。
+ *
+ * NOTE: 这些值只参与判定、不需要触发重组，所以用一个普通类而不是一堆 `mutableStateOf`
+ * （对齐 legacy 的 `lastTap` / `lastTapDirection` / `seekState`）。
+ */
+private class TapState {
+    var lastTapAt = 0L
+    var lastTapZone = 0
+    var lastSeekAt = 0L
+    var seekDirection = 0
+    var seekTotal = 0
 }

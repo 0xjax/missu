@@ -347,11 +347,14 @@ private fun DetailHero(
             )
         }
         // 压暗：只压暗不虚化，封面的"同一张图"辨识度就还在，那正是要削掉的东西。
-        if (defocus.value > 0.01f) {
+        // CRITICAL: 必须乘上 `posterAlpha`。`defocus` 在视频出画后**停在 1 不回零**（那是刻意的，
+        // 免得封面淡出时先“重新对焦”），只按它算透明度的话，这层 22% 黑会永久盖住整块画面——
+        // 连播放器的白色控件一起压成 199/255（2026-11-15 量像素确认：白色控件发灰的根因）。
+        if (defocus.value > 0.01f && posterAlpha > 0.01f) {
             Box(
                 Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = POSTER_SCRIM_ALPHA * defocus.value)),
+                    .background(Color.Black.copy(alpha = POSTER_SCRIM_ALPHA * defocus.value * posterAlpha)),
             )
         }
 

@@ -99,6 +99,8 @@
     <!-- 播放器 -->
     <string name="player_fullscreen">Fullscreen</string>
     <string name="player_exit_fullscreen">Exit fullscreen</string>
+    <string name="player_seek_hint">%1$s%2$d s</string>
+    <string name="player_speed">Playback speed</string>
 
     <!-- 卡片长按预览 -->
     <string name="preview_open">Preview</string>
