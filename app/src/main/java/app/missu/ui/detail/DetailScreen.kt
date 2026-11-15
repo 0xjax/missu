@@ -2,6 +2,7 @@
 
 package app.missu.ui.detail
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -116,6 +117,10 @@ fun DetailScreen(
 ) {
     var fullscreen by rememberSaveable { mutableStateOf(false) }
     FullscreenEffect(fullscreen)
+    // NOTE: 全屏时返回键/侧滑**先退全屏**，不退出详情：横屏里返回行被藏起来，播放器是唯一的画面，
+    // 侧滑一下就把整部片连同这一页丢掉太狠；而且退出全屏要由我们主动发 `requestedOrientation`，
+    // 交给导航走的话页面直接没了、横屏状态还得靠 onDispose 兜底。
+    BackHandler(enabled = fullscreen) { fullscreen = false }
 
     val detail = (state as? DetailUiState.Content)?.detail
     // NOTE: 卡片带过来的那张优先，而不是详情页的 og:image。理由有两个：它和卡片上看到的

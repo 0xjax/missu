@@ -3,10 +3,19 @@ package app.missu.ui.player
 import android.util.Log
 import android.view.TextureView
 import androidx.annotation.OptIn
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
@@ -27,6 +36,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -101,6 +111,10 @@ fun ExoVideoPlayer(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var controlsVisible by remember { mutableStateOf(true) }
     var isPlaying by remember { mutableStateOf(false) }
+    // NOTE: 画面比例（宽/高）。TextureView 不像 `PlayerView` 那样自带 `AspectRatioFrameLayout`：
+    // 它把解码缓冲**拉伸**到自己的尺寸，16:9 的片子铺进 20:9 的横屏就是横向拉宽（实机可见）。
+    // 所以按真实比例给视频层定尺寸、居中，多出来的部分由黑底垫住；0 表示还不知道。
+    var videoAspect by remember { mutableStateOf(0f) }
     // NOTE: 倍速是**全局设置**，不是本次播放的临时状态：它跟着偏好走，所以每部片的播放器
     // 建起来就按它设好（见下面 player 的 apply）。1.0x 只是没存过值时的默认。
     val settings = remember(context) { SettingsStore(context.applicationContext) }
@@ -142,6 +156,12 @@ fun ExoVideoPlayer(
                 isPlaying = playing
                 // NOTE: 这里**不**点亮控件层。控件显隐只由用户操作驱动（初始可见 + 3 秒自动隐藏
                 // + 单击唤出），否则 seek/缓冲引起的 false→true 会把整层控件唤出来。
+            }
+
+            override fun onVideoSizeChanged(videoSize: VideoSize) {
+                // NOTE: 要按像素宽高比折算——变形宽银幕的片子 `width/height` 不是画面比例。
+                val width = videoSize.width * videoSize.pixelWidthHeightRatio
+                if (videoSize.height > 0 && width > 0f) videoAspect = width / videoSize.height
             }
 
             override fun onRenderedFirstFrame() {
@@ -238,7 +258,20 @@ fun ExoVideoPlayer(
         }
     }
 
+    fun applySpeed(value: Float) {
+        player.setPlaybackSpeed(value)
+        speed = value
+        // 立刻落盘：用户在这里改的其实是「以后都按这个速度放」。
+        settings.setPlaybackSpeed(value)
+        settingsOpen = false
+    }
+
     fun handleTap(x: Float, width: Float) {
+        // NOTE: 设置菜单开着时，点画面只是关菜单（YouTube 的行为），不要顺手把控件也切一次。
+        if (settingsOpen) {
+            settingsOpen = false
+            return
+        }
         val edge = width * ((1f - TAP_MIDDLE_FRACTION) / 2f)
         // 中间区：没有双击语义，单击**立即**显隐控件。
         if (x >= edge && x <= width - edge) {
@@ -267,9 +300,15 @@ fun ExoVideoPlayer(
         }
     }
 
-    Box(modifier) {
+    // NOTE: 黑底是**视频层自己的底**：画面按真实比例居中后多出来的部分就是它（横屏时左右两条黑边），
+    // 与页面底色无关。竖屏详情页里那个 16:9 的框因此看起来没变，差别只在横屏全屏。
+    Box(modifier.background(Color.Black)) {
         AndroidView(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .align(Alignment.Center)
+                .then(
+                    if (videoAspect > 0.01f) Modifier.aspectRatio(videoAspect) else Modifier.fillMaxSize(),
+                ),
             factory = { ctx ->
                 TextureView(ctx).apply {
                     player.setVideoTextureView(this)
@@ -293,23 +332,35 @@ fun ExoVideoPlayer(
             visible = ready && controlsVisible,
             isPlaying = isPlaying,
             isFullscreen = isFullscreen,
-            onSettingsClick = { settingsOpen = true },
+            onSettingsClick = { settingsOpen = !settingsOpen },
             onToggleFullscreen = onToggleFullscreen,
             seekHintSeconds = seekHintSeconds,
         )
 
         // 设置面板放在控件层之外：控件被自动隐藏时它仍然存在。
-        if (settingsOpen) {
+        // NOTE: 全屏用**贴着齿轮的悬浮菜单**，内嵌（16:9 那点高度）仍用底部抽屉。
+        // CRITICAL: 全屏绝不能用抽屉：`ModalBottomSheet` 是独立窗口，它一出现系统栏就跟着那个窗口
+        // 重新可见——状态栏冒出来、页面重新 inset，画面整块被顶下去（实机可见）。
+        if (settingsOpen && !isFullscreen) {
             PlayerSettingsSheet(
                 speed = speed,
                 onDismiss = { settingsOpen = false },
-                onSpeedChange = { value ->
-                    player.setPlaybackSpeed(value)
-                    speed = value
-                    // 立刻落盘：用户在这里改的其实是「以后都按这个速度放」。
-                    settings.setPlaybackSpeed(value)
-                    settingsOpen = false
-                },
+                onSpeedChange = ::applySpeed,
+            )
+        }
+        AnimatedVisibility(
+            visible = settingsOpen && isFullscreen,
+            modifier = Modifier.align(Alignment.TopEnd),
+            // 从齿轮那一角长出来（transformOrigin 打在右上角），和面板贴着的锚点对得上。
+            enter = fadeIn(tween(120)) +
+                scaleIn(tween(120), initialScale = 0.92f, transformOrigin = TransformOrigin(1f, 0f)),
+            exit = fadeOut(tween(90)),
+        ) {
+            PlayerSettingsMenu(
+                speed = speed,
+                onSpeedChange = ::applySpeed,
+                // 齿轮下面那颗键的圆底 32dp + 上下留白，面板顶边就落在它下面。
+                modifier = Modifier.padding(top = 56.dp, end = 8.dp),
             )
         }
 
