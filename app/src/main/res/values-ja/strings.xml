@@ -94,6 +94,10 @@
     <!-- プレイヤー -->
     <string name="player_fullscreen">全画面</string>
     <string name="player_exit_fullscreen">全画面を終了</string>
+    <string name="player_settings">プレーヤー設定</string>
+    <string name="player_play">再生</string>
+    <string name="player_pause">一時停止</string>
+    <string name="player_progress">再生位置</string>
     <string name="player_seek_hint">%1$s%2$d 秒</string>
     <string name="player_rewind_10_minutes">10 分巻き戻す</string>
     <string name="player_forward_10_minutes">10 分早送り</string>
@@ -123,6 +127,7 @@
     <string name="playlist_name">プレイリスト名</string>
     <string name="playlists_public">公開プレイリスト</string>
     <string name="playlists_create_action">作成</string>
+    <string name="playlists_creating">作成中…</string>
     <string name="playlists_updated">更新 %1$s</string>
 
     <!-- プレイリスト詳細 -->

@@ -8,6 +8,8 @@ import app.missu.data.store.SearchHistoryStore
 import app.missu.ui.common.LoadMoreState
 import app.missu.ui.common.UiMessage
 import app.missu.ui.common.toUiMessage
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,9 +17,9 @@ import kotlinx.coroutines.launch
 
 sealed interface SearchUiState {
     data object Idle : SearchUiState
-    data object Loading : SearchUiState
-    data object Empty : SearchUiState
-    data class Error(val message: UiMessage) : SearchUiState
+    data class Loading(val keyword: String) : SearchUiState
+    data class Empty(val keyword: String) : SearchUiState
+    data class Error(val keyword: String, val message: UiMessage) : SearchUiState
     data class Content(
         val keyword: String,
         val videos: List<VideoSummary>,
@@ -36,27 +38,31 @@ class SearchViewModel(
     /** 最近搜索关键词，供空状态展示。 */
     private val _recent = MutableStateFlow(history.recent())
     val recent: StateFlow<List<String>> = _recent.asStateFlow()
+    private var requestJob: Job? = null
 
     fun search(keyword: String) {
         val normalized = keyword.trim()
         if (normalized.isEmpty()) {
-            _state.value = SearchUiState.Idle
+            clear()
             return
         }
-        viewModelScope.launch {
-            _state.value = SearchUiState.Loading
+        requestJob?.cancel()
+        _state.value = SearchUiState.Loading(normalized)
+        requestJob = viewModelScope.launch {
             _state.value = try {
                 val page = api.searchVideos(normalized)
                 // 只在搜索成功后记入历史，避免把打错的词也留下。
                 history.record(normalized)
                 _recent.value = history.recent()
                 if (page.videos.isEmpty()) {
-                    SearchUiState.Empty
+                    SearchUiState.Empty(normalized)
                 } else {
                     SearchUiState.Content(normalized, page.videos, page.nextPage)
                 }
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Exception) {
-                SearchUiState.Error(error.toUiMessage())
+                SearchUiState.Error(normalized, error.toUiMessage())
             }
         }
     }
@@ -68,6 +74,7 @@ class SearchViewModel(
 
     /** 退出搜索、回到首页内容。 */
     fun clear() {
+        requestJob?.cancel()
         _state.value = SearchUiState.Idle
     }
 
@@ -79,8 +86,9 @@ class SearchViewModel(
         // 由界面的 enabled 挡住，所以失败之后不会靠滚动偷偷重试。
         if (current.more == LoadMoreState.Loading) return
 
+        requestJob?.cancel()
         _state.value = current.copy(more = LoadMoreState.Loading)
-        viewModelScope.launch {
+        requestJob = viewModelScope.launch {
             _state.value = try {
                 val page = api.searchVideos(current.keyword, next)
                 current.copy(
@@ -89,6 +97,8 @@ class SearchViewModel(
                     nextPage = page.nextPage,
                     more = LoadMoreState.Idle,
                 )
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Exception) {
                 // WARNING: 不能静默复位成 Idle——那一页没取到，界面必须留一个重试入口，
                 // 否则列表就在底部无声卡住，用户分不清「已经到底」和「坏了」。

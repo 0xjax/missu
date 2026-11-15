@@ -6,6 +6,8 @@ import app.missu.data.api.MissavApi
 import app.missu.data.model.HomeSection
 import app.missu.ui.common.UiMessage
 import app.missu.ui.common.toUiMessage
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,13 +28,17 @@ class HomeViewModel(private val api: MissavApi) : ViewModel() {
     /** 下拉刷新中（内容留在原地，只转顶部指示器）。 */
     private val _refreshing = MutableStateFlow(false)
     val refreshing: StateFlow<Boolean> = _refreshing.asStateFlow()
+    private var requestJob: Job? = null
 
     fun load() {
-        viewModelScope.launch {
+        requestJob?.cancel()
+        requestJob = viewModelScope.launch {
             _state.value = HomeUiState.Loading
             _state.value = try {
                 val sections = api.getHome()
                 if (sections.isEmpty()) HomeUiState.Empty else HomeUiState.Content(sections)
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Exception) {
                 HomeUiState.Error(error.toUiMessage())
             }
@@ -47,7 +53,7 @@ class HomeViewModel(private val api: MissavApi) : ViewModel() {
      * 已有内容就什么都不做，想要新内容走下拉刷新（[refresh]）。
      */
     fun loadIfNeeded() {
-        if (_state.value is HomeUiState.Content) return
+        if (_state.value is HomeUiState.Content || _state.value is HomeUiState.Loading) return
         load()
     }
 
@@ -58,11 +64,14 @@ class HomeViewModel(private val api: MissavApi) : ViewModel() {
      */
     fun refresh() {
         if (_refreshing.value) return
-        viewModelScope.launch {
+        requestJob?.cancel()
+        requestJob = viewModelScope.launch {
             _refreshing.value = true
             try {
                 val sections = api.getHome()
                 _state.value = if (sections.isEmpty()) HomeUiState.Empty else HomeUiState.Content(sections)
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Exception) {
                 if (_state.value !is HomeUiState.Content) _state.value = HomeUiState.Error(error.toUiMessage())
             } finally {

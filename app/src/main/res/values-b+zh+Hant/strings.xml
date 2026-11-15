@@ -98,6 +98,10 @@
     <!-- 播放器 -->
     <string name="player_fullscreen">全螢幕</string>
     <string name="player_exit_fullscreen">結束全螢幕</string>
+    <string name="player_settings">播放器設定</string>
+    <string name="player_play">播放</string>
+    <string name="player_pause">暫停</string>
+    <string name="player_progress">播放進度</string>
     <string name="player_seek_hint">%1$s%2$d 秒</string>
     <string name="player_rewind_10_minutes">快退 10 分鐘</string>
     <string name="player_forward_10_minutes">快進 10 分鐘</string>
@@ -127,6 +131,7 @@
     <string name="playlist_name">片單名稱</string>
     <string name="playlists_public">公開片單</string>
     <string name="playlists_create_action">建立</string>
+    <string name="playlists_creating">建立中…</string>
     <string name="playlists_updated">更新 %1$s</string>
 
     <!-- 片單詳情 -->

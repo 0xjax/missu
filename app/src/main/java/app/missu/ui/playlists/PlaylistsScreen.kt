@@ -62,7 +62,8 @@ fun PlaylistsScreen(
     onOpen: (PlaylistSummary) -> Unit,
     onBack: () -> Unit,
     createMessage: UiMessage? = null,
-    onCreate: (name: String, isPublic: Boolean) -> Unit = { _, _ -> },
+    creating: Boolean = false,
+    onCreate: (name: String, isPublic: Boolean, onSuccess: () -> Unit) -> Unit = { _, _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     var dialogOpen by rememberSaveable { mutableStateOf(false) }
@@ -74,9 +75,9 @@ fun PlaylistsScreen(
         if (dialogOpen) {
             CreateDialog(
                 message = createMessage?.text(),
+                creating = creating,
                 onConfirm = { name, isPublic ->
-                    onCreate(name, isPublic)
-                    dialogOpen = false
+                    onCreate(name, isPublic) { dialogOpen = false }
                 },
                 onDismiss = { dialogOpen = false },
             )
@@ -156,6 +157,7 @@ fun PlaylistsScreen(
 @Composable
 private fun CreateDialog(
     message: String?,
+    creating: Boolean,
     onConfirm: (name: String, isPublic: Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -163,7 +165,7 @@ private fun CreateDialog(
     var isPublic by rememberSaveable { mutableStateOf(false) }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!creating) onDismiss() },
         title = { Text(stringResource(R.string.playlists_create)) },
         text = {
             Column {
@@ -172,6 +174,7 @@ private fun CreateDialog(
                     onValueChange = { name = it },
                     label = { Text(stringResource(R.string.playlist_name)) },
                     singleLine = true,
+                    enabled = !creating,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(16.dp))
@@ -183,7 +186,7 @@ private fun CreateDialog(
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.weight(1f),
                     )
-                    Switch(checked = isPublic, onCheckedChange = { isPublic = it })
+                    Switch(checked = isPublic, onCheckedChange = { isPublic = it }, enabled = !creating)
                 }
                 message?.let {
                     Spacer(Modifier.height(8.dp))
@@ -192,10 +195,16 @@ private fun CreateDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(name, isPublic) }) { Text(stringResource(R.string.playlists_create_action)) }
+            TextButton(onClick = { onConfirm(name, isPublic) }, enabled = !creating) {
+                Text(
+                    stringResource(
+                        if (creating) R.string.playlists_creating else R.string.playlists_create_action,
+                    ),
+                )
+            }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
+            TextButton(onClick = onDismiss, enabled = !creating) { Text(stringResource(R.string.common_cancel)) }
         },
     )
 }
