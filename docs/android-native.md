@@ -92,16 +92,17 @@ cd D:\missu
 .\scripts\build.ps1 release    # release（沿用 debug 签名，仅自用侧载）
 ```
 
-- **产物与留档**：`app/build/outputs/apk/release/app-release.apk`。按版本复制一份到 `.local/`（已 gitignore，与 GitHub Release 附件共用同一个名字），版本号从 `app/build.gradle.kts` 读，别写死：
+- **产物与留档**：`app/build/outputs/apk/release/app-release.apk`（只含 `arm64-v8a`，见下）。按版本复制一份到 `.local/`（已 gitignore，与 GitHub Release 附件共用同一个名字），版本号从 `app/build.gradle.kts` 读，别写死：
 
   ```powershell
   $raw = Get-Content app\build.gradle.kts -Raw
   $version = [regex]::Match($raw, 'versionName\s*=\s*"([^"]+)"').Groups[1].Value
-  Copy-Item app\build\outputs\apk\release\app-release.apk ".local\Missu-$version-universal.apk"
-  Get-FileHash ".local\Missu-$version-universal.apk" -Algorithm SHA256 | Select-Object Hash
+  Copy-Item app\build\outputs\apk\release\app-release.apk ".local\Missu-$version-arm64-v8a.apk"
+  Get-FileHash ".local\Missu-$version-arm64-v8a.apk" -Algorithm SHA256 | Select-Object Hash
   ```
 
-- **后缀用 `universal` 而不是 ABI**：这个 APK 里只有一个 native 库 `libandroidx.graphics.path.so`（每个 ABI 7–12 KB），分 ABI 只能省不到 30 KB，一个全 ABI 包最省事。legacy 时代的 `-arm64-v8a` 是因为 Expo 构建真的只打了 arm64。要分 ABI 就在 `app/build.gradle.kts` 里开 `splits.abi`（或 `androidComponents` 的 ABI 过滤），**不要靠改文件名冒充**——签名覆盖整个包，删别的 ABI 目录会让签名失效。
+- **所有变体都只打 `arm64-v8a`**：见 `app/build.gradle.kts` 的 `defaultConfig.ndk.abiFilters`。包里唯一的 native 库是 `libandroidx.graphics.path.so`（每个 ABI 7–12 KB），所以这不是为了省体积（只省 40 KB），而是让**归档名和包内容对得上**：真机 V2507A 的 `ro.product.cpu.abilist` 只有 `arm64-v8a`，legacy 的两个 release 也用的这个后缀。debug 同样只打 arm64——x86_64 模拟器/设备装不上，需要时按变体加过滤。
+- **不要靠删文件或改文件名冒充架构**：签名覆盖整个包，删掉别的 `lib/<abi>/` 目录会让 v2/v3 签名失效、装不上；要换架构就改 `abiFilters` 重新构建。
 
 自动化场景（需要采集输出）加环境变量 `MISSU_NO_DAEMON=1`：**Gradle daemon 会一直占着 stdout，管道等不到 EOF，命令看起来"卡死"**——构建其实早就结束了。
 
