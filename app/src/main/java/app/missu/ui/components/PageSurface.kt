@@ -1,8 +1,5 @@
 package app.missu.ui.components
 
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -51,11 +48,9 @@ fun PageSurface(
 ) {
     var shrink by remember { mutableStateOf(1f) }
     val carded = card && shrink < 0.999f
-    val corner by animateDpAsState(
-        targetValue = if (carded) CardCorner else 0.dp,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-        label = "pageCardCorner",
-    )
+    // 圆角**不做过渡**：页面一开始缩小就是最终圆角，整个拖动过程里它不变。
+    // （之前用 spring 从 0 长到 24dp，手一推圆角还在长，看起来就是「先尖后钝」。）
+    val corner = if (carded) CardCorner else 0.dp
     val shape = RoundedCornerShape(corner)
 
     Box(
@@ -66,10 +61,10 @@ fun PageSurface(
                 if (coords.size.width > 0 && coords.size.height > 0) {
                     val w = inWindow.width / coords.size.width
                     val h = inWindow.height / coords.size.height
-                    // 只有**等比**缩小才算「被缩放成卡片」（返回预览）。横滑时页面只是平移，
-                    // 被窗口裁掉的一边会让宽高比不同，这一帧不能画圆角/投影，否则切页签时
-                    // 会在页头下方闪出一条卡片阴影。
-                    shrink = if (kotlin.math.abs(w - h) < 0.02f) minOf(w, h) else 1f
+                    // 只有**等比**的测量才算数：等比缩小/放大才更新状态；非等比（横滑进出、
+                    // 松手后向右滑出被窗口裁掉一边）一律沿用上一次的值——否则滑出的那一刻
+                    // 圆角会突然消失，而它明明还是那张缩小中的卡片。
+                    if (kotlin.math.abs(w - h) < 0.02f) shrink = minOf(w, h)
                 }
             }
             .graphicsLayer {
