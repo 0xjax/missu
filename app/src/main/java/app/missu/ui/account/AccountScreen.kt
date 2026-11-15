@@ -24,7 +24,7 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.HorizontalDivider
+
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -41,6 +41,8 @@ import androidx.compose.ui.unit.dp
 import app.missu.R
 import app.missu.data.model.AccountUser
 import app.missu.ui.components.EmptyHint
+import app.missu.ui.components.GroupDivider
+import app.missu.ui.components.GroupSurface
 import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.PageTopBar
 
@@ -80,7 +82,7 @@ fun AccountScreen(
                     onAction = onLogin,
                     modifier = Modifier.weight(1f),
                 )
-                MenuGroup {
+                GroupSurface {
                     MenuRow(Icons.Filled.Settings, stringResource(R.string.account_settings), onSettings)
                 }
                 Spacer(Modifier.height(16.dp))
@@ -94,19 +96,19 @@ fun AccountScreen(
                 ProfileCard(user = state.user)
                 Spacer(Modifier.height(16.dp))
 
-                MenuGroup {
+                GroupSurface {
                     MenuRow(Icons.Filled.Favorite, stringResource(R.string.account_saved), onSaved)
-                    RowDivider()
+                    GroupDivider(start = 56.dp)
                     MenuRow(Icons.AutoMirrored.Filled.List, stringResource(R.string.account_playlists), onPlaylists)
-                    RowDivider()
+                    GroupDivider(start = 56.dp)
                     MenuRow(Icons.Filled.DateRange, stringResource(R.string.account_history), onHistory)
-                    RowDivider()
+                    GroupDivider(start = 56.dp)
                     MenuRow(Icons.Filled.Settings, stringResource(R.string.account_settings), onSettings)
                 }
 
                 Spacer(Modifier.height(12.dp))
 
-                MenuGroup {
+                GroupSurface {
                     MenuRow(
                         icon = Icons.AutoMirrored.Filled.ExitToApp,
                         label = stringResource(R.string.account_logout),
@@ -165,17 +167,6 @@ private fun ProfileCard(user: AccountUser) {
     }
 }
 
-/** 分组容器：一张 `surfaceContainer` 的圆角面。 */
-@Composable
-private fun MenuGroup(content: @Composable () -> Unit) {
-    Surface(
-        shape = MaterialTheme.shapes.largeIncreased,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-    ) {
-        Column(content = { content() })
-    }
-}
 
 /**
  * 分组内的一行入口。
@@ -213,12 +204,4 @@ private fun MenuRow(
     ) {
         Text(text = label, color = tint)
     }
-}
-
-@Composable
-private fun RowDivider() {
-    HorizontalDivider(
-        modifier = Modifier.padding(start = 56.dp, end = 16.dp),
-        color = MaterialTheme.colorScheme.outlineVariant,
-    )
 }
