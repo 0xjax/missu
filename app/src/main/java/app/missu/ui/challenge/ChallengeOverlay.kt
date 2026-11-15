@@ -85,18 +85,14 @@ private const val POLL_MS = 500L
 private const val MAX_ATTEMPTS = 120
 
 /**
- * 「浏览器压根没被挑战」时的提前收工阈值（12 次 ≈ 6 秒）。
+ * 「浏览器压根没被挑战」时的收工阈值（12 次 ≈ 6 秒）。
  *
  * NOTE: 这种情况下等 clearance 是等不到的，只能靠浏览器代取 HTML；连 HTML 都拿不到
- * （页面被导去别处，例如登录态失效 302 回首页）就没必要干等满 60 秒。
+ * （页面被导去别处，例如登录态失效 302 回首页，或者浏览器自己卡住）就没必要干等满 60 秒。
+ * WARNING: 这类请求**全程不显形**——正常页面上绝不该弹出防护层。所以到点就交回 OkHttp
+ * 重取，别留一个看不见、又在吃触摸的模态窗口。
  */
 private const val GIVE_UP_ATTEMPTS = 12
-
-/**
- * 静默期上限（10 次 ≈ 5 秒）。正常情况下 1.3–1.5 秒就能靠标题判定完；
- * 页面一直加载不出来时也要把浮层显出来——留一个看不见的模态挂在屏幕上更糟。
- */
-private const val REVEAL_AFTER_ATTEMPTS = 10
 
 /** 抬起后多久补一张「刚打开」的截图：给 WebView 一点出画面的时间，又不至于错过白屏阶段。 */
 private const val OPENING_SHOT_MS = 400L
@@ -448,7 +444,10 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
             val challengePage = page?.isChallengePage() == true
             val onTarget = samePath(view.url.orEmpty(), targetUrl)
             // 真挑战页才显形；其余情况（浏览器直接拿到了目标页）全程不显示任何东西。
-            if (challengePage || attempts >= REVEAL_AFTER_ATTEMPTS) revealed = true
+            // WARNING: 这里不再有「等满 5 秒就显形」的兜底——那会让正常首页上冒出一层防护层
+            // （2026-11-15 实测见过一次）。加载慢的普通页面走下面的收工分支，不靠显形来解决。
+            // NOTE: 预览通道（debug 构建）不受这条限制——它本来就是把浮层抬出来看的。
+            if (challengePage || request.previewUrl != null) revealed = true
             // 深色主题 + 挑战页：CF 的深色样式可能晚于 onPageFinished 注入，没抓到就每轮补一次。
             if (challengePage && darkTheme && themeRules.get() <= 0) {
                 applyPageTheme(view, darkTheme) { n -> themeRules.set(n) }
@@ -477,6 +476,9 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
                 // 页面被导去了别处（例如登录态失效 302 回首页），又没有 clearance：没东西可等。
                 !challengePage && ready == "complete" && !onTarget && attempts >= GIVE_UP_ATTEMPTS ->
                     finish(passed = false, html = null)
+                // 非挑战页、又迟迟不 complete（浏览器慢或卡住）：到点交回 OkHttp 重取。
+                // 既不显形、也不干等满 60 秒——60 秒那档只留给真挑战页（用户可能正在点 Turnstile）。
+                !challengePage && attempts >= GIVE_UP_ATTEMPTS -> finish(passed = true, html = null)
                 attempts >= MAX_ATTEMPTS -> finish(passed = false, html = null)
                 else -> {
                     status = context.getString(R.string.challenge_waiting)
