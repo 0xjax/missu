@@ -318,6 +318,9 @@ private fun MissuApp(
     // 记的是**被弹出的那个 entry 的 id**，不是布尔量：布尔量要在某处复位，而复位时机
     // 会和转场读它的时机赛跑（亚毫秒级的先后差别就够让缩放那一套生效）。
     var buttonPopId by remember { mutableStateOf<String?>(null) }
+    // NOTE: 当前页签提到这里：三个页签合成了一个目的地（TABS_ROUTE），而详情页的共享元素
+    // 命名空间来自「上一个目的地的路由」——那只会是 tabs，所以还得知道是哪个页签。
+    var tabRoute by rememberSaveable { mutableStateOf("home") }
 
     val api = rememberApi(challengeState)
     val context = LocalContext.current
@@ -415,7 +418,7 @@ private fun MissuApp(
             composable(TABS_ROUTE) { entry ->
                 // NOTE: 三个页签是**一个页面**的三种形态，不是三个可返回的目的地：
                 // 底栏属于它们本身，所以返回预览里进入的页面自带底栏，切页签时底栏也不动。
-                var tab by rememberSaveable { mutableStateOf("home") }
+                // 页签状态在 MissuApp（详情页要用它决定共享元素命名空间）。
                 val navScope = this
                 Scaffold(
                     // NOTE: 这里不能再吃状态栏内边距——每个页签页自己已经让过一次
@@ -425,8 +428,8 @@ private fun MissuApp(
                         ShortNavigationBar {
                             topLevels.forEach { item ->
                                 ShortNavigationBarItem(
-                                    selected = tab == item.route,
-                                    onClick = { if (tab != item.route) tab = item.route },
+                                    selected = tabRoute == item.route,
+                                    onClick = { if (tabRoute != item.route) tabRoute = item.route },
                                     icon = { Icon(item.icon, contentDescription = stringResource(item.labelRes)) },
                                     label = { Text(stringResource(item.labelRes)) },
                                 )
@@ -435,7 +438,7 @@ private fun MissuApp(
                     },
                 ) { tabPadding ->
                     AnimatedContent(
-                        targetState = tab,
+                        targetState = tabRoute,
                         modifier = Modifier.padding(tabPadding),
                         transitionSpec = {
                             val forward = topLevels.indexOfFirst { it.route == targetState } >
@@ -493,6 +496,7 @@ private fun MissuApp(
                 }
                             }
                             "discover" -> {
+                                ProvideHeroVisibility(navScope, namespace = "discover") {
                 val viewModel = discoverViewModel
                 val states by viewModel.states.collectAsState()
                 val sort by viewModel.sort.collectAsState()
@@ -548,6 +552,7 @@ private fun MissuApp(
                         onResetFilters = viewModel::resetFilters,
                     )
                 }
+                                }
                             }
                             "account" -> {
                 PageSurface(card = false) {
@@ -800,11 +805,17 @@ private fun MissuApp(
                 // NOTE: 共享元素的命名空间取「来源目的地的路由名」——详情页只和真正被点的那张卡片
                 // 配对。首页预览与完整列表里都有同一批影片，不分区的话它们之间也会互相配对，
                 // 转场时只有两边都有的那几张封面在飞、其余跟着页面横滑（实测）。
-                val heroSource = navController.previousBackStackEntry?.destination?.route
+                // NOTE: 共享元素的命名空间必须和卡片的提供方一致（见 ProvideHeroVisibility）。
+                // 三个页签合并成了一个目的地，上一站只会是 `tabs`，所以那种情况要用当前页签；
+                // 其它来源（列表 / 收藏 / 历史 / 片单）直接用它们的路由名。
+                val previousRoute = navController.previousBackStackEntry?.destination?.route
                     ?.substringBefore('?')
                     ?.substringBefore('/')
-                    ?.ifEmpty { "home" }
-                    ?: "home"
+                val heroSource = if (previousRoute == TABS_ROUTE || previousRoute.isNullOrEmpty()) {
+                    tabRoute
+                } else {
+                    previousRoute
+                }
 
                 ProvideHeroVisibility(this, namespace = heroSource) {
                     PageSurface {
