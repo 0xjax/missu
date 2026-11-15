@@ -15,14 +15,40 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import android.os.Build
+import android.view.RoundedCorner
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-/** 卡片态（返回预览里被缩小的那一页）的圆角。 */
-private val CardCorner = 24.dp
+/** 机器报不出屏幕圆角时的兜底（MD3 的 extraLarge）。 */
+private val FallbackCorner = 24.dp
+
+/**
+ * 卡片态的圆角：取**这台机器自己的屏幕圆角**（`RoundedCorner`，API 31+）。
+ *
+ * NOTE: 不同机器读到的值本来就不一样（有的上报 0），这是预期——要的是「同一台机器上恒定，
+ * 且缩小后的卡片和屏幕的圆角是同一档」，不是跨机型统一。读不到就退回 [FallbackCorner]。
+ * NOTE: 只在进入组合时读一次，避免每帧访问 window insets。
+ */
+@Composable
+private fun deviceCardCorner(): Dp {
+    val view = LocalView.current
+    val density = LocalDensity.current
+    return remember(view) {
+        val px = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            view.rootWindowInsets?.getRoundedCorner(RoundedCorner.POSITION_TOP_LEFT)?.radius ?: 0
+        } else {
+            0
+        }
+        if (px > 0) with(density) { px.toDp() } else FallbackCorner
+    }
+}
 
 /**
  * 页面底材。两件事挂在**页面自身的窗口缩放比**上：
@@ -50,7 +76,7 @@ fun PageSurface(
     val carded = card && shrink < 0.999f
     // 圆角**不做过渡**：页面一开始缩小就是最终圆角，整个拖动过程里它不变。
     // （之前用 spring 从 0 长到 24dp，手一推圆角还在长，看起来就是「先尖后钝」。）
-    val corner = if (carded) CardCorner else 0.dp
+    val corner = if (carded) deviceCardCorner() else 0.dp
     val shape = RoundedCornerShape(corner)
 
     Box(
