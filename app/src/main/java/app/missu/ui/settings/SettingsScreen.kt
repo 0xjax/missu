@@ -18,14 +18,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.HorizontalDivider
+
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,6 +47,8 @@ import app.missu.R
 import app.missu.data.store.AppLanguage
 import app.missu.data.store.ColorSource
 import app.missu.data.store.ThemeMode
+import app.missu.ui.components.GroupDivider
+import app.missu.ui.components.GroupSurface
 import app.missu.ui.components.PageTopBar
 import app.missu.ui.theme.resolveColorScheme
 import app.missu.ui.theme.staticColorScheme
@@ -85,9 +87,9 @@ fun SettingsScreen(
         ) {
             SectionLabel(stringResource(R.string.settings_appearance))
 
-            SettingsGroup {
+            GroupSurface {
                 ThemeMode.entries.forEachIndexed { index, mode ->
-                    if (index > 0) RowDivider()
+                    if (index > 0) GroupDivider()
                     val selected = mode == themeMode
                     ListItem(
                         modifier = Modifier.selectable(
@@ -106,7 +108,7 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(8.dp))
 
-            SettingsGroup {
+            GroupSurface {
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
                 ) {
@@ -123,14 +125,14 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                RowDivider()
+                GroupDivider()
                 // NOTE: 图标换色只能在应用进后台之后生效（前台禁用启动入口会结束当前 task），
                 // 支持文案里要写明这一点，否则用户会以为「点了没反应」。
                 ListItem(
-                    modifier = Modifier.selectable(
-                        selected = followThemeIcon,
+                    modifier = Modifier.toggleable(
+                        value = followThemeIcon,
                         role = Role.Switch,
-                        onClick = { onFollowThemeIconChange(!followThemeIcon) },
+                        onValueChange = onFollowThemeIconChange,
                     ),
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     supportingContent = {
@@ -141,18 +143,18 @@ fun SettingsScreen(
                         )
                     },
                     trailingContent = {
-                        Switch(checked = followThemeIcon, onCheckedChange = onFollowThemeIconChange)
+                        Switch(checked = followThemeIcon, onCheckedChange = null)
                     },
                 ) {
                     Text(text = stringResource(R.string.settings_follow_icon), style = MaterialTheme.typography.bodyLarge)
                 }
-                RowDivider()
+                GroupDivider()
                 // NOTE: 纯黑是省电偏好，不是默认值——M3 深色规范用 tone 6 的近黑底，容器才有台阶可踩。
                 ListItem(
-                    modifier = Modifier.selectable(
-                        selected = pureBlack,
+                    modifier = Modifier.toggleable(
+                        value = pureBlack,
                         role = Role.Switch,
-                        onClick = { onPureBlackChange(!pureBlack) },
+                        onValueChange = onPureBlackChange,
                     ),
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     supportingContent = {
@@ -163,7 +165,7 @@ fun SettingsScreen(
                         )
                     },
                     trailingContent = {
-                        Switch(checked = pureBlack, onCheckedChange = onPureBlackChange)
+                        Switch(checked = pureBlack, onCheckedChange = null)
                     },
                 ) {
                     Text(text = stringResource(R.string.settings_pure_black), style = MaterialTheme.typography.bodyLarge)
@@ -174,12 +176,12 @@ fun SettingsScreen(
 
             // NOTE: 播放相关只有这一项。默认开——本 App 的核心是「点开就看」，关掉是给
             // 「不想在公共场合突然出声」的人一个开关，不是默认体验。
-            SettingsGroup {
+            GroupSurface {
                 ListItem(
-                    modifier = Modifier.selectable(
-                        selected = autoplay,
+                    modifier = Modifier.toggleable(
+                        value = autoplay,
                         role = Role.Switch,
-                        onClick = { onAutoplayChange(!autoplay) },
+                        onValueChange = onAutoplayChange,
                     ),
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     supportingContent = {
@@ -190,7 +192,7 @@ fun SettingsScreen(
                         )
                     },
                     trailingContent = {
-                        Switch(checked = autoplay, onCheckedChange = onAutoplayChange)
+                        Switch(checked = autoplay, onCheckedChange = null)
                     },
                 ) {
                     Text(text = stringResource(R.string.settings_autoplay), style = MaterialTheme.typography.bodyLarge)
@@ -202,9 +204,9 @@ fun SettingsScreen(
             // NOTE: 一个设置项同时决定**界面语言与站点内容语言**。不拆成两项：详情页的信息行标签
             // 是站点按内容语言返回的，两个轴分开就会出现「中文界面 + 英文标签」的混排。
             // NOTE: 列表里只出现有 UI 翻译的语言；「跟随系统」时界面回退英文、内容按系统语言走。
-            SettingsGroup {
+            GroupSurface {
                 AppLanguage.entries.forEachIndexed { index, option ->
-                    if (index > 0) RowDivider()
+                    if (index > 0) GroupDivider()
                     val selected = option == appLanguage
                     ListItem(
                         modifier = Modifier.selectable(
@@ -349,25 +351,5 @@ private fun SectionLabel(text: String) {
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(start = 24.dp, top = 16.dp, bottom = 8.dp),
-    )
-}
-
-@Composable
-private fun SettingsGroup(content: @Composable () -> Unit) {
-    Surface(
-        shape = MaterialTheme.shapes.largeIncreased,
-        // NOTE: surfaceContainerLow 在纯黑底上会画成纯黑（实测），分组容器会看不见；用能看见的最低一档。
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-    ) {
-        Column(content = { content() })
-    }
-}
-
-@Composable
-private fun RowDivider() {
-    HorizontalDivider(
-        modifier = Modifier.padding(horizontal = 16.dp),
-        color = MaterialTheme.colorScheme.outlineVariant,
     )
 }

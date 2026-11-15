@@ -21,7 +21,6 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
@@ -241,13 +240,4 @@ fun LoadMoreOnScroll(
                 if (canLoad && total > 0 && total - 1 - last <= LoadMorePrefetchItems) load()
             }
     }
-}
-
-/** 分组列表之间的细分隔线：左侧留出图标位，右边贴边（M3E 列表项的分隔规则）。 */
-@Composable
-fun ListRowDivider() {
-    HorizontalDivider(
-        modifier = Modifier.padding(start = 56.dp, end = 16.dp),
-        color = MaterialTheme.colorScheme.outlineVariant,
-    )
 }

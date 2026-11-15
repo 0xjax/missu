@@ -5,7 +5,7 @@ package app.missu.ui.detail
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.EnterExitState
-import androidx.compose.animation.core.Animatable
+
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animate
@@ -21,14 +21,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.FlowRow
+
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
+
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -39,7 +38,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
+
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -49,18 +48,11 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularWavyProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
+
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SplitButtonDefaults
 import androidx.compose.material3.SplitButtonLayout
@@ -79,20 +71,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.RectangleShape
+
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.layout.ContentScale
+
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
@@ -108,26 +97,27 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import app.missu.R
-import app.missu.data.model.DetailInfoRow
+
 import app.missu.data.model.VideoDetail
 import app.missu.data.model.VideoPlaylist
-import app.missu.ui.player.ExoVideoPlayer
+
 import app.missu.ui.player.FullscreenEffect
 import app.missu.ui.components.ErrorHint
-import app.missu.ui.components.MissuBottomSheet
+import app.missu.ui.components.GroupDivider
+import app.missu.ui.components.GroupSurface
+
 import app.missu.ui.components.PageStateTransition
 import app.missu.ui.common.UiMessage
 import app.missu.ui.common.text
 import app.missu.ui.theme.LocalDarkTheme
 import app.missu.ui.components.heroKeyFor
-import app.missu.ui.components.videoHero
+
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import androidx.core.view.WindowCompat
 import androidx.media3.common.Player
-import coil3.compose.AsyncImage
-import kotlinx.coroutines.delay
+
 import kotlinx.coroutines.launch
 
 @Composable
@@ -344,221 +334,9 @@ private const val DetailSeekStepLongMs = 10 * 60 * 1000L
 private const val DragCommitMs = 120
 private const val DragCancelMs = 180
 
-/** 视频出画时封面淡出的时长；与控件出现是同一段，看起来像「画面显影」。 */
-private const val POSTER_FADE_MS = 200
 
-/** 转圈延迟出现的时长：快的时候（内存缓存 / 秒开）不该闪一下转圈。 */
-private const val PROGRESS_DELAY_MS = 600L
 
-/**
- * 封面虚焦的时序与强度。
- *
- * NOTE: 延迟必须 ≥ 容器转场时长（300ms）。飞行途中就开始虚化，等于把刚建立的
- * 「同一个东西」的连续性自己拆掉——先让它落位、被看清，再让它退到"未就绪"的状态里。
- * NOTE: 爬升时长按**典型的视频起步延迟（2–3 秒）**来定，不是按普通状态切换的 300ms：
- * 它要在整段等待里持续可见地变化，而不是"一闪就完成、然后一直锁死"。
- */
-private const val DEFOCUS_DELAY_MS = 300L
-private const val DEFOCUS_RAMP_MS = 1500
-private const val POSTER_BLUR_DP = 12
-private const val POSTER_SCRIM_ALPHA = 0.22f
 
-/**
- * 播放器框——同时是卡片封面的**共享容器**（container transform 的落点）。
- *
- * 这里也是「静帧 → 动态画面」的接缝，四件事必须按顺序发生，否则接缝会露出来：
- * 1. 容器长大到位时，里面还是**同一张封面**（卡片那张，从内存缓存来），此时不虚化；
- * 2. 落位 300ms 后开始虚焦 + 轻压暗（600ms 渐变）：降低封面的"认知抓力"，
- *    让画面只有一个主角——还没出现的视频。等待中若一直清晰，用户会以为这就是内容；
- * 3. 视频第一帧真正出画之前，封面一直在；中途容器里不会空一下，也不会先出现控件；
- * 4. 第一帧出画 → 封面 200ms 淡出（画面在下面显影），控件同时出现，之后 3 秒无操作自动隐藏。
- *
- * NOTE: 虚化用**两层静态图交叉淡入**（清晰层 + 虚焦层），不逐帧改 blur 半径——
- * 后者每帧重建 RenderEffect，中端机会掉帧；前者只动 alpha，成本恒定且可逆。
- * `Modifier.blur` 在 API < 31 是空操作，那时只剩压暗，降级不崩。
- * NOTE: 封面画在播放器**之上**（含控件层之上），所以过渡只能是「封面淡出露出画面」，
- * 而不可能是「画面替换封面」那种硬切。
- * NOTE: 它必须在首帧就存在，Loading / Error 也不例外：点卡片时共享元素要有另一侧可长进去。
- * NOTE: 播放器本身固定在这一格（不进 LazyColumn），切全屏只是换尺寸、不会离开组合，
- * ExoPlayer 实例与播放进度都能保住。
- */
-@Composable
-private fun DetailHero(
-    state: DetailUiState,
-    poster: String?,
-    heroKey: String,
-    isCurrent: Boolean,
-    fullscreen: Boolean,
-    startPositionMs: Long,
-    onPositionReport: (Long) -> Unit,
-    onPlayerAvailable: (Player?) -> Unit,
-    onToggleFullscreen: () -> Unit,
-    modifier: Modifier = Modifier,
-    /** 上滑 / 下滑切换全屏的跟手进度（0..1）。转屏那一下没法跟手，这一段负责"越拖越大 / 越拖越缩"。 */
-    dragProgress: Float = 0f,
-) {
-    val detail = (state as? DetailUiState.Content)?.detail
-    val playbackUrl = detail?.playbackUrl
-
-    // CRITICAL: 这里的状态**只能按 heroKey（路由 id）取 remember，不能按 playbackUrl**。
-    // playbackUrl 会从 null 变成真正的地址，按它做 key 等于在详情数据回来那一刻重建状态：
-    // Animatable 被重置成 0，正在跑的虚化动画作用在旧实例上、直接被丢掉——表现就是
-    // "虚化一小段 → 弹回清晰封面 → 一直清晰等视频"。
-    /** 封面已经可以让位给画面（视频出过画，或播放失败要让错误层露出来）。 */
-    var revealed by remember(heroKey) { mutableStateOf(false) }
-    /** 正在离开当前目的地（返回）。容器里要换回封面，缩回去的才不是一个活视频。 */
-    var leaving by remember(heroKey) { mutableStateOf(false) }
-
-    val coverVisible = leaving || !revealed
-    val posterAlpha by animateFloatAsState(
-        targetValue = if (coverVisible) 1f else 0f,
-        animationSpec = tween(durationMillis = POSTER_FADE_MS),
-        label = "posterFade",
-    )
-
-    // 还在等：要么详情没回来，要么播放地址有了但视频还没出画。
-    val pending = detail == null || (playbackUrl != null && !revealed)
-    var showProgress by remember { mutableStateOf(false) }
-    LaunchedEffect(pending) {
-        if (!pending) {
-            showProgress = false
-            return@LaunchedEffect
-        }
-        delay(PROGRESS_DELAY_MS)
-        showProgress = true
-    }
-
-    // NOTE: 用 Animatable 而不是 animateFloatAsState：出画时要把当前值**冻住**让封面整体淡出，
-    // 不能反向"重新对焦"（那会在淡出前先闪一下变清晰）。
-    val defocus = remember(heroKey) { Animatable(0f) }
-    LaunchedEffect(pending) {
-        if (pending) {
-            delay(DEFOCUS_DELAY_MS)
-            defocus.animateTo(1f, tween(durationMillis = DEFOCUS_RAMP_MS))
-        } else if (detail != null && playbackUrl == null) {
-            // 站点没给 m3u8：不会再播放了，把封面恢复清晰（这里反向是对的）。
-            defocus.animateTo(0f, tween(durationMillis = DEFOCUS_RAMP_MS))
-        }
-    }
-
-    // NOTE: 离开（返回 / 被压栈）时容器里要换回封面：反向的 container transform 落点必须是
-    // 卡片上那张封面，不能是一帧视频画面。用 `isCurrent` 而不是拦截返回键——它在 pop 开始那一帧
-    // 就变 false（比目的地被销毁早整整一个转场），而且不参与返回决策，预测性返回的手势预览照旧。
-    LaunchedEffect(isCurrent) {
-        if (isCurrent) {
-            // 预测性返回被取消：视频重新盖过封面（音频由播放器自己恢复）。
-            leaving = false
-        } else {
-            leaving = true
-            // 还在等待（封面是虚的）时离开：把它恢复清晰再飞回去。
-            if (!revealed) defocus.snapTo(0f)
-        }
-    }
-
-    val sharpAlpha = posterAlpha * (1f - defocus.value)
-    val softAlpha = posterAlpha * defocus.value
-
-    Box(
-        modifier = (if (fullscreen) {
-            Modifier.fillMaxSize()
-        } else {
-            Modifier.fillMaxWidth().aspectRatio(16f / 9f)
-        })
-            .then(modifier)
-            .graphicsLayer {
-                // 跟手：竖屏里放大（从顶边往下长），横屏里缩小并下移——两个方向都只改绘制，
-                // 不参与布局，所以正文不会因为拖动而抖动。
-                val scale = if (fullscreen) 1f - 0.12f * dragProgress else 1f + 0.35f * dragProgress
-                scaleX = scale
-                scaleY = scale
-                translationY = (if (fullscreen) 64.dp else -24.dp).toPx() * dragProgress
-                transformOrigin = TransformOrigin(0.5f, 0f)
-            }
-            .videoHero(heroKey, RectangleShape)
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (playbackUrl != null) {
-            ExoVideoPlayer(
-                url = playbackUrl,
-                modifier = Modifier.fillMaxSize(),
-                active = isCurrent,
-                isFullscreen = fullscreen,
-                onToggleFullscreen = onToggleFullscreen,
-                initialPositionMs = startPositionMs,
-                onPositionReport = onPositionReport,
-                onPlayerAvailable = onPlayerAvailable,
-                onFirstFrameRendered = { revealed = true },
-                // 播放失败：把封面撤掉让错误层露出来（否则它永远被压在最上面）。
-                onPlaybackFailed = { revealed = true },
-            )
-        }
-
-        // 封面盖在播放器之上：出画前它是容器内容，出画时它淡出。
-        if (poster != null && sharpAlpha > 0.01f) {
-            AsyncImage(
-                model = poster,
-                contentDescription = detail?.title,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize().alpha(sharpAlpha),
-            )
-        }
-        if (poster != null && softAlpha > 0.01f) {
-            AsyncImage(
-                model = poster,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .blur(POSTER_BLUR_DP.dp)
-                    .alpha(softAlpha),
-            )
-        }
-        // 压暗：只压暗不虚化，封面的"同一张图"辨识度就还在，那正是要削掉的东西。
-        // CRITICAL: 必须乘上 `posterAlpha`。`defocus` 在视频出画后**停在 1 不回零**（那是刻意的，
-        // 免得封面淡出时先“重新对焦”），只按它算透明度的话，这层 22% 黑会永久盖住整块画面——
-        // 连播放器的白色控件一起压成 199/255（2026-11-15 量像素确认：白色控件发灰的根因）。
-        if (defocus.value > 0.01f && posterAlpha > 0.01f) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = POSTER_SCRIM_ALPHA * defocus.value * posterAlpha)),
-            )
-        }
-
-        if (showProgress) {
-            // NOTE: 压在照片上必须自带底衬，否则浅色封面上的指示器会看不清。
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(Color(0x66000000)),
-                contentAlignment = Alignment.Center,
-            ) {
-                // NOTE: 这里刻意**不用**页面级的 `LoadingIndicator`。视频缓冲和「页面在取数」是
-                // 两种等待：一个是媒体流在续，一个是界面在等数据。形状家族不同（波浪环 vs 形变团块）
-                // 才能一眼分清——同一个团块出现在两个地方，只会让人觉得"整个 App 都在转"。
-                CircularWavyProgressIndicator(
-                    modifier = Modifier.size(36.dp),
-                    color = Color.White,
-                    trackColor = Color(0x40FFFFFF),
-                )
-            }
-        }
-
-        if (playbackUrl == null && detail != null) {
-            // 详情拿到了但站点没给 m3u8：压在封面上说一句，否则用户只看到一张静止的封面。
-            Text(
-                text = stringResource(R.string.detail_no_playback),
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White,
-                modifier = Modifier
-                    .background(Color(0xCC000000), MaterialTheme.shapes.small)
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-            )
-        }
-    }
-}
 
 /**
  * 标题：固定在动作条下面，不随信息卡滚动。
@@ -605,7 +383,7 @@ private fun DetailTitle(detail: VideoDetail, interactionEnabled: Boolean = true)
  * NOTE: 这里自己开一个 Column：它是 [PageStateTransition] 的内容，拿不到外层的 ColumnScope，
  * 所以 `weight(1f)` 只能由这一层的 Column 提供。
  * NOTE: 版式跟设置页 / 我的同一套：标题是 `titleMedium`，其余内容装进**分组容器**
- * （`DetailGroup`），行间用 `outlineVariant` 分隔线，内外边距 16dp。之前这里是一串裸
+ * （`GroupSurface`），行间用 `outlineVariant` 分隔线，内外边距 16dp。之前这里是一串裸
  * `bodySmall` 文字，密度和其余页面差一档，读起来像另一个 App。
  * NOTE: 收藏 / 片单那一行固定在**本函数最上面**（也就是视频正下方），不随正文滚动。
  * NOTE: 标题**也是固定的**（2026-11-16 定的）：它和那两个动作是同一块「这个视频」的决策区，
@@ -683,7 +461,7 @@ private fun DetailBody(
 
             if (detail.info.isNotEmpty()) {
                 item(key = "info") {
-                    DetailGroup {
+                    GroupSurface(modifier = Modifier) {
                         detail.info.forEachIndexed { index, row ->
                             if (index > 0) GroupDivider()
                             InfoRow(row = row, onOpenPath = onOpenPath)
@@ -694,7 +472,9 @@ private fun DetailBody(
 
             detail.description?.let { description ->
                 item(key = "description") {
-                    DetailGroup { DescriptionCard(id = detail.id, description = description) }
+                    GroupSurface(modifier = Modifier) {
+                        DescriptionCard(id = detail.id, description = description)
+                    }
                 }
             }
         }
@@ -865,7 +645,12 @@ private fun DetailBody(
     }
 
     if (playlists !is PlaylistUiState.Hidden) {
-        PlaylistSheet(state = playlists, onDismiss = onClosePlaylists, onToggle = onTogglePlaylist)
+        PlaylistSheet(
+            state = playlists,
+            onDismiss = onClosePlaylists,
+            onRetry = onOpenPlaylists,
+            onToggle = onTogglePlaylist,
+        )
     }
 }
 
@@ -957,133 +742,10 @@ private fun SeekControlButton(
     }
 }
 
-/** 梗概折叠时的行数：三行足够判断"要不要读下去"，又不至于把首屏吃掉。 */
-private const val DescriptionCollapsedLines = 3
 
-/**
- * 剧情梗概卡片：默认只露 3 行，底部给一个**看得见的**「展开 / 收起」。
- *
- * NOTE: 控件必须看得见——正文里的一段文字不会让人觉得它可以点（标题可以点文字，是因为点标题
- * 本来就是常识；正文不行，2026-11-16 定）。
- * NOTE: 只有真的装不下才出现这一行：短梗概原样全显示，不多一次点击。
- * NOTE: 「装不下」是粘性的，和 [InfoRow] 同一套：展开后 hasVisualOverflow 会变 false，
- * 那正是要收起的时刻，所以展开态改用「行数 > 3」判断。
- */
-@Composable
-private fun DescriptionCard(id: String, description: String) {
-    var expanded by rememberSaveable(id) { mutableStateOf(false) }
-    var overflowing by remember(id) { mutableStateOf(false) }
-    val label = stringResource(if (expanded) R.string.detail_collapse else R.string.detail_expand)
 
-    Column(Modifier.padding(16.dp)) {
-        Text(
-            text = description,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = if (expanded) Int.MAX_VALUE else DescriptionCollapsedLines,
-            overflow = TextOverflow.Ellipsis,
-            onTextLayout = { result ->
-                if (expanded) {
-                    if (result.lineCount > DescriptionCollapsedLines) overflowing = true
-                } else {
-                    overflowing = result.hasVisualOverflow
-                }
-            },
-        )
-        if (overflowing) {
-            Row(
-                // NOTE: 居右：同一张信息卡里那些「装不下」的箭头（`InfoRow`）就在右边，整页只讲
-                // 一种语言——展开的指示器靠右。居左会和正文首行抢起跑线，读起来像正文的一部分。
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable(onClickLabel = label) { expanded = !expanded }
-                        .padding(horizontal = 6.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    Icon(
-                        imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-            }
-        }
-    }
-}
 
-/** 加入片单的面板。NOTE: 只展示与勾选，新建片单要走站点的网页表单，暂未实现。 */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun PlaylistSheet(
-    state: PlaylistUiState,
-    onDismiss: () -> Unit,
-    onToggle: (VideoPlaylist) -> Unit,
-) {
-    MissuBottomSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
-            Text(
-                text = stringResource(R.string.detail_add_to_playlist),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-            )
 
-            when (state) {
-                PlaylistUiState.Hidden -> Unit
-                PlaylistUiState.Loading -> Box(
-                    Modifier.fillMaxWidth().padding(24.dp),
-                    contentAlignment = Alignment.Center,
-                ) { LoadingIndicator() }
-
-                is PlaylistUiState.Error -> Text(
-                    text = state.message.text(),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(24.dp),
-                )
-
-                is PlaylistUiState.Content -> {
-                    if (state.items.isEmpty()) {
-                        Text(
-                            text = stringResource(R.string.detail_no_playlists),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(24.dp),
-                        )
-                    }
-                    state.items.forEach { item ->
-                        ListItem(
-                            modifier = Modifier.clickable { onToggle(item) },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            trailingContent = {
-                                // NOTE: 整行已经可点，勾选框不再接一次点击——否则读屏会看到两个节点
-                                // （与设置页的单选行同一处理）。
-                                Checkbox(
-                                    checked = item.added,
-                                    onCheckedChange = null,
-                                    enabled = state.pendingKey == null || state.pendingKey == item.key,
-                                )
-                            },
-                        ) {
-                            Text(text = item.name, style = MaterialTheme.typography.bodyLarge)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 /**
  * 收藏心形的红。**语义色**，不属于主题色板（和卡片角标那几档同性质）：收藏的红在浅色/深色
  * 主题里都该是同一个可识别的心形红，跟着主题变就不是「收藏」了。
@@ -1128,114 +790,7 @@ private val PlaylistAddIcon: ImageVector = ImageVector.Builder(
     }
 }.build()
 
-/**
- * 详情页的分组容器（与设置页 / 我的同一份规格：`surfaceContainer` + `largeIncreased` 圆角）。
- *
- * NOTE: 不用 `surfaceContainerLow`——它在纯黑底上会画成纯黑（实测），容器会看不见。
- */
-@Composable
-private fun DetailGroup(content: @Composable ColumnScope.() -> Unit) {
-    Surface(
-        shape = MaterialTheme.shapes.largeIncreased,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(content = content)
-    }
-}
 
-/** 分组容器里的行间分隔线：从内容左边缘起，与设置页一致。 */
-@Composable
-private fun GroupDivider() {
-    HorizontalDivider(
-        modifier = Modifier.padding(horizontal = 16.dp),
-        color = MaterialTheme.colorScheme.outlineVariant,
-    )
-}
-
-/**
- * 信息块的一行：标签固定占三成，值在右侧自动换行（`FlowRow`，长标签/长值都不会挤坏）。
- *
- * NOTE: 值默认**折成一行**，装不下才给展开。判断不做内容猜测（不按长度、不按标点、更不按
- * 标签文案——标签随内容语言变），直接看**实测排版**：`Text` 在 `maxLines = 1` 下
- * `hasVisualOverflow` 为真，说明这一行放不下。所以站点那条整句的「标题」也是「一行 + 展开」，
- * 而不是被删掉，也不会把卡片撑到一屏放不下。
- * NOTE: 多值的行（类型、标签）每颗值各自一行、靠 `FlowRow` 换行——它们不会被折起来。
- */
-@Composable
-private fun InfoRow(row: DetailInfoRow, onOpenPath: (path: String, title: String) -> Unit) {
-    // key 用标签：同一部影片的信息块里标签唯一，切片时状态自然重置。
-    var expanded by rememberSaveable(row.label) { mutableStateOf(false) }
-    // 「装不下」是粘性的：展开之后排在多行，`hasVisualOverflow` 会变 false，
-    // 那正是要收起的时候——所以展开态改用「行数 > 1」判断。
-    var overflowing by remember(row.label) { mutableStateOf(false) }
-    val label = if (expanded) {
-        stringResource(R.string.detail_collapse)
-    } else {
-        stringResource(R.string.detail_expand)
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(
-                // 只有装不下的行才可点（否则整行都是无效命中区）。
-                if (overflowing) {
-                    Modifier.clickable(onClickLabel = label) { expanded = !expanded }
-                } else {
-                    Modifier
-                },
-            )
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.Top,
-    ) {
-        Text(
-            // NOTE: 标签在页面里自带冒号（如「发行日期:」），这里只补一个空格。
-            text = row.label + " ",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(0.34f),
-        )
-        // NOTE: 带 path 的值（女优/类型/厂商…）可点，跳到对应的 /latest 列表页。
-        FlowRow(
-            modifier = Modifier.weight(0.66f),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            row.values.forEach { value ->
-                // NOTE: 先取成局部变量——跨模块的 data class 属性在 lambda 里不会被智能转换。
-                val path = value.path
-                Text(
-                    text = value.text,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (path != null) MaterialTheme.colorScheme.primary else Color.Unspecified,
-                    maxLines = if (expanded) Int.MAX_VALUE else 1,
-                    overflow = TextOverflow.Ellipsis,
-                    onTextLayout = { result ->
-                        if (expanded) {
-                            if (result.lineCount > 1) overflowing = true
-                        } else {
-                            overflowing = result.hasVisualOverflow
-                        }
-                    },
-                    modifier = if (path != null) {
-                        Modifier.clickable { onOpenPath(path, value.text) }
-                    } else {
-                        Modifier
-                    },
-                )
-            }
-        }
-        if (overflowing) {
-            Icon(
-                imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 4.dp).size(20.dp),
-            )
-        }
-    }
-}
 
 private fun Context.findActivity(): Activity? {
     var current: Context? = this

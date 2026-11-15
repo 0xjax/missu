@@ -12,8 +12,9 @@ import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,8 +28,6 @@ private val SheetSideMargin = 16.dp
 /** 抽屉卡片的底部边距：和左右一起，让卡片四周都透出页面。 */
 private val SheetBottomMargin = 12.dp
 
-/** 卡片圆角：M3 的 extraLarge 档。 */
-private val SheetCornerSize = 28.dp
 
 /**
  * 全应用统一的抽屉：**一张浮起来的圆角卡片**，四周留边距，不贴着屏幕底边和左右边。
@@ -39,7 +38,7 @@ private val SheetCornerSize = 28.dp
  * NOTE: 抽屉本体的行为完全不变：仍是 `ModalBottomSheet`，拖动关闭、点外面关闭、返回键关闭都原生；
  * 只是本色透明（`containerColor = Color.Transparent`）、自带把手关掉（`dragHandle = null`），
  * 改由里面的卡片自己画。
- * NOTE: 跳过"部分展开"锚点（`skipPartiallyExpanded`）：卡片高度通常不高，停在半高会把内容裁掉。
+ * NOTE: 使用统一的 `rememberBottomSheetState`，初始保持 Hidden，由原生展开/关闭动画接管。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,7 +51,7 @@ fun MissuBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         modifier = modifier,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden),
         sheetMaxWidth = sheetMaxWidth,
         containerColor = Color.Transparent,
         dragHandle = null,
@@ -61,7 +60,7 @@ fun MissuBottomSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = SheetSideMargin, vertical = SheetBottomMargin),
-            shape = RoundedCornerShape(SheetCornerSize),
+            shape = MaterialTheme.shapes.extraLarge,
             color = MaterialTheme.colorScheme.surfaceContainerLow,
         ) {
             Column(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
