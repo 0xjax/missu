@@ -106,9 +106,14 @@ fun PlayerOverlay(
     // 不这样取的话 play/pause 图标和进度条都不会动。
     var positionMs by remember { mutableLongStateOf(0L) }
     var durationMs by remember { mutableLongStateOf(0L) }
-    // NOTE: 全屏时进度条必须离屏幕边缘留一点：圆球半径 6dp，条贴在物理边上时它下半截会被屏幕裁掉，
+    // NOTE: 全屏时进度条必须离屏幕边缘留一点：圆球有半径，条贴在物理边上时它下半截会被屏幕裁掉，
     // 两端位置（0% / 100%）也会被左右裁掉一半。内嵌时相反——球**故意**骑在视频下沿上，所以留 0。
+    // NOTE: 全屏的条已经和控件一起显示/隐藏，就是控件组的一员：左右内缩跟齿轮、时间胶囊、全屏键
+    // 落在同一条竖线上（都是 16dp），不能比它们更靠外。
     val barInset = if (isFullscreen) FullscreenBarInset else 0.dp
+    val barSideInset = if (isFullscreen) FullscreenBarSideInset else 0.dp
+    // 条占的条带：全屏的球更大，条带也要跟着加高，否则球会压到底部那一行。
+    val barBand = if (isFullscreen) FullscreenBarHeight else ProgressBarReservedHeight
     LaunchedEffect(player, visible) {
         if (!visible) return@LaunchedEffect
         while (true) {
@@ -152,7 +157,15 @@ fun PlayerOverlay(
                         ),
                 )
 
-                Column(Modifier.fillMaxSize()) {
+                Column(
+                    Modifier
+                        .fillMaxSize()
+                        // NOTE: 全屏时整层控件统一让出侧边：圆底外面还有一圈 48dp 的触摸区，比圆底
+                        // 每边大 8dp，所以这一层加 8dp 之后，「看得见的边」离屏幕边正好 16dp
+                        // （时间胶囊本来就还有 8dp 的行内 padding，跟着一起走到 16dp）。
+                        // 内嵌不加：16:9 的框本来就窄，再收就压到画面了。
+                        .padding(horizontal = if (isFullscreen) FullscreenControlSideInset else 0.dp),
+                ) {
                     // 顶部右侧：设置（倍速等）。
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
@@ -205,7 +218,7 @@ fun PlayerOverlay(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 8.dp, bottom = ProgressBarReservedHeight + barInset),
+                            .padding(start = 8.dp, bottom = barBand + barInset),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         TimePill("${formatTime(positionMs)} / ${formatTime(durationMs)}")
@@ -237,9 +250,10 @@ fun PlayerOverlay(
                 durationMs = durationMs,
                 showThumb = visible,
                 onSeek = { target -> player.seekTo(target) },
+                fullscreen = isFullscreen,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = barInset, end = barInset, bottom = barInset),
+                    .padding(start = barSideInset, end = barSideInset, bottom = barInset),
             )
         }
 
@@ -280,7 +294,12 @@ private fun SeekBar(
     showThumb: Boolean,
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier,
+    /** 全屏的条**更粗**、球更大：横屏是一整屏，3dp 的细线在大画面上轻得像根毛。 */
+    fullscreen: Boolean = false,
 ) {
+    val thickness = if (fullscreen) FullscreenTrackThickness else InlineTrackThickness
+    val thumbRadius = if (fullscreen) FullscreenThumbRadius else InlineThumbRadius
+    val bandHeight = if (fullscreen) FullscreenBarHeight else ProgressBarReservedHeight
     var dragging by remember { mutableStateOf(false) }
     var dragFraction by remember { mutableStateOf(0f) }
     var widthPx by remember { mutableStateOf(1) }
@@ -311,7 +330,7 @@ private fun SeekBar(
     Canvas(
         modifier
             .fillMaxWidth()
-            .height(ProgressBarReservedHeight)
+            .height(bandHeight)
             .onSizeChanged { widthPx = it.width.coerceAtLeast(1) }
             .then(
                 if (showThumb) {
@@ -340,7 +359,7 @@ private fun SeekBar(
                 },
             ),
     ) {
-        val trackHeight = 3.dp.toPx()
+        val trackHeight = thickness.toPx()
         // 线贴**自己的**下沿：内嵌时那就是视频最底边，**圆球故意跨出去**、下半部分压进页面里
         // （YouTube 移动端就是这样，球骑在视频与页面的分界上）。所以这里不裁剪、也不为了
         // "不越界"把球上移——全屏时屏幕边缘会裁掉它，那由调用方给整条留 inset（见 barInset）。
@@ -361,7 +380,7 @@ private fun SeekBar(
             cap = StrokeCap.Round,
         )
         if (showThumb) {
-            drawCircle(color = activeColor, radius = 6.dp.toPx(), center = Offset(playedX, centerY))
+            drawCircle(color = activeColor, radius = thumbRadius.toPx(), center = Offset(playedX, centerY))
         }
     }
 }
@@ -620,11 +639,36 @@ private val ProgressBarReservedHeight = 12.dp
 /**
  * 全屏时进度条离屏幕边缘的距离（底部与左右各一份）。
  *
- * NOTE: 比球半径（6dp）明显大一些：球在 0% / 100% 和屏幕下沿都不能被裁，同时横屏画面本身是
- * 居中的（左右各有黑边），条再贴边就会和黑边打架——16dp 是"看得出留白但不悬浮"的量级。
+ * NOTE: 比球半径（8dp）明显大一些：球在 0% / 100% 和屏幕下沿都不能被裁，横屏画面本身又是
+ * 居中的（左右各有黑边），条再贴边就会和黑边打架——和控件那圈同一个 24dp。
  * NOTE: 底部那一行（时间胶囊 / 全屏键）要跟着抬起同样的高度，否则它会压在进度条上。
  */
-private val FullscreenBarInset = 16.dp
+private val FullscreenBarInset = 24.dp
+
+/**
+ * 全屏时进度条左右的留白。
+ *
+ * NOTE: 比控件组再往里一档（32dp vs 按钮圆边 24dp）：条对的是时间胶囊里**文字**的左沿和
+ * 全屏键的图标，不是胶囊/圆底的边——对到边的条会显得比那一行还宽，看着不齐。
+ */
+private val FullscreenBarSideInset = 32.dp
+
+/**
+ * 全屏时整层控件（齿轮 / 时间胶囊 / 全屏键）离屏幕左右边的额外留白。
+ *
+ * NOTE: 圆底的触摸区是 48dp、可见圆底 32dp，每边虚 8dp——所以这一层加 16dp，露出来的圆边
+ * 才是离屏幕 24dp；时间胶囊那边还有 8dp 行内 padding，同样落到 24dp 上。
+ */
+private val FullscreenControlSideInset = 16.dp
+
+/** 内嵌条：3dp 细线 + 12dp 球，贴视频下沿（球故意骑在分界上）。 */
+private val InlineTrackThickness = 3.dp
+private val InlineThumbRadius = 6.dp
+
+/** 全屏条：更粗、球更大，条带也更高（球不能压到底部那一行）。 */
+private val FullscreenTrackThickness = 5.dp
+private val FullscreenThumbRadius = 8.dp
+private val FullscreenBarHeight = 20.dp
 
 /** 全屏设置面板的宽度：六档倍速（"0.75x" + 勾）够用，又不至于把画面挡住。 */
 private val FullscreenMenuWidth = 176.dp
