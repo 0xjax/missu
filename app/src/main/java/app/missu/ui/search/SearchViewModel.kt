@@ -3,7 +3,9 @@ package app.missu.ui.search
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.missu.data.api.MissavApi
+import app.missu.data.model.VideoList
 import app.missu.data.model.VideoSummary
+import app.missu.data.store.SearchHistory
 import app.missu.data.store.SearchHistoryStore
 import app.missu.ui.common.LoadMoreState
 import app.missu.ui.common.UiMessage
@@ -28,10 +30,14 @@ sealed interface SearchUiState {
     ) : SearchUiState
 }
 
-class SearchViewModel(
-    private val api: MissavApi,
-    private val history: SearchHistoryStore,
+class SearchViewModel internal constructor(
+    private val history: SearchHistory,
+    private val searchPage: suspend (keyword: String, page: Int) -> VideoList,
 ) : ViewModel() {
+    constructor(api: MissavApi, history: SearchHistoryStore) : this(
+        history = history,
+        searchPage = { keyword, page -> api.searchVideos(keyword, page) },
+    )
     private val _state = MutableStateFlow<SearchUiState>(SearchUiState.Idle)
     val state: StateFlow<SearchUiState> = _state.asStateFlow()
 
@@ -50,7 +56,7 @@ class SearchViewModel(
         _state.value = SearchUiState.Loading(normalized)
         requestJob = viewModelScope.launch {
             _state.value = try {
-                val page = api.searchVideos(normalized)
+                val page = searchPage(normalized, 1)
                 // 只在搜索成功后记入历史，避免把打错的词也留下。
                 history.record(normalized)
                 _recent.value = history.recent()
@@ -90,7 +96,7 @@ class SearchViewModel(
         _state.value = current.copy(more = LoadMoreState.Loading)
         requestJob = viewModelScope.launch {
             _state.value = try {
-                val page = api.searchVideos(current.keyword, next)
+                val page = searchPage(current.keyword, next)
                 current.copy(
                     // CRITICAL: 按界面 key 去重（同 id 同 pageUrl），分页重叠会让 LazyVerticalGrid 抛重复 key 崩溃。
                     videos = (current.videos + page.videos).distinctBy { it.id + it.pageUrl },
