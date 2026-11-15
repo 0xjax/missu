@@ -1,6 +1,19 @@
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.plugin.compose")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.compose.compiler)
+}
+
+// NOTE: 1.13.0-rc01 的 ui-test Android 构件未发布；应用 implementation 的 alpha BOM 也会约束
+// androidTest，所以测试构件固定到最近的稳定 BOM；这些依赖不进入应用主 UI。
+configurations.configureEach {
+    resolutionStrategy.force(
+        "androidx.compose.ui:ui-test:${libs.versions.composeTestVersion.get()}",
+        "androidx.compose.ui:ui-test-android:${libs.versions.composeTestVersion.get()}",
+        "androidx.compose.ui:ui-test-junit4:${libs.versions.composeTestVersion.get()}",
+        "androidx.compose.ui:ui-test-junit4-android:${libs.versions.composeTestVersion.get()}",
+        "androidx.compose.ui:ui-test-manifest:${libs.versions.composeTestVersion.get()}",
+        "androidx.compose.ui:ui-test-manifest-android:${libs.versions.composeTestVersion.get()}",
+    )
 }
 
 android {
@@ -14,9 +27,11 @@ android {
     defaultConfig {
         applicationId = "app.missu"
         minSdk = 26
+        //noinspection OldTargetApi — 行为仍按 36 验收；compileSdk 37.1 只为新编译 API。
         targetSdk = 36
         versionCode = 5
         versionName = "2.1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // NOTE: 所有变体（debug / release）都只打 arm64-v8a。包里唯一的 native 库是
         // androidx.graphics.path（每个 ABI 7–12 KB），所以这不是为了省体积，而是让**产物只有
         // 一个确定的架构**：归档名里的 `-arm64-v8a` 必须和包内容对得上，不能靠改名冒充。
@@ -31,7 +46,9 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             // NOTE: 沿用 debug 签名，仅自用侧载；换正式 keystore 后旧包必须先卸载。
             signingConfig = signingConfigs.getByName("debug")
         }
@@ -40,6 +57,18 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    bundle {
+        language {
+            enableSplit = false
+        }
+    }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
     }
 }
 
@@ -50,42 +79,51 @@ dependencies {
     // LoadingIndicator / 柔性顶栏）只在 material3 1.5.0 线；1.4.0 稳定线只有「部分 Expressive」。
     // WARNING: 这是预发布栈（Compose 1.13-rc01 + material3 1.5.0-rc01），升级需按 README 的
     // 「升级 SDK 环境依赖前」清单复核，并逐页真机复查。
-    implementation(platform("androidx.compose:compose-bom-alpha:2026.11.00"))
-    implementation("androidx.compose.material3:material3")
+    implementation(platform(libs.compose.bom))
+    implementation(libs.compose.material3)
     // 底部导航的图标（Home / List / Search / Person）来自 icons-core，避免引入 extended 的体积。
-    implementation("androidx.compose.material:material-icons-core")
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.activity:activity-compose:1.13.0")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
+    implementation(libs.compose.material.icons)
+    implementation(libs.compose.ui)
+    implementation(libs.compose.ui.tooling.preview)
+    implementation(libs.activity.compose)
+    implementation(libs.lifecycle.viewmodel.compose)
+    implementation(libs.lifecycle.runtime.compose)
     // NOTE: ProcessLifecycleOwner 用来判断「应用已经完全不可见」——桌面图标换色只在那之后做，
     // 在前台禁用当前启动入口会结束它所在的 task（见 LauncherIcons）。
-    implementation("androidx.lifecycle:lifecycle-process:2.11.0")
-    implementation("androidx.navigation:navigation-compose:2.10.2")
+    implementation(libs.lifecycle.process)
+    implementation(libs.navigation.compose)
+    implementation(libs.profileinstaller)
 
     // 网络：:core 已用 api 暴露 okhttp/coroutines，这里显式列出便于阅读；
     // Jsoup 只在 :core 里用，app 不再声明。
-    implementation("com.squareup.okhttp3:okhttp:5.5.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+    implementation(libs.okhttp)
+    implementation(libs.coroutines.android)
 
     // 图片：Coil 3（Compose 原生 API + 自带内存/磁盘缓存）。
-    implementation("io.coil-kt.coil3:coil-compose:3.6.3")
-    implementation("io.coil-kt.coil3:coil-network-okhttp:3.6.3")
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
 
     // 播放：Media3（ExoPlayer）。
     // NOTE: Media3 1.x 把 HLS 拆成独立模块——只加 media3-exoplayer 会在 setMediaItem 时
     // 抛 ClassNotFoundException: HlsMediaSource$Factory（已实测踩过一次）。
-    implementation("androidx.media3:media3-exoplayer:1.11.1")
-    implementation("androidx.media3:media3-exoplayer-hls:1.11.1")
-    // NOTE: 不再需要 media3-ui（View 版 PlayerView）——画面输出用 TextureView + setVideoTextureView，
-    // 控件用下面的 Compose 模块，旧 PlayerView 已无任何引用。
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.exoplayer.hls)
+    // 原生 Compose 画面与进度状态；控件外观仍由工程自绘。
+    implementation(libs.media3.ui.compose)
     // 只保留官方 PlayerDefaults.ErrorOverlay；画面输出与播放控件由本工程自绘。
-    implementation("androidx.media3:media3-ui-compose-material3:1.11.1")
+    implementation(libs.media3.ui.compose.material3)
     // NOTE: 让 ExoPlayer 走 OkHttp 而不是默认的 HttpURLConnection——媒体主机对后者的 TLS 指纹返回 403（实测）。
-    implementation("androidx.media3:media3-datasource-okhttp:1.11.1")
+    implementation(libs.media3.datasource.okhttp)
 
-    testImplementation("junit:junit:4.13.2")
+    testImplementation(libs.junit)
+    testImplementation(libs.coroutines.test)
+    testImplementation(libs.compose.ui.test.junit4)
+    testImplementation(libs.compose.ui.test.manifest)
+    testImplementation(libs.robolectric)
 
-    debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation(libs.compose.ui.tooling)
+    androidTestImplementation(libs.compose.ui.test.junit4)
+    androidTestImplementation(libs.test.ext.junit)
+    androidTestImplementation(libs.test.runner)
+    debugImplementation(libs.compose.ui.test.manifest)
 }

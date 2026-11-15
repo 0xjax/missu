@@ -15,7 +15,8 @@
 # 原生工程（唯一现役构建；仓库根就是 Gradle 根，不用 cd）
 .\scripts\build.ps1              # debug APK
 .\scripts\build.ps1 install      # 构建 + 装到设备
-.\scripts\build.ps1 release      # release（沿用 debug 签名，仅自用侧载）
+.\scripts\build.ps1 release      # release（R8 + 资源压缩，沿用 debug 签名，仅自用侧载）
+.\scripts\build.ps1 check        # core/app 测试 + lint + debug 构建
 ```
 
 `scripts/build.ps1` 会配好 `JAVA_HOME`（自动选 `D:\Android\jdk-N`；AS 已卸载，构建不依赖它）、`ANDROID_HOME`（`D:\Android\Sdk`）、`ANDROID_USER_HOME`。自动化采集输出时加 `MISSU_NO_DAEMON=1`——Gradle daemon 会一直占着 stdout，管道等不到 EOF。
@@ -25,7 +26,7 @@
 ## 开发流程
 
 - **没有 Metro / Fast Refresh**。改 Kotlin 代码 → 重新编译装机（增量约 10–30 秒）→ `adb shell am start -n app.missu/.MainActivity`。
-- 两个模块：`:core` 是**纯 JVM**（取数/解析/模型，不许 `android.*` / `androidx.*`），`:app` 是 Android UI 与平台适配；`:app` 依赖 `:core`，反向禁止。解析测试在 `:core`，用 `.\gradlew.bat :core:test` 跑。
+- 业务模块：`:core` 是**纯 JVM**（取数/解析/模型，不许 `android.*` / `androidx.*`），`:app` 是 Android UI 与平台适配；`:app` 依赖 `:core`，反向禁止。`:baselineprofile` 仅是独立启动 Profile 生成器，不进交付 APK。统一检查用 `.\scripts\build.ps1 check`。
 - 真机调试（无线 ADB、截图、日志、uiautomator）见 `docs/android-debugging.md`。
 - 真机上**纯操作、不需要读屏判断的长链路**（如建片单→加影片→移除→复原）→ 直接把步骤交给我，别逐步调工具；需要看截图/读 UI 才能判断的（布局、文案、状态是否真的变了）才自己驱动。
 - 观感类缺陷（闪一下、抖、跳）**先量化再改**：`adb shell screencap` 抓中间帧比对亮度/像素，定位到层（窗口底色 / 转场 / 状态机 / 组合生命周期）。**同一层连续两次调参仍复现 → 停止调参、换层排查**，不要在参数上反复试。
@@ -109,7 +110,7 @@
 
 ## Verification
 
-- 原生工程：`.\scripts\build.ps1`（或 `install`）必须 `BUILD SUCCESSFUL`；这是唯一的验收命令。
+- 原生工程：`.\scripts\build.ps1 check` 必须 `BUILD SUCCESSFUL`；改动安装链路或播放器时，另跑 `.\scripts\build.ps1 install` 做真机验收。
 - `legacy/expo/` 不参与验证（不构建、不跑 lint）；它只是参照实现。
 - 构建环境的已知坑（`native-platform.dll`、adb 的 `%TEMP%` 拒写、JVM 被按程序拦截、PS 5.1 需要 BOM）见 `docs/android-native.md` 的「已知坑」。
 - **升级 SDK / JDK 等环境依赖前，先查 Android CLI 最新情况**：Google 正在把 `sdkmanager` 迁到原生的 `android sdk`，新版 bundle 自带的 JRE 可能未签名，而本机 Windows 11 Smart App Control 处于强制模式（`VerifiedAndReputablePolicyState = 1`）会拒绝加载未签名代码。按 `docs/android-native.md`「升级 SDK 环境依赖前」的检查清单确认后再动，并把结论写回那里。

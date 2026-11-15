@@ -17,8 +17,10 @@ adb shell am start -n app.missu/.MainActivity
 ```
 app/                  Android 应用模块（UI + 平台适配）→ 交付包 app.missu
 core/                 纯 JVM 模块（取数 / 解析 / 模型，不许 android.* / androidx.*）
-scripts/build.ps1             构建脚本（配好 JDK / SDK / ANDROID_USER_HOME）
-settings.gradle.kts   Gradle 根配置（:app + :core）
+baselineprofile/      独立启动 Profile 生成器（仅测试，不进入交付 APK）
+gradle/libs.versions.toml      依赖与插件版本唯一来源
+scripts/build.ps1     构建 / 安装 / 检查脚本（配好 JDK / SDK / ANDROID_USER_HOME）
+settings.gradle.kts   Gradle 根配置（:app + :core + :baselineprofile）
 gradlew(.bat)         Gradle wrapper 9.6.0
 
 legacy/expo/          归档：Expo SDK 58 的 React Native 实现（参照实现 + 设计规格，不构建）

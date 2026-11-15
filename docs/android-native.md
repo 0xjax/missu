@@ -54,6 +54,8 @@
 
 ## 依赖清单
 
+版本与插件坐标统一在 `gradle/libs.versions.toml`，各模块只引用 catalog alias。
+
 `:core`（纯 JVM，只有这些）：
 
 | 依赖 | 版本 | 声明 | 用途 |
@@ -75,7 +77,7 @@
 | lifecycle-viewmodel-compose / lifecycle-runtime-compose | 2.11.0 | `viewModel()` / 生命周期感知的 `collectAsStateWithLifecycle()` |
 | navigation-compose | 2.10.2 | `NavHost` 单 Activity 路由 |
 | media3-exoplayer + media3-exoplayer-hls | 1.11.1 | 播放；HLS 必须单独加（见已知坑） |
-| media3-ui-compose-material3 | 1.11.1 | 只使用官方 `PlayerDefaults.ErrorOverlay`；其余播放控件自绘 |
+| media3-ui-compose + material3 | 1.11.1 | `ContentFrame` / `PlayerSurface` 与官方进度状态；错误层用 `PlayerDefaults.ErrorOverlay`，其余播放控件自绘 |
 | media3-datasource-okhttp | 1.11.1 | ExoPlayer 走 OkHttp（默认 HttpURLConnection 被媒体主机 403） |
 | Coil 3（coil-compose + coil-network-okhttp） | 3.6.3 | 封面图 |
 | coroutines-android | 1.11.0 | 主线程调度 |
@@ -89,7 +91,8 @@
 cd D:\missu
 .\scripts\build.ps1            # debug APK
 .\scripts\build.ps1 install    # 构建 + 装到设备
-.\scripts\build.ps1 release    # release（沿用 debug 签名，仅自用侧载）
+.\scripts\build.ps1 release    # release（R8 + 资源压缩，沿用 debug 签名，仅自用侧载）
+.\scripts\build.ps1 check      # core/app 测试 + lint + debug 构建
 ```
 
 - **产物与留档**：`app/build/outputs/apk/release/app-release.apk`（只含 `arm64-v8a`，见下）。按版本复制一份到 `.local/`（已 gitignore，与 GitHub Release 附件共用同一个名字），版本号从 `app/build.gradle.kts` 读，别写死：
@@ -309,10 +312,15 @@ app/           Android 应用（UI + 平台适配）
     ViewModelFactories.kt  Lifecycle initializer 工厂
     ui/home · ui/detail（DetailHero / PlaylistSheet / DetailInfo 已拆分）· ui/player · ui/search · ui/discover · ui/saved · ui/playlists ·
     ui/history · ui/settings · ui/account · ui/list · ui/components · ui/theme · ui/challenge
-    data/api/              AndroidCookieJar（CookieManager 适配）· AndroidApi（把 ChallengeState 注入取数层）
+    data/api/              AppDependencies（共享 OkHttp / MissavApi / Coil 数据源）·
+                           AndroidCookieJar（CookieManager 适配）· AndroidApi（把 ChallengeState 注入取数层）
     data/store/            ProfileStore（邮箱）· CredentialStore（Keystore 加密的账号密码）·
                            SettingsStore（语言 / 明暗模式 / 主题色 / 纯黑）· HistoryStore（观看进度）·
                            SearchHistoryStore（最近搜索）
+  src/test/            ViewModel 协程测试 + Robolectric Compose 交互测试
+
+baselineprofile/  独立 com.android.test 模块，只负责启动 Profile 采集；targetProjectPath = :app，
+                  不进入交付 APK，也不与应用共享测试进程。
 ```
 
 **边界规则**：`:app` 依赖 `:core`，反向禁止。取数、解析、模型都只在 `:core`，因此它们能在纯 JVM 上跑测试，将来也能被服务端复用。
@@ -402,7 +410,7 @@ adb shell am start -n app.missu/.LauncherTeal
 
 ```powershell
 cd D:\missu
-.\gradlew.bat :core:test      # 29 个离线测试（另有 2 个联网测试默认跳过）
+.\scripts\build.ps1 check     # core 解析测试 + app JVM/Robolectric 测试 + lint + debug 构建
 ```
 
 | 测试 | 覆盖 |
@@ -414,10 +422,17 @@ cd D:\missu
 | `PlaylistParserTest` | 真实 `/playlists` 页：路径/名字/可见性/更新时间切分 |
 | `PlaylistFormParserTest` | 真实新建页与修改页：更新表单（无 `_method`）与删除表单（`_method=delete`）的字段读取，**不打印 token** |
 | `ApiJsonTest` | 收藏状态与片单 JSON 的字段缺失/类型异常兜底 |
+| `SearchViewModelTest` | 连续搜索取消、分页失败重试、重叠数据去重、空关键词清理 |
+| `PageStatesTest` | Robolectric + Compose v2 规则：错误重试、空态动作、分页脚注交互 |
 
 fixture 都是**真机抓的真实页面**（`home-cn.html` / `detail.html` / `search.html` / `playlists.html` / `playlist-create.html` / `playlist-edit.html` / `directory-makers.html`）。
 
 联网测试默认跳过，加 `MISSU_LIVE=1` 才会跑（`LiveHomeTest` / `LiveDiagnosticsTest`）。
+
+启动 Profile：`:baselineprofile:connectedDebugAndroidTest` 使用独立测试进程采集，避免规则冷启动时终止测试自身。
+本机 V2507A 当前会在 UiAutomation 信任检查处终止 Benchmark（`Calling from not trusted UID`），且没有 `cmd profile` 系统服务；
+因此仓库只有生成器与 `profileinstaller` 依赖，**没有已生成的 `baseline-prof.txt`，不能声称启动 Profile 已启用**。
+Compose UI 回归测试改在 Robolectric JVM 上执行，不依赖该设备的 ActivityScenario 启动行为。
 
 ## Expo 版对应关系
 
