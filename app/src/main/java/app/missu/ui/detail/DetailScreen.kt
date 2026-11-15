@@ -16,12 +16,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -53,6 +56,7 @@ import androidx.compose.material3.SplitButtonLayout
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -80,6 +84,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
@@ -97,8 +102,13 @@ import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.PageStateTransition
 import app.missu.ui.common.UiMessage
 import app.missu.ui.common.text
+import app.missu.ui.theme.LocalDarkTheme
 import app.missu.ui.components.heroKeyFor
 import app.missu.ui.components.videoHero
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import androidx.core.view.WindowCompat
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -145,6 +155,20 @@ fun DetailScreen(
     var dragProgress by remember { mutableFloatStateOf(0f) }
     val animationScope = rememberCoroutineScope()
 
+    // NOTE: 状态栏那条是**黑的**，图标反过来用浅色：这一页顶上就是播放器，浅色页面底 + 深色图标
+    // 在转全屏那一下会闪一条白边；黑条和播放器/横屏全屏的黑底是同一种颜色，旋转就看不出来了。
+    // NOTE: 离开这一页必须还回去（按当前主题），否则回到列表还是浅色图标压在浅色页头上。
+    val view = LocalView.current
+    val darkTheme = LocalDarkTheme.current
+    val window = remember(view) { view.context.findActivity()?.window }
+    DisposableEffect(window, darkTheme) {
+        val controller = window?.let { WindowCompat.getInsetsController(it, view) }
+        controller?.isAppearanceLightStatusBars = false
+        onDispose { controller?.isAppearanceLightStatusBars = !darkTheme }
+    }
+    val density = LocalDensity.current
+    val statusBarInset = with(density) { WindowInsets.statusBars.getTop(this).toDp() }
+
     // NOTE: 播放器必须和正文**并列**在一个 Box 里，不能只是 Column 的兄弟：上滑放大时它要长到
     // 正文上面去，而 Column 中后一个孩子会把前一个盖住。所以正文让出播放器高度的占位，
     // 播放器自己绝对定位在顶部、zIndex 抬到最上面。
@@ -153,6 +177,16 @@ fun DetailScreen(
             .fillMaxSize()
             .background(if (fullscreen) Color.Black else MaterialTheme.colorScheme.background),
     ) {
+        // 状态栏那条黑底：铺在页面底色之上、播放器之下（播放器本身也整体下移了同样高度）。
+        if (!fullscreen) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(statusBarInset)
+                    .background(Color.Black),
+            )
+        }
+
         // 内嵌播放器的高度：整宽 16:9。正文从这个高度之下开始。
         val videoHeight = maxWidth * 9f / 16f
         val screenHeightPx = with(LocalDensity.current) { maxHeight.toPx() }
@@ -204,7 +238,7 @@ fun DetailScreen(
         }
 
         if (!fullscreen) {
-            Column(Modifier.fillMaxSize()) {
+            Column(Modifier.fillMaxSize().padding(top = statusBarInset)) {
                 // 播放器的位置占位（播放器本身在下面绝对定位，见上）。
                 Spacer(Modifier.height(videoHeight))
 
@@ -259,6 +293,10 @@ fun DetailScreen(
             dragProgress = dragProgress,
             modifier = Modifier
                 .align(Alignment.TopCenter)
+                // CRITICAL: 这里只能 offset，**不能** padding。padding 在 modifier 链上会缩掉
+                // 播放器自己的可用高度（16:9 的框被压成 16:9 - 状态栏高，实机量出来是 2.07:1），
+                // offset 只是整体下移，框本身还是严丝合缝的 16:9。
+                .offset(y = statusBarInset)
                 .zIndex(1f)
                 .then(dragModifier),
         )
@@ -981,4 +1019,13 @@ private fun InfoRow(row: DetailInfoRow, onOpenPath: (path: String, title: String
             )
         }
     }
+}
+
+private fun Context.findActivity(): Activity? {
+    var current: Context? = this
+    while (current is ContextWrapper) {
+        if (current is Activity) return current
+        current = current.baseContext
+    }
+    return null
 }

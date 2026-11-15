@@ -99,6 +99,9 @@
     <string name="player_exit_fullscreen">結束全螢幕</string>
     <string name="player_seek_hint">%1$s%2$d 秒</string>
     <string name="player_speed">倍速</string>
+    <string name="player_aspect">畫面</string>
+    <string name="player_aspect_fit">適應</string>
+    <string name="player_aspect_fill">填充</string>
 
     <!-- 卡片長按預覽 -->
     <string name="preview_open">預覽</string>
