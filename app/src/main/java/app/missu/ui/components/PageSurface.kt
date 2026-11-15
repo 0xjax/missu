@@ -27,9 +27,6 @@ import androidx.compose.ui.unit.dp
 /** 卡片态（返回预览里被缩小的那一页）的圆角。 */
 private val CardCorner = 24.dp
 
-/** 卡片态的投影。深色主题下几乎看不见，只负责把「浮起来的一页」和底下那页分开。 */
-private val CardElevation = 12.dp
-
 /**
  * 页面底材。两件事挂在**页面自身的窗口缩放比**上：
  *
@@ -47,11 +44,13 @@ private val CardElevation = 12.dp
 fun PageSurface(
     modifier: Modifier = Modifier,
     contentInset: Boolean = true,
+    /** 一级页（三个页签）永远不会被缩成卡片，关掉这一层，别在上面留下痕迹。 */
+    card: Boolean = true,
 
     content: @Composable () -> Unit,
 ) {
     var shrink by remember { mutableStateOf(1f) }
-    val carded = shrink < 0.999f
+    val carded = card && shrink < 0.999f
     val corner by animateDpAsState(
         targetValue = if (carded) CardCorner else 0.dp,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
@@ -67,15 +66,20 @@ fun PageSurface(
                 if (coords.size.width > 0 && coords.size.height > 0) {
                     val w = inWindow.width / coords.size.width
                     val h = inWindow.height / coords.size.height
-                    shrink = minOf(w, h)
+                    // 只有**等比**缩小才算「被缩放成卡片」（返回预览）。横滑时页面只是平移，
+                    // 被窗口裁掉的一边会让宽高比不同，这一帧不能画圆角/投影，否则切页签时
+                    // 会在页头下方闪出一条卡片阴影。
+                    shrink = if (kotlin.math.abs(w - h) < 0.02f) minOf(w, h) else 1f
                 }
             }
             .graphicsLayer {
                 this.shape = shape
                 clip = corner > 0.dp
-                shadowElevation = if (corner > 0.dp) CardElevation.toPx() else 0f
 
             }
+            // 底色**常驻**：页面在返回预览里必须是不透明的，否则下层会从它的空白处透上来
+            // （手势刚起手的瞬间最明显）。之前那条「页头下方接缝」的真凶是卡片态的投影，
+            // 投影已经删掉了，底色可以放心地一直铺。
             .background(MaterialTheme.colorScheme.background),
     ) {
         Box(
