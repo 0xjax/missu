@@ -313,6 +313,11 @@ private fun MissuApp(
     onAppLanguageChange: (AppLanguage) -> Unit,
 ) {
     val navController = rememberNavController()
+    // NOTE: 纯按钮返回（顶栏 up 箭头）没有手势深度，不该走「缩到 90% + 下层压暗」那套，
+    // 它只播一记「向右滑出」；手势松手才走缩放那条线。
+    // 记的是**被弹出的那个 entry 的 id**，不是布尔量：布尔量要在某处复位，而复位时机
+    // 会和转场读它的时机赛跑（亚毫秒级的先后差别就够让缩放那一套生效）。
+    var buttonPopId by remember { mutableStateOf<String?>(null) }
 
     val api = rememberApi(challengeState)
     val context = LocalContext.current
@@ -323,6 +328,11 @@ private fun MissuApp(
      * NOTE: 封面必须从卡片传过去：详情数据要等一次请求，而共享容器首帧就得有东西可长——
      * 少了这张图，点卡片时封面会长进一块空灰面。
      */
+
+    fun goBack() {
+        buttonPopId = navController.currentBackStackEntry?.id
+        navController.popBackStack()
+    }
 
     fun openDetail(id: String, thumbnail: String?) {
         navController.navigate("detail/$id?img=${Uri.encode(thumbnail.orEmpty())}")
@@ -352,6 +362,7 @@ private fun MissuApp(
     // 底部导航只在四个一级页面显示；详情/列表/收藏等二级页面全屏展示。
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
+    // NOTE: 不在这里复位 buttonPopId——它只在「按钮返回」那一帧被比对，过期值不会再命中任何 entry。
     // NOTE: 顶栏/底栏的归属见 TABS_ROUTE；这里只保留「这个 entry 是否已离开返回栈」。
 
     // NOTE: 系统栏、刘海、输入法的内边距只在这里处理一次，各页面只负责内容布局。
@@ -392,14 +403,14 @@ private fun MissuApp(
                     slideOutHorizontally(animationSpec = tween(durationMillis = 300)) { if (forward) -it else it }
                 }
             },
-            popEnterTransition = { missuPopEnter() },
-            popExitTransition = { missuPopExit() },
+            popEnterTransition = { missuPopEnter(button = initialState.id == buttonPopId) },
+            popExitTransition = { missuPopExit(button = initialState.id == buttonPopId) },
             // NOTE: 预测式返回（侧滑还没松手）走的是这两个，签名是 `Scope.(swipeEdge) -> …`。
             // 默认值是 fadeIn(spring) + scaleOut(0.7)：两页不透明地叠在一起，实测文字重影。
             // 两段各管一段：手势期间只缩放，松手后才平移离开（见下面 missuPopEnter/Exit）
             // 接着放完的那段，中间没有"预览一个、落地另一个"的换挡。
-            predictivePopEnterTransition = { missuPopEnter() },
-            predictivePopExitTransition = { missuPopExit() },
+            predictivePopEnterTransition = { missuPopEnter(button = false) },
+            predictivePopExitTransition = { missuPopExit(button = false) },
         ) {
             composable(TABS_ROUTE) { entry ->
                 // NOTE: 三个页签是**一个页面**的三种形态，不是三个可返回的目的地：
@@ -561,7 +572,7 @@ private fun MissuApp(
                     LoginScreen(
                         state = loginState,
                         onSubmit = { email, password ->
-                            auth.login(email, password) { navController.popBackStack() }
+                            auth.login(email, password) { goBack() }
                         },
                         onBack = {
                             auth.clearLoginError()
@@ -592,7 +603,7 @@ private fun MissuApp(
                             settings.setAutoplay(enabled)
                             autoplay = enabled
                         },
-                        onBack = { navController.popBackStack() },
+                        onBack = { goBack() },
                     )
                 }
             }
@@ -644,7 +655,7 @@ private fun MissuApp(
                             onRetry = viewModel::load,
                             onLoadMore = viewModel::loadMore,
                             onOpen = ::openDetail,
-                            onBack = { navController.popBackStack() },
+                            onBack = { goBack() },
                         )
                     }
                 }
@@ -662,7 +673,7 @@ private fun MissuApp(
                             entries = entries,
                             onOpen = ::openDetail,
                             onClear = viewModel::clear,
-                            onBack = { navController.popBackStack() },
+                            onBack = { goBack() },
                         )
                     }
                 }
@@ -680,7 +691,7 @@ private fun MissuApp(
                         onOpen = { playlist ->
                             navController.navigate("playlist/${playlist.id}?n=${Uri.encode(playlist.name)}")
                         },
-                        onBack = { navController.popBackStack() },
+                        onBack = { goBack() },
                         createMessage = createMessage,
                         onCreate = viewModel::create,
                     )
@@ -712,7 +723,7 @@ private fun MissuApp(
                             message = message,
                             onRetry = viewModel::load,
                             onOpen = ::openDetail,
-                            onBack = { navController.popBackStack() },
+                            onBack = { goBack() },
                             onEdit = { navController.navigate("playlist/$id/edit") },
                             onRemove = viewModel::removeAll,
                         )
@@ -744,7 +755,7 @@ private fun MissuApp(
                         },
                         onDelete = { viewModel.delete { backToList() } },
                         onRetry = viewModel::load,
-                        onBack = { navController.popBackStack() },
+                        onBack = { goBack() },
                     )
                 }
             }
@@ -760,7 +771,7 @@ private fun MissuApp(
                             onRetry = viewModel::load,
                             onLoadMore = viewModel::loadMore,
                             onOpen = ::openDetail,
-                            onBack = { navController.popBackStack() },
+                            onBack = { goBack() },
                         )
                     }
                 }
@@ -800,7 +811,7 @@ private fun MissuApp(
                         DetailScreen(
                             state = state,
                             onRetry = viewModel::load,
-                            onBack = { navController.popBackStack() },
+                            onBack = { goBack() },
                             videoId = id,
                             posterUrl = poster.ifEmpty { null },
                             // NOTE: 返回时这一项会先变 false（popBackStack 是同步的），
@@ -906,12 +917,18 @@ private object PopMotion {
 
     /** 平移自身的时长。 */
     const val SLIDE_MS = 200
+
+    /** 按钮返回（up 箭头）整段时长：只滑出，不缩放。 */
+    const val BUTTON_MS = 260
 }
 
 /** 详情页走 container transform（规范：用 Navigation 组件时不要缩放整屏）。 */
-private fun AnimatedContentTransitionScope<NavBackStackEntry>.missuPopEnter(): EnterTransition =
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.missuPopEnter(button: Boolean): EnterTransition =
     if (involvesDetail(initialState, targetState)) {
         heroEnter()
+    } else if (button) {
+        // 按钮返回没有预览阶段：下层不动、也不压暗。
+        EnterTransition.None
     } else {
         fadeIn(
             animationSpec = keyframes {
@@ -924,9 +941,14 @@ private fun AnimatedContentTransitionScope<NavBackStackEntry>.missuPopEnter(): E
         )
     }
 
-private fun AnimatedContentTransitionScope<NavBackStackEntry>.missuPopExit(): ExitTransition =
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.missuPopExit(button: Boolean): ExitTransition =
     if (involvesDetail(initialState, targetState)) {
         heroExit()
+    } else if (button) {
+        // 按钮返回：不缩放，直接向右滑出。
+        slideOutHorizontally(
+            animationSpec = tween(durationMillis = PopMotion.BUTTON_MS),
+        ) { it }
     } else {
         scaleOut(
             animationSpec = tween(durationMillis = PopMotion.TOTAL_MS),
