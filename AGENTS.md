@@ -21,7 +21,7 @@
 ## 开发流程
 
 - 业务模块：`:core` 为纯 JVM 取数/解析/模型，禁止 `android.*` / `androidx.*`；`:app` 为 UI 与平台适配，单向依赖 `:core`。`:baselineprofile` 仅生成启动 Profile，不进交付 APK。
-- 默认终点：`build.ps1 check` → `build.ps1 install` → `adb shell am start -n app.missu/.MainActivity` → **用户验收后再提交**。
+- 修改后默认跑定向测试（确有覆盖时）或直接 `build.ps1 install` 启动；功能完成时才执行一次 `build.ps1 check` → `install` → `adb shell am start -n app.missu/.MainActivity`，**用户验收后再提交**。连续修正中间不反复 `check`，纯文档修改不跑。
 - 未经用户明确要求，构建装机后**不继续点击、截屏、dump UI 或抓日志**；视觉缺陷诊断和用户指定的真机操作除外。
 - 观感缺陷先量化并定位到窗口底色 / 转场 / 状态机 / 组合生命周期；同层连续两次调参仍复现 → 换层排查。
 - 真机纯操作长链路交给用户；需要读屏判断的操作才由 agent 明确驱动。调试细节见 `docs/android-debugging.md`。
