@@ -63,8 +63,7 @@
     <string name="list_pin_home">ホームに固定</string>
 
     <!-- ホーム -->
-    <string name="home_empty_title">ホームにコンテンツがありません</string>
-    <string name="home_empty_subtitle">サイトから情報を取得できませんでした。引っ張って更新するか、時間をおいてもう一度お試しください</string>
+    <string name="error_home_empty">ホームのセクションを読み込めませんでした。もう一度お試しください</string>
     <string name="home_more">もっと見る</string>
     <string name="home_refresh_random">更新</string>
 
@@ -117,6 +116,9 @@
     <string name="preview_open">プレビュー</string>
     <string name="preview_close">プレビューを閉じる</string>
     <string name="preview_close_hint">外側をタップして閉じる</string>
+    <string name="preview_gesture_hint">指を離して閉じる · ドラッグ後に離して開く</string>
+    <string name="preview_release_to_open">指を離して動画を開く</string>
+    <string name="preview_open_detail">動画を開く</string>
 
     <!-- プレイリスト -->
     <string name="playlists_title">プレイリスト</string>

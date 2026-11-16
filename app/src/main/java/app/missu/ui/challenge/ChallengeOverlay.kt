@@ -318,7 +318,7 @@ private fun applyPageTheme(view: WebView, dark: Boolean, onRules: (Int) -> Unit 
 }
 
 /**
- * 页面探针：标题 / 就绪状态 / 是不是挑战页 / 明暗 / body 实际计算色。
+ * 页面探针：标题 / 就绪状态 / 是不是挑战页 / 正文长度 / 明暗 / body 实际计算色。
  *
  * `c` 是**挑战页自己的身份标记 `window._cf_chl_opt`**：CF 的 chl 脚本一定会在页面上挂它
  * （实测：抓下来的英文 403 正文里 7 处；中文挑战页 `请稍候…` 的实时 DOM 里同样成立）。
@@ -336,6 +336,7 @@ private fun applyPageTheme(view: WebView, dark: Boolean, onRules: (Int) -> Unit 
 private const val PROBE_JS =
     "JSON.stringify({t:document.title,r:document.readyState," +
         "c:(typeof window._cf_chl_opt!=='undefined')," +
+        "n:(document.body?document.body.innerText.trim().length:0)," +
         "d:matchMedia('(prefers-color-scheme: dark)').matches," +
         "bg:getComputedStyle(document.body).backgroundColor,fg:getComputedStyle(document.body).color})"
 
@@ -463,12 +464,12 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
                 continue
             }
             when {
-                // 首选结局：浏览器已经把目标页渲染完，就把这份 HTML 直接交回请求，
-                // 正好治「OkHttp 被挡、浏览器没被挡」那种等不到 cookie 的卡死。
+                // 首选结局：浏览器已经把有正文的目标页渲染完，就把这份 HTML 直接交回请求。
+                // 空 body 的 document 外壳不是结果（实测只有 39 字符），继续等，之后交回 OkHttp 重取。
                 // WARNING: 这一条必须排在 clearance 之前。以前是 clearance 优先，于是浏览器手里明明有整页，
                 // 也要放它走、让 OkHttp 再取一次；那次要是又被挡（CF 按 TLS 指纹判、或 cookie 还没落到
                 // 共享存储），界面看到的就是一句「站点要求人机验证，请重试」，浮层不会再来第二遍。
-                !challengePage && ready == "complete" && onTarget -> {
+                !challengePage && ready == "complete" && onTarget && (page?.optInt("n") ?: 0) > 0 -> {
                     // NOTE: 空串当没有——`html=""` 会让解析直接失败，而重取一次反而可能成。
                     readHtml(view) { html ->
                         finish(passed = true, html = html?.takeIf { it.isNotBlank() })

@@ -67,8 +67,7 @@
     <string name="list_pin_home">置頂到首頁</string>
 
     <!-- 首頁 -->
-    <string name="home_empty_title">首頁沒有內容</string>
-    <string name="home_empty_subtitle">站點這次沒有回傳任何區塊，下拉或稍後再試</string>
+    <string name="error_home_empty">未能讀取首頁區塊，請重試</string>
     <string name="home_more">更多</string>
     <string name="home_refresh_random">重新整理</string>
 
@@ -121,6 +120,9 @@
     <string name="preview_open">預覽</string>
     <string name="preview_close">關閉預覽</string>
     <string name="preview_close_hint">點擊空白處關閉</string>
+    <string name="preview_gesture_hint">鬆手關閉 · 拖動後鬆手進入</string>
+    <string name="preview_release_to_open">鬆手進入影片</string>
+    <string name="preview_open_detail">進入影片</string>
 
     <!-- 片單 -->
     <string name="playlists_title">我的片單</string>
