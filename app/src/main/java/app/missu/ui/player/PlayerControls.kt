@@ -4,6 +4,7 @@ package app.missu.ui.player
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.animation.fadeIn
@@ -17,7 +18,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -31,6 +33,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -59,12 +62,14 @@ import androidx.compose.material3.SelectableChipColors
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -119,11 +124,13 @@ const val SEEK_STEP_SECONDS = 10
 fun PlayerOverlay(
     player: Player,
     visible: Boolean,
+    seekEnabled: Boolean,
     /** 播放态：由外层给（它带 seek 静默窗口，seek 期间不会闪成暂停图标）。 */
     isPlaying: Boolean,
     isFullscreen: Boolean,
     onSettingsClick: () -> Unit,
     onToggleFullscreen: () -> Unit,
+    onSeekDraggingChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     /** 双击 seek 的提示（带符号的秒数，如 -20 / +10）；为空表示不显示。 */
     seekHintSeconds: Int? = null,
@@ -131,6 +138,8 @@ fun PlayerOverlay(
     // 内嵌进度条常显，所以控件隐藏后仍要更新；全屏才随控件停止轮询。
     // 状态只在时间文本与进度条内部读取，避免每 200ms 重组整个控件层。
     val progress = rememberProgressStateWithTickInterval(player, 200L)
+    // 只有时间胶囊读取预览状态，拖动时不会重组整个控件层。
+    val seekPreviewPositionMs = remember { mutableStateOf<Long?>(null) }
     // NOTE: 全屏时进度条必须离屏幕边缘留一点：圆球有半径，条贴在物理边上时它下半截会被屏幕裁掉，
     // 两端位置（0% / 100%）也会被左右裁掉一半。内嵌时相反——球**故意**骑在视频下沿上，所以留 0。
     // NOTE: 全屏的条已经和控件一起显示/隐藏，就是控件组的一员：左右内缩跟齿轮、时间胶囊、全屏键
@@ -145,6 +154,46 @@ fun PlayerOverlay(
     }
 
     Box(modifier.fillMaxSize()) {
+        // 挡板在进度条下面，按钮在上面：扩大触摸区后，按钮仍优先命中，圆球也不会被挡板压暗。
+        AnimatedVisibility(
+            visible = visible,
+            modifier = Modifier.align(Alignment.BottomCenter),
+            enter = fadeIn(tween(150)),
+            exit = fadeOut(tween(150)),
+        ) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(BottomScrimHeight)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f)),
+                        ),
+                    ),
+            )
+        }
+
+        // 进度条：内嵌时常显；全屏时跟随其余控件显隐。
+        AnimatedVisibility(
+            visible = !isFullscreen || visible,
+            modifier = Modifier.align(Alignment.BottomCenter),
+            enter = fadeIn(tween(150)),
+            exit = fadeOut(tween(150)),
+        ) {
+            SeekBar(
+                progress = progress,
+                showThumb = visible,
+                enabled = seekEnabled,
+                onSeek = { target -> player.seekTo(target) },
+                onDraggingChange = onSeekDraggingChange,
+                previewPositionMs = seekPreviewPositionMs,
+                fullscreen = isFullscreen,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = barSideInset, end = barSideInset, bottom = barInset),
+            )
+        }
+
         AnimatedVisibility(
             visible = visible,
             enter = fadeIn(tween(150)),
@@ -152,19 +201,6 @@ fun PlayerOverlay(
             modifier = Modifier.fillMaxSize(),
         ) {
             Box(Modifier.fillMaxSize()) {
-                // 底部挡板：画面亮的时候白字、白图标也得读得出来（所有播放器都这么做）。
-                Box(
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .height(BottomScrimHeight)
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f)),
-                            ),
-                        ),
-                )
-
                 // 顶部挡板 + 右上角的设置按钮：亮画面上白色图标也读得清。
                 Box(
                     Modifier
@@ -249,7 +285,7 @@ fun PlayerOverlay(
                             .padding(start = 8.dp, bottom = barBand + barInset),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        PlaybackTimePill(progress)
+                        PlaybackTimePill(progress, seekPreviewPositionMs)
                         Spacer(Modifier.weight(1f))
                         RoundButton(
                             size = 32.dp,
@@ -268,26 +304,6 @@ fun PlayerOverlay(
                     }
                 }
             }
-        }
-
-        // 进度条：**内嵌时永远可见**，贴在视频最底边、占满宽度——控件隐藏时只藏圆球（细线还在），
-        // 所以看进度不需要唤出控件。**全屏时反过来**：它跟着控件一起淡出（用户实测要求：全屏藏控件
-        // 就得连它一起藏），否则横屏上一条孤零零的线挂在画面下沿很脏。
-        AnimatedVisibility(
-            visible = !isFullscreen || visible,
-            modifier = Modifier.align(Alignment.BottomCenter),
-            enter = fadeIn(tween(150)),
-            exit = fadeOut(tween(150)),
-        ) {
-            SeekBar(
-                progress = progress,
-                showThumb = visible,
-                onSeek = { target -> player.seekTo(target) },
-                fullscreen = isFullscreen,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = barSideInset, end = barSideInset, bottom = barInset),
-            )
         }
 
         // 双击 seek 的提示：控件隐藏时也要看得见，所以放在 AnimatedVisibility 之外。
@@ -311,12 +327,9 @@ fun PlayerOverlay(
     }
 }
 
-/** 进度条：自己画的细条，**贴在视频最底边**、一直可见（YouTube 移动端那种）。
- * 进度条：自己画的细条，**贴在视频最底边**、一直可见（YouTube 移动端那种）。
+/** 进度条：细线贴在视频最底边，透明触摸区向上 36dp、向下 12dp，不改变视觉布局。
  *
- * NOTE: 控件隐藏时只藏圆球、细线照画——看进度不需要唤出控件，双击快进快退时条直接跳，
- * 观看过程不被打断。所以这条不在 `AnimatedVisibility` 里面。
- * NOTE: 拖动只在控件可见时接管；隐藏时这 20dp 条带不消费事件，点击照样落到下面的手势层。
+ * NOTE: 内嵌时控件隐藏也能直接按下拖动；按下唤醒控件，松手才 seek，取消则不改变播放位置。
  * NOTE: 已播部分与圆球都取**主题色**；未播部分是 30% 白，压在任意画面上都能看出剩余。
  * NOTE: 不用 M3 `Slider`——1.5 的拇指是一根竖条，播放位置 0 时就是左下角一根突兀的白杠。
  */
@@ -324,7 +337,10 @@ fun PlayerOverlay(
 private fun SeekBar(
     progress: ProgressStateWithTickInterval,
     showThumb: Boolean,
+    enabled: Boolean,
     onSeek: (Long) -> Unit,
+    onDraggingChange: (Boolean) -> Unit,
+    previewPositionMs: MutableState<Long?>,
     modifier: Modifier = Modifier,
     /** 全屏的条**更粗**、球更大：横屏是一整屏，3dp 的细线在大画面上轻得像根毛。 */
     fullscreen: Boolean = false,
@@ -346,12 +362,14 @@ private fun SeekBar(
         val pending = pendingFraction ?: return@LaunchedEffect
         if (durationMs > 0L && abs(positionMs - pending * durationMs) < PendingSeekToleranceMs) {
             pendingFraction = null
+            previewPositionMs.value = null
         }
     }
     LaunchedEffect(pendingFraction) {
         if (pendingFraction != null) {
             delay(PendingSeekTimeoutMs)
             pendingFraction = null
+            previewPositionMs.value = null
         }
     }
     val fraction = when {
@@ -359,13 +377,25 @@ private fun SeekBar(
         pendingFraction != null -> pendingFraction!!
         else -> polledFraction
     }
+    val currentFraction by rememberUpdatedState(fraction)
+    val trackThickness by animateDpAsState(
+        targetValue = if (dragging) thickness + 2.dp else thickness,
+        animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+        label = "seekTrackThickness",
+    )
+    val currentThumbRadius by animateDpAsState(
+        targetValue = if (dragging) thumbRadius + 2.dp else thumbRadius,
+        animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+        label = "seekThumbRadius",
+    )
     val activeColor = MaterialTheme.colorScheme.primary
     val progressLabel = stringResource(R.string.player_progress)
 
-    Canvas(
+    Box(
         modifier
             .fillMaxWidth()
-            .height(bandHeight)
+            .height(SeekTouchTargetHeight)
+            .offset(y = SeekTouchBelow)
             .semantics {
                 contentDescription = progressLabel
                 progressBarRangeInfo = ProgressBarRangeInfo(current = fraction, range = 0f..1f)
@@ -373,81 +403,135 @@ private fun SeekBar(
                     if (durationMs <= 0L) return@setProgress false
                     val coerced = target.coerceIn(0f, 1f)
                     pendingFraction = coerced
+                    previewPositionMs.value = (coerced * durationMs).toLong()
                     onSeek((coerced * durationMs).toLong())
                     true
                 }
             }
             .onSizeChanged { widthPx = it.width.coerceAtLeast(1) }
-            .then(
-                if (showThumb) {
-                    Modifier.pointerInput(durationMs) {
-                        detectHorizontalDragGestures(
-                            onDragStart = { offset ->
-                                dragging = true
-                                dragFraction = (offset.x / widthPx.toFloat()).coerceIn(0f, 1f)
-                            },
-                            onHorizontalDrag = { change, _ ->
-                                dragFraction = (change.position.x / widthPx.toFloat()).coerceIn(0f, 1f)
-                            },
-                            onDragEnd = {
-                                val target = dragFraction
-                                dragging = false
-                                if (durationMs > 0L) {
-                                    pendingFraction = target
-                                    onSeek((target * durationMs).toLong())
+            .pointerInput(durationMs, enabled) {
+                if (!enabled || durationMs <= 0L) return@pointerInput
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    val startX = down.position.x
+                    val startFraction = currentFraction
+                    val thumbTouch = abs(startX - startFraction * widthPx) <= ThumbTouchRadius.toPx()
+                    var dragStarted = false
+                    var seekCommitted = false
+                    down.consume()
+                    onDraggingChange(true)
+                    dragging = true
+                    dragFraction = startFraction
+                    previewPositionMs.value = (startFraction * durationMs).toLong()
+                    try {
+                        while (true) {
+                            val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
+                            if (change.isConsumed) break
+                            if (!change.pressed) {
+                                val target = if (dragStarted) {
+                                    dragFraction
+                                } else {
+                                    (startX / widthPx.toFloat()).coerceIn(0f, 1f)
                                 }
-                            },
-                            onDragCancel = { dragging = false },
-                        )
+                                pendingFraction = target
+                                previewPositionMs.value = (target * durationMs).toLong()
+                                onSeek((target * durationMs).toLong())
+                                seekCommitted = true
+                                change.consume()
+                                break
+                            }
+                            val distanceX = change.position.x - startX
+                            if (!dragStarted && abs(distanceX) >= viewConfiguration.touchSlop) {
+                                dragStarted = true
+                            }
+                            if (dragStarted) {
+                                dragFraction = (if (thumbTouch) {
+                                    change.position.x / widthPx.toFloat()
+                                } else {
+                                    startFraction + distanceX / widthPx.toFloat()
+                                }).coerceIn(0f, 1f)
+                                previewPositionMs.value = (dragFraction * durationMs).toLong()
+                                change.consume()
+                            }
+                        }
+                    } finally {
+                        dragging = false
+                        if (!seekCommitted) previewPositionMs.value = null
+                        onDraggingChange(false)
                     }
-                } else {
-                    Modifier
-                },
-            ),
+                }
+            },
     ) {
-        val trackHeight = thickness.toPx()
-        // 线贴**自己的**下沿：内嵌时那就是视频最底边，**圆球故意跨出去**、下半部分压进页面里
-        // （YouTube 移动端就是这样，球骑在视频与页面的分界上）。所以这里不裁剪、也不为了
-        // "不越界"把球上移——全屏时屏幕边缘会裁掉它，那由调用方给整条留 inset（见 barInset）。
-        val centerY = size.height - trackHeight / 2f
-        drawLine(
-            color = Color.White.copy(alpha = 0.3f),
-            start = Offset(0f, centerY),
-            end = Offset(size.width, centerY),
-            strokeWidth = trackHeight,
-            cap = StrokeCap.Round,
-        )
-        val playedX = size.width * fraction
-        drawLine(
-            color = activeColor,
-            start = Offset(0f, centerY),
-            end = Offset(playedX, centerY),
-            strokeWidth = trackHeight,
-            cap = StrokeCap.Round,
-        )
-        if (showThumb) {
-            drawCircle(color = activeColor, radius = thumbRadius.toPx(), center = Offset(playedX, centerY))
+        Canvas(
+            Modifier
+                .align(Alignment.TopCenter)
+                .offset(y = SeekTouchAbove - bandHeight)
+                .fillMaxWidth()
+                .height(bandHeight),
+        ) {
+            val trackHeight = trackThickness.toPx()
+            // 圆球故意骑在视频与页面的分界上；全屏由调用方留 inset，避免被物理边缘裁掉。
+            val centerY = size.height - trackHeight / 2f
+            drawLine(
+                color = Color.White.copy(alpha = 0.3f),
+                start = Offset(0f, centerY),
+                end = Offset(size.width, centerY),
+                strokeWidth = trackHeight,
+                cap = StrokeCap.Round,
+            )
+            val playedX = size.width * fraction
+            drawLine(
+                color = activeColor,
+                start = Offset(0f, centerY),
+                end = Offset(playedX, centerY),
+                strokeWidth = trackHeight,
+                cap = StrokeCap.Round,
+            )
+            if (showThumb || dragging) {
+                drawCircle(
+                    color = activeColor,
+                    radius = currentThumbRadius.toPx(),
+                    center = Offset(playedX, centerY),
+                )
+            }
         }
     }
 }
 
-/** 「当前 / 总时长」胶囊：黑底 40% + 白字，和播放/暂停那颗圆底是同一个悬浮语言。 */
+/** 「当前 / 总时长」胶囊：seek 预览期间仅当前时间用主题色，总时长与容器保持不变。 */
 @Composable
-private fun PlaybackTimePill(progress: ProgressStateWithTickInterval) {
-    TimePill("${formatTime(progress.currentPositionMs)} / ${formatTime(progress.durationMs)}")
+private fun PlaybackTimePill(
+    progress: ProgressStateWithTickInterval,
+    previewPositionMs: MutableState<Long?>,
+) {
+    val preview = previewPositionMs.value
+    TimePill(
+        currentTime = formatTime(preview ?: progress.currentPositionMs),
+        duration = formatTime(progress.durationMs),
+        seeking = preview != null,
+    )
 }
 
 @Composable
-private fun TimePill(text: String) {
-    Text(
-        text = text,
-        color = Color.White,
-        fontSize = 11.sp,
+private fun TimePill(
+    currentTime: String,
+    duration: String,
+    seeking: Boolean,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .clip(RoundedCornerShape(percent = 50))
             .background(Color(0x66000000))
             .padding(horizontal = 10.dp, vertical = 3.dp),
-    )
+    ) {
+        Text(
+            text = currentTime,
+            color = if (seeking) MaterialTheme.colorScheme.primary else Color.White,
+            fontSize = 11.sp,
+        )
+        Text(text = " / $duration", color = Color.White, fontSize = 11.sp)
+    }
 }
 
 private fun progressFraction(positionMs: Long, durationMs: Long): Float =
@@ -771,10 +855,16 @@ private const val PendingSeekToleranceMs = 600f
 /** 待生效目标的兜底时长：播放器一直不报新位置也不能让进度条永远挂着（毫秒）。 */
 private const val PendingSeekTimeoutMs = 1_200L
 
-/** 最底边进度条占的条带高度：既是它的触摸区，也是底部那一行要给它让出的位置。
- *  NOTE: 这个值直接决定「时间胶囊 / 全屏」离下边有多远——条带越矮，它们越贴底；但也不能小于
- *  12dp，否则那两颗按钮的下沿会落进进度条的拖动区，点按钮会变成拖进度。 */
+/** 内嵌条的绘制高度，也是底部控件行给它预留的空间；透明触摸区单独向上扩展。 */
 private val ProgressBarReservedHeight = 12.dp
+
+/** 进度条触摸区：上 36dp、下 12dp；按钮层在上方，不会抢走时间胶囊与全屏键的点击。 */
+private val SeekTouchAbove = 36.dp
+private val SeekTouchBelow = 12.dp
+private val SeekTouchTargetHeight = SeekTouchAbove + SeekTouchBelow
+
+/** 圆球抓取范围：大于可见圆球，抓住时跟随手指；其余轨道拖动按位移相对调整。 */
+private val ThumbTouchRadius = 24.dp
 
 /**
  * 全屏时进度条离屏幕边缘的距离（底部与左右各一份）。
