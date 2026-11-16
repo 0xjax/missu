@@ -87,12 +87,14 @@ fun SearchHost(
     onOpen: (id: String, thumbnail: String?) -> Unit,
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
+    initialKeyword: String = "",
     recent: List<String> = emptyList(),
     onClearHistory: () -> Unit = {},
+    onExit: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val searchBarState = rememberSearchBarState()
-    val textFieldState = rememberTextFieldState()
+    val textFieldState = rememberTextFieldState(initialText = initialKeyword)
     val scope = rememberCoroutineScope()
     val searching = state !is SearchUiState.Idle
 
@@ -109,16 +111,19 @@ fun SearchHost(
     }
 
     fun exit() {
-        textFieldState.edit { replace(0, length, "") }
+        val wasExpanded = searchBarState.targetValue == SearchBarValue.Expanded
+        if (onExit == null || !wasExpanded) textFieldState.edit { replace(0, length, "") }
         scope.launch { searchBarState.animateToCollapsed() }
-        onClear()
+        if (onExit == null) onClear() else if (!wasExpanded) onExit()
     }
 
     // NOTE: 搜索态是**同一个目的地里的第二层**（栏就地展开、结果是同一屏的内容替换），返回栈上
     // 没有它的条目。不接管返回键的话，系统返回会一路走到 Activity，也就是「从搜索结果页直接退出
     // 应用」。这里让它退一层：先回到首页内容，首页再按才是退出。
     // NOTE: 展开但还没提交查询也算一层——栏开着就说明用户进入了搜索模式，返回应当先收起。
-    BackHandler(enabled = searching || searchBarState.targetValue == SearchBarValue.Expanded) {
+    BackHandler(
+        enabled = searchBarState.targetValue == SearchBarValue.Expanded || (onExit == null && searching),
+    ) {
         exit()
     }
 

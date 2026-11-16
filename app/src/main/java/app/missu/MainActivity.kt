@@ -360,6 +360,7 @@ private fun MissuApp(
                 settingsState = settingsState,
                 settingsActions = settingsActions,
                 historyStore = historyStore,
+                searchHistory = searchHistory,
                 listSortStore = listSortStore,
                 auth = auth,
                 onGoBack = ::goBack,

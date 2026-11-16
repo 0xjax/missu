@@ -23,6 +23,7 @@ import app.missu.data.store.AppLanguage
 import app.missu.data.store.ColorSource
 import app.missu.data.store.HistoryStore
 import app.missu.data.store.ListSortStore
+import app.missu.data.store.SearchHistoryStore
 import app.missu.data.store.SettingsStore
 import app.missu.data.store.ThemeMode
 import app.missu.ui.account.AuthViewModel
@@ -48,6 +49,9 @@ import app.missu.ui.playlists.PlaylistsScreen
 import app.missu.ui.playlists.PlaylistsViewModel
 import app.missu.ui.saved.SavedScreen
 import app.missu.ui.saved.SavedViewModel
+import app.missu.ui.search.SearchBody
+import app.missu.ui.search.SearchHost
+import app.missu.ui.search.SearchViewModel
 import app.missu.ui.settings.SettingsScreen
 
 internal data class AppSettingsState(
@@ -78,6 +82,7 @@ internal fun NavGraphBuilder.secondaryDestinations(
     settingsState: AppSettingsState,
     settingsActions: AppSettingsActions,
     historyStore: HistoryStore,
+    searchHistory: SearchHistoryStore,
     listSortStore: ListSortStore,
     auth: AuthViewModel,
     onGoBack: () -> Unit,
@@ -314,6 +319,41 @@ internal fun NavGraphBuilder.secondaryDestinations(
         }
     }
 
+    composable("search/{keyword}") { entry ->
+        val keyword = Uri.decode(entry.arguments?.getString("keyword").orEmpty())
+        val viewModel: SearchViewModel = viewModel(
+            key = "search-$keyword",
+            factory = missuViewModelFactory { SearchViewModel(api, searchHistory) },
+        )
+        val state by viewModel.state.collectAsStateWithLifecycle()
+        val recent by viewModel.recent.collectAsStateWithLifecycle()
+        LaunchedEffect(keyword) { viewModel.search(keyword) }
+
+        ProvideHeroVisibility(this, namespace = "search") {
+            PageSurface(contentInset = false) {
+                SearchHost(
+                    state = state,
+                    initialKeyword = keyword,
+                    recent = recent,
+                    onSearch = viewModel::search,
+                    onLoadMore = viewModel::loadMore,
+                    onOpen = { id, thumbnail -> onOpenDetail(id, thumbnail, "") },
+                    onClearHistory = viewModel::clearHistory,
+                    onClear = viewModel::clear,
+                    onExit = onGoBack,
+                ) {
+                    SearchBody(
+                        state = state,
+                        keyword = keyword,
+                        onRetry = viewModel::search,
+                        onLoadMore = viewModel::loadMore,
+                        onOpen = { id, thumbnail -> onOpenDetail(id, thumbnail, "") },
+                    )
+                }
+            }
+        }
+    }
+
     composable(
         route = "detail/{id}?img={img}&h={h}",
         arguments = listOf(
@@ -361,6 +401,9 @@ internal fun NavGraphBuilder.secondaryDestinations(
                     onClosePlaylists = viewModel::closePlaylists,
                     onTogglePlaylist = viewModel::togglePlaylist,
                     onOpenPath = onOpenList,
+                    onSearch = { keyword ->
+                        navController.navigate("search/${Uri.encode(keyword)}")
+                    },
                 )
             }
         }

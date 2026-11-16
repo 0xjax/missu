@@ -43,7 +43,12 @@ fun DescriptionCard(description: String) {
 }
 
 @Composable
-fun InfoRow(row: DetailInfoRow, onOpenPath: (path: String, title: String) -> Unit) {
+fun InfoRow(
+    row: DetailInfoRow,
+    videoId: String,
+    onOpenPath: (path: String, title: String) -> Unit,
+    onSearch: (String) -> Unit,
+) {
     var expanded by rememberSaveable(row.label) { mutableStateOf(false) }
     var overflowing by remember(row.label) { mutableStateOf(false) }
     val label = stringResource(if (expanded) R.string.detail_collapse else R.string.detail_expand)
@@ -74,10 +79,11 @@ fun InfoRow(row: DetailInfoRow, onOpenPath: (path: String, title: String) -> Uni
         ) {
             row.values.forEach { value ->
                 val path = value.path
+                val isCode = path == null && value.text.equals(videoId, ignoreCase = true)
                 Text(
                     text = value.text,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (path != null) MaterialTheme.colorScheme.primary else Color.Unspecified,
+                    color = if (path != null || isCode) MaterialTheme.colorScheme.primary else Color.Unspecified,
                     maxLines = if (expanded) Int.MAX_VALUE else 1,
                     overflow = TextOverflow.Ellipsis,
                     onTextLayout = { result ->
@@ -87,10 +93,10 @@ fun InfoRow(row: DetailInfoRow, onOpenPath: (path: String, title: String) -> Uni
                             overflowing = result.hasVisualOverflow
                         }
                     },
-                    modifier = if (path != null) {
-                        Modifier.clickable { onOpenPath(path, value.text) }
-                    } else {
-                        Modifier
+                    modifier = when {
+                        path != null -> Modifier.clickable { onOpenPath(path, value.text) }
+                        isCode -> Modifier.clickable { onSearch(value.text) }
+                        else -> Modifier
                     },
                 )
             }
