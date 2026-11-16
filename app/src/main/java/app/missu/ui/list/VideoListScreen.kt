@@ -28,6 +28,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,6 +39,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.missu.R
+import kotlinx.coroutines.flow.StateFlow
 import app.missu.data.api.VideoListOptions
 import app.missu.ui.common.LoadMoreState
 import app.missu.ui.common.text
@@ -52,6 +54,18 @@ import app.missu.ui.components.PageTopBar
 import app.missu.ui.components.PushPinIcon
 import app.missu.ui.components.TooltipIconButton
 import app.missu.ui.components.VideoGridCard
+
+@Composable
+internal fun AutoLoadVideoList(
+    key: Any,
+    state: StateFlow<VideoListUiState>,
+    onLoad: () -> Unit,
+) {
+    LaunchedEffect(key) {
+        // NOTE: 切换 key 时 Compose 状态可能仍是上一个 ViewModel 的 Content；必须读当前 StateFlow，否则会漏掉首次加载。
+        if (state.value is VideoListUiState.Loading) onLoad()
+    }
+}
 
 /**
  * 视频列表页：顶栏 + **一行口径**（排序 | 过滤）+ 列表本体。
