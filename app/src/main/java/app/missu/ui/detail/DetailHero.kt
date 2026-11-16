@@ -1,5 +1,6 @@
 package app.missu.ui.detail
 
+import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -34,6 +35,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.Player
 import app.missu.R
+import app.missu.ui.components.LocalNavAnimatedVisibilityScope
 import app.missu.ui.components.videoHero
 import app.missu.ui.player.ExoVideoPlayer
 import coil3.compose.AsyncImage
@@ -46,7 +48,7 @@ private const val DEFOCUS_RAMP_MS = 1500
 private const val POSTER_BLUR_DP = 12
 private const val POSTER_SCRIM_ALPHA = 0.22f
 
-/** 播放器框与卡片封面的共享容器，也负责静帧到视频首帧的交接。 */
+/** 静态封面独占共享转场；播放器只负责画面与音频，不参与容器动画。 */
 @Composable
 fun DetailHero(
     state: DetailUiState,
@@ -66,11 +68,8 @@ fun DetailHero(
 
     // CRITICAL: 状态只能按 heroKey 取 remember；playbackUrl 到达时重建会让正在运行的动画失效。
     var revealed by remember(heroKey) { mutableStateOf(false) }
-    var leaving by remember(heroKey) { mutableStateOf(false) }
-
-    val coverVisible = leaving || !revealed
     val posterAlpha by animateFloatAsState(
-        targetValue = if (coverVisible) 1f else 0f,
+        targetValue = if (revealed) 0f else 1f,
         animationSpec = tween(durationMillis = POSTER_FADE_MS),
         label = "posterFade",
     )
@@ -86,7 +85,7 @@ fun DetailHero(
         showProgress = true
     }
 
-    // 出画时冻住当前虚化值，让封面整体淡出，不先闪回清晰。
+    // 首帧到达时冻住当前虚化值，让封面整体淡出，不先闪回清晰。
     val defocus = remember(heroKey) { Animatable(0f) }
     LaunchedEffect(pending) {
         if (pending) {
@@ -97,17 +96,13 @@ fun DetailHero(
         }
     }
 
-    LaunchedEffect(isCurrent) {
-        if (isCurrent) {
-            leaving = false
-        } else {
-            leaving = true
-            if (!revealed) defocus.snapTo(0f)
-        }
-    }
-
-    val sharpAlpha = posterAlpha * (1f - defocus.value)
-    val softAlpha = posterAlpha * defocus.value
+    // NOTE: 返回直接使用清晰封面；视频层同时隐去，不再先缩小视频、再播放一次封面转场。
+    val leaving = !isCurrent ||
+        LocalNavAnimatedVisibilityScope.current?.transition?.targetState == EnterExitState.PostExit
+    val visiblePosterAlpha = if (leaving) 1f else posterAlpha
+    val visibleDefocus = if (leaving) 0f else defocus.value
+    val sharpAlpha = visiblePosterAlpha * (1f - visibleDefocus)
+    val softAlpha = visiblePosterAlpha * visibleDefocus
 
     Box(
         modifier = (if (fullscreen) {
@@ -123,14 +118,13 @@ fun DetailHero(
                 translationY = (if (fullscreen) 64.dp else -24.dp).toPx() * dragProgress
                 transformOrigin = TransformOrigin(0.5f, 0f)
             }
-            .videoHero(heroKey, RectangleShape)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh),
         contentAlignment = Alignment.Center,
     ) {
         if (playbackUrl != null) {
             ExoVideoPlayer(
                 url = playbackUrl,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().alpha(if (leaving) 0f else 1f),
                 active = isCurrent,
                 isFullscreen = fullscreen,
                 onToggleFullscreen = onToggleFullscreen,
@@ -142,36 +136,49 @@ fun DetailHero(
             )
         }
 
-        // 两层静态图交叉淡入，避免逐帧重建 RenderEffect。
-        if (poster != null && sharpAlpha > 0.01f) {
-            AsyncImage(
-                model = poster,
-                contentDescription = detail?.title,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize().alpha(sharpAlpha),
-            )
-        }
-        if (poster != null && softAlpha > 0.01f) {
-            AsyncImage(
-                model = poster,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .blur(POSTER_BLUR_DP.dp)
-                    .alpha(softAlpha),
-            )
-        }
-        // CRITICAL: 压暗必须乘 posterAlpha，否则封面消失后黑层仍会盖住视频和控件。
-        if (defocus.value > 0.01f && posterAlpha > 0.01f) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = POSTER_SCRIM_ALPHA * defocus.value * posterAlpha)),
-            )
+        Box(
+            Modifier
+                .fillMaxSize()
+                .videoHero(heroKey, RectangleShape)
+                .then(
+                    if (poster == null) {
+                        Modifier.background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    } else {
+                        Modifier
+                    },
+                ),
+        ) {
+            // 两层静态图交叉淡入，避免逐帧重建 RenderEffect。
+            if (poster != null && sharpAlpha > 0.01f) {
+                AsyncImage(
+                    model = poster,
+                    contentDescription = detail?.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().alpha(sharpAlpha),
+                )
+            }
+            if (poster != null && softAlpha > 0.01f) {
+                AsyncImage(
+                    model = poster,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .blur(POSTER_BLUR_DP.dp)
+                        .alpha(softAlpha),
+                )
+            }
+            // CRITICAL: 压暗必须乘封面可见度，否则封面消失后黑层仍会盖住视频和控件。
+            if (visibleDefocus > 0.01f && visiblePosterAlpha > 0.01f) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = POSTER_SCRIM_ALPHA * visibleDefocus * visiblePosterAlpha)),
+                )
+            }
         }
 
-        if (showProgress) {
+        if (showProgress && !leaving) {
             Box(
                 modifier = Modifier
                     .size(56.dp)

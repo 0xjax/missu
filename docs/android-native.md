@@ -697,12 +697,12 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
   ① 两个页面在转场期间必须同时在组合里——导航转场的时长不能是 0，否则退场页立刻被移除；
   ② 共享元素动画的时长必须**等于**导航转场时长（容器用 `tween` 而不是空间 spring），否则转场结束时动画会被硬切成终点；
   ③ 目标一侧的元素必须在**首帧**就存在（详情页 Loading 时也要有那个框），所以封面靠路由参数 `detail/{id}?img=` 传过去，等详情数据回来再换。
-- **共享元素覆盖层默认按父布局裁剪**（`ParentClip`）：卡片那一格会把长大的元素切掉，必须显式给 `clipInOverlayDuringTransition = OverlayClip(shape)`。作用域用 `CompositionLocal` 传（`LocalSharedTransitionScope` + 目的地自己的 `AnimatedVisibilityScope`），不要一路加参数。
+- **共享元素覆盖层默认按父布局裁剪**（`ParentClip`）：卡片那一格会把长大的元素切掉，必须显式给 `clipInOverlayDuringTransition = OverlayClip(shape)`。作用域用 `CompositionLocal` 传（`LocalSharedTransitionScope` + 目的地自己的 `AnimatedVisibilityScope`），不要一路加参数。**共享修饰符只挂静态封面层**：播放器 / 整个 `DetailHero` 不参与转场，返回时视频层直接隐去，否则同一趟返回会先做视频缩小、再做封面缩回。
 - **静帧转动态画面的接缝**：容器长大到位时视频通常还没出画，所以**封面要留到 `Player.Listener.onRenderedFirstFrame`**才撤（提前撤就是"封面突然消失 + 黑框"），控件也只在出画后才显示（`PlayerOverlay(visible = ready && controlsVisible)`）——加载中把进度条和播放键摆出来，等于在还没东西可控的时候先给一堆控件。撤回用封面 200ms 淡出（封面画在播放器之上，所以是"画面显影"而不是"画面替换封面"）。等待中的指示器延迟 600ms 出现，秒开时不闪。
 - **两种等待要用两套指示器**：页面取数用 `LoadingIndicator`（形变团块），视频缓冲用 `CircularWavyProgressIndicator`（波浪环）。官方选择表只按"等待时长 + 能否算进度"分，但同一屏上两种等待混用同一个团块，看起来就像"整个 App 都在转"；形状家族是成本最低的场景区分手段。
 - **封面虚焦用两层静态图交叉淡入**，不要逐帧改 `Modifier.blur` 半径——后者每帧重建 RenderEffect，中端机会掉帧。清晰层 + 虚焦层各画一次，只动 alpha，成本恒定；`Modifier.blur` 在 API < 31 是空操作，那里只剩压暗也算降级。另外**封面画在播放器之上会把 `PlayerDefaults.ErrorOverlay` 挡住**，所以播放失败必须回调上层把封面撤掉，否则用户看到的是"虚焦封面 + 永远在转的环"。
 - **`remember(key)` 的 key 不能是会中途变化的派生值**：曾经把虚化的 `Animatable` 按 `playbackUrl` 做 key，而它会在详情返回时从 `null` 变成真地址 → 状态被重建、正在跑的动画作用在旧实例上被丢弃，表现是"虚化一小段 → 弹回清晰封面 → 一直清晰"。按**稳定身份**（路由 id）做 key；视频/详情数据都是这个身份下的产物。
-- **"要离开了"用 `isCurrent`（目的地还是不是栈顶）判断，不要拦截返回键**：`popBackStack` 是同步的，转场**第一帧** `currentBackStackEntry` 就已经变，比目的地被销毁（`onDispose`）早整整一个转场。拿它来停音频、把共享容器换回封面，既不参与者返回决策，也不影响预测性返回的手势预览；用 `BackHandler` 抢返回则会把这个预览吃掉。
+- **"要离开了"用 `isCurrent`（目的地还是不是栈顶）判断，不要拦截返回键**：`popBackStack` 是同步的，转场**第一帧** `currentBackStackEntry` 就已经变，比目的地被销毁（`onDispose`）早整整一个转场。拿它来停音频；共享封面的可见度直接由 `isCurrent` / 导航 transition 的 `PostExit` 派生，不再经过 `LaunchedEffect` 或返回淡入。视频层只隐去、不销毁，侧滑取消不会重建播放器；用 `BackHandler` 抢返回则会把这个预览吃掉。
 - **窗口底色必须跟主题同步**：`res/values/themes.xml` 的 `windowBackground` 是静态值，浅色下任何透明帧都会露黑；`MainActivity.onCreate` 先按持久化主题设一次，`MissuTheme` 里继续同步。
 - **页签级 ViewModel 放 Activity 作用域**：放在 `composable()` 里会随页签销毁，切回来变成「新建 VM → Loading → 重新请求」——用户看到先一帧旧画面再转圈。同理，`LaunchedEffect(语言)` 这类重载不要放在目的地里，否则每次切回都触发。
 

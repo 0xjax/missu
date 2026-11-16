@@ -29,6 +29,7 @@ class HomeViewModel(private val api: MissavApi) : ViewModel() {
     private val _refreshing = MutableStateFlow(false)
     val refreshing: StateFlow<Boolean> = _refreshing.asStateFlow()
     private var requestJob: Job? = null
+    private var requestedLanguage: String? = null
 
     fun load() {
         requestJob?.cancel()
@@ -46,14 +47,12 @@ class HomeViewModel(private val api: MissavApi) : ViewModel() {
     }
 
     /**
-     * 只在「还没有内容」时拉一次首页；切回页签时用它。
-     *
-     * NOTE: 目的地每次重新进入组合都会重跑 `LaunchedEffect(Unit)`。那里如果直接调 [load]，
-     * 已经加载好的首页会被打回 Loading——用户看到的就是「先闪一帧旧内容，再变成转圈」。
-     * 已有内容就什么都不做，想要新内容走下拉刷新（[refresh]）。
+     * 每种内容语言只自动加载一次；返回详情或切回页签都不重取。
+     * 语言变化必须重新加载，想看新内容走下拉刷新（[refresh]），失败由界面显式重试。
      */
-    fun loadIfNeeded() {
-        if (_state.value is HomeUiState.Content || _state.value is HomeUiState.Loading) return
+    fun loadIfNeeded(contentLanguage: String) {
+        if (requestedLanguage == contentLanguage) return
+        requestedLanguage = contentLanguage
         load()
     }
 

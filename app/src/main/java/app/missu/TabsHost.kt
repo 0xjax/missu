@@ -93,7 +93,7 @@ internal fun TabsHost(
     )
     val authState by auth.state.collectAsStateWithLifecycle()
 
-    LaunchedEffect(contentLanguage) { homeViewModel.load() }
+    LaunchedEffect(contentLanguage) { homeViewModel.loadIfNeeded(contentLanguage) }
 
     val startTab = topLevels.first().route
     BackHandler(enabled = tabRoute != startTab) { onTabChange(startTab) }
@@ -138,8 +138,6 @@ internal fun TabsHost(
                     val refreshing by homeViewModel.refreshing.collectAsStateWithLifecycle()
                     val searchState by searchViewModel.state.collectAsStateWithLifecycle()
                     val recent by searchViewModel.recent.collectAsStateWithLifecycle()
-                    LaunchedEffect(Unit) { homeViewModel.loadIfNeeded() }
-
                     ProvideHeroVisibility(navScope, namespace = "home") {
                         SearchHost(
                             state = searchState,
