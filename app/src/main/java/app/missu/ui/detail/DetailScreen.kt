@@ -147,6 +147,7 @@ fun DetailScreen(
     onClosePlaylists: () -> Unit = {},
     onTogglePlaylist: (VideoPlaylist) -> Unit = {},
     onOpenPath: (path: String, title: String) -> Unit = { _, _ -> },
+    onSearch: (String) -> Unit = {},
 ) {
     var fullscreen by rememberSaveable { mutableStateOf(false) }
     FullscreenEffect(fullscreen)
@@ -282,6 +283,7 @@ fun DetailScreen(
                             onClosePlaylists = onClosePlaylists,
                             onTogglePlaylist = onTogglePlaylist,
                             onOpenPath = onOpenPath,
+                            onSearch = onSearch,
                         )
                     }
                 }
@@ -406,6 +408,7 @@ private fun DetailBody(
     onClosePlaylists: () -> Unit,
     onTogglePlaylist: (VideoPlaylist) -> Unit,
     onOpenPath: (path: String, title: String) -> Unit,
+    onSearch: (String) -> Unit,
 ) {
     // NOTE: 触觉只用来确认「状态改变」，不用在导航与滚动上（见 DESIGN.md「Motion」）。收藏要等一次
     // 网络请求，界面上的文字与颜色都要等到结果回来才变——按下去这一下是它唯一即时的回应。
@@ -470,7 +473,12 @@ private fun DetailBody(
                     GroupSurface(modifier = Modifier) {
                         detail.info.forEachIndexed { index, row ->
                             if (index > 0) GroupDivider()
-                            InfoRow(row = row, onOpenPath = onOpenPath)
+                            InfoRow(
+                                row = row,
+                                videoId = detail.id,
+                                onOpenPath = onOpenPath,
+                                onSearch = onSearch,
+                            )
                         }
                     }
                 }
