@@ -46,6 +46,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.missu.data.api.LocalAppDependencies
+import app.missu.data.model.SeekPreviewSpec
 import app.missu.data.store.SettingsStore
 import kotlin.math.abs
 import kotlinx.coroutines.Job
@@ -104,6 +105,7 @@ fun ExoVideoPlayer(
     isFullscreen: Boolean = false,
     onToggleFullscreen: () -> Unit = {},
     initialPositionMs: Long = 0L,
+    seekPreview: SeekPreviewSpec? = null,
     onPositionReport: ((Long) -> Unit)? = null,
     onPlayerAvailable: (Player?) -> Unit = {},
     // NOTE: 第一帧真正出画。上层（详情页）要靠它决定什么时候撤掉封面：
@@ -353,6 +355,7 @@ fun ExoVideoPlayer(
             isFullscreen = isFullscreen,
             onSettingsClick = { settingsOpen = !settingsOpen },
             onToggleFullscreen = onToggleFullscreen,
+            seekPreview = seekPreview,
             onSeekDraggingChange = { dragging ->
                 seekDragging = dragging
                 if (dragging) {

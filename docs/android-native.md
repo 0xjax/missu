@@ -509,6 +509,7 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
   `deletePlaylistItem()` 里的原始调用）。片单页只有片单 id，走前者需要先查一次 `key`，没必要。
 - **首页 4 个板块来自同一次请求**：`GET /` 的 HTML 里就是 4 个兄弟 `<h2>`（新作上市 / 最近更新 / 無碼影片 / 隨機），不是 4 个接口——`getHome()` 只发一次请求。真正各自独立的是各板块「更多」指向的列表页（`/cn/new`、`/cn/release`、`/cn/uncensored-leak`、`/cn/random`），打开时才各发一次。随机板块的「刷新」也复用 `GET /` 并只替换随机块。
 - **任意置顶列表只多一次第一页请求**：置顶时优先复用当前列表；命中原生首页的默认口径则复用板块。冷启动、语言变化和手动下拉刷新才重新取置顶预览，返回详情、切页签与列数变化都不取；请求与首页依次执行，不做额外预取或自动重试。
+- **seek 画面预览不是 JSON 接口或 VTT**：详情页内联 Plyr `thumbnail` 配置直出 `pic_num`、单帧宽高、行列数与雪碧图 `urls`；`js/plyr-plugin-thumbnail.js` 用 `floor(目标时间 × pic_num / 视频时长)` 定位帧，再按行列裁切。只消费页面直出的 URL，不按番号或 UUID 推导；雪碧图 CDN 与媒体流一样要求站点 `Referer` 和 Android UA（缺省实测 403），Coil 请求必须显式携带。`DetailFixtureTest` 用真实 `detail.html` 锁住解析和帧定位。
 - **筛选生效时 `sort=` 会挪到第二个参数、并被 HTML 实体化成 `&amp;sort=`**：`/today-hot?filters=chinese-subtitle` 的排序下拉
   链接是 `…?filters=chinese-subtitle&amp;sort=today_views`（2026-11-15 真机实测）。`parseListSort` 第一版只认 `?sort=` / `&sort=`，
   于是「一加筛选，排序名就退回默认」——正则与解析必须同时接受 `&amp;`。同一次实测也确认：`/today-hot`（热门那面列表）

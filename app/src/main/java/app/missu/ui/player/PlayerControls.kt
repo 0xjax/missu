@@ -15,6 +15,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.background
@@ -26,6 +27,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -75,15 +77,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathBuilder
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
@@ -101,8 +107,15 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.state.ProgressStateWithTickInterval
 import androidx.media3.ui.compose.state.rememberProgressStateWithTickInterval
 import app.missu.R
+import app.missu.data.api.SourceConfig
+import app.missu.data.model.SeekPreviewSpec
 import app.missu.ui.components.MissuBottomSheet
+import coil3.compose.rememberAsyncImagePainter
+import coil3.network.NetworkHeaders
+import coil3.network.httpHeaders
+import coil3.request.ImageRequest
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -130,6 +143,7 @@ fun PlayerOverlay(
     isFullscreen: Boolean,
     onSettingsClick: () -> Unit,
     onToggleFullscreen: () -> Unit,
+    seekPreview: SeekPreviewSpec?,
     onSeekDraggingChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     /** 双击 seek 的提示（带符号的秒数，如 -20 / +10）；为空表示不显示。 */
@@ -138,8 +152,9 @@ fun PlayerOverlay(
     // 内嵌进度条常显，所以控件隐藏后仍要更新；全屏才随控件停止轮询。
     // 状态只在时间文本与进度条内部读取，避免每 200ms 重组整个控件层。
     val progress = rememberProgressStateWithTickInterval(player, 200L)
-    // 只有时间胶囊读取预览状态，拖动时不会重组整个控件层。
+    // 只有时间胶囊与缩略图读取预览位置，拖动时不会重组整个控件层。
     val seekPreviewPositionMs = remember { mutableStateOf<Long?>(null) }
+    var seekDragging by remember { mutableStateOf(false) }
     // NOTE: 全屏时进度条必须离屏幕边缘留一点：圆球有半径，条贴在物理边上时它下半截会被屏幕裁掉，
     // 两端位置（0% / 100%）也会被左右裁掉一半。内嵌时相反——球**故意**骑在视频下沿上，所以留 0。
     // NOTE: 全屏的条已经和控件一起显示/隐藏，就是控件组的一员：左右内缩跟齿轮、时间胶囊、全屏键
@@ -185,7 +200,10 @@ fun PlayerOverlay(
                 showThumb = visible,
                 enabled = seekEnabled,
                 onSeek = { target -> player.seekTo(target) },
-                onDraggingChange = onSeekDraggingChange,
+                onDraggingChange = { dragging ->
+                    seekDragging = dragging
+                    onSeekDraggingChange(dragging)
+                },
                 previewPositionMs = seekPreviewPositionMs,
                 fullscreen = isFullscreen,
                 modifier = Modifier
@@ -306,6 +324,21 @@ fun PlayerOverlay(
             }
         }
 
+        seekPreview?.let { spec ->
+            AnimatedVisibility(
+                visible = seekDragging,
+                enter = fadeIn(tween(100)),
+                exit = fadeOut(tween(100)),
+            ) {
+                SeekPreviewThumbnail(
+                    spec = spec,
+                    positionMs = seekPreviewPositionMs,
+                    durationMs = progress.durationMs,
+                    fullscreen = isFullscreen,
+                )
+            }
+        }
+
         // 双击 seek 的提示：控件隐藏时也要看得见，所以放在 AnimatedVisibility 之外。
         val hint = seekHintSeconds
         if (hint != null) {
@@ -323,6 +356,71 @@ fun PlayerOverlay(
                     .background(Color(0x66000000))
                     .padding(horizontal = 14.dp, vertical = 8.dp),
             )
+        }
+    }
+}
+
+@Composable
+private fun SeekPreviewThumbnail(
+    spec: SeekPreviewSpec,
+    positionMs: MutableState<Long?>,
+    durationMs: Long,
+    fullscreen: Boolean,
+) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val position = positionMs.value ?: return@BoxWithConstraints
+        val frame = spec.frameAt(position, durationMs) ?: return@BoxWithConstraints
+        val density = LocalDensity.current
+        val context = LocalContext.current
+        // 与媒体流相同：CDN 会拒绝没有站点 Referer / Android UA 的雪碧图请求。
+        val imageRequest = remember(frame.url) {
+            ImageRequest.Builder(context)
+                .data(frame.url)
+                .httpHeaders(
+                    NetworkHeaders.Builder()
+                        .set("Referer", SourceConfig.BASE_URL + "/")
+                        .set("User-Agent", SourceConfig.DEFAULT_USER_AGENT)
+                        .build(),
+                )
+                .build()
+        }
+        val width = if (fullscreen) 160.dp else 120.dp
+        val height = width * spec.frameHeight.toFloat() / spec.frameWidth.toFloat()
+        val widthPx = with(density) { width.toPx() }
+        val heightPx = with(density) { height.toPx() }
+        val edgePx = with(density) { 8.dp.toPx() }
+        val bottomPx = with(density) { (if (fullscreen) FullscreenBarInset + 12.dp else 12.dp).toPx() }
+        val maxX = (constraints.maxWidth - widthPx - edgePx).coerceAtLeast(edgePx)
+        val x = (constraints.maxWidth * progressFraction(position, durationMs) - widthPx / 2f)
+            .coerceIn(edgePx, maxX)
+        val y = (constraints.maxHeight - heightPx - bottomPx).coerceAtLeast(0f)
+        val scale = widthPx / spec.frameWidth.toFloat()
+        val painter = rememberAsyncImagePainter(imageRequest)
+
+        Box(
+            Modifier
+                .offset { IntOffset(x.roundToInt(), y.roundToInt()) }
+                .size(width, height)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.Black)
+                .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(8.dp)),
+        ) {
+            // 整张雪碧图交给 Coil 缓存；Canvas 按原始像素坐标缩放并移动，只显示目标帧。
+            Canvas(Modifier.fillMaxSize()) {
+                withTransform({
+                    translate(left = -frame.x * scale, top = -frame.y * scale)
+                    scale(scale, scale, Offset.Zero)
+                }) {
+                    with(painter) {
+                        draw(
+                            Size(
+                                spec.frameWidth * spec.columns.toFloat(),
+                                spec.frameHeight * spec.rows.toFloat(),
+                            ),
+                        )
+                    }
+                }
+            }
         }
     }
 }
