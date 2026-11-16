@@ -12,17 +12,34 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,51 +50,151 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.missu.R
 import app.missu.data.store.HistoryEntry
-import coil3.compose.AsyncImage
+import app.missu.data.store.ListHistoryEntry
 import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.LocalVideoListColumns
 import app.missu.ui.components.PageTopBar
 import app.missu.ui.components.videoHero
+import app.missu.ui.list.filterLabel
+import app.missu.ui.list.sortLabel
+import coil3.compose.AsyncImage
 
 @Composable
 fun HistoryScreen(
     entries: List<HistoryEntry>,
+    listEntries: List<ListHistoryEntry>,
     onOpen: (id: String, thumbnail: String?) -> Unit,
-    onClear: () -> Unit,
+    onOpenList: (ListHistoryEntry) -> Unit,
+    onClearVideos: () -> Unit,
+    onClearLists: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+    val videoGridState = rememberLazyGridState()
+    val listState = rememberLazyListState()
+
     Column(modifier.fillMaxSize()) {
         PageTopBar(
             title = stringResource(R.string.history_title),
             onBack = onBack,
             actions = {
-                // NOTE: 把操作放进 actions，而不是在标题后面塞 Spacer(weight) —— 那是手搓顶栏的写法。
-                if (entries.isNotEmpty()) {
-                    TextButton(onClick = onClear) { Text(stringResource(R.string.common_clear)) }
+                val empty = if (selectedTab == 0) entries.isEmpty() else listEntries.isEmpty()
+                if (!empty) {
+                    TextButton(onClick = if (selectedTab == 0) onClearVideos else onClearLists) {
+                        Text(stringResource(R.string.common_clear))
+                    }
                 }
             },
         )
-
-        if (entries.isEmpty()) {
-            EmptyHint(
-                icon = Icons.Filled.PlayArrow,
-                title = stringResource(R.string.history_empty_title),
-                subtitle = stringResource(R.string.history_empty_subtitle),
+        PrimaryTabRow(selectedTabIndex = selectedTab) {
+            Tab(
+                selected = selectedTab == 0,
+                onClick = { selectedTab = 0 },
+                text = { Text(stringResource(R.string.history_videos_tab)) },
             )
-        } else {
-            LazyVerticalGrid(
-                modifier = Modifier.fillMaxSize(),
-                columns = GridCells.Fixed(LocalVideoListColumns.current),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                items(items = entries, key = { it.id }) { entry ->
-                    HistoryCard(entry = entry, onClick = { onOpen(entry.id, entry.thumbnailUrl) })
-                }
+            Tab(
+                selected = selectedTab == 1,
+                onClick = { selectedTab = 1 },
+                text = { Text(stringResource(R.string.history_lists_tab)) },
+            )
+        }
+
+        when (selectedTab) {
+            0 -> VideoHistory(
+                entries = entries,
+                state = videoGridState,
+                onOpen = onOpen,
+            )
+            else -> ListHistory(
+                entries = listEntries,
+                state = listState,
+                onOpen = onOpenList,
+            )
+        }
+    }
+}
+
+@Composable
+private fun VideoHistory(
+    entries: List<HistoryEntry>,
+    state: LazyGridState,
+    onOpen: (id: String, thumbnail: String?) -> Unit,
+) {
+    if (entries.isEmpty()) {
+        EmptyHint(
+            icon = Icons.Filled.PlayArrow,
+            title = stringResource(R.string.history_empty_title),
+            subtitle = stringResource(R.string.history_empty_subtitle),
+        )
+    } else {
+        LazyVerticalGrid(
+            state = state,
+            modifier = Modifier.fillMaxSize(),
+            columns = GridCells.Fixed(LocalVideoListColumns.current),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            items(items = entries, key = { it.id }) { entry ->
+                HistoryCard(entry = entry, onClick = { onOpen(entry.id, entry.thumbnailUrl) })
             }
         }
+    }
+}
+
+@Composable
+private fun ListHistory(
+    entries: List<ListHistoryEntry>,
+    state: LazyListState,
+    onOpen: (ListHistoryEntry) -> Unit,
+) {
+    if (entries.isEmpty()) {
+        EmptyHint(
+            icon = Icons.AutoMirrored.Filled.List,
+            title = stringResource(R.string.history_lists_empty_title),
+            subtitle = stringResource(R.string.history_lists_empty_subtitle),
+        )
+    } else {
+        LazyColumn(
+            state = state,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(top = 8.dp, bottom = 32.dp),
+        ) {
+            items(items = entries, key = { it.query.path }) { entry ->
+                ListHistoryRow(entry = entry, onClick = { onOpen(entry) })
+            }
+        }
+    }
+}
+
+@Composable
+private fun ListHistoryRow(entry: ListHistoryEntry, onClick: () -> Unit) {
+    val queryLabels = listOfNotNull(
+        entry.query.sort?.let { sortLabel(it) },
+        entry.query.filter?.let { filterLabel(it) },
+    )
+    ListItem(
+        modifier = Modifier.clickable(onClick = onClick),
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        supportingContent = queryLabels.takeIf { it.isNotEmpty() }?.let { labels ->
+            {
+                Text(
+                    text = labels.joinToString(" · "),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        },
+        trailingContent = {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        },
+    ) {
+        Text(entry.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -143,7 +260,7 @@ private fun formatTime(millis: Long): String {
     val h = total / 3600
     val m = (total % 3600) / 60
     val s = total % 60
-    return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
+    return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%02d:%02d".format(m, s)
 }
 
 /** 把 `1:59:09` 这种时长文案转成毫秒，用于算进度比例。 */

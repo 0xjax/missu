@@ -22,6 +22,8 @@ import app.missu.data.api.VideoListOptions
 import app.missu.data.store.AppLanguage
 import app.missu.data.store.ColorSource
 import app.missu.data.store.HistoryStore
+import app.missu.data.store.ListHistoryEntry
+import app.missu.data.store.ListHistoryStore
 import app.missu.data.store.ListQueryStore
 import app.missu.data.store.ListSortStore
 import app.missu.data.store.SearchHistoryStore
@@ -84,6 +86,7 @@ internal fun NavGraphBuilder.secondaryDestinations(
     settingsState: AppSettingsState,
     settingsActions: AppSettingsActions,
     historyStore: HistoryStore,
+    listHistoryStore: ListHistoryStore,
     searchHistory: SearchHistoryStore,
     listSortStore: ListSortStore,
     listQueryStore: ListQueryStore,
@@ -91,6 +94,7 @@ internal fun NavGraphBuilder.secondaryDestinations(
     onGoBack: () -> Unit,
     onOpenDetail: (String, String?, String) -> Unit,
     onOpenList: (String, String) -> Unit,
+    onOpenListQuery: (VideoListQuery, String) -> Unit,
 ) {
     composable("login") {
         val loginState by auth.loginState.collectAsStateWithLifecycle()
@@ -152,6 +156,9 @@ internal fun NavGraphBuilder.secondaryDestinations(
             mutableStateOf(VideoListOptions.Filter.fromKey(entry.arguments?.getString("f")))
         }
         val query = remember(path, sort, filter) { VideoListQuery(path, sort = sort, filter = filter) }
+        LaunchedEffect(query, title) {
+            listHistoryStore.record(ListHistoryEntry(title, query, System.currentTimeMillis()))
+        }
         val pinnedHome by homeViewModel.pinned.collectAsStateWithLifecycle()
         val pinnedHomeState by homeViewModel.pinnedState.collectAsStateWithLifecycle()
         val homeState by homeViewModel.state.collectAsStateWithLifecycle()
@@ -206,17 +213,21 @@ internal fun NavGraphBuilder.secondaryDestinations(
 
     composable("history") {
         val viewModel: HistoryViewModel = viewModel(
-            factory = missuViewModelFactory { HistoryViewModel(historyStore) },
+            factory = missuViewModelFactory { HistoryViewModel(historyStore, listHistoryStore) },
         )
         val entries by viewModel.entries.collectAsStateWithLifecycle()
+        val listEntries by viewModel.listEntries.collectAsStateWithLifecycle()
         LaunchedEffect(Unit) { viewModel.load() }
 
         ProvideHeroVisibility(this, namespace = "history") {
             PageSurface {
                 HistoryScreen(
                     entries = entries,
+                    listEntries = listEntries,
                     onOpen = { id, thumbnail -> onOpenDetail(id, thumbnail, "") },
-                    onClear = viewModel::clear,
+                    onOpenList = { onOpenListQuery(it.query, it.title) },
+                    onClearVideos = viewModel::clearVideos,
+                    onClearLists = viewModel::clearLists,
                     onBack = onGoBack,
                 )
             }
