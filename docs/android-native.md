@@ -749,7 +749,7 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
 - **画面手势由独立 Compose 层接管**：`TextureView` 之上、控件之下放一层 `detectTapGestures`，单击显隐、左右双击 seek；不要依赖会被 interop View 吃掉的 `clickable`，也不再使用 `TextureView.setOnTouchListener`。
 - **弹层不能放在会被自动隐藏的控件树里**：倍速菜单挂在控件层内时，3 秒自动隐藏会把整棵树销毁，
   菜单一闪就关。菜单本体要由播放器持有，并在菜单展开期间暂停自动隐藏。
-- **连续长按预览不能新建 Dialog 窗口**：长按后仍要由原卡片接收移动与抬起，浮层必须挂在组合根部的同一窗口；否则按压序列会被窗口切换打断。原地松手只关闭，移动至少 24dp 后在预览片内松手才进入详情，避免预览图正好出现在手指下造成误入。
+- **连续长按预览不能新建 Dialog 窗口**：长按后仍要由原卡片接收移动与抬起，浮层必须挂在组合根部的同一窗口；否则按压序列会被窗口切换打断。原地松手只关闭，移动至少 24dp 后在预览片内松手才进入详情，避免预览图正好出现在手指下造成误入。预览退出为 200ms，待浮层移出组合后再启动现有卡片 → 详情共享动画，不与关闭重叠。
 - **「等首帧再创建 view」是死锁**：长按预览第一版写成 `if (ready) AndroidView(...)`，`ready` 等
   `onRenderedFirstFrame`，而首帧要等一个 surface —— 没有 view 就没有首帧，没有首帧就永远不建 view。
   表现是浮层里一直停在封面上，logcat 只有一句 `ExoPlayerImpl: Init`，没有任何错误。正确做法：view
