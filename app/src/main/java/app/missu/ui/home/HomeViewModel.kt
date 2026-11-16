@@ -123,7 +123,7 @@ class HomeViewModel(
     }
 
     /** 当前生效项不提供入口；其他列表直接覆盖旧置顶。 */
-    fun pin(pinned: PinnedHomeList, currentVideos: List<VideoSummary>) {
+    fun pin(pinned: PinnedHomeList, currentVideos: List<VideoSummary>, currentNextPage: Int? = null) {
         if (_pinned.value?.query?.sameSiteQuery(pinned.query) == true) return
 
         settings.setPinnedHomeList(pinned)
@@ -135,7 +135,7 @@ class HomeViewModel(
             _pinnedState.value = null
         } else if (currentVideos.isNotEmpty()) {
             pinnedJob?.cancel()
-            _pinnedState.value = VideoListUiState.Content(currentVideos, nextPage = null)
+            _pinnedState.value = VideoListUiState.Content(currentVideos, nextPage = currentNextPage)
             loadedPinnedKey = pinned.query.cacheKey
             loadedPinnedLanguage = SourceConfig.contentLanguage
         } else {
@@ -184,7 +184,7 @@ class HomeViewModel(
             _pinnedState.value = if (page.videos.isEmpty()) {
                 VideoListUiState.Empty
             } else {
-                VideoListUiState.Content(page.videos, nextPage = null)
+                VideoListUiState.Content(page.videos, nextPage = page.nextPage)
             }
             loadedPinnedKey = query.cacheKey
             loadedPinnedLanguage = SourceConfig.contentLanguage

@@ -145,11 +145,17 @@ internal fun NavGraphBuilder.secondaryDestinations(
         }
         val query = remember(path, sort, filter) { VideoListQuery(path, sort = sort, filter = filter) }
         val pinnedHome by homeViewModel.pinned.collectAsStateWithLifecycle()
+        val pinnedHomeState by homeViewModel.pinnedState.collectAsStateWithLifecycle()
         val homeState by homeViewModel.state.collectAsStateWithLifecycle()
         val effectivePinned = effectivePinnedQuery(pinnedHome, homeState)
+        val initialContent = (pinnedHomeState as? VideoListUiState.Content)?.takeIf {
+            pinnedHome?.query?.sameSiteQuery(query) == true
+        }
         val viewModel: VideoListViewModel = viewModel(
             key = "list-${query.cacheKey}",
-            factory = missuViewModelFactory { VideoListViewModel(api, query, listSortStore) },
+            factory = missuViewModelFactory {
+                VideoListViewModel(api, query, listSortStore, initialContent = initialContent)
+            },
         )
         val state by viewModel.state.collectAsStateWithLifecycle()
         val detectedSort by viewModel.detectedSort.collectAsStateWithLifecycle()
@@ -178,6 +184,7 @@ internal fun NavGraphBuilder.secondaryDestinations(
                         homeViewModel.pin(
                             pinned = PinnedHomeList(title = title, query = query),
                             currentVideos = (state as? VideoListUiState.Content)?.videos.orEmpty(),
+                            currentNextPage = (state as? VideoListUiState.Content)?.nextPage,
                         )
                     },
                 )
