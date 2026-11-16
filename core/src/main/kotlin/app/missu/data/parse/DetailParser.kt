@@ -3,8 +3,12 @@ package app.missu.data.parse
 import app.missu.data.api.SourceConfig
 import app.missu.data.model.DetailInfoRow
 import app.missu.data.model.DetailInfoValue
+import app.missu.data.model.SeekPreviewSpec
 import app.missu.data.model.VideoDetail
 import java.net.URI
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 
@@ -30,6 +34,7 @@ object DetailParser {
             actors = doc.select("meta[property=og:video:actor]")
                 .mapNotNull { it.attr("content").trim().ifEmpty { null } },
             playbackUrl = extractPlaybackUrl(doc),
+            seekPreview = extractSeekPreview(doc),
             internalId = INTERNAL_ID.find(html)?.groupValues?.get(1),
             info = parseInfo(doc),
         )
@@ -81,6 +86,32 @@ object DetailParser {
         }
         return null
     }
+
+    /**
+     * seek 预览没有 JSON 接口：原站把雪碧图配置直出在详情页的 Plyr `thumbnail` 设置里。
+     * 依据是详情页内联脚本及 `js/plyr-plugin-thumbnail.js`；只消费页面已有值，不推导图片地址。
+     */
+    private fun extractSeekPreview(doc: Element): SeekPreviewSpec? {
+        for (script in doc.select("script")) {
+            val block = THUMBNAIL_BLOCK.find(script.data())?.groupValues?.get(1) ?: continue
+            if (ENABLED.find(block)?.groupValues?.get(1)?.toBooleanStrictOrNull() != true) continue
+            val frameCount = intField(block, "pic_num") ?: continue
+            val width = intField(block, "width") ?: continue
+            val height = intField(block, "height") ?: continue
+            val columns = intField(block, "col") ?: continue
+            val rows = intField(block, "row") ?: continue
+            val urlsValue = URLS.find(block)?.groupValues?.get(1) ?: continue
+            val urls = runCatching {
+                Json.parseToJsonElement(urlsValue).jsonArray.map { it.jsonPrimitive.content }
+            }.getOrNull() ?: continue
+            if (frameCount <= 0 || width <= 0 || height <= 0 || columns <= 0 || rows <= 0 || urls.isEmpty()) continue
+            return SeekPreviewSpec(frameCount, width, height, columns, rows, urls)
+        }
+        return null
+    }
+
+    private fun intField(block: String, name: String): Int? =
+        Regex("\\b${Regex.escape(name)}\\s*:\\s*(\\d+)").find(block)?.groupValues?.get(1)?.toIntOrNull()
 
     private fun meta(root: Element, property: String, attribute: String = "property"): String? =
         root.selectFirst("meta[$attribute=$property]")?.attr("content")?.takeIf { it.isNotBlank() }
@@ -169,4 +200,7 @@ object DetailParser {
     private val URL_PATTERN = Regex("https?://[^\\s\"'<>\\\\]+")
     private val WORD_PATTERN = Regex("\\b\\w+\\b")
     private val INTERNAL_ID = Regex("/api/items/([a-z0-9]+)/view", RegexOption.IGNORE_CASE)
+    private val THUMBNAIL_BLOCK = Regex("\\bthumbnail\\s*:\\s*\\{([\\s\\S]*?)\\}")
+    private val ENABLED = Regex("\\benabled\\s*:\\s*(true|false)")
+    private val URLS = Regex("\\burls\\s*:\\s*(\\[[\\s\\S]*?])")
 }

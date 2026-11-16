@@ -70,6 +70,31 @@ data class DetailInfoValue(val text: String, val path: String? = null)
 /** 详情页信息行：标签 + 若干个值（发行日期 / 番号 / 女优…）。 */
 data class DetailInfoRow(val label: String, val values: List<DetailInfoValue>)
 
+/** 原站详情页直出的 seek 雪碧图配置。 */
+data class SeekPreviewSpec(
+    val frameCount: Int,
+    val frameWidth: Int,
+    val frameHeight: Int,
+    val columns: Int,
+    val rows: Int,
+    val spriteUrls: List<String>,
+) {
+    fun frameAt(positionMs: Long, durationMs: Long): SeekPreviewFrame? {
+        if (durationMs <= 0L || frameCount <= 0 || columns <= 0 || rows <= 0) return null
+        val position = positionMs.coerceIn(0L, durationMs)
+        val index = (position * frameCount / durationMs).toInt().coerceIn(0, frameCount - 1)
+        val framesPerSprite = columns * rows
+        val localIndex = index % framesPerSprite
+        return SeekPreviewFrame(
+            url = spriteUrls.getOrNull(index / framesPerSprite) ?: return null,
+            x = (localIndex % columns) * frameWidth,
+            y = (localIndex / columns) * frameHeight,
+        )
+    }
+}
+
+data class SeekPreviewFrame(val url: String, val x: Int, val y: Int)
+
 /** 详情页数据。`playbackUrl` 是 HLS（m3u8），来自页面内联打包脚本。 */
 data class VideoDetail(
     val id: String,
@@ -81,6 +106,7 @@ data class VideoDetail(
     val releaseDate: String? = null,
     val actors: List<String> = emptyList(),
     val playbackUrl: String? = null,
+    val seekPreview: SeekPreviewSpec? = null,
     val internalId: String? = null,
     /** 收藏状态；只在拿到 [internalId] 并成功查询时才有意义。 */
     val saved: Boolean = false,

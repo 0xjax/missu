@@ -129,6 +129,7 @@ fun DetailHero(
                 isFullscreen = fullscreen,
                 onToggleFullscreen = onToggleFullscreen,
                 initialPositionMs = startPositionMs,
+                seekPreview = detail.seekPreview,
                 onPositionReport = onPositionReport,
                 onPlayerAvailable = onPlayerAvailable,
                 onFirstFrameRendered = { revealed = true },

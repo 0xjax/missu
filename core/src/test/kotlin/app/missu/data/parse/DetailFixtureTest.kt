@@ -1,5 +1,7 @@
 package app.missu.data.parse
 
+import app.missu.data.model.SeekPreviewSpec
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -30,5 +32,39 @@ class DetailFixtureTest {
         assertTrue("信息行应足够多，实际 ${detail.info.size}", detail.info.size >= 5)
         assertTrue("fixture 页面里应带 internalId", detail.internalId != null)
         assertTrue("缩略图应为绝对地址", detail.thumbnailUrl?.startsWith("https://") == true)
+
+        val preview = detail.seekPreview!!
+        assertEquals(3575, preview.frameCount)
+        assertEquals(300, preview.frameWidth)
+        assertEquals(168, preview.frameHeight)
+        assertEquals(6, preview.columns)
+        assertEquals(6, preview.rows)
+        assertEquals(100, preview.spriteUrls.size)
+        assertEquals(
+            "https://surrit.com/99c34382-0963-4113-89ab-58dc7c3ea346/seek/_0.jpg",
+            preview.spriteUrls.first(),
+        )
+    }
+
+    @Test
+    fun mapsSeekPositionToSpriteFrame() {
+        val spec = SeekPreviewSpec(
+            frameCount = 100,
+            frameWidth = 300,
+            frameHeight = 168,
+            columns = 2,
+            rows = 2,
+            spriteUrls = List(25) { "https://example.com/_$it.jpg" },
+        )
+
+        assertEquals("https://example.com/_0.jpg", spec.frameAt(0, 100_000)?.url)
+        val frame = spec.frameAt(12_500, 100_000)!!
+        assertEquals("https://example.com/_3.jpg", frame.url)
+        assertEquals(0, frame.x)
+        assertEquals(0, frame.y)
+        val last = spec.frameAt(100_000, 100_000)!!
+        assertEquals("https://example.com/_24.jpg", last.url)
+        assertEquals(300, last.x)
+        assertEquals(168, last.y)
     }
 }
