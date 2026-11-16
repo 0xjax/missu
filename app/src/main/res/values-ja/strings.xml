@@ -21,7 +21,7 @@
     <string name="account_go_login">ログイン</string>
     <string name="account_saved">お気に入り</string>
     <string name="account_playlists">プレイリスト</string>
-    <string name="account_history">視聴履歴</string>
+    <string name="account_history">履歴</string>
     <string name="account_settings">設定</string>
     <string name="account_logout">ログアウト</string>
     <string name="account_logged_in">ログイン済み</string>
@@ -40,10 +40,14 @@
     <string name="saved_empty_title">お気に入りはまだありません</string>
     <string name="saved_empty_subtitle">動画ページで「お気に入り」を押すと、ここから開けます</string>
 
-    <!-- 視聴履歴 -->
-    <string name="history_title">視聴履歴</string>
+    <!-- 履歴 -->
+    <string name="history_title">履歴</string>
+    <string name="history_videos_tab">動画</string>
+    <string name="history_lists_tab">一覧</string>
     <string name="history_empty_title">視聴履歴はまだありません</string>
     <string name="history_empty_subtitle">動画を再生すると、どこまで見たかがここに記録されます</string>
+    <string name="history_lists_empty_title">最近の一覧はありません</string>
+    <string name="history_lists_empty_subtitle">開いた動画一覧がここに表示されます</string>
 
     <!-- 一覧 -->
     <string name="list_empty_title">まだ何もありません</string>

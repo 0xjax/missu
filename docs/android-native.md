@@ -17,9 +17,9 @@
 - ✅ **收藏列表**：`/saved` 分页网格；**实测**游客态会被误报成「空收藏」，现用 `reloginWithRemembered()` 确认会话后重取
 - ✅ **播放器控件**：**整套自绘**（不再用 media3 `PlayerDefaults`）——设置 / 播放暂停 / 时间胶囊 / YouTube 式进度条 / 全屏，全部黑底白图标圆底；点画面切换显隐，播放中 3 秒自动隐藏；双击左右两侧 ∓10 秒；上滑进全屏、下滑退出（跟手）；设置是两级抽屉（倍速 + 画面：适应/填充）
 - ✅ **设置 + 内容语言**：7 种语言（繁體/简体/英/日/韩/马来/泰），写进站点路径段；切换后首页立即重拉，重启后保持
-- ✅ **观看历史 + 继续播放**：本地存进度（每 5 秒 + 退出时上报），历史页有进度条，点进去从上次位置续播（实测 0:23 → 打开后 00:42）
+- ✅ **观看 / 列表历史**：本地存观看进度（每 5 秒 + 退出时上报），视频可续播；历史页分「视频 / 列表」，最近列表按路径去重、保存最新口径，上限 20 条，可分别清空
 - ✅ **片单成员管理**：详情页「片单」底部面板，勾选即写入 `/api/playlists/add|remove`；重开面板读回服务端状态（实测 false → true → 重启后仍 true）
-- ✅ **列表页**：`MissavApi.getVideos(path, page)` 通用列表 + 分页；详情页信息行里带路径的值（女优/类型/厂商…）可点，跳到对应列表（实测点「RARA」进入其作品页）
+- ✅ **列表页**：`MissavApi.getVideos(path, page)` 通用列表 + 分页；详情页信息行里带路径的值（女优/类型/厂商…）可点，跳到对应列表（实测点「RARA」进入其作品页）；用户排序 / 过滤按列表类别持久化，女优、类型、厂商各自整类共享
 - ✅ **视频单列/双列**：设置页全局切换，首页、热门、搜索、收藏、历史与片单共用 `LocalVideoListColumns`；只重组布局，不重取数据，偏好持久化
 - ✅ **任意列表首页置顶 + 随机刷新**：共享列表口径行末尾图钉保存完整 `VideoListQuery`，普通列表与一级热门同享；首页板块标题行也可直接置顶（含没有「更多」的随机）。首页只保留一个置顶预览，当前生效项（默认第一板块或显式置顶）不显示图钉，其他内容点击直接覆盖；复用当前列表或原生板块数据，「更多」恢复同口径分页。随机「刷新」只替换该板块，失败可重试
 - ✅ **底部导航 + 发现**：`首页 / 发现 / 我的` 三个一级页签；发现页只有三个目录「女优 / 类型 / 厂商」（`DirectoryParser`，分页），手动搜索入口只在首页顶部，详情番号可直达对应搜索页
@@ -318,7 +318,8 @@ app/           Android 应用（UI + 平台适配）
                            AndroidCookieJar（CookieManager 适配）· AndroidApi（把 ChallengeState 注入取数层）
     data/store/            ProfileStore（邮箱）· CredentialStore（Keystore 加密的账号密码）·
                            SettingsStore（语言 / 外观 / 视频列数 / 首页置顶 / 播放偏好）· HistoryStore（观看进度）·
-                           SearchHistoryStore（最近搜索）
+                           ListSortStore（站点默认序）· ListQueryStore（用户列表口径）·
+                           ListHistoryStore（最近列表）· SearchHistoryStore（最近搜索）
   src/test/            ViewModel 协程测试 + Robolectric Compose 交互测试
 
 baselineprofile/  独立 com.android.test 模块，只负责启动 Profile 采集；targetProjectPath = :app，

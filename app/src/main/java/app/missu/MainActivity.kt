@@ -52,10 +52,12 @@ import app.missu.data.api.AppDependencies
 import app.missu.data.api.LocalAppDependencies
 import app.missu.data.api.SourceConfig
 import app.missu.data.model.PinnedHomeList
+import app.missu.data.model.VideoListQuery
 import app.missu.data.store.AppLanguage
 import app.missu.data.store.ColorSource
 import app.missu.data.store.CredentialStore
 import app.missu.data.store.HistoryStore
+import app.missu.data.store.ListHistoryStore
 import app.missu.data.store.ListQueryStore
 import app.missu.data.store.ListSortStore
 import app.missu.data.store.ProfileStore
@@ -249,20 +251,19 @@ private fun MissuApp(
         )
     }
 
-    fun openList(path: String, title: String) {
-        val query = listQueryStore.get(path)
+    fun openListQuery(query: VideoListQuery, title: String) {
         navController.navigate(
             "list?p=${Uri.encode(query.path)}&t=${Uri.encode(title)}" +
                 "&s=${query.sort?.name.orEmpty()}&f=${query.filter?.name.orEmpty()}",
         )
     }
 
+    fun openList(path: String, title: String) {
+        openListQuery(listQueryStore.get(path), title)
+    }
+
     fun openPinnedList(pinned: PinnedHomeList) {
-        val query = pinned.query
-        navController.navigate(
-            "list?p=${Uri.encode(query.path)}&t=${Uri.encode(pinned.title)}" +
-                "&s=${query.sort?.name.orEmpty()}&f=${query.filter?.name.orEmpty()}",
-        )
+        openListQuery(pinned.query, pinned.title)
     }
 
     fun goBack() {
@@ -283,6 +284,7 @@ private fun MissuApp(
         factory = missuViewModelFactory { HomeViewModel(api, settings) },
     )
     val historyStore = remember { HistoryStore(context.applicationContext) }
+    val listHistoryStore = remember { ListHistoryStore(context.applicationContext) }
     val searchHistory = remember { SearchHistoryStore(context.applicationContext) }
     val listSortStore = remember { ListSortStore(context.applicationContext) }
     val backStackEntry = navController.currentBackStackEntryAsState()
@@ -367,6 +369,7 @@ private fun MissuApp(
                 settingsState = settingsState,
                 settingsActions = settingsActions,
                 historyStore = historyStore,
+                listHistoryStore = listHistoryStore,
                 searchHistory = searchHistory,
                 listSortStore = listSortStore,
                 listQueryStore = listQueryStore,
@@ -374,6 +377,7 @@ private fun MissuApp(
                 onGoBack = ::goBack,
                 onOpenDetail = ::openDetail,
                 onOpenList = ::openList,
+                onOpenListQuery = ::openListQuery,
             )
         }
     }

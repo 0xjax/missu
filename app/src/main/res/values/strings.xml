@@ -27,7 +27,7 @@
     <string name="account_go_login">Sign in</string>
     <string name="account_saved">Saved</string>
     <string name="account_playlists">Playlists</string>
-    <string name="account_history">Watch history</string>
+    <string name="account_history">History</string>
     <string name="account_settings">Settings</string>
     <string name="account_logout">Sign out</string>
     <string name="account_logged_in">Signed in</string>
@@ -46,10 +46,14 @@
     <string name="saved_empty_title">Nothing saved yet</string>
     <string name="saved_empty_subtitle">Tap Save on a video page and it shows up here</string>
 
-    <!-- 观看历史 -->
-    <string name="history_title">Watch history</string>
-    <string name="history_empty_title">No history yet</string>
+    <!-- 历史 -->
+    <string name="history_title">History</string>
+    <string name="history_videos_tab">Videos</string>
+    <string name="history_lists_tab">Lists</string>
+    <string name="history_empty_title">No watch history yet</string>
     <string name="history_empty_subtitle">Play any video and the position you stopped at is recorded here</string>
+    <string name="history_lists_empty_title">No recent lists</string>
+    <string name="history_lists_empty_subtitle">Video lists you open will appear here</string>
 
     <!-- 列表 -->
     <string name="list_empty_title">Nothing here yet</string>

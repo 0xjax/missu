@@ -318,7 +318,7 @@ private fun sortColor(selected: Boolean): Color =
  * 不带参数时的顺序不等于任何取值；默认是否真实存在随页面类型而异，保留独立状态更安全。
  */
 @Composable
-private fun sortLabel(sort: VideoListOptions.Sort?): String = when (sort) {
+internal fun sortLabel(sort: VideoListOptions.Sort?): String = when (sort) {
     null -> stringResource(R.string.list_sort_default)
     VideoListOptions.Sort.RELEASED_AT -> stringResource(R.string.list_sort_released_at)
     VideoListOptions.Sort.PUBLISHED_AT -> stringResource(R.string.list_sort_published_at)
@@ -330,7 +330,7 @@ private fun sortLabel(sort: VideoListOptions.Sort?): String = when (sort) {
 }
 
 @Composable
-private fun filterLabel(filter: VideoListOptions.Filter): String = when (filter) {
+internal fun filterLabel(filter: VideoListOptions.Filter): String = when (filter) {
     VideoListOptions.Filter.INDIVIDUAL -> stringResource(R.string.list_filter_individual)
     VideoListOptions.Filter.MULTIPLE -> stringResource(R.string.list_filter_multiple)
     VideoListOptions.Filter.CHINESE_SUBTITLE -> stringResource(R.string.list_filter_chinese_subtitle)

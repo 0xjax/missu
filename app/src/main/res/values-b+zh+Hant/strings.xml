@@ -25,7 +25,7 @@
     <string name="account_go_login">去登入</string>
     <string name="account_saved">我的收藏</string>
     <string name="account_playlists">我的片單</string>
-    <string name="account_history">觀看紀錄</string>
+    <string name="account_history">歷史紀錄</string>
     <string name="account_settings">設定</string>
     <string name="account_logout">登出</string>
     <string name="account_logged_in">已登入</string>
@@ -44,10 +44,14 @@
     <string name="saved_empty_title">還沒有收藏</string>
     <string name="saved_empty_subtitle">在詳情頁點一下「收藏」，之後就能從這裡直接打開</string>
 
-    <!-- 觀看紀錄 -->
-    <string name="history_title">觀看紀錄</string>
+    <!-- 歷史紀錄 -->
+    <string name="history_title">歷史紀錄</string>
+    <string name="history_videos_tab">影片</string>
+    <string name="history_lists_tab">清單</string>
     <string name="history_empty_title">還沒有觀看紀錄</string>
     <string name="history_empty_subtitle">打開任意影片開始播放後，這裡會記下看到第幾分鐘</string>
+    <string name="history_lists_empty_title">還沒有最近清單</string>
+    <string name="history_lists_empty_subtitle">開啟過的影片清單會顯示在這裡</string>
 
     <!-- 列表 -->
     <string name="list_empty_title">這裡還沒有內容</string>
