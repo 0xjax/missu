@@ -69,6 +69,7 @@ import kotlinx.coroutines.delay
 
 private const val TAG = "MissuPreview"
 private const val FADE_MS = 150
+private const val EXIT_MS = 200
 private const val SCRIM_ALPHA = 0.86f
 private val CardMaxWidth = 480.dp
 
@@ -88,6 +89,7 @@ class VideoPreviewState {
         private set
 
     private var onOpenDetail: (() -> Unit)? = null
+    private var pendingOpenDetail: (() -> Unit)? = null
     private var previewBounds: Rect? = null
     private var gestureStart = Offset.Zero
     private var activationSlop = 0f
@@ -96,6 +98,7 @@ class VideoPreviewState {
     fun open(video: VideoSummary, onOpenDetail: () -> Unit) {
         current = video
         this.onOpenDetail = onOpenDetail
+        pendingOpenDetail = null
         previewBounds = null
         armed = false
         gestureActive = false
@@ -116,15 +119,17 @@ class VideoPreviewState {
 
     fun release(position: Offset) {
         moveTo(position)
-        val openDetail = armed
-        val action = onOpenDetail
-        close()
-        if (openDetail) action?.invoke()
+        if (armed) openDetail() else close()
     }
 
     fun openDetail() {
-        val action = onOpenDetail
+        pendingOpenDetail = onOpenDetail
         close()
+    }
+
+    fun runPendingOpenDetail() {
+        val action = pendingOpenDetail
+        pendingOpenDetail = null
         action?.invoke()
     }
 
@@ -167,8 +172,9 @@ fun VideoPreviewHost(state: VideoPreviewState) {
         } else {
             transition.targetState = false
             if (shown != null) {
-                delay(FADE_MS.toLong())
+                delay(EXIT_MS.toLong())
                 shown = null
+                state.runPendingOpenDetail()
             }
         }
     }
@@ -180,7 +186,7 @@ fun VideoPreviewHost(state: VideoPreviewState) {
     AnimatedVisibility(
         visibleState = transition,
         enter = fadeIn(tween(FADE_MS)) + scaleIn(initialScale = 0.92f, animationSpec = tween(FADE_MS)),
-        exit = fadeOut(tween(FADE_MS)),
+        exit = fadeOut(tween(EXIT_MS)),
     ) {
         PreviewContent(video = video, state = state)
     }
