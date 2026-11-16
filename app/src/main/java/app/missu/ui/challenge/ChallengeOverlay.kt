@@ -96,6 +96,16 @@ private const val MAX_ATTEMPTS = 120
  */
 private const val GIVE_UP_ATTEMPTS = 12
 
+/** 真挑战立即显形；空白与未识别可能只是正常导航的暂态，持续超过宽限期才显形。 */
+internal fun shouldRevealChallenge(
+    challengePage: Boolean,
+    blankPage: Boolean,
+    identifiedPage: Boolean,
+    attempts: Int,
+    preview: Boolean,
+): Boolean = challengePage || preview ||
+    ((blankPage || !identifiedPage) && attempts >= GIVE_UP_ATTEMPTS)
+
 /** 抬起后多久补一张「刚打开」的截图：给 WebView 一点出画面的时间，又不至于错过白屏阶段。 */
 private const val OPENING_SHOT_MS = 400L
 
@@ -450,8 +460,17 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
             val onTarget = samePath(view.url.orEmpty(), targetUrl)
             val contentLength = page?.optInt("n") ?: 0
             val blankPage = page != null && ready == "complete" && contentLength == 0
-            // 正常且有正文的目标页不打扰用户；真挑战、空白外壳和暂时无法识别的页面必须给出等待状态。
-            if (challengePage || blankPage || page == null || request.previewUrl != null) revealed = true
+            // 正常导航的首次探针也可能是 null / 空文档；只有持续异常才显形，不能把暂态误报成挑战。
+            if (shouldRevealChallenge(
+                    challengePage = challengePage,
+                    blankPage = blankPage,
+                    identifiedPage = page != null,
+                    attempts = attempts,
+                    preview = request.previewUrl != null,
+                )
+            ) {
+                revealed = true
+            }
             // 深色主题 + 挑战页：CF 的深色样式可能晚于 onPageFinished 注入，没抓到就每轮补一次。
             if (challengePage && darkTheme && themeRules.get() <= 0) {
                 applyPageTheme(view, darkTheme) { n -> themeRules.set(n) }
