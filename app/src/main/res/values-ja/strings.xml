@@ -60,11 +60,13 @@
     <string name="list_filter_individual">単体作品</string>
     <string name="list_filter_multiple">複数作品</string>
     <string name="list_filter_chinese_subtitle">中文字幕</string>
+    <string name="list_pin_home">ホームに固定</string>
 
     <!-- ホーム -->
     <string name="home_empty_title">ホームにコンテンツがありません</string>
     <string name="home_empty_subtitle">サイトから情報を取得できませんでした。引っ張って更新するか、時間をおいてもう一度お試しください</string>
     <string name="home_more">もっと見る</string>
+    <string name="home_refresh_random">更新</string>
 
     <!-- 検索 -->
     <string name="search_placeholder">品番・女優・キーワードで検索</string>

@@ -60,11 +60,13 @@
     <string name="list_filter_individual">单人作品</string>
     <string name="list_filter_multiple">多人作品</string>
     <string name="list_filter_chinese_subtitle">中文字幕</string>
+    <string name="list_pin_home">置顶到首页</string>
 
     <!-- 首页 -->
     <string name="home_empty_title">首页没有内容</string>
     <string name="home_empty_subtitle">站点这次没有返回任何板块，下拉或稍后重试</string>
     <string name="home_more">更多</string>
+    <string name="home_refresh_random">刷新</string>
 
     <!-- 搜索 -->
     <string name="search_placeholder">搜索番号、女优、关键词</string>

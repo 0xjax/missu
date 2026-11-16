@@ -96,6 +96,7 @@ fun DiscoverScreen(
     hotFilter: VideoListOptions.Filter?,
     hotDetectedSort: VideoListOptions.Sort?,
     hotState: VideoListUiState,
+    showHotPin: Boolean,
     channels: ChannelsUiState,
     onLoad: (String) -> Unit,
     onLoadMore: (String) -> Unit,
@@ -106,6 +107,7 @@ fun DiscoverScreen(
     onHotFilterChange: (VideoListOptions.Filter?) -> Unit,
     onHotLoadMore: () -> Unit,
     onHotRetry: () -> Unit,
+    onHotPin: () -> Unit,
     onOpen: (path: String, title: String) -> Unit,
     onOpenVideo: (id: String, thumbnail: String?) -> Unit,
     onSortChange: (String) -> Unit,
@@ -199,6 +201,8 @@ fun DiscoverScreen(
                 onRetry = onHotRetry,
                 onLoadMore = onHotLoadMore,
                 onOpen = onOpenVideo,
+                showPin = showHotPin,
+                onPin = onHotPin,
                 modifier = Modifier.fillMaxSize(),
             )
         } else if (tab == DiscoverTab.CHANNELS) {

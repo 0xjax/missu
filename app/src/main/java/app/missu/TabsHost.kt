@@ -48,7 +48,9 @@ import app.missu.ui.discover.DiscoverViewModel
 import app.missu.ui.discover.HOT_PATH
 import app.missu.ui.home.HomeScreen
 import app.missu.ui.home.HomeViewModel
-import app.missu.ui.list.VideoListQuery
+import app.missu.ui.home.effectivePinnedQuery
+import app.missu.data.model.PinnedHomeList
+import app.missu.data.model.VideoListQuery
 import app.missu.ui.list.VideoListUiState
 import app.missu.ui.list.VideoListViewModel
 import app.missu.ui.search.SearchBody
@@ -80,13 +82,14 @@ internal fun TabsHost(
     onTabChange: (String) -> Unit,
     contentLanguage: String,
     api: MissavApi,
+    homeViewModel: HomeViewModel,
     searchHistory: SearchHistoryStore,
     listSortStore: ListSortStore,
     auth: AuthViewModel,
     onOpenDetail: (String, String?, String) -> Unit,
     onOpenList: (String, String) -> Unit,
+    onOpenPinnedList: (PinnedHomeList) -> Unit,
 ) {
-    val homeViewModel: HomeViewModel = viewModel(factory = missuViewModelFactory { HomeViewModel(api) })
     val discoverViewModel: DiscoverViewModel = viewModel(factory = missuViewModelFactory { DiscoverViewModel(api) })
     val searchViewModel: SearchViewModel = viewModel(
         factory = missuViewModelFactory { SearchViewModel(api, searchHistory) },
@@ -136,6 +139,10 @@ internal fun TabsHost(
                 "home" -> {
                     val state by homeViewModel.state.collectAsStateWithLifecycle()
                     val refreshing by homeViewModel.refreshing.collectAsStateWithLifecycle()
+                    val pinned by homeViewModel.pinned.collectAsStateWithLifecycle()
+                    val pinnedState by homeViewModel.pinnedState.collectAsStateWithLifecycle()
+                    val refreshingRandom by homeViewModel.refreshingRandom.collectAsStateWithLifecycle()
+                    val randomRefreshError by homeViewModel.randomRefreshError.collectAsStateWithLifecycle()
                     val searchState by searchViewModel.state.collectAsStateWithLifecycle()
                     val recent by searchViewModel.recent.collectAsStateWithLifecycle()
                     ProvideHeroVisibility(navScope, namespace = "home") {
@@ -152,11 +159,20 @@ internal fun TabsHost(
                                 PageSurface(card = false, contentInset = false) {
                                     HomeScreen(
                                         state = state,
+                                        pinned = pinned,
+                                        pinnedState = pinnedState,
                                         refreshing = refreshing,
+                                        refreshingRandom = refreshingRandom,
+                                        randomRefreshError = randomRefreshError,
                                         onRefresh = homeViewModel::refresh,
+                                        onRefreshRandom = homeViewModel::refreshRandom,
+                                        onClearRandomRefreshError = homeViewModel::clearRandomRefreshError,
+                                        onRetryPinned = homeViewModel::retryPinned,
                                         onRetry = homeViewModel::load,
                                         onOpen = onOpenDetail,
                                         onOpenList = onOpenList,
+                                        onOpenPinnedList = onOpenPinnedList,
+                                        onPin = { homeViewModel.pin(it, emptyList()) },
                                     )
                                 }
                             } else {
@@ -190,6 +206,10 @@ internal fun TabsHost(
                         )
                         val hotState by hotViewModel.state.collectAsStateWithLifecycle()
                         val hotDetectedSort by hotViewModel.detectedSort.collectAsStateWithLifecycle()
+                        val pinnedHome by homeViewModel.pinned.collectAsStateWithLifecycle()
+                        val homeState by homeViewModel.state.collectAsStateWithLifecycle()
+                        val effectivePinned = effectivePinnedQuery(pinnedHome, homeState)
+                        val hotTitle = stringResource(R.string.discover_section_hot)
                         LaunchedEffect(hotQuery) {
                             if (hotState is VideoListUiState.Loading) hotViewModel.load()
                         }
@@ -204,6 +224,7 @@ internal fun TabsHost(
                                 hotFilter = hotFilter,
                                 hotDetectedSort = hotDetectedSort,
                                 hotState = hotState,
+                                showHotPin = effectivePinned?.sameSiteQuery(hotQuery) != true,
                                 channels = channels,
                                 onLoad = discoverViewModel::load,
                                 onLoadMore = discoverViewModel::loadMore,
@@ -214,6 +235,15 @@ internal fun TabsHost(
                                 onHotFilterChange = { hotFilter = it },
                                 onHotLoadMore = hotViewModel::loadMore,
                                 onHotRetry = hotViewModel::load,
+                                onHotPin = {
+                                    homeViewModel.pin(
+                                        pinned = PinnedHomeList(
+                                            title = hotTitle,
+                                            query = hotQuery,
+                                        ),
+                                        currentVideos = (hotState as? VideoListUiState.Content)?.videos.orEmpty(),
+                                    )
+                                },
                                 onOpen = onOpenList,
                                 onOpenVideo = { id, thumbnail -> onOpenDetail(id, thumbnail, "") },
                                 onSortChange = discoverViewModel::setSort,

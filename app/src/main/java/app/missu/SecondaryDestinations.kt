@@ -33,7 +33,10 @@ import app.missu.ui.detail.DetailScreen
 import app.missu.ui.detail.DetailViewModel
 import app.missu.ui.history.HistoryScreen
 import app.missu.ui.history.HistoryViewModel
-import app.missu.ui.list.VideoListQuery
+import app.missu.ui.home.HomeViewModel
+import app.missu.ui.home.effectivePinnedQuery
+import app.missu.data.model.PinnedHomeList
+import app.missu.data.model.VideoListQuery
 import app.missu.ui.list.VideoListScreen
 import app.missu.ui.list.VideoListUiState
 import app.missu.ui.list.VideoListViewModel
@@ -70,6 +73,7 @@ internal fun NavGraphBuilder.secondaryDestinations(
     backStackEntry: State<NavBackStackEntry?>,
     tabRoute: State<String>,
     api: MissavApi,
+    homeViewModel: HomeViewModel,
     settings: SettingsStore,
     settingsState: AppSettingsState,
     settingsActions: AppSettingsActions,
@@ -122,18 +126,27 @@ internal fun NavGraphBuilder.secondaryDestinations(
     }
 
     composable(
-        route = "list?p={p}&t={t}",
+        route = "list?p={p}&t={t}&s={s}&f={f}",
         arguments = listOf(
             navArgument("p") { defaultValue = "/latest" },
             navArgument("t") { defaultValue = "" },
+            navArgument("s") { defaultValue = "" },
+            navArgument("f") { defaultValue = "" },
         ),
     ) { entry ->
         val path = Uri.decode(entry.arguments?.getString("p").orEmpty())
         val title = Uri.decode(entry.arguments?.getString("t").orEmpty())
             .ifEmpty { stringResource(R.string.list_default_title) }
-        var sort by rememberSaveable { mutableStateOf<VideoListOptions.Sort?>(null) }
-        var filter by rememberSaveable { mutableStateOf<VideoListOptions.Filter?>(null) }
+        var sort by rememberSaveable {
+            mutableStateOf(VideoListOptions.Sort.fromKey(entry.arguments?.getString("s")))
+        }
+        var filter by rememberSaveable {
+            mutableStateOf(VideoListOptions.Filter.fromKey(entry.arguments?.getString("f")))
+        }
         val query = remember(path, sort, filter) { VideoListQuery(path, sort = sort, filter = filter) }
+        val pinnedHome by homeViewModel.pinned.collectAsStateWithLifecycle()
+        val homeState by homeViewModel.state.collectAsStateWithLifecycle()
+        val effectivePinned = effectivePinnedQuery(pinnedHome, homeState)
         val viewModel: VideoListViewModel = viewModel(
             key = "list-${query.cacheKey}",
             factory = missuViewModelFactory { VideoListViewModel(api, query, listSortStore) },
@@ -160,6 +173,13 @@ internal fun NavGraphBuilder.secondaryDestinations(
                     onLoadMore = viewModel::loadMore,
                     onOpen = { id, thumbnail -> onOpenDetail(id, thumbnail, "") },
                     onBack = onGoBack,
+                    showPin = effectivePinned?.sameSiteQuery(query) != true,
+                    onPin = {
+                        homeViewModel.pin(
+                            pinned = PinnedHomeList(title = title, query = query),
+                            currentVideos = (state as? VideoListUiState.Content)?.videos.orEmpty(),
+                        )
+                    },
                 )
             }
         }

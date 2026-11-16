@@ -11,6 +11,7 @@ import androidx.compose.ui.test.performClick
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.ConscryptMode
 import app.missu.R
 import app.missu.ui.common.LoadMoreState
 import app.missu.ui.theme.MissuTheme
@@ -21,6 +22,8 @@ import org.junit.runner.RunWith
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
+// Windows SAC 会拦 Robolectric 解压的未签名 Conscrypt DLL；本类不测 TLS。
+@ConscryptMode(ConscryptMode.Mode.OFF)
 class PageStatesTest {
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()

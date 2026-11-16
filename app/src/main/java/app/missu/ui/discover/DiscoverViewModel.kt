@@ -45,7 +45,7 @@ enum class DiscoverTab(val kind: String, @param:StringRes val labelRes: Int) {
  * NOTE: 站点把「今日 / 本周 / 本月热门」做成三个 vanity path，但那三页就是**同一面列表**换了
  * `?sort=`：实测 `/today-hot?sort=weekly_views` 与 `/weekly-hot`、`?sort=monthly_views` 与
  * `/monthly-hot`，第 1、2 页的条目 id 完全一致。所以这里只留一个 path——三档周期不是三个独立入口，
- * 而是这面列表的三个排序取值，与该页另外 4 档排序、3 档过滤**共用同一套口径**（[app.missu.ui.list.VideoListQuery]）。
+ * 而是这面列表的三个排序取值，与该页另外 4 档排序、3 档过滤**共用同一套口径**（[app.missu.data.model.VideoListQuery]）。
  */
 internal const val HOT_PATH = "/today-hot"
 

@@ -64,11 +64,13 @@
     <string name="list_filter_individual">單人作品</string>
     <string name="list_filter_multiple">多人作品</string>
     <string name="list_filter_chinese_subtitle">中文字幕</string>
+    <string name="list_pin_home">置頂到首頁</string>
 
     <!-- 首頁 -->
     <string name="home_empty_title">首頁沒有內容</string>
     <string name="home_empty_subtitle">站點這次沒有回傳任何區塊，下拉或稍後再試</string>
     <string name="home_more">更多</string>
+    <string name="home_refresh_random">重新整理</string>
 
     <!-- 搜尋 -->
     <string name="search_placeholder">搜尋番號、女優、關鍵字</string>

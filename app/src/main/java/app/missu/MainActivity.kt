@@ -51,6 +51,7 @@ import androidx.navigation.compose.rememberNavController
 import app.missu.data.api.AppDependencies
 import app.missu.data.api.LocalAppDependencies
 import app.missu.data.api.SourceConfig
+import app.missu.data.model.PinnedHomeList
 import app.missu.data.store.AppLanguage
 import app.missu.data.store.ColorSource
 import app.missu.data.store.CredentialStore
@@ -68,6 +69,7 @@ import app.missu.ui.challenge.ChallengeOverlayHost
 import app.missu.ui.challenge.ChallengeState
 import app.missu.ui.components.LocalSharedTransitionScope
 import app.missu.ui.components.LocalVideoListColumns
+import app.missu.ui.home.HomeViewModel
 import app.missu.ui.preview.LocalVideoPreview
 import app.missu.ui.preview.VideoPreviewHost
 import app.missu.ui.preview.VideoPreviewState
@@ -249,6 +251,14 @@ private fun MissuApp(
         navController.navigate("list?p=${Uri.encode(path)}&t=${Uri.encode(title)}")
     }
 
+    fun openPinnedList(pinned: PinnedHomeList) {
+        val query = pinned.query
+        navController.navigate(
+            "list?p=${Uri.encode(query.path)}&t=${Uri.encode(pinned.title)}" +
+                "&s=${query.sort?.name.orEmpty()}&f=${query.filter?.name.orEmpty()}",
+        )
+    }
+
     fun goBack() {
         buttonPopId = navController.currentBackStackEntry?.id
         navController.popBackStack()
@@ -262,6 +272,9 @@ private fun MissuApp(
                 CredentialStore(context.applicationContext),
             )
         },
+    )
+    val homeViewModel: HomeViewModel = viewModel(
+        factory = missuViewModelFactory { HomeViewModel(api, settings) },
     )
     val historyStore = remember { HistoryStore(context.applicationContext) }
     val searchHistory = remember { SearchHistoryStore(context.applicationContext) }
@@ -328,11 +341,13 @@ private fun MissuApp(
                     onTabChange = { tabRoute = it },
                     contentLanguage = contentLanguage,
                     api = api,
+                    homeViewModel = homeViewModel,
                     searchHistory = searchHistory,
                     listSortStore = listSortStore,
                     auth = auth,
                     onOpenDetail = ::openDetail,
                     onOpenList = ::openList,
+                    onOpenPinnedList = ::openPinnedList,
                 )
             }
             secondaryDestinations(
@@ -340,6 +355,7 @@ private fun MissuApp(
                 backStackEntry = backStackEntry,
                 tabRoute = tabRouteState,
                 api = api,
+                homeViewModel = homeViewModel,
                 settings = settings,
                 settingsState = settingsState,
                 settingsActions = settingsActions,
