@@ -33,9 +33,10 @@ class VideoListViewModel(
     private val api: MissavApi,
     private val query: VideoListQuery,
     private val sortStore: ListSortStore,
+    initialContent: VideoListUiState.Content? = null,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow<VideoListUiState>(VideoListUiState.Loading)
+    private val _state = MutableStateFlow<VideoListUiState>(initialContent ?: VideoListUiState.Loading)
     val state: StateFlow<VideoListUiState> = _state.asStateFlow()
 
     /**

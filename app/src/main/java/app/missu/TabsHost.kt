@@ -242,6 +242,7 @@ internal fun TabsHost(
                                             query = hotQuery,
                                         ),
                                         currentVideos = (hotState as? VideoListUiState.Content)?.videos.orEmpty(),
+                                        currentNextPage = (hotState as? VideoListUiState.Content)?.nextPage,
                                     )
                                 },
                                 onOpen = onOpenList,
