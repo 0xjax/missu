@@ -31,55 +31,14 @@ import androidx.compose.ui.unit.dp
 import app.missu.R
 import app.missu.data.model.DetailInfoRow
 
-private const val DescriptionCollapsedLines = 3
-
 @Composable
-fun DescriptionCard(id: String, description: String) {
-    var expanded by rememberSaveable(id) { mutableStateOf(false) }
-    var overflowing by remember(id) { mutableStateOf(false) }
-    val label = stringResource(if (expanded) R.string.detail_collapse else R.string.detail_expand)
-
+fun DescriptionCard(description: String) {
     Column(Modifier.padding(16.dp)) {
         Text(
             text = description,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = if (expanded) Int.MAX_VALUE else DescriptionCollapsedLines,
-            overflow = TextOverflow.Ellipsis,
-            onTextLayout = { result ->
-                if (expanded) {
-                    if (result.lineCount > DescriptionCollapsedLines) overflowing = true
-                } else {
-                    overflowing = result.hasVisualOverflow
-                }
-            },
         )
-        if (overflowing) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable(onClickLabel = label) { expanded = !expanded }
-                        .padding(horizontal = 6.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    Icon(
-                        imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-            }
-        }
     }
 }
 

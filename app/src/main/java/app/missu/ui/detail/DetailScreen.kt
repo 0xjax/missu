@@ -479,7 +479,7 @@ private fun DetailBody(
             detail.description?.let { description ->
                 item(key = "description") {
                     GroupSurface(modifier = Modifier) {
-                        DescriptionCard(id = detail.id, description = description)
+                        DescriptionCard(description = description)
                     }
                 }
             }
