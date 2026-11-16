@@ -117,6 +117,12 @@ class DetailViewModel(
     private val _message = MutableStateFlow<UiMessage?>(null)
     val message: StateFlow<UiMessage?> = _message.asStateFlow()
 
+    /** 仅首次自动加载；返回详情、重组及失败状态都不会暗中重取，失败由用户显式重试。 */
+    fun loadIfNeeded() {
+        if (loadJob?.isActive == true || _state.value !is DetailUiState.Loading) return
+        load()
+    }
+
     fun load() {
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
