@@ -22,6 +22,7 @@ import app.missu.data.api.VideoListOptions
 import app.missu.data.store.AppLanguage
 import app.missu.data.store.ColorSource
 import app.missu.data.store.HistoryStore
+import app.missu.data.store.ListQueryStore
 import app.missu.data.store.ListSortStore
 import app.missu.data.store.SearchHistoryStore
 import app.missu.data.store.SettingsStore
@@ -85,6 +86,7 @@ internal fun NavGraphBuilder.secondaryDestinations(
     historyStore: HistoryStore,
     searchHistory: SearchHistoryStore,
     listSortStore: ListSortStore,
+    listQueryStore: ListQueryStore,
     auth: AuthViewModel,
     onGoBack: () -> Unit,
     onOpenDetail: (String, String?, String) -> Unit,
@@ -177,8 +179,14 @@ internal fun NavGraphBuilder.secondaryDestinations(
                     detectedSort = detectedSort,
                     sorts = VideoListOptions.Sort.entries,
                     filters = VideoListOptions.Filter.entries,
-                    onSortChange = { sort = it },
-                    onFilterChange = { filter = it },
+                    onSortChange = {
+                        listQueryStore.put(query.copy(sort = it))
+                        sort = it
+                    },
+                    onFilterChange = {
+                        listQueryStore.put(query.copy(filter = it))
+                        filter = it
+                    },
                     onRetry = viewModel::load,
                     onLoadMore = viewModel::loadMore,
                     onOpen = { id, thumbnail -> onOpenDetail(id, thumbnail, "") },

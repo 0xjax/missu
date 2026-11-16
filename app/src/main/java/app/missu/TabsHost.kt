@@ -36,6 +36,7 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import app.missu.data.api.MissavApi
 import app.missu.data.api.VideoListOptions
+import app.missu.data.store.ListQueryStore
 import app.missu.data.store.ListSortStore
 import app.missu.data.store.SearchHistoryStore
 import app.missu.ui.account.AccountScreen
@@ -86,6 +87,7 @@ internal fun TabsHost(
     homeViewModel: HomeViewModel,
     searchHistory: SearchHistoryStore,
     listSortStore: ListSortStore,
+    listQueryStore: ListQueryStore,
     auth: AuthViewModel,
     onOpenDetail: (String, String?, String) -> Unit,
     onOpenList: (String, String) -> Unit,
@@ -196,8 +198,8 @@ internal fun TabsHost(
                         val filters by discoverViewModel.filters.collectAsStateWithLifecycle()
                         val refreshingKinds by discoverViewModel.refreshing.collectAsStateWithLifecycle()
                         val channels by discoverViewModel.channels.collectAsStateWithLifecycle()
-                        var hotSort by rememberSaveable { mutableStateOf<VideoListOptions.Sort?>(null) }
-                        var hotFilter by rememberSaveable { mutableStateOf<VideoListOptions.Filter?>(null) }
+                        var hotSort by rememberSaveable { mutableStateOf(listQueryStore.get(HOT_PATH).sort) }
+                        var hotFilter by rememberSaveable { mutableStateOf(listQueryStore.get(HOT_PATH).filter) }
                         val hotQuery = remember(hotSort, hotFilter) {
                             VideoListQuery(HOT_PATH, sort = hotSort, filter = hotFilter)
                         }
@@ -230,8 +232,14 @@ internal fun TabsHost(
                                 onRefresh = discoverViewModel::refresh,
                                 onChannelsLoad = { discoverViewModel.loadChannels() },
                                 onChannelsRetry = { discoverViewModel.loadChannels(force = true) },
-                                onHotSortChange = { hotSort = it },
-                                onHotFilterChange = { hotFilter = it },
+                                onHotSortChange = {
+                                    listQueryStore.put(hotQuery.copy(sort = it))
+                                    hotSort = it
+                                },
+                                onHotFilterChange = {
+                                    listQueryStore.put(hotQuery.copy(filter = it))
+                                    hotFilter = it
+                                },
                                 onHotLoadMore = hotViewModel::loadMore,
                                 onHotRetry = hotViewModel::load,
                                 onHotPin = {
