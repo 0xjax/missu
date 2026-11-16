@@ -176,6 +176,9 @@
     <string name="settings_pure_black">純黒の背景</string>
     <string name="settings_pure_black_note">ダークテーマでのみ有効になります。消費電力を抑えられますが、階層の表現は弱くなります</string>
     <string name="settings_language">言語</string>
+    <string name="settings_video_list">動画リスト</string>
+    <string name="settings_video_list_single">1列</string>
+    <string name="settings_video_list_double">2列</string>
 
     <!-- 再生 -->
     <string name="settings_playback">再生</string>

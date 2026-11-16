@@ -53,6 +53,7 @@ internal data class AppSettingsState(
     val colorSource: ColorSource,
     val followThemeIcon: Boolean,
     val pureBlack: Boolean,
+    val singleColumnVideos: Boolean,
 )
 
 internal data class AppSettingsActions(
@@ -61,6 +62,7 @@ internal data class AppSettingsActions(
     val onColorSourceChange: (ColorSource) -> Unit,
     val onFollowThemeIconChange: (Boolean) -> Unit,
     val onPureBlackChange: (Boolean) -> Unit,
+    val onSingleColumnVideosChange: (Boolean) -> Unit,
 )
 
 internal fun NavGraphBuilder.secondaryDestinations(
@@ -69,7 +71,7 @@ internal fun NavGraphBuilder.secondaryDestinations(
     tabRoute: State<String>,
     api: MissavApi,
     settings: SettingsStore,
-    settingsState: State<AppSettingsState>,
+    settingsState: AppSettingsState,
     settingsActions: AppSettingsActions,
     historyStore: HistoryStore,
     listSortStore: ListSortStore,
@@ -94,7 +96,7 @@ internal fun NavGraphBuilder.secondaryDestinations(
 
     composable("settings") {
         var autoplay by remember { mutableStateOf(settings.autoplay()) }
-        val currentSettings = settingsState.value
+        val currentSettings = settingsState
         PageSurface {
             SettingsScreen(
                 appLanguage = currentSettings.appLanguage,
@@ -102,12 +104,14 @@ internal fun NavGraphBuilder.secondaryDestinations(
                 colorSource = currentSettings.colorSource,
                 followThemeIcon = currentSettings.followThemeIcon,
                 pureBlack = currentSettings.pureBlack,
+                singleColumnVideos = currentSettings.singleColumnVideos,
                 autoplay = autoplay,
                 onAppLanguageChange = settingsActions.onAppLanguageChange,
                 onThemeModeChange = settingsActions.onThemeModeChange,
                 onColorSourceChange = settingsActions.onColorSourceChange,
                 onFollowThemeIconChange = settingsActions.onFollowThemeIconChange,
                 onPureBlackChange = settingsActions.onPureBlackChange,
+                onSingleColumnVideosChange = settingsActions.onSingleColumnVideosChange,
                 onAutoplayChange = { enabled ->
                     settings.setAutoplay(enabled)
                     autoplay = enabled

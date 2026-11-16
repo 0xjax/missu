@@ -67,6 +67,7 @@ import app.missu.ui.challenge.ChallengeDiagnostics
 import app.missu.ui.challenge.ChallengeOverlayHost
 import app.missu.ui.challenge.ChallengeState
 import app.missu.ui.components.LocalSharedTransitionScope
+import app.missu.ui.components.LocalVideoListColumns
 import app.missu.ui.preview.LocalVideoPreview
 import app.missu.ui.preview.VideoPreviewHost
 import app.missu.ui.preview.VideoPreviewState
@@ -130,6 +131,7 @@ private fun MissuRoot() {
     var colorSource by remember { mutableStateOf(settings.colorSource()) }
     var followThemeIcon by remember { mutableStateOf(settings.followThemeIcon()) }
     var pureBlack by remember { mutableStateOf(settings.pureBlack()) }
+    var singleColumnVideos by remember { mutableStateOf(settings.singleColumnVideos()) }
     val darkTheme = when (themeMode) {
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
         ThemeMode.LIGHT -> false
@@ -168,6 +170,7 @@ private fun MissuRoot() {
                     LocalResources provides localizedContext.resources,
                     LocalVideoPreview provides previewState,
                     LocalAppDependencies provides dependencies,
+                    LocalVideoListColumns provides if (singleColumnVideos) 1 else 2,
                 ) {
                     MissuApp(
                         settings = settings,
@@ -178,6 +181,7 @@ private fun MissuRoot() {
                         colorSource = colorSource,
                         followThemeIcon = followThemeIcon,
                         pureBlack = pureBlack,
+                        singleColumnVideos = singleColumnVideos,
                         onAppLanguageChange = { value ->
                             settings.setAppLanguage(value)
                             appLanguage = value
@@ -198,6 +202,10 @@ private fun MissuRoot() {
                             settings.setPureBlack(enabled)
                             pureBlack = enabled
                         },
+                        onSingleColumnVideosChange = { enabled ->
+                            settings.setSingleColumnVideos(enabled)
+                            singleColumnVideos = enabled
+                        },
                     )
                     VideoPreviewHost(state = previewState)
                     ChallengeOverlayHost(state = challengeState)
@@ -215,10 +223,12 @@ private fun MissuApp(
     colorSource: ColorSource,
     followThemeIcon: Boolean,
     pureBlack: Boolean,
+    singleColumnVideos: Boolean,
     onThemeModeChange: (ThemeMode) -> Unit,
     onColorSourceChange: (ColorSource) -> Unit,
     onFollowThemeIconChange: (Boolean) -> Unit,
     onPureBlackChange: (Boolean) -> Unit,
+    onSingleColumnVideosChange: (Boolean) -> Unit,
     appLanguage: AppLanguage,
     contentLanguage: String,
     onAppLanguageChange: (AppLanguage) -> Unit,
@@ -258,23 +268,21 @@ private fun MissuApp(
     val listSortStore = remember { ListSortStore(context.applicationContext) }
     val backStackEntry = navController.currentBackStackEntryAsState()
     val tabRouteState = remember { derivedStateOf { tabRoute } }
-    val settingsState = remember {
-        derivedStateOf {
-            AppSettingsState(
-                appLanguage = appLanguage,
-                themeMode = themeMode,
-                colorSource = colorSource,
-                followThemeIcon = followThemeIcon,
-                pureBlack = pureBlack,
-            )
-        }
-    }
+    val settingsState = AppSettingsState(
+        appLanguage = appLanguage,
+        themeMode = themeMode,
+        colorSource = colorSource,
+        followThemeIcon = followThemeIcon,
+        pureBlack = pureBlack,
+        singleColumnVideos = singleColumnVideos,
+    )
     val settingsActions = AppSettingsActions(
         onAppLanguageChange = onAppLanguageChange,
         onThemeModeChange = onThemeModeChange,
         onColorSourceChange = onColorSourceChange,
         onFollowThemeIconChange = onFollowThemeIconChange,
         onPureBlackChange = onPureBlackChange,
+        onSingleColumnVideosChange = onSingleColumnVideosChange,
     )
 
     Scaffold(

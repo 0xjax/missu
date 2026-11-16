@@ -16,6 +16,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,8 +34,11 @@ private val SubtitleBadge = Color(0xD9991B1B)
 private val UncensoredBadge = Color(0xD91E40AF)
 private val OtherBadge = Color(0xD91F2937)
 
+/** 全局视频卡片列数；设置只改这个值，各列表保留自己的数据与滚动状态。 */
+val LocalVideoListColumns = compositionLocalOf { 2 }
+
 /**
- * 首页、列表、收藏与搜索页共用的视频卡片：16:9 封面 + 时长 + 语义角标 + 两行标题。
+ * 首页与各视频列表共用的卡片：16:9 封面 + 时长 + 语义角标 + 两行标题。
  * 长按出预览浮层——只有卡片自带 `previewUrl` 时才有，整理模式下由调用方关掉。
  *
  * NOTE: 封面圆角与占位色改取 M3E 的形状/颜色 token（`shapes.medium` + `surfaceContainerHigh`），
@@ -129,7 +133,11 @@ fun VideoGridCard(
         Spacer(Modifier.height(6.dp))
         Text(
             text = video.title,
-            style = MaterialTheme.typography.bodySmall,
+            style = if (LocalVideoListColumns.current == 1) {
+                MaterialTheme.typography.bodyLarge
+            } else {
+                MaterialTheme.typography.bodySmall
+            },
             color = MaterialTheme.colorScheme.onBackground,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,

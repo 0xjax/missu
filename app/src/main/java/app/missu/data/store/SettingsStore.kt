@@ -37,12 +37,11 @@ enum class ColorSource {
 }
 
 /**
- * 应用设置：语言、明暗模式、主题色源。
+ * 应用设置：语言、外观、视频列数与播放偏好。
  *
  * NOTE: 语言必须在**第一次网络请求之前**装进 [SourceConfig]，否则首屏会按默认语言拉一轮再换，
  * legacy 就是先读完偏好再挂载界面（见 `src/stores/language.tsx`）。现在这一步由 `MissuRoot`
  * 在组合期算好（见 [AppLanguage.contentLanguage]），本类只负责持久化。
- * TODO: 还有设置项要加时（列表列数…）统一放这里。
  */
 class SettingsStore(context: Context) {
 
@@ -113,6 +112,13 @@ class SettingsStore(context: Context) {
         prefs.edit { putBoolean(KEY_PURE_BLACK, enabled) }
     }
 
+    /** 视频卡片是否使用整宽单列；默认双列。 */
+    fun singleColumnVideos(): Boolean = prefs.getBoolean(KEY_SINGLE_COLUMN_VIDEOS, false)
+
+    fun setSingleColumnVideos(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_SINGLE_COLUMN_VIDEOS, enabled) }
+    }
+
     /**
      * 播放倍速（1f = 原速）。全局一个值，对所有影片生效。
      *
@@ -159,6 +165,7 @@ class SettingsStore(context: Context) {
         const val KEY_COLOR_SOURCE = "colorSource"
         const val KEY_FOLLOW_THEME_ICON = "followThemeIcon"
         const val KEY_PURE_BLACK = "pureBlack"
+        const val KEY_SINGLE_COLUMN_VIDEOS = "singleColumnVideos"
         const val KEY_PLAYBACK_SPEED = "playbackSpeed"
         const val KEY_AUTOPLAY = "autoplay"
         const val KEY_FILL_SCREEN = "fillScreen"
