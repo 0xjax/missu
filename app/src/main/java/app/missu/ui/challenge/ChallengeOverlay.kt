@@ -448,11 +448,10 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
                 ?.contains("cf_clearance") == true
             val challengePage = page?.isChallengePage() == true
             val onTarget = samePath(view.url.orEmpty(), targetUrl)
-            // 真挑战页才显形；其余情况（浏览器直接拿到了目标页）全程不显示任何东西。
-            // WARNING: 这里不再有「等满 5 秒就显形」的兜底——那会让正常首页上冒出一层防护层
-            // （2026-11-15 实测见过一次）。加载慢的普通页面走下面的收工分支，不靠显形来解决。
-            // NOTE: 预览通道（debug 构建）不受这条限制——它本来就是把浮层抬出来看的。
-            if (challengePage || request.previewUrl != null) revealed = true
+            val contentLength = page?.optInt("n") ?: 0
+            val blankPage = page != null && ready == "complete" && contentLength == 0
+            // 正常且有正文的目标页不打扰用户；真挑战、空白外壳和暂时无法识别的页面必须给出等待状态。
+            if (challengePage || blankPage || page == null || request.previewUrl != null) revealed = true
             // 深色主题 + 挑战页：CF 的深色样式可能晚于 onPageFinished 注入，没抓到就每轮补一次。
             if (challengePage && darkTheme && themeRules.get() <= 0) {
                 applyPageTheme(view, darkTheme) { n -> themeRules.set(n) }
@@ -465,11 +464,11 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
             }
             when {
                 // 首选结局：浏览器已经把有正文的目标页渲染完，就把这份 HTML 直接交回请求。
-                // 空 body 的 document 外壳不是结果（实测只有 39 字符），继续等，之后交回 OkHttp 重取。
+                // 空 body 的 document 外壳不是结果（实测只有 39 字符），显示等待并继续等，不能交回重取。
                 // WARNING: 这一条必须排在 clearance 之前。以前是 clearance 优先，于是浏览器手里明明有整页，
                 // 也要放它走、让 OkHttp 再取一次；那次要是又被挡（CF 按 TLS 指纹判、或 cookie 还没落到
                 // 共享存储），界面看到的就是一句「站点要求人机验证，请重试」，浮层不会再来第二遍。
-                !challengePage && ready == "complete" && onTarget && (page?.optInt("n") ?: 0) > 0 -> {
+                !challengePage && ready == "complete" && onTarget && contentLength > 0 -> {
                     // NOTE: 空串当没有——`html=""` 会让解析直接失败，而重取一次反而可能成。
                     readHtml(view) { html ->
                         finish(passed = true, html = html?.takeIf { it.isNotBlank() })
@@ -481,9 +480,10 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
                 // 页面被导去了别处（例如登录态失效 302 回首页），又没有 clearance：没东西可等。
                 !challengePage && ready == "complete" && !onTarget && attempts >= GIVE_UP_ATTEMPTS ->
                     finish(passed = false, html = null)
-                // 非挑战页、又迟迟不 complete（浏览器慢或卡住）：到点交回 OkHttp 重取。
-                // 既不显形、也不干等满 60 秒——60 秒那档只留给真挑战页（用户可能正在点 Turnstile）。
-                !challengePage && attempts >= GIVE_UP_ATTEMPTS -> finish(passed = true, html = null)
+                // 已识别的非空普通页面迟迟不 complete：到点交回 OkHttp 重取。
+                // 空白或无法识别的页面不算通过，继续显示等待，直到 clearance、有效正文或最终失败。
+                !challengePage && !blankPage && page != null && attempts >= GIVE_UP_ATTEMPTS ->
+                    finish(passed = true, html = null)
                 attempts >= MAX_ATTEMPTS -> finish(passed = false, html = null)
                 else -> {
                     status = waitingText
