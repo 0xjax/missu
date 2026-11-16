@@ -709,7 +709,7 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
 - **`remember(key)` 的 key 不能是会中途变化的派生值**：曾经把虚化的 `Animatable` 按 `playbackUrl` 做 key，而它会在详情返回时从 `null` 变成真地址 → 状态被重建、正在跑的动画作用在旧实例上被丢弃，表现是"虚化一小段 → 弹回清晰封面 → 一直清晰"。按**稳定身份**（路由 id）做 key；视频/详情数据都是这个身份下的产物。
 - **"要离开了"用 `isCurrent`（目的地还是不是栈顶）判断，不要拦截返回键**：`popBackStack` 是同步的，转场**第一帧** `currentBackStackEntry` 就已经变，比目的地被销毁（`onDispose`）早整整一个转场。拿它来停音频；共享封面的可见度直接由 `isCurrent` / 导航 transition 的 `PostExit` 派生，不再经过 `LaunchedEffect` 或返回淡入。视频层只隐去、不销毁，侧滑取消不会重建播放器；用 `BackHandler` 抢返回则会把这个预览吃掉。
 - **窗口底色必须跟主题同步**：`res/values/themes.xml` 的 `windowBackground` 是静态值，浅色下任何透明帧都会露黑；`MainActivity.onCreate` 先按持久化主题设一次，`MissuTheme` 里继续同步。
-- **页签级 ViewModel 放 Activity 作用域**：放在 `composable()` 里会随页签销毁，切回来变成「新建 VM → Loading → 重新请求」——用户看到先一帧旧画面再转圈。同理，`LaunchedEffect(语言)` 这类重载不要放在目的地里，否则每次切回都触发。
+- **页签级 ViewModel 放 Activity 作用域**：放在 `composable()` 里会随页签销毁，切回来变成「新建 VM → Loading → 重新请求」——用户看到先一帧旧画面再转圈。同理，`LaunchedEffect(语言)` 这类重载不要放在目的地里，否则每次切回都触发。详情虽由返回栈保留 ViewModel，但重新进入组合也会再跑 `LaunchedEffect(id)`，所以导航入口必须调用 `loadIfNeeded()`；已有内容、加载中与失败状态都不自动重取，只有显式重试调用 `load()`。
 
 **M3E / Compose 1.13-rc（预发布栈）**
 

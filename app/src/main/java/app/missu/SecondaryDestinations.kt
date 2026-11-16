@@ -372,7 +372,7 @@ internal fun NavGraphBuilder.secondaryDestinations(
         val state by viewModel.state.collectAsStateWithLifecycle()
         val message by viewModel.message.collectAsStateWithLifecycle()
         val playlists by viewModel.playlists.collectAsStateWithLifecycle()
-        LaunchedEffect(id) { viewModel.load() }
+        LaunchedEffect(id) { viewModel.loadIfNeeded() }
 
         val previousRoute = navController.previousBackStackEntry?.destination?.route
             ?.substringBefore('?')
