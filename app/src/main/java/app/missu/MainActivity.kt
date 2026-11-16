@@ -56,6 +56,7 @@ import app.missu.data.store.AppLanguage
 import app.missu.data.store.ColorSource
 import app.missu.data.store.CredentialStore
 import app.missu.data.store.HistoryStore
+import app.missu.data.store.ListQueryStore
 import app.missu.data.store.ListSortStore
 import app.missu.data.store.ProfileStore
 import app.missu.data.store.SearchHistoryStore
@@ -240,6 +241,7 @@ private fun MissuApp(
     var tabRoute by rememberSaveable { mutableStateOf("home") }
     val api = LocalAppDependencies.current.api
     val context = LocalContext.current
+    val listQueryStore = remember { ListQueryStore(context.applicationContext) }
 
     fun openDetail(id: String, thumbnail: String?, heroTag: String) {
         navController.navigate(
@@ -248,7 +250,11 @@ private fun MissuApp(
     }
 
     fun openList(path: String, title: String) {
-        navController.navigate("list?p=${Uri.encode(path)}&t=${Uri.encode(title)}")
+        val query = listQueryStore.get(path)
+        navController.navigate(
+            "list?p=${Uri.encode(query.path)}&t=${Uri.encode(title)}" +
+                "&s=${query.sort?.name.orEmpty()}&f=${query.filter?.name.orEmpty()}",
+        )
     }
 
     fun openPinnedList(pinned: PinnedHomeList) {
@@ -344,6 +350,7 @@ private fun MissuApp(
                     homeViewModel = homeViewModel,
                     searchHistory = searchHistory,
                     listSortStore = listSortStore,
+                    listQueryStore = listQueryStore,
                     auth = auth,
                     onOpenDetail = ::openDetail,
                     onOpenList = ::openList,
@@ -362,6 +369,7 @@ private fun MissuApp(
                 historyStore = historyStore,
                 searchHistory = searchHistory,
                 listSortStore = listSortStore,
+                listQueryStore = listQueryStore,
                 auth = auth,
                 onGoBack = ::goBack,
                 onOpenDetail = ::openDetail,
