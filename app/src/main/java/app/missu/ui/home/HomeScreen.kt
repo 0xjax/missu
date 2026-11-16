@@ -23,7 +23,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
@@ -95,12 +94,6 @@ fun HomeScreen(
     PageStateTransition(state = state, modifier = modifier.fillMaxSize()) { current ->
         when (current) {
             HomeUiState.Loading -> LoadingHint()
-
-            HomeUiState.Empty -> EmptyHint(
-                icon = Icons.Filled.Home,
-                title = stringResource(R.string.home_empty_title),
-                subtitle = stringResource(R.string.home_empty_subtitle),
-            )
 
             is HomeUiState.Error -> ErrorHint(current.message.text(), onRetry)
 

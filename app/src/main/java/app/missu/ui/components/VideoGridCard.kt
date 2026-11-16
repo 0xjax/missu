@@ -1,7 +1,10 @@
 package app.missu.ui.components
 
+import android.os.SystemClock
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -17,11 +20,22 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.onLongClick
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -29,10 +43,12 @@ import app.missu.R
 import app.missu.data.model.VideoSummary
 import app.missu.ui.preview.LocalVideoPreview
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.withTimeoutOrNull
 
 private val SubtitleBadge = Color(0xD9991B1B)
 private val UncensoredBadge = Color(0xD91E40AF)
 private val OtherBadge = Color(0xD91F2937)
+private val PreviewActivationSlop = 24.dp
 
 /** 全局视频卡片列数；设置只改这个值，各列表保留自己的数据与滚动状态。 */
 val LocalVideoListColumns = compositionLocalOf { 2 }
@@ -54,25 +70,81 @@ fun VideoGridCard(
     // NOTE: 同一页里可能重复出现同一部影片时（首页多板块）带上来源标签，见 [heroKeyFor]。
     heroTag: String = "",
 ) {
-    val preview = LocalVideoPreview.current
+    val preview = LocalVideoPreview.current?.takeIf { previewOnLongPress && video.previewUrl != null }
+    val longPressLabel = if (preview != null) stringResource(R.string.preview_open) else null
+    val currentOnClick = rememberUpdatedState(onClick)
+    val haptics = LocalHapticFeedback.current
+    val cardCoordinates = remember { mutableStateOf<LayoutCoordinates?>(null) }
 
-    // NOTE: 长按的触觉由 `combinedClickable` 自己发（Android 16 上实测一次长按 = 一次
-    // `HapticFeedbackConstants.LONG_PRESS`，`dumpsys vibrator_manager` 里一条 HEAVY_CLICK），
-    // 这里不要再补一次——补了就是两下。
-    val openPreview: (() -> Unit)? = if (previewOnLongPress && preview != null && video.previewUrl != null) {
-        { preview.open(video) }
+    val cardModifier = if (preview != null) {
+        Modifier
+            .onGloballyPositioned { cardCoordinates.value = it }
+            .semantics {
+                onClick {
+                    currentOnClick.value()
+                    true
+                }
+                onLongClick(label = longPressLabel) {
+                    preview.open(video) { currentOnClick.value() }
+                    true
+                }
+            }
+            .pointerInput(video, preview) {
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    var position = down.position
+                    down.consume()
+
+                    while (true) {
+                        val elapsed = SystemClock.uptimeMillis() - down.uptimeMillis
+                        val remaining = (viewConfiguration.longPressTimeoutMillis - elapsed).coerceAtLeast(1L)
+                        val event = withTimeoutOrNull(remaining) { awaitPointerEvent() } ?: break
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: return@awaitEachGesture
+                        position = change.position
+                        when {
+                            !change.pressed -> {
+                                if (!change.isConsumed) {
+                                    change.consume()
+                                    currentOnClick.value()
+                                }
+                                return@awaitEachGesture
+                            }
+
+                            change.isConsumed -> return@awaitEachGesture
+                            (position - down.position).getDistance() > viewConfiguration.touchSlop -> {
+                                return@awaitEachGesture
+                            }
+                        }
+                    }
+
+                    // NOTE: 自绘连续手势只在这里补一次长按触觉；无预览分支仍由 combinedClickable 自己发。
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    val coordinates = cardCoordinates.value ?: return@awaitEachGesture
+                    preview.open(video) { currentOnClick.value() }
+                    preview.beginGesture(coordinates.localToWindow(position), PreviewActivationSlop.toPx())
+                    try {
+                        while (true) {
+                            val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
+                            val windowPosition = coordinates.localToWindow(change.position)
+                            if (!change.pressed) {
+                                change.consume()
+                                preview.release(windowPosition)
+                                break
+                            }
+                            if (change.isConsumed) break
+                            change.consume()
+                            preview.moveTo(windowPosition)
+                        }
+                    } finally {
+                        preview.close()
+                    }
+                }
+            }
     } else {
-        null
+        Modifier.combinedClickable(onClick = onClick)
     }
-    val longPressLabel = if (openPreview != null) stringResource(R.string.preview_open) else null
 
-    Column(
-        modifier = Modifier.combinedClickable(
-            onClick = onClick,
-            onLongClickLabel = longPressLabel,
-            onLongClick = openPreview,
-        ),
-    ) {
+    Column(modifier = cardModifier) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()

@@ -10,7 +10,7 @@
 - ✅ 工具链已收口：SDK/JDK 全局唯一，NDK/CMake/重复 SDK 已删（回收约 5.6 GB）
 - ✅ 数据层首块：`data/api` + `data/parse`，`getHome` 已用**真实抓取的首页**验证（4 个板块 / 56 条视频）
 - ✅ **真机端到端**：vivo V2507A 上点按钮 → `getHome` 直接拿到 HTML 并解析出同样 4 板块 / 56 条（未触发人机验证）
-- ✅ **首页 UI**：Compose 单列/双列网格（板块标题 + 封面 + 时长角标 + 两行标题），Coil 3 加载封面，加载/空/错误/内容四态齐全
+- ✅ **首页 UI**：Compose 单列/双列网格（板块标题 + 封面 + 时长角标 + 两行标题），Coil 3 加载封面；加载 / 错误 / 内容三态，固定板块解析为空按可重试错误处理，不伪造合法空首页
 - ✅ **详情 + 播放**：点卡片进详情（标题/时长/8 行信息/简介），ExoPlayer 播 HLS；已验证真机出画面
 - ✅ **搜索**：关键词搜索 + 分页（「加载更多」实测 12 → 24 条），结果网格与首页共用 `VideoGridCard`；详情页番号可点击，复用 `SearchHost` 打开对应二级搜索页，返回详情
 - ✅ **收藏**：详情页收藏/取消收藏，状态来自 `/api/items/{id}/view`；**实测**删掉会话后点收藏会先自动重登再重试（`/api/items/{id}/save` 401 → `withAuthRetry`）
@@ -607,8 +607,9 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
     CF 正常页面是否也拉那套脚本我们**没验过**——已验证足够的信号不替换成面更大、未验证的信号。
 - **「看到的是正常页面」不等于误触发**：命中后 `withChallengeRetry` 用 `handler.verify(/)` 抬起浮层，
   WebView 里通过后显示的就是**真实页面**（所以看起来"直接跳过了"）；页面请求优先把浏览器已经渲染完的
-  那份目标页 HTML 直接交回（省掉一次可能再被 403 的重取），拿不到 HTML 才让 `cf_clearance` 落进共享
-  Cookie、重试原请求。
+  那份**有正文**的目标页 HTML 直接交回（省掉一次可能再被 403 的重取），拿不到 HTML 才让 `cf_clearance` 落进共享
+  Cookie、重试原请求。`readyState=complete` 也可能只有空 body 的 document 外壳（实测 outerHTML 仅 39 字符），
+  它不能交给解析器，否则首页会误报为空；继续等待，超过普通页面收工阈值后交回 OkHttp 重取。
 - **验证通过后那一次重取也可能再被挡**：以前它把 `ChallengeException` 直接抛给界面，用户只看到一句
   「站点要求人机验证，请重试」，而浮层不会再来——2026-11-15 的现象就是这个。现在重取再被挡会退回验证
   再走一轮（`CHALLENGE_ROUNDS = 2`）；同一时刻的并发验证也**共享同一次浮层**：后到者跟着等，不再把前
@@ -748,6 +749,7 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
 - **画面手势由独立 Compose 层接管**：`TextureView` 之上、控件之下放一层 `detectTapGestures`，单击显隐、左右双击 seek；不要依赖会被 interop View 吃掉的 `clickable`，也不再使用 `TextureView.setOnTouchListener`。
 - **弹层不能放在会被自动隐藏的控件树里**：倍速菜单挂在控件层内时，3 秒自动隐藏会把整棵树销毁，
   菜单一闪就关。菜单本体要由播放器持有，并在菜单展开期间暂停自动隐藏。
+- **连续长按预览不能新建 Dialog 窗口**：长按后仍要由原卡片接收移动与抬起，浮层必须挂在组合根部的同一窗口；否则按压序列会被窗口切换打断。原地松手只关闭，移动至少 24dp 后在预览片内松手才进入详情，避免预览图正好出现在手指下造成误入。
 - **「等首帧再创建 view」是死锁**：长按预览第一版写成 `if (ready) AndroidView(...)`，`ready` 等
   `onRenderedFirstFrame`，而首帧要等一个 surface —— 没有 view 就没有首帧，没有首帧就永远不建 view。
   表现是浮层里一直停在封面上，logcat 只有一句 `ExoPlayerImpl: Init`，没有任何错误。正确做法：view

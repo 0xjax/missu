@@ -69,8 +69,7 @@
     <string name="list_pin_home">Pin to home</string>
 
     <!-- 首页 -->
-    <string name="home_empty_title">The home page is empty</string>
-    <string name="home_empty_subtitle">The site returned no sections this time — pull to refresh or try again later</string>
+    <string name="error_home_empty">Couldn’t load the home sections. Try again.</string>
     <string name="home_more">More</string>
     <string name="home_refresh_random">Refresh</string>
 
@@ -123,6 +122,9 @@
     <string name="preview_open">Preview</string>
     <string name="preview_close">Close preview</string>
     <string name="preview_close_hint">Tap outside to close</string>
+    <string name="preview_gesture_hint">Release to close · Drag, then release to open</string>
+    <string name="preview_release_to_open">Release to open video</string>
+    <string name="preview_open_detail">Open video</string>
 
     <!-- 片单 -->
     <string name="playlists_title">Playlists</string>

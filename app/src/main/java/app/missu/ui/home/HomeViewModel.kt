@@ -19,10 +19,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/** 首页四态：加载中 / 空 / 错误 / 内容。 */
+/** 首页状态：加载中 / 错误 / 内容。固定板块解析为空属于加载失败，不是合法空页。 */
 sealed interface HomeUiState {
     data object Loading : HomeUiState
-    data object Empty : HomeUiState
     data class Error(val message: UiMessage) : HomeUiState
     data class Content(val sections: List<HomeSection>) : HomeUiState
 }
@@ -90,7 +89,11 @@ class HomeViewModel(
             _pinnedState.value = _pinned.value?.let { VideoListUiState.Loading }
             try {
                 val sections = api.getHome()
-                _state.value = if (sections.isEmpty()) HomeUiState.Empty else HomeUiState.Content(sections)
+                _state.value = if (sections.isEmpty()) {
+                    HomeUiState.Error(UiMessage.HomeEmpty)
+                } else {
+                    HomeUiState.Content(sections)
+                }
                 if (sections.isNotEmpty()) fetchPinned(force = false, preserveContent = false)
             } catch (error: CancellationException) {
                 throw error
@@ -110,8 +113,14 @@ class HomeViewModel(
             _refreshing.value = true
             try {
                 val sections = api.getHome()
-                _state.value = if (sections.isEmpty()) HomeUiState.Empty else HomeUiState.Content(sections)
-                if (sections.isNotEmpty()) fetchPinned(force = true, preserveContent = true)
+                if (sections.isEmpty()) {
+                    if (_state.value !is HomeUiState.Content) {
+                        _state.value = HomeUiState.Error(UiMessage.HomeEmpty)
+                    }
+                } else {
+                    _state.value = HomeUiState.Content(sections)
+                    fetchPinned(force = true, preserveContent = true)
+                }
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
