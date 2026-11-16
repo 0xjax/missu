@@ -118,6 +118,7 @@ fun ExoVideoPlayer(
 
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var controlsVisible by remember { mutableStateOf(true) }
+    var seekDragging by remember { mutableStateOf(false) }
     var isPlaying by remember { mutableStateOf(false) }
     // 原生 ContentFrame 监听视频尺寸并按 ContentScale 布局，不再手工计算 TextureView 尺寸。
     // NOTE: 倍速是**全局设置**，不是本次播放的临时状态：它跟着偏好走，所以每部片的播放器
@@ -239,10 +240,9 @@ fun ExoVideoPlayer(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // 播放中 3 秒无操作隐藏控件。
-    // NOTE: 设置面板开着的时候不隐藏——否则面板的锚点（控件层）会先消失。
-    LaunchedEffect(controlsVisible, isPlaying, settingsOpen) {
-        if (controlsVisible && isPlaying && !settingsOpen) {
+    // 播放中 3 秒无操作隐藏控件；设置面板与进度拖动期间都不能隐藏。
+    LaunchedEffect(controlsVisible, isPlaying, settingsOpen, seekDragging) {
+        if (controlsVisible && isPlaying && !settingsOpen && !seekDragging) {
             delay(AUTO_HIDE_MS)
             controlsVisible = false
         }
@@ -348,10 +348,20 @@ fun ExoVideoPlayer(
         PlayerOverlay(
             player = player,
             visible = ready && controlsVisible,
+            seekEnabled = ready,
             isPlaying = isPlaying,
             isFullscreen = isFullscreen,
             onSettingsClick = { settingsOpen = !settingsOpen },
             onToggleFullscreen = onToggleFullscreen,
+            onSeekDraggingChange = { dragging ->
+                seekDragging = dragging
+                if (dragging) {
+                    toggleJob?.cancel()
+                    toggleJob = null
+                    tapState.lastTapAt = 0L
+                    controlsVisible = true
+                }
+            },
             seekHintSeconds = seekHintSeconds,
         )
 
