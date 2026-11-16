@@ -21,6 +21,7 @@
 - ✅ **片单成员管理**：详情页「片单」底部面板，勾选即写入 `/api/playlists/add|remove`；重开面板读回服务端状态（实测 false → true → 重启后仍 true）
 - ✅ **列表页**：`MissavApi.getVideos(path, page)` 通用列表 + 分页；详情页信息行里带路径的值（女优/类型/厂商…）可点，跳到对应列表（实测点「RARA」进入其作品页）
 - ✅ **视频单列/双列**：设置页全局切换，首页、热门、搜索、收藏、历史与片单共用 `LocalVideoListColumns`；只重组布局，不重取数据，偏好持久化
+- ✅ **任意列表首页置顶 + 随机刷新**：共享列表口径行末尾图钉保存完整 `VideoListQuery`，普通列表与一级热门同享；首页板块标题行也可直接置顶（含没有「更多」的随机）。首页只保留一个置顶预览，当前生效项（默认第一板块或显式置顶）不显示图钉，其他内容点击直接覆盖；复用当前列表或原生板块数据，「更多」恢复同口径分页。随机「刷新」只替换该板块，失败可重试
 - ✅ **底部导航 + 发现**：`首页 / 发现 / 我的` 三个一级页签；发现页只有三个目录「女优 / 类型 / 厂商」（`DirectoryParser`，分页），搜索入口只在首页顶部
 - ✅ **女优筛选与排序**：身高 12 档 / 罩杯 A–Q / 年龄 6 档 / 出道年份（N 年以前），排序 `影片 / 出道`（实测 161–165cm 与按出道年排序都生效）
 - ✅ **搜索历史**：成功搜索后记入本地（上限 20，重复置顶），空输入时展示为可点胶囊，可清空
@@ -297,8 +298,8 @@ core/          纯 JVM 库（非 UI 层）——**不许出现 android.* / andro
     api/    SourceConfig（语言前缀 /dm 前缀）、MissavClient（OkHttp + 挑战翻译 + JSON 请求）、
             MissavApi（getHome / getVideoDetail / searchVideos / getSaved / getVideos /
             getDirectory / login / 收藏 / 片单）、CredentialsProvider、Errors
-    model/  VideoSummary · HomeSection · VideoDetail · VideoList · DirectoryList · DirectoryItem ·
-            PlaylistSummary · PlaylistDetail · VideoPlaylist · AccountUser · DetailInfoRow ·
+    model/  VideoSummary · HomeSection · VideoListQuery · PinnedHomeList · VideoDetail · VideoList ·
+            DirectoryList · DirectoryItem · PlaylistSummary · PlaylistDetail · VideoPlaylist · AccountUser · DetailInfoRow ·
             FilterOption · FilterSection
     parse/  HomeParser · DetailParser（含 Dean Edwards 解包）· DirectoryParser · ApiJson ·
             PlaylistParser（片单列表/详情）· PlaylistFormParser（新建/修改页表单）
@@ -316,7 +317,7 @@ app/           Android 应用（UI + 平台适配）
     data/api/              AppDependencies（共享 OkHttp / MissavApi / Coil 数据源）·
                            AndroidCookieJar（CookieManager 适配）· AndroidApi（把 ChallengeState 注入取数层）
     data/store/            ProfileStore（邮箱）· CredentialStore（Keystore 加密的账号密码）·
-                           SettingsStore（语言 / 外观 / 视频列数 / 播放偏好）· HistoryStore（观看进度）·
+                           SettingsStore（语言 / 外观 / 视频列数 / 首页置顶 / 播放偏好）· HistoryStore（观看进度）·
                            SearchHistoryStore（最近搜索）
   src/test/            ViewModel 协程测试 + Robolectric Compose 交互测试
 
@@ -425,6 +426,7 @@ cd D:\missu
 | `ApiJsonTest` | 收藏状态与片单 JSON 的字段缺失/类型异常兜底 |
 | `SearchViewModelTest` | 连续搜索取消、分页失败重试、重叠数据去重、空关键词清理 |
 | `PageStatesTest` | Robolectric + Compose v2 规则：错误重试、空态动作、分页脚注交互 |
+| `SettingsStoreTest` / `HomeSectionOrderTest` | 置顶完整口径持久化、默认第一板块的有效置顶状态；原生板块跨语言路径匹配、带口径列表不复用默认预览 |
 
 fixture 都是**真机抓的真实页面**（`home-cn.html` / `detail.html` / `search.html` / `playlists.html` / `playlist-create.html` / `playlist-edit.html` / `directory-makers.html`）。
 
@@ -433,7 +435,7 @@ fixture 都是**真机抓的真实页面**（`home-cn.html` / `detail.html` / `s
 启动 Profile：`:baselineprofile:connectedDebugAndroidTest` 使用独立测试进程采集，避免规则冷启动时终止测试自身。
 本机 V2507A 当前会在 UiAutomation 信任检查处终止 Benchmark（`Calling from not trusted UID`），且没有 `cmd profile` 系统服务；
 因此仓库只有生成器与 `profileinstaller` 依赖，**没有已生成的 `baseline-prof.txt`，不能声称启动 Profile 已启用**。
-Compose UI 回归测试改在 Robolectric JVM 上执行，不依赖该设备的 ActivityScenario 启动行为。
+Compose UI 回归测试改在 Robolectric JVM 上执行，不依赖该设备的 ActivityScenario 启动行为。Windows Smart App Control 会拦截 Robolectric 解压的未签名 Conscrypt DLL；不涉及 TLS 的 Robolectric 测试用官方 `@ConscryptMode(ConscryptMode.Mode.OFF)` 改用 BouncyCastle，不关闭 SAC、不跳过测试。
 
 ## Expo 版对应关系
 
@@ -505,7 +507,8 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
 - **片单有两种移除入口，别混用**：详情页面板是 `POST /api/playlists/remove`（body 要 `{dvdId, key}`，
   `key` 就是片单 id）；片单详情页是 `DELETE /api/playlists/{片单id}/{影片id}`（页面内联脚本
   `deletePlaylistItem()` 里的原始调用）。片单页只有片单 id，走前者需要先查一次 `key`，没必要。
-- **首页 4 个板块来自同一次请求**：`GET /` 的 HTML 里就是 4 个兄弟 `<h2>`（新作上市 / 最近更新 / 無碼影片 / 隨機），不是 4 个接口——`getHome()` 只发一次请求。真正各自独立的是各板块「更多」指向的列表页（`/cn/new`、`/cn/release`、`/cn/uncensored-leak`、`/cn/random`），打开时才各发一次。
+- **首页 4 个板块来自同一次请求**：`GET /` 的 HTML 里就是 4 个兄弟 `<h2>`（新作上市 / 最近更新 / 無碼影片 / 隨機），不是 4 个接口——`getHome()` 只发一次请求。真正各自独立的是各板块「更多」指向的列表页（`/cn/new`、`/cn/release`、`/cn/uncensored-leak`、`/cn/random`），打开时才各发一次。随机板块的「刷新」也复用 `GET /` 并只替换随机块。
+- **任意置顶列表只多一次第一页请求**：置顶时优先复用当前列表；命中原生首页的默认口径则复用板块。冷启动、语言变化和手动下拉刷新才重新取置顶预览，返回详情、切页签与列数变化都不取；请求与首页依次执行，不做额外预取或自动重试。
 - **筛选生效时 `sort=` 会挪到第二个参数、并被 HTML 实体化成 `&amp;sort=`**：`/today-hot?filters=chinese-subtitle` 的排序下拉
   链接是 `…?filters=chinese-subtitle&amp;sort=today_views`（2026-11-15 真机实测）。`parseListSort` 第一版只认 `?sort=` / `&sort=`，
   于是「一加筛选，排序名就退回默认」——正则与解析必须同时接受 `&amp;`。同一次实测也确认：`/today-hot`（热门那面列表）

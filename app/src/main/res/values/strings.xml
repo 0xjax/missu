@@ -66,11 +66,13 @@
     <string name="list_filter_individual">Solo</string>
     <string name="list_filter_multiple">Multiple</string>
     <string name="list_filter_chinese_subtitle">Chinese subtitles</string>
+    <string name="list_pin_home">Pin to home</string>
 
     <!-- 首页 -->
     <string name="home_empty_title">The home page is empty</string>
     <string name="home_empty_subtitle">The site returned no sections this time — pull to refresh or try again later</string>
     <string name="home_more">More</string>
+    <string name="home_refresh_random">Refresh</string>
 
     <!-- 搜索 -->
     <string name="search_placeholder">Search code, actress or keyword</string>

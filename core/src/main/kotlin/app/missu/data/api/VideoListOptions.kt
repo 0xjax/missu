@@ -27,6 +27,11 @@ object VideoListOptions {
         WEEKLY_VIEWS("weekly_views"),
         MONTHLY_VIEWS("monthly_views"),
         VIEWS("views"),
+        ;
+
+        companion object {
+            fun fromKey(key: String?): Sort? = entries.firstOrNull { it.name == key }
+        }
     }
 
     /**
@@ -38,6 +43,11 @@ object VideoListOptions {
         CHINESE_SUBTITLE("chinese-subtitle"),
         INDIVIDUAL("individual"),
         MULTIPLE("multiple"),
+        ;
+
+        companion object {
+            fun fromKey(key: String?): Filter? = entries.firstOrNull { it.name == key }
+        }
     }
 }
 

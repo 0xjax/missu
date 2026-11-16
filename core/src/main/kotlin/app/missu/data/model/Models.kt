@@ -1,5 +1,24 @@
 package app.missu.data.model
 
+import app.missu.data.api.SourceConfig
+import app.missu.data.api.VideoListOptions
+
+/** 一个视频列表的口径：路径 + 排序 + 过滤；三者共同决定缓存键。 */
+data class VideoListQuery(
+    val path: String,
+    val sort: VideoListOptions.Sort? = null,
+    val filter: VideoListOptions.Filter? = null,
+) {
+    val cacheKey: String get() = "$path|${sort?.value ?: "-"}|${filter?.value ?: "-"}"
+
+    fun sameSiteQuery(other: VideoListQuery): Boolean =
+        SourceConfig.contentPath(path) == SourceConfig.contentPath(other.path) &&
+            sort == other.sort && filter == other.filter
+}
+
+/** 单一首页置顶：保留完整列表口径，视频数据只在内存里缓存。 */
+data class PinnedHomeList(val title: String, val query: VideoListQuery)
+
 /** 一张视频卡片的摘要信息；字段与 legacy 的 VideoSummary 一一对应。 */
 data class VideoSummary(
     val id: String,

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.missu.data.api.MissavApi
 import app.missu.data.api.VideoListOptions
+import app.missu.data.model.VideoListQuery
 import app.missu.data.model.VideoSummary
 import app.missu.data.store.ListSortStore
 import app.missu.ui.common.LoadMoreState
@@ -25,22 +26,6 @@ sealed interface VideoListUiState {
         val nextPage: Int?,
         val more: LoadMoreState = LoadMoreState.Idle,
     ) : VideoListUiState
-}
-
-/**
- * 一个视频列表的**口径**：路径 + 排序 + 过滤。
- *
- * NOTE: 三样合起来才是「哪一个列表」——所以它同时是缓存键（`cacheKey`）。换排序/过滤只是换一份
- * 数据，页面结构一点不动（同一屏、同一个列表、同一套卡片）。
- * NOTE: `null` 有确切含义：排序 `null` = **站点默认序**（实测不等于任何一个 sort 取值），
- * 过滤 `null` = 不过滤（「全部」）。别拿某个值去「还原默认」。
- */
-data class VideoListQuery(
-    val path: String,
-    val sort: VideoListOptions.Sort? = null,
-    val filter: VideoListOptions.Filter? = null,
-) {
-    val cacheKey: String get() = "$path|${sort?.value ?: "-"}|${filter?.value ?: "-"}"
 }
 
 /** 通用列表页。`path` 来自详情页信息行 / 频道 / 首页「更多」的归一化结果。 */
