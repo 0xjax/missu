@@ -38,6 +38,7 @@ import app.missu.ui.home.HomeViewModel
 import app.missu.ui.home.effectivePinnedQuery
 import app.missu.data.model.PinnedHomeList
 import app.missu.data.model.VideoListQuery
+import app.missu.ui.list.AutoLoadVideoList
 import app.missu.ui.list.VideoListScreen
 import app.missu.ui.list.VideoListUiState
 import app.missu.ui.list.VideoListViewModel
@@ -164,9 +165,7 @@ internal fun NavGraphBuilder.secondaryDestinations(
         )
         val state by viewModel.state.collectAsStateWithLifecycle()
         val detectedSort by viewModel.detectedSort.collectAsStateWithLifecycle()
-        LaunchedEffect(query) {
-            if (state is VideoListUiState.Loading) viewModel.load()
-        }
+        AutoLoadVideoList(viewModel, viewModel.state, viewModel::load)
 
         ProvideHeroVisibility(this, namespace = "list") {
             PageSurface {

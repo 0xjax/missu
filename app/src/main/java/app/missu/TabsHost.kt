@@ -51,6 +51,7 @@ import app.missu.ui.home.HomeViewModel
 import app.missu.ui.home.effectivePinnedQuery
 import app.missu.data.model.PinnedHomeList
 import app.missu.data.model.VideoListQuery
+import app.missu.ui.list.AutoLoadVideoList
 import app.missu.ui.list.VideoListUiState
 import app.missu.ui.list.VideoListViewModel
 import app.missu.ui.search.SearchBody
@@ -210,9 +211,7 @@ internal fun TabsHost(
                         val homeState by homeViewModel.state.collectAsStateWithLifecycle()
                         val effectivePinned = effectivePinnedQuery(pinnedHome, homeState)
                         val hotTitle = stringResource(R.string.discover_section_hot)
-                        LaunchedEffect(hotQuery) {
-                            if (hotState is VideoListUiState.Loading) hotViewModel.load()
-                        }
+                        AutoLoadVideoList(hotViewModel, hotViewModel.state, hotViewModel::load)
 
                         PageSurface(card = false) {
                             DiscoverScreen(
