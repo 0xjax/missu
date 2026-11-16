@@ -578,7 +578,12 @@ private fun DetailBody(
                 )
                 Spacer(Modifier.width(8.dp))
                 FilledTonalIconButton(
-                    onClick = { seekControlsOpen = !seekControlsOpen },
+                    onClick = {
+                        haptics.performHapticFeedback(
+                            if (seekControlsOpen) HapticFeedbackType.ToggleOff else HapticFeedbackType.ToggleOn,
+                        )
+                        seekControlsOpen = !seekControlsOpen
+                    },
                     enabled = onSeekBy != null || seekControlsOpen,
                     modifier = Modifier
                         .padding(vertical = 4.dp)
