@@ -46,6 +46,7 @@ import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadMoreFooter
 import app.missu.ui.components.LoadMoreOnScroll
 import app.missu.ui.components.LoadingHint
+import app.missu.ui.components.LocalVideoListColumns
 import app.missu.ui.components.PageStateTransition
 import app.missu.ui.components.PageTopBar
 import app.missu.ui.components.VideoGridCard
@@ -241,7 +242,7 @@ fun VideoListBody(
                 LazyVerticalGrid(
                     state = gridState,
                     modifier = Modifier.fillMaxSize(),
-                    columns = GridCells.Fixed(2),
+                    columns = GridCells.Fixed(LocalVideoListColumns.current),
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 32.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),

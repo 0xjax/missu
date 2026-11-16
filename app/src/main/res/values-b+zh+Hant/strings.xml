@@ -180,6 +180,9 @@
     <string name="settings_pure_black">純黑背景</string>
     <string name="settings_pure_black_note">僅深色模式生效。純黑更省電，但分組容器的層級會被壓平</string>
     <string name="settings_language">語言</string>
+    <string name="settings_video_list">影片列表</string>
+    <string name="settings_video_list_single">單欄</string>
+    <string name="settings_video_list_double">雙欄</string>
 
     <!-- 播放 -->
     <string name="settings_playback">播放</string>

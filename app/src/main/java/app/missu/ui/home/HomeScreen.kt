@@ -46,6 +46,7 @@ import app.missu.ui.common.text
 import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadingHint
+import app.missu.ui.components.LocalVideoListColumns
 import app.missu.ui.components.PageStateTransition
 import app.missu.ui.components.VideoGridCard
 import app.missu.ui.components.heroKeyFor
@@ -54,15 +55,15 @@ import app.missu.ui.search.LocalSearchBarInset
 import coil3.compose.AsyncImage
 
 /**
- * 每个板块在首页只露出的条数（2 列 × 3 行）。
+ * 每个板块在首页只露出三行：双列 6 条，单列 3 条。
  *
  * NOTE: 站点每个板块给 16 条上下，全铺出来首页就是三十多行、要翻约 6000dp 才到最后一个板块。
  * 首页只当「预览」，完整列表走板块标题行的「更多」进 `/list`（复用已有分页页）。
  * NOTE: 首页**不请求** `/new` 之类的列表接口——4 个板块来自同一次 `GET /`（站点把预览块直出在首页
- * HTML 里），`take(SECTION_PREVIEW)` 是我们自己的上限；「更多」用的是站点那一行链接的路径。
+ * HTML 里），三行预览是我们自己的上限；「更多」用的是站点那一行链接的路径。
  * 所以首页与完整页是**导读关系**，不是同一份接口数据的两种截断。
  */
-private const val SECTION_PREVIEW = 6
+private const val SECTION_PREVIEW_ROWS = 3
 
 @Composable
 fun HomeScreen(
@@ -111,6 +112,7 @@ private fun HomeContent(
     // NOTE: 搜索胶囊浮在内容之上（见 SearchHost），下拉刷新的指示器得让开它那一条，
     // 否则转圈会被胶囊盖住。
     val barInset = LocalSearchBarInset.current
+    val columns = LocalVideoListColumns.current
     val pullState = rememberPullToRefreshState()
     PullToRefreshBox(
         isRefreshing = refreshing,
@@ -127,7 +129,7 @@ private fun HomeContent(
     ) {
         LazyVerticalGrid(
             modifier = Modifier.fillMaxSize(),
-            columns = GridCells.Fixed(2),
+            columns = GridCells.Fixed(columns),
             // NOTE: 顶部让出搜索胶囊那一条（见 `LocalSearchBarInset`）：胶囊浮在内容之上、
             // 不占布局，静止时第一行靠这份内边距落在它下面，滚动时内边距跟着内容滚掉、
             // 卡片从胶囊底下穿过去。
@@ -172,7 +174,7 @@ private fun HomeContent(
                     }
                 } else {
                     items(
-                        items = section.videos.take(SECTION_PREVIEW),
+                        items = section.videos.take(SECTION_PREVIEW_ROWS * columns),
                         key = { video -> "${section.id}-${video.id}" },
                     ) { video ->
                         // NOTE: `heroTag` = 板块 id：同一部影片可能同时在两个板块里，卡片位置不同、

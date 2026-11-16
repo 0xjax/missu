@@ -183,6 +183,9 @@
     <string name="settings_pure_black">Pure black background</string>
     <string name="settings_pure_black_note">Dark theme only. Saves power, but flattens the container hierarchy.</string>
     <string name="settings_language">Language</string>
+    <string name="settings_video_list">Video list</string>
+    <string name="settings_video_list_single">Single column</string>
+    <string name="settings_video_list_double">Two columns</string>
 
     <!-- 播放 -->
     <string name="settings_playback">Playback</string>

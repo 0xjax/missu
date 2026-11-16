@@ -62,6 +62,7 @@ import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadMoreFooter
 import app.missu.ui.components.LoadMoreOnScroll
 import app.missu.ui.components.LoadingHint
+import app.missu.ui.components.LocalVideoListColumns
 import app.missu.ui.components.PageStateTransition
 import app.missu.ui.components.VideoGridCard
 import kotlinx.coroutines.launch
@@ -353,7 +354,7 @@ private fun Results(
     LazyVerticalGrid(
         state = gridState,
         modifier = Modifier.fillMaxSize(),
-        columns = GridCells.Fixed(2),
+        columns = GridCells.Fixed(LocalVideoListColumns.current),
         // NOTE: 顶部让出搜索胶囊那一条（见 [LocalSearchBarInset]），静止时第一行落在胶囊下面；
         // 滚动时这份内边距跟着内容滚掉，卡片从胶囊底下穿过去。
         contentPadding = PaddingValues(

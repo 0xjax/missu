@@ -35,6 +35,7 @@ import app.missu.R
 import app.missu.data.store.HistoryEntry
 import coil3.compose.AsyncImage
 import app.missu.ui.components.EmptyHint
+import app.missu.ui.components.LocalVideoListColumns
 import app.missu.ui.components.PageTopBar
 import app.missu.ui.components.videoHero
 
@@ -67,7 +68,7 @@ fun HistoryScreen(
         } else {
             LazyVerticalGrid(
                 modifier = Modifier.fillMaxSize(),
-                columns = GridCells.Fixed(2),
+                columns = GridCells.Fixed(LocalVideoListColumns.current),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -126,7 +127,11 @@ private fun HistoryCard(entry: HistoryEntry, onClick: () -> Unit) {
         Spacer(Modifier.height(6.dp))
         Text(
             text = entry.title,
-            style = MaterialTheme.typography.bodySmall,
+            style = if (LocalVideoListColumns.current == 1) {
+                MaterialTheme.typography.bodyLarge
+            } else {
+                MaterialTheme.typography.bodySmall
+            },
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )

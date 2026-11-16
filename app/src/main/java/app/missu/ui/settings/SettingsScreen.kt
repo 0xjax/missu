@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -54,7 +55,7 @@ import app.missu.ui.theme.resolveColorScheme
 import app.missu.ui.theme.staticColorScheme
 
 /**
- * 设置页：外观（明暗模式 / 主题色）+ 内容语言。
+ * 设置页：外观、视频列表、播放与内容语言。
  *
  * NOTE: 选中表达一律用 M3E 的列表项 + 单选控件：整行 `selectable(role = RadioButton)`，控件本身
  * 不再接收点击（onClick = null），否则读屏会看到两个可点节点。
@@ -67,12 +68,14 @@ fun SettingsScreen(
     colorSource: ColorSource,
     followThemeIcon: Boolean,
     pureBlack: Boolean,
+    singleColumnVideos: Boolean,
     autoplay: Boolean,
     onAppLanguageChange: (AppLanguage) -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
     onColorSourceChange: (ColorSource) -> Unit,
     onFollowThemeIconChange: (Boolean) -> Unit,
     onPureBlackChange: (Boolean) -> Unit,
+    onSingleColumnVideosChange: (Boolean) -> Unit,
     onAutoplayChange: (Boolean) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -169,6 +172,33 @@ fun SettingsScreen(
                     },
                 ) {
                     Text(text = stringResource(R.string.settings_pure_black), style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+
+            SectionLabel(stringResource(R.string.settings_video_list))
+
+            val columnOptions = listOf(
+                true to stringResource(R.string.settings_video_list_single),
+                false to stringResource(R.string.settings_video_list_double),
+            )
+            GroupSurface(
+                modifier = Modifier.padding(horizontal = 16.dp).selectableGroup(),
+            ) {
+                columnOptions.forEachIndexed { index, (single, label) ->
+                    if (index > 0) GroupDivider()
+                    ListItem(
+                        modifier = Modifier.selectable(
+                            selected = singleColumnVideos == single,
+                            role = Role.RadioButton,
+                            onClick = { onSingleColumnVideosChange(single) },
+                        ),
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        trailingContent = {
+                            RadioButton(selected = singleColumnVideos == single, onClick = null)
+                        },
+                    ) {
+                        Text(text = label, style = MaterialTheme.typography.bodyLarge)
+                    }
                 }
             }
 
