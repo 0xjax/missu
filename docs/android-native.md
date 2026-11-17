@@ -97,14 +97,7 @@ cd D:\missu
 .\scripts\build.ps1 check      # core/app 测试 + lint + debug 构建
 ```
 
-- **产物与留档**：`app/build/outputs/apk/release/app-release.apk`（只含 `arm64-v8a`，见下）。按版本复制一份到 `.local/`（已 gitignore，与 GitHub Release 附件共用同一个名字），版本号从 `app/build.gradle.kts` 读，别写死：
-
-  ```powershell
-  $raw = Get-Content app\build.gradle.kts -Raw
-  $version = [regex]::Match($raw, 'versionName\s*=\s*"([^"]+)"').Groups[1].Value
-  Copy-Item app\build\outputs\apk\release\app-release.apk ".local\Missu-$version-arm64-v8a.apk"
-  Get-FileHash ".local\Missu-$version-arm64-v8a.apk" -Algorithm SHA256 | Select-Object Hash
-  ```
+- **产物与留档**：`release` 命令生成 `app/build/outputs/apk/release/app-release.apk`，自动归档为 `.local/releases/Missu-<versionName>-arm64-v8a.apk`（已 gitignore，与 GitHub Release 附件同名）并输出 SHA-256；版本号从 `app/build.gradle.kts` 读取。
 
 - **所有变体都只打 `arm64-v8a`**：见 `app/build.gradle.kts` 的 `defaultConfig.ndk.abiFilters`。包里唯一的 native 库是 `libandroidx.graphics.path.so`（每个 ABI 7–12 KB），所以这不是为了省体积（只省 40 KB），而是让**归档名和包内容对得上**：真机 V2507A 的 `ro.product.cpu.abilist` 只有 `arm64-v8a`，legacy 的两个 release 也用的这个后缀。debug 同样只打 arm64——x86_64 模拟器/设备装不上，需要时按变体加过滤。
 - **不要靠删文件或改文件名冒充架构**：签名覆盖整个包，删掉别的 `lib/<abi>/` 目录会让 v2/v3 签名失效、装不上；要换架构就改 `abiFilters` 重新构建。

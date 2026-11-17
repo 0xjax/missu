@@ -12,7 +12,7 @@
 ```powershell
 .\scripts\build.ps1              # debug APK
 .\scripts\build.ps1 install      # 构建 + 装到设备
-.\scripts\build.ps1 release      # R8 + 资源压缩，沿用 debug 签名，仅自用侧载
+.\scripts\build.ps1 release      # R8 + 资源压缩，归档到 .local/releases，沿用 debug 签名
 .\scripts\build.ps1 check        # core/app 测试 + lint + debug 构建
 ```
 
