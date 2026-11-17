@@ -27,9 +27,9 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.ExpandedFullScreenSearchBar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -138,16 +138,16 @@ fun SearchHost(
                 // 别做成按钮——否则它会把「点一下就展开」的整块命中区截走一块。
                 if (searching) {
                     IconButton(onClick = { exit() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.search_exit))
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.search_exit))
                     }
                 } else {
-                    Icon(Icons.Filled.Search, contentDescription = null)
+                    Icon(Icons.Outlined.Search, contentDescription = null)
                 }
             },
             trailingIcon = {
                 if (textFieldState.text.isNotEmpty()) {
                     IconButton(onClick = { textFieldState.edit { replace(0, length, "") } }) {
-                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.common_clear))
+                        Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.common_clear))
                     }
                 }
             },
@@ -277,7 +277,7 @@ fun SearchBody(
             is SearchUiState.Loading -> LoadingHint()
 
             is SearchUiState.Empty -> EmptyHint(
-                icon = Icons.Filled.Search,
+                icon = Icons.Outlined.Search,
                 title = stringResource(R.string.search_empty_title),
                 subtitle = stringResource(R.string.search_empty_subtitle),
             )

@@ -81,7 +81,7 @@ dependencies {
     // 「升级 SDK 环境依赖前」清单复核，并逐页真机复查。
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.material3)
-    // 底部导航的图标（Home / List / Search / Person）来自 icons-core，避免引入 extended 的体积。
+    // 全界面统一使用官方 Outlined 图标；release 由 R8 移除未使用字形。
     implementation(libs.compose.material.icons)
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.tooling.preview)

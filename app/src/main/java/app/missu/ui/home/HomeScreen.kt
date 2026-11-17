@@ -21,9 +21,10 @@ import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.outlined.List
+import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarDuration
@@ -61,7 +62,6 @@ import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.LocalVideoListColumns
 import app.missu.ui.components.PageStateTransition
-import app.missu.ui.components.PushPinIcon
 import app.missu.ui.components.TooltipIconButton
 import app.missu.ui.components.VideoGridCard
 import app.missu.ui.components.heroKeyFor
@@ -225,7 +225,7 @@ private fun HomeContent(
                             )
                             item(key = "pinned-empty", span = { GridItemSpan(maxLineSpan) }) {
                                 EmptyHint(
-                                    icon = Icons.AutoMirrored.Filled.List,
+                                    icon = Icons.AutoMirrored.Outlined.List,
                                     title = stringResource(R.string.list_empty_title),
                                     modifier = Modifier.height(200.dp),
                                 )
@@ -325,7 +325,7 @@ private fun HomeSectionHeader(
         )
         if (onPin != null) {
             TooltipIconButton(
-                icon = PushPinIcon,
+                icon = Icons.Outlined.PushPin,
                 contentDescription = stringResource(R.string.list_pin_home),
                 onClick = onPin,
             )
@@ -337,7 +337,7 @@ private fun HomeSectionHeader(
                 }
             } else {
                 TooltipIconButton(
-                    icon = Icons.Filled.Refresh,
+                    icon = Icons.Outlined.Refresh,
                     contentDescription = stringResource(R.string.home_refresh_random),
                     onClick = onRefreshRandom,
                 )
@@ -345,7 +345,7 @@ private fun HomeSectionHeader(
         }
         if (onMore != null) {
             TooltipIconButton(
-                icon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                icon = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
                 contentDescription = stringResource(R.string.home_more),
                 onClick = onMore,
             )

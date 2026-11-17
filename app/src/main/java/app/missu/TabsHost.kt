@@ -12,9 +12,9 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.automirrored.outlined.List
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ShortNavigationBar
@@ -69,9 +69,9 @@ internal data class TopLevel(
 )
 
 internal val topLevels = listOf(
-    TopLevel("home", R.string.nav_home, Icons.Filled.Home),
-    TopLevel("discover", R.string.nav_discover, Icons.AutoMirrored.Filled.List),
-    TopLevel("account", R.string.nav_account, Icons.Filled.Person),
+    TopLevel("home", R.string.nav_home, Icons.Outlined.Home),
+    TopLevel("discover", R.string.nav_discover, Icons.AutoMirrored.Outlined.List),
+    TopLevel("account", R.string.nav_account, Icons.Outlined.Person),
 )
 
 @Composable

@@ -16,11 +16,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.outlined.List
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonMenu
@@ -91,7 +91,7 @@ fun PlaylistsScreen(
                     PlaylistsUiState.Loading -> LoadingHint()
 
                     PlaylistsUiState.Empty -> EmptyHint(
-                        icon = Icons.AutoMirrored.Filled.List,
+                        icon = Icons.AutoMirrored.Outlined.List,
                         title = stringResource(R.string.playlists_empty_title),
                         subtitle = stringResource(R.string.playlists_empty_subtitle),
                     )
@@ -122,7 +122,7 @@ fun PlaylistsScreen(
                         contentColor = MaterialTheme.colorScheme.onPrimary,
                     ) {
                         Icon(
-                            imageVector = if (fabExpanded) Icons.Filled.Close else Icons.Filled.Add,
+                            imageVector = if (fabExpanded) Icons.Outlined.Close else Icons.Outlined.Add,
                             contentDescription = if (fabExpanded) stringResource(R.string.playlists_collapse) else stringResource(R.string.playlists_more_actions),
                         )
                     }
@@ -134,7 +134,7 @@ fun PlaylistsScreen(
                         dialogOpen = true
                     },
                     text = { Text(stringResource(R.string.playlists_create)) },
-                    icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                    icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                 )
@@ -144,7 +144,7 @@ fun PlaylistsScreen(
                         onRetry()
                     },
                     text = { Text(stringResource(R.string.playlists_refresh)) },
-                    icon = { Icon(Icons.Filled.Refresh, contentDescription = null) },
+                    icon = { Icon(Icons.Outlined.Refresh, contentDescription = null) },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                 )
@@ -237,7 +237,7 @@ private fun PlaylistRow(playlist: PlaylistSummary, onClick: () -> Unit) {
             supportingContent = supporting,
             trailingContent = {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

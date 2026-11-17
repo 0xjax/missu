@@ -44,13 +44,15 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.KeyboardArrowUp
+import androidx.compose.material.icons.outlined.OpenInFull
+import androidx.compose.material.icons.outlined.Pause
+import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -80,12 +82,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.withTransform
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.PathBuilder
-import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -249,12 +248,12 @@ fun PlayerOverlay(
                     ) {
                         // 设置也套一层圆底：和播放键、时间胶囊同一个悬浮语言（裸白图标在亮画面上不稳）。
                         RoundButton(
-                            size = 32.dp,
+                            size = 36.dp,
                             label = stringResource(R.string.player_settings),
                             onClick = onSettingsClick,
                         ) {
                             Icon(
-                                imageVector = Icons.Filled.Settings,
+                                imageVector = Icons.Outlined.Settings,
                                 contentDescription = null,
                                 tint = Color.White,
                                 modifier = Modifier.size(24.dp),
@@ -267,7 +266,6 @@ fun PlayerOverlay(
                     Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                         RoundButton(
                             size = 56.dp,
-                            dim = 0.5f,
                             label = stringResource(
                                 if (isPlaying) R.string.player_pause else R.string.player_play,
                             ),
@@ -279,14 +277,14 @@ fun PlayerOverlay(
                         ) {
                             if (isPlaying) {
                                 Icon(
-                                    imageVector = PauseIcon,
+                                    imageVector = Icons.Outlined.Pause,
                                     contentDescription = null,
                                     tint = Color.White,
                                     modifier = Modifier.size(42.dp),
                                 )
                             } else {
                                 Icon(
-                                    imageVector = Icons.Filled.PlayArrow,
+                                    imageVector = Icons.Outlined.PlayArrow,
                                     contentDescription = null,
                                     tint = Color.White,
                                     modifier = Modifier.size(42.dp),
@@ -306,17 +304,17 @@ fun PlayerOverlay(
                         PlaybackTimePill(progress, seekPreviewPositionMs)
                         Spacer(Modifier.weight(1f))
                         RoundButton(
-                            size = 32.dp,
+                            size = 36.dp,
                             label = stringResource(
                                 if (isFullscreen) R.string.player_exit_fullscreen else R.string.player_fullscreen,
                             ),
                             onClick = onToggleFullscreen,
                         ) {
                             Icon(
-                                imageVector = if (isFullscreen) FullscreenExitIcon else FullscreenIcon,
+                                imageVector = Icons.Outlined.OpenInFull,
                                 contentDescription = null,
                                 tint = Color.White,
-                                modifier = Modifier.size(24.dp),
+                                modifier = Modifier.size(24.dp).graphicsLayer { scaleX = -1f },
                             )
                         }
                     }
@@ -620,7 +618,7 @@ private fun TimePill(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .clip(RoundedCornerShape(percent = 50))
-            .background(Color(0x66000000))
+            .background(Color.Black.copy(alpha = 0.36f))
             .padding(horizontal = 10.dp, vertical = 3.dp),
     ) {
         Text(
@@ -658,7 +656,7 @@ private fun formatTime(ms: Long): String {
 private fun RoundButton(
     size: Dp,
     label: String,
-    dim: Float = 0.42f,
+    dim: Float = 0.36f,
     onClick: () -> Unit,
     content: @Composable BoxScope.() -> Unit,
 ) {
@@ -682,56 +680,6 @@ private fun RoundButton(
             content = content,
         )
     }
-}
-
-/**
- * 播放器图标：全部用 Material 官方的 **24dp 路径数据**建 `ImageVector`。
- *
- * NOTE: 之前这几个图标是拿 `Canvas` 按比例现画的（全屏的四段括号、设置的三个旋钮），
- * 没有落在 24dp 网格上、描边和拐角半径都是估的，缩到 20dp 就明显歪（2026-11-15 反馈）。
- * 这里换成官方 glyph 的路径，字形和 Material Symbols 一致；设置直接用 `material-icons-core`
- * 里已有的 `Icons.Filled.Settings`，不必自己画。
- * NOTE: 仍然不引 `material-icons-extended`——整套图标几 MB，为这几个字形不值得。
- */
-private fun materialIcon(name: String, pathBuilder: PathBuilder.() -> Unit): ImageVector =
-    ImageVector.Builder(
-        name = name,
-        defaultWidth = 24.dp,
-        defaultHeight = 24.dp,
-        viewportWidth = 24f,
-        viewportHeight = 24f,
-    ).apply {
-        path(fill = SolidColor(Color.Black), pathBuilder = pathBuilder)
-    }.build()
-
-/** Material `fullscreen`。 */
-private val FullscreenIcon: ImageVector = materialIcon("Fullscreen") {
-    moveTo(7f, 14f); horizontalLineTo(5f); verticalLineToRelative(5f); horizontalLineToRelative(5f)
-    verticalLineToRelative(-2f); horizontalLineTo(7f); verticalLineToRelative(-3f); close()
-    moveTo(5f, 10f); horizontalLineToRelative(2f); verticalLineTo(7f); horizontalLineToRelative(3f)
-    verticalLineTo(5f); horizontalLineTo(5f); verticalLineToRelative(5f); close()
-    moveTo(17f, 17f); horizontalLineToRelative(-3f); verticalLineToRelative(2f); horizontalLineToRelative(5f)
-    verticalLineToRelative(-5f); horizontalLineToRelative(-2f); verticalLineToRelative(3f); close()
-    moveTo(14f, 5f); verticalLineToRelative(2f); horizontalLineToRelative(3f); verticalLineToRelative(3f)
-    horizontalLineToRelative(2f); verticalLineTo(5f); horizontalLineToRelative(-5f); close()
-}
-
-/** Material `fullscreen_exit`（括号朝内）。 */
-private val FullscreenExitIcon: ImageVector = materialIcon("FullscreenExit") {
-    moveTo(5f, 16f); horizontalLineToRelative(3f); verticalLineToRelative(3f); horizontalLineToRelative(2f)
-    verticalLineToRelative(-5f); horizontalLineTo(5f); verticalLineToRelative(2f); close()
-    moveTo(8f, 8f); horizontalLineTo(5f); verticalLineToRelative(2f); horizontalLineToRelative(5f)
-    verticalLineTo(5f); horizontalLineTo(8f); verticalLineToRelative(3f); close()
-    moveTo(14f, 19f); horizontalLineToRelative(2f); verticalLineToRelative(-3f); horizontalLineToRelative(3f)
-    verticalLineToRelative(-2f); horizontalLineToRelative(-5f); verticalLineToRelative(5f); close()
-    moveTo(16f, 8f); verticalLineTo(5f); horizontalLineToRelative(-2f); verticalLineToRelative(5f)
-    horizontalLineToRelative(5f); verticalLineTo(8f); horizontalLineToRelative(-3f); close()
-}
-
-/** Material `pause`。 */
-private val PauseIcon: ImageVector = materialIcon("Pause") {
-    moveTo(6f, 19f); horizontalLineToRelative(4f); verticalLineTo(5f); horizontalLineTo(6f); close()
-    moveToRelative(8f, -14f); verticalLineToRelative(14f); horizontalLineToRelative(4f); verticalLineTo(5f); close()
 }
 
 /**
@@ -872,7 +820,7 @@ private fun PlayerSettingRow(label: String, value: String, onClick: () -> Unit) 
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(20.dp),
@@ -891,7 +839,7 @@ private fun PlayerSectionHeader(title: String, onBack: () -> Unit) {
     ) {
         IconButton(onClick = onBack) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                 contentDescription = stringResource(R.string.common_back),
             )
         }

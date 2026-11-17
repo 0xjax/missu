@@ -4,7 +4,7 @@ package app.missu.ui.components
 
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -55,7 +55,7 @@ fun PageTopBar(
         navigationIcon = {
             if (back != null) {
                 TooltipIconButton(
-                    icon = Icons.AutoMirrored.Filled.ArrowBack,
+                    icon = Icons.AutoMirrored.Outlined.ArrowBack,
                     contentDescription = stringResource(R.string.common_back),
                     onClick = back,
                 )

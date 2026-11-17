@@ -23,9 +23,9 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.outlined.List
+import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
@@ -123,7 +123,7 @@ private fun VideoHistory(
 ) {
     if (entries.isEmpty()) {
         EmptyHint(
-            icon = Icons.Filled.PlayArrow,
+            icon = Icons.Outlined.PlayArrow,
             title = stringResource(R.string.history_empty_title),
             subtitle = stringResource(R.string.history_empty_subtitle),
         )
@@ -151,7 +151,7 @@ private fun ListHistory(
 ) {
     if (entries.isEmpty()) {
         EmptyHint(
-            icon = Icons.AutoMirrored.Filled.List,
+            icon = Icons.AutoMirrored.Outlined.List,
             title = stringResource(R.string.history_lists_empty_title),
             subtitle = stringResource(R.string.history_lists_empty_subtitle),
         )
@@ -188,7 +188,7 @@ private fun ListHistoryRow(entry: ListHistoryEntry, onClick: () -> Unit) {
         },
         trailingContent = {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
