@@ -328,6 +328,7 @@ private fun HomeSectionHeader(
                 icon = Icons.Outlined.PushPin,
                 contentDescription = stringResource(R.string.list_pin_home),
                 onClick = onPin,
+                tonal = true,
             )
         }
         if (onRefreshRandom != null) {
