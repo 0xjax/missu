@@ -3,19 +3,16 @@
 package app.missu.ui.detail
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.EnterExitState
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -44,9 +41,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
-import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
-import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.material3.ButtonDefaults
@@ -77,7 +72,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -93,7 +88,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
@@ -416,12 +410,17 @@ private fun DetailBody(
     val savedText = stringResource(R.string.detail_saved)
     // 每部影片默认收起；旋转或全屏往返仍保留用户当前选择。
     var seekControlsOpen by rememberSaveable(detail.id) { mutableStateOf(false) }
-    val seekSizeSpec = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
+    val seekScaleSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
     val seekEffectsSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
     val titleVisibility by animateFloatAsState(
         targetValue = if (seekControlsOpen) 0f else 1f,
         animationSpec = seekEffectsSpec,
         label = "detailTitleVisibility",
+    )
+    val seekTriggerRotation by animateFloatAsState(
+        targetValue = if (seekControlsOpen) 180f else 0f,
+        animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+        label = "seekControlsTriggerRotation",
     )
     val titleThreeLineHeight = with(LocalDensity.current) {
         MaterialTheme.typography.titleMedium.lineHeight.toDp() * 3
@@ -550,7 +549,7 @@ private fun DetailBody(
                                 Icon(
                                     imageVector = if (detail.saved) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                                     contentDescription = null,
-                                    tint = if (detail.saved) FavoriteRed else LocalContentColor.current,
+                                    tint = if (detail.saved) MaterialTheme.colorScheme.primary else LocalContentColor.current,
                                     modifier = Modifier.size(18.dp),
                                 )
                                 Spacer(Modifier.width(8.dp))
@@ -596,19 +595,15 @@ private fun DetailBody(
                         .padding(vertical = 4.dp)
                         .size(width = 56.dp, height = 40.dp),
                 ) {
-                    Crossfade(
-                        targetState = seekControlsOpen,
-                        animationSpec = seekEffectsSpec,
-                        label = "seekControlsTrigger",
-                    ) { open ->
-                        Icon(
-                            imageVector = if (open) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.SwapHoriz,
-                            contentDescription = stringResource(
-                                if (open) R.string.player_hide_seek_controls else R.string.player_show_seek_controls,
-                            ),
-                            modifier = Modifier.size(24.dp),
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Outlined.KeyboardArrowDown,
+                        contentDescription = stringResource(
+                            if (seekControlsOpen) R.string.player_hide_seek_controls else R.string.player_show_seek_controls,
+                        ),
+                        modifier = Modifier
+                            .size(24.dp)
+                            .graphicsLayer { rotationZ = seekTriggerRotation },
+                    )
                 }
             }
             Box(Modifier.fillMaxWidth().heightIn(min = titleThreeLineHeight)) {
@@ -626,44 +621,22 @@ private fun DetailBody(
                 ) {
                     DetailTitle(detail, interactionEnabled = !seekControlsOpen)
                 }
-                // NOTE: 展开动画会裁剪自己的内容，Surface 的阴影放里面只能等展开结束才突然完整出现。
-                // 阴影容器放在裁剪外，与标题共用同一条透明度时间线；面板本体仍在下面展开。
-                if (titleVisibility < 1f) {
-                    val panelShape = MaterialTheme.shapes.largeIncreased
-                    Box(
-                        Modifier
-                            .matchParentSize()
-                            .padding(horizontal = 16.dp)
-                            .shadow(2.dp, panelShape)
-                            .background(MaterialTheme.colorScheme.surfaceContainerHigh, panelShape)
-                            .graphicsLayer { alpha = 1f - titleVisibility },
-                    )
-                }
                 // NOTE: 标题始终参与测量，面板用 matchParentSize 覆盖；快速反向时两边也只反转、不重排。
                 androidx.compose.animation.AnimatedVisibility(
                     visible = seekControlsOpen,
                     modifier = Modifier.matchParentSize(),
+                    // scale 不裁剪 Surface：托盘、内容和阴影始终同一层做弹簧变换。
                     enter = fadeIn(seekEffectsSpec) +
-                        expandHorizontally(
-                            animationSpec = seekSizeSpec,
-                            expandFrom = Alignment.End,
-                            initialWidth = { it / 7 },
-                        ) +
-                        expandVertically(
-                            animationSpec = seekSizeSpec,
-                            expandFrom = Alignment.Top,
-                            initialHeight = { it * 2 / 3 },
+                        scaleIn(
+                            animationSpec = seekScaleSpec,
+                            initialScale = 0.85f,
+                            transformOrigin = TransformOrigin(1f, 0f),
                         ),
                     exit = fadeOut(seekEffectsSpec) +
-                        shrinkHorizontally(
-                            animationSpec = seekSizeSpec,
-                            shrinkTowards = Alignment.End,
-                            targetWidth = { it / 7 },
-                        ) +
-                        shrinkVertically(
-                            animationSpec = seekSizeSpec,
-                            shrinkTowards = Alignment.Top,
-                            targetHeight = { it * 2 / 3 },
+                        scaleOut(
+                            animationSpec = seekScaleSpec,
+                            targetScale = 0.85f,
+                            transformOrigin = TransformOrigin(1f, 0f),
                         ),
                     label = "seekControlsPanel",
                 ) {
@@ -696,6 +669,7 @@ private fun SeekControlPanel(
             .padding(horizontal = 16.dp),
         shape = MaterialTheme.shapes.largeIncreased,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shadowElevation = 2.dp,
     ) {
         Row(
             modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -774,13 +748,6 @@ private fun SeekControlButton(
 
 
 
-
-
-/**
- * 收藏心形的红。**语义色**，不属于主题色板（和卡片角标那几档同性质）：收藏的红在浅色/深色
- * 主题里都该是同一个可识别的心形红，跟着主题变就不是「收藏」了。
- */
-private val FavoriteRed = Color(0xFFE5484D)
 
 
 private fun Context.findActivity(): Activity? {

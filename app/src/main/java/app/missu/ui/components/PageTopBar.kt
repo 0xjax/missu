@@ -3,6 +3,7 @@
 package app.missu.ui.components
 
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.Icon
@@ -13,16 +14,20 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTooltipState
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import app.missu.R
 
 /**
@@ -79,14 +84,34 @@ fun TooltipIconButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     tint: Color? = null,
+    tonal: Boolean = false,
 ) {
     TooltipBox(
         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
         tooltip = { PlainTooltip { Text(contentDescription) } },
         state = rememberTooltipState(),
     ) {
-        IconButton(onClick = onClick, modifier = modifier, enabled = enabled) {
-            Icon(icon, contentDescription = contentDescription, tint = tint ?: LocalContentColor.current)
+        if (tonal) {
+            FilledTonalIconButton(
+                onClick = onClick,
+                modifier = modifier.minimumInteractiveComponentSize(),
+                enabled = enabled,
+                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+            ) {
+                Icon(
+                    icon,
+                    contentDescription = contentDescription,
+                    tint = tint ?: LocalContentColor.current,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        } else {
+            IconButton(onClick = onClick, modifier = modifier, enabled = enabled) {
+                Icon(icon, contentDescription = contentDescription, tint = tint ?: LocalContentColor.current)
+            }
         }
     }
 }

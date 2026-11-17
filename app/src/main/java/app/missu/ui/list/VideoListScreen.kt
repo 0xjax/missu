@@ -236,6 +236,7 @@ private fun ListControls(
                 icon = Icons.Outlined.PushPin,
                 contentDescription = stringResource(R.string.list_pin_home),
                 onClick = onPin,
+                tonal = true,
             )
         }
     }
