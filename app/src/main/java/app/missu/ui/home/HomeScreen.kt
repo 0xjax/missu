@@ -243,13 +243,9 @@ private fun HomeContent(
                         carousel = genericPinned == null && index == 0,
                         onMore = section.morePath?.let { path -> { onOpenList(path, section.title) } },
                         onPin = listPath?.let { path ->
-                            val query = VideoListQuery(path)
-                            if (effectivePinned?.sameSiteQuery(query) == true) {
-                                null
-                            } else {
-                                { onPin(PinnedHomeList(section.title, query)) }
-                            }
+                            { onPin(PinnedHomeList(section.title, VideoListQuery(path))) }
                         },
+                        pinned = listPath?.let { effectivePinned?.sameSiteQuery(VideoListQuery(it)) } == true,
                         refreshingRandom = refreshingRandom,
                         onRefreshRandom = onRefreshRandom.takeIf { section.id == "random" },
                         onOpen = onOpen,
@@ -276,6 +272,7 @@ private fun LazyGridScope.homeSection(
     carousel: Boolean,
     onMore: (() -> Unit)?,
     onPin: (() -> Unit)?,
+    pinned: Boolean = false,
     onOpen: (id: String, thumbnail: String?, heroTag: String) -> Unit,
     refreshingRandom: Boolean = false,
     onRefreshRandom: (() -> Unit)? = null,
@@ -285,6 +282,7 @@ private fun LazyGridScope.homeSection(
             title = section.title,
             onMore = onMore,
             onPin = onPin,
+            pinned = pinned,
             refreshingRandom = refreshingRandom,
             onRefreshRandom = onRefreshRandom,
         )
@@ -313,6 +311,7 @@ private fun HomeSectionHeader(
     title: String,
     onMore: (() -> Unit)?,
     onPin: (() -> Unit)?,
+    pinned: Boolean = false,
     refreshingRandom: Boolean = false,
     onRefreshRandom: (() -> Unit)? = null,
 ) {
@@ -326,9 +325,10 @@ private fun HomeSectionHeader(
         if (onPin != null) {
             TooltipIconButton(
                 icon = Icons.Outlined.PushPin,
-                contentDescription = stringResource(R.string.list_pin_home),
+                contentDescription = stringResource(if (pinned) R.string.list_pinned_home else R.string.list_pin_home),
                 onClick = onPin,
                 tonal = true,
+                active = pinned,
             )
         }
         if (onRefreshRandom != null) {

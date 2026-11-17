@@ -85,6 +85,7 @@ fun TooltipIconButton(
     enabled: Boolean = true,
     tint: Color? = null,
     tonal: Boolean = false,
+    active: Boolean = false,
 ) {
     TooltipBox(
         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
@@ -95,11 +96,20 @@ fun TooltipIconButton(
             FilledTonalIconButton(
                 onClick = onClick,
                 modifier = modifier.minimumInteractiveComponentSize(),
-                enabled = enabled,
-                colors = IconButtonDefaults.filledTonalIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                ),
+                enabled = enabled && !active,
+                colors = if (active) {
+                    IconButtonDefaults.filledTonalIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        disabledContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        disabledContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                } else {
+                    IconButtonDefaults.filledTonalIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                },
             ) {
                 Icon(
                     icon,

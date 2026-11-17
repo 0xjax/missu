@@ -54,8 +54,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -99,7 +99,7 @@ fun DiscoverScreen(
     hotFilter: VideoListOptions.Filter?,
     hotDetectedSort: VideoListOptions.Sort?,
     hotState: VideoListUiState,
-    showHotPin: Boolean,
+    hotPinned: Boolean,
     channels: ChannelsUiState,
     onLoad: (String) -> Unit,
     onLoadMore: (String) -> Unit,
@@ -152,6 +152,11 @@ fun DiscoverScreen(
                 animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
                 label = "actressFilterVisibility",
             )
+            val filterScale by animateFloatAsState(
+                targetValue = if (ranking) 0.96f else 1f,
+                animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+                label = "actressFilterScale",
+            )
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -184,7 +189,11 @@ fun DiscoverScreen(
                 // NOTE: 排行不吃这些筛选；操作淡出但槽位必须继续测量，否则排序组会突然扩宽、三颗按钮一起跳。
                 Row(
                     modifier = Modifier
-                        .alpha(filterVisibility)
+                        .graphicsLayer {
+                            alpha = filterVisibility
+                            scaleX = filterScale
+                            scaleY = filterScale
+                        }
                         .then(if (ranking) Modifier.clearAndSetSemantics { } else Modifier),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -219,7 +228,7 @@ fun DiscoverScreen(
                 onRetry = onHotRetry,
                 onLoadMore = onHotLoadMore,
                 onOpen = onOpenVideo,
-                showPin = showHotPin,
+                pinned = hotPinned,
                 onPin = onHotPin,
                 modifier = Modifier.fillMaxSize(),
             )
