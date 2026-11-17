@@ -42,9 +42,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.KeyboardArrowUp
+import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
+import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.material3.ButtonDefaults
@@ -76,10 +78,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 
@@ -549,7 +548,7 @@ private fun DetailBody(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Icon(
-                                    imageVector = if (detail.saved) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                    imageVector = if (detail.saved) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                                     contentDescription = null,
                                     tint = if (detail.saved) FavoriteRed else LocalContentColor.current,
                                     modifier = Modifier.size(18.dp),
@@ -572,7 +571,7 @@ private fun DetailBody(
                             // contentDescription（按钮会把文字作为无障碍名）。
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                    imageVector = PlaylistAddIcon,
+                                    imageVector = Icons.AutoMirrored.Outlined.PlaylistAdd,
                                     contentDescription = null,
                                     modifier = Modifier.size(18.dp),
                                 )
@@ -603,7 +602,7 @@ private fun DetailBody(
                         label = "seekControlsTrigger",
                     ) { open ->
                         Icon(
-                            imageVector = if (open) Icons.Filled.KeyboardArrowUp else SeekControlsIcon,
+                            imageVector = if (open) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.SwapHoriz,
                             contentDescription = stringResource(
                                 if (open) R.string.player_hide_seek_controls else R.string.player_show_seek_controls,
                             ),
@@ -626,6 +625,19 @@ private fun DetailBody(
                         ),
                 ) {
                     DetailTitle(detail, interactionEnabled = !seekControlsOpen)
+                }
+                // NOTE: 展开动画会裁剪自己的内容，Surface 的阴影放里面只能等展开结束才突然完整出现。
+                // 阴影容器放在裁剪外，与标题共用同一条透明度时间线；面板本体仍在下面展开。
+                if (titleVisibility < 1f) {
+                    val panelShape = MaterialTheme.shapes.largeIncreased
+                    Box(
+                        Modifier
+                            .matchParentSize()
+                            .padding(horizontal = 16.dp)
+                            .shadow(2.dp, panelShape)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh, panelShape)
+                            .graphicsLayer { alpha = 1f - titleVisibility },
+                    )
                 }
                 // NOTE: 标题始终参与测量，面板用 matchParentSize 覆盖；快速反向时两边也只反转、不重排。
                 androidx.compose.animation.AnimatedVisibility(
@@ -684,7 +696,6 @@ private fun SeekControlPanel(
             .padding(horizontal = 16.dp),
         shape = MaterialTheme.shapes.largeIncreased,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shadowElevation = 2.dp,
     ) {
         Row(
             modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -770,45 +781,6 @@ private fun SeekControlButton(
  * 主题里都该是同一个可识别的心形红，跟着主题变就不是「收藏」了。
  */
 private val FavoriteRed = Color(0xFFE5484D)
-
-private val SeekControlsIcon: ImageVector = ImageVector.Builder(
-    name = "SeekControls",
-    defaultWidth = 24.dp,
-    defaultHeight = 24.dp,
-    viewportWidth = 24f,
-    viewportHeight = 24f,
-).apply {
-    path(fill = SolidColor(Color.Black)) {
-        moveTo(11f, 18f); lineTo(2f, 12f); lineTo(11f, 6f); close()
-        moveTo(13f, 6f); lineTo(22f, 12f); lineTo(13f, 18f); close()
-    }
-}.build()
-
-/**
- * 「加入片单」图标（Material 的 `playlist_add`：三条横线 + 右侧一个加号）。
- *
- * NOTE: 自己画，不引 `material-icons-extended`——为了一个图标把整套图标塞进 APK 不值得，
- * 本工程一直只用 `material-icons-core`（见 `app/build.gradle.kts` 里那条注释）。
- * 几何按 24×24 视口画成实心矩形，`Icon` 的 tint 照常生效。
- */
-private val PlaylistAddIcon: ImageVector = ImageVector.Builder(
-    name = "PlaylistAdd",
-    defaultWidth = 24.dp,
-    defaultHeight = 24.dp,
-    viewportWidth = 24f,
-    viewportHeight = 24f,
-).apply {
-    path(fill = SolidColor(Color.Black)) {
-        // 三条横线（x 2..13，线宽 2，行距 5）
-        moveTo(2f, 6f); horizontalLineToRelative(11f); verticalLineToRelative(2f); horizontalLineToRelative(-11f); close()
-        moveTo(2f, 11f); horizontalLineToRelative(11f); verticalLineToRelative(2f); horizontalLineToRelative(-11f); close()
-        moveTo(2f, 16f); horizontalLineToRelative(11f); verticalLineToRelative(2f); horizontalLineToRelative(-11f); close()
-        // 右侧加号：中心 (18.5, 13)，横竖各 7×2 / 2×7
-        moveTo(15f, 12f); horizontalLineToRelative(7f); verticalLineToRelative(2f); horizontalLineToRelative(-7f); close()
-        moveTo(17.5f, 9.5f); horizontalLineToRelative(2f); verticalLineToRelative(7f); horizontalLineToRelative(-2f); close()
-    }
-}.build()
-
 
 
 private fun Context.findActivity(): Activity? {

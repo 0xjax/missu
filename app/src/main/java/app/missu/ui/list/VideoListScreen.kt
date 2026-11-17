@@ -18,8 +18,9 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.automirrored.outlined.List
+import androidx.compose.material.icons.outlined.ArrowDropDown
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -51,7 +52,6 @@ import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.LocalVideoListColumns
 import app.missu.ui.components.PageStateTransition
 import app.missu.ui.components.PageTopBar
-import app.missu.ui.components.PushPinIcon
 import app.missu.ui.components.TooltipIconButton
 import app.missu.ui.components.VideoGridCard
 
@@ -194,7 +194,7 @@ private fun ListControls(
                 onClick = { sortMenuOpen = true },
                 label = { Text(sortLabel(current), maxLines = 1) },
                 trailingIcon = {
-                    Icon(imageVector = Icons.Filled.ArrowDropDown, contentDescription = null)
+                    Icon(imageVector = Icons.Outlined.ArrowDropDown, contentDescription = null)
                 },
             )
             DropdownMenu(expanded = sortMenuOpen, onDismissRequest = { sortMenuOpen = false }) {
@@ -233,7 +233,7 @@ private fun ListControls(
 
         if (showPin) {
             TooltipIconButton(
-                icon = PushPinIcon,
+                icon = Icons.Outlined.PushPin,
                 contentDescription = stringResource(R.string.list_pin_home),
                 onClick = onPin,
             )
@@ -260,7 +260,7 @@ fun VideoListBody(
             VideoListUiState.Loading -> LoadingHint()
 
             VideoListUiState.Empty -> EmptyHint(
-                icon = Icons.AutoMirrored.Filled.List,
+                icon = Icons.AutoMirrored.Outlined.List,
                 title = stringResource(R.string.list_empty_title),
             )
 

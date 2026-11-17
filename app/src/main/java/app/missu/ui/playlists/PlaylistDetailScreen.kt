@@ -19,11 +19,11 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.automirrored.outlined.List
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Clear
+import androidx.compose.material.icons.outlined.Done
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AppBarRow
 import androidx.compose.material3.ButtonGroup
@@ -141,7 +141,7 @@ fun PlaylistDetailScreen(
                     PlaylistDetailUiState.Loading -> LoadingHint()
 
                     PlaylistDetailUiState.Empty -> EmptyHint(
-                        icon = Icons.AutoMirrored.Filled.List,
+                        icon = Icons.AutoMirrored.Outlined.List,
                         title = stringResource(R.string.playlist_empty_title),
                         subtitle = stringResource(R.string.playlist_empty_subtitle),
                     )
@@ -219,13 +219,13 @@ fun PlaylistDetailScreen(
                     AppBarRow {
                         clickableItem(
                             onClick = { selected = emptyList() },
-                            icon = { Icon(Icons.Filled.Clear, contentDescription = null) },
+                            icon = { Icon(Icons.Outlined.Clear, contentDescription = null) },
                             label = deselectLabel,
                             enabled = selected.isNotEmpty() && removing.isEmpty(),
                         )
                         clickableItem(
                             onClick = { exitManaging() },
-                            icon = { Icon(Icons.Filled.Done, contentDescription = null) },
+                            icon = { Icon(Icons.Outlined.Done, contentDescription = null) },
                             label = doneLabel,
                         )
                     }
@@ -260,7 +260,7 @@ fun PlaylistDetailScreen(
                     containerColor = { fabContainer },
                 ) {
                     Icon(
-                        Icons.Filled.Edit,
+                        Icons.Outlined.Edit,
                         contentDescription = stringResource(R.string.playlist_manage),
                         tint = onFabContainer,
                     )
@@ -310,7 +310,7 @@ private fun SelectionBadge(
         when {
             removing -> LoadingIndicator(modifier = Modifier.size(16.dp), color = Color.White)
             selected -> Icon(
-                Icons.Filled.Check,
+                Icons.Outlined.Check,
                 contentDescription = null,
                 tint = Color.White,
                 modifier = Modifier.size(16.dp),

@@ -13,7 +13,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -48,7 +48,7 @@ fun SavedScreen(
                 SavedUiState.Loading -> LoadingHint()
 
                 SavedUiState.Empty -> EmptyHint(
-                    icon = Icons.Filled.Favorite,
+                    icon = Icons.Outlined.FavoriteBorder,
                     title = stringResource(R.string.saved_empty_title),
                     subtitle = stringResource(R.string.saved_empty_subtitle),
                 )

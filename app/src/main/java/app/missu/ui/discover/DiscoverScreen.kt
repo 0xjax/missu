@@ -2,6 +2,7 @@
 
 package app.missu.ui.discover
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,8 +27,8 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.outlined.List
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -53,10 +54,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -143,6 +146,12 @@ fun DiscoverScreen(
 
         // 排序与筛选只有女优目录有（站点对类型目录不提供 sort / 筛选参数）。
         if (tab == DiscoverTab.ACTRESSES) {
+            val ranking = sort == ActressFilterOptions.SORT_RANKING
+            val filterVisibility by animateFloatAsState(
+                targetValue = if (ranking) 0f else 1f,
+                animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
+                label = "actressFilterVisibility",
+            )
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -164,6 +173,7 @@ fun DiscoverScreen(
                                     ButtonGroupDefaults.connectedTrailingButtonShapes()
                                 else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
                             },
+                            contentPadding = PaddingValues(horizontal = 4.dp),
                             modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
                         ) {
                             Text(sortLabel(option.value), maxLines = 1, softWrap = false)
@@ -171,15 +181,23 @@ fun DiscoverScreen(
                     }
                 }
 
-                // NOTE: 「本月排行」是站点另一张页面，不吃 height/cup/age/debut 这些筛选参数；
-                // 留着「筛选」按钮的话，点开会得到一组点完没有任何变化的胶囊。所以那一档藏起来。
-                if (sort != ActressFilterOptions.SORT_RANKING) {
+                // NOTE: 排行不吃这些筛选；操作淡出但槽位必须继续测量，否则排序组会突然扩宽、三颗按钮一起跳。
+                Row(
+                    modifier = Modifier
+                        .alpha(filterVisibility)
+                        .then(if (ranking) Modifier.clearAndSetSemantics { } else Modifier),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     if (filters.isNotEmpty()) {
-                        TextButton(onClick = onResetFilters) { Text(stringResource(R.string.discover_clear)) }
+                        TextButton(onClick = onResetFilters, enabled = !ranking) {
+                            Text(stringResource(R.string.discover_clear))
+                        }
                     }
                     FilterChip(
                         selected = filters.isNotEmpty(),
                         onClick = { filterSheetOpen = true },
+                        enabled = !ranking,
                         label = { Text(if (filters.isEmpty()) stringResource(R.string.discover_filter) else stringResource(R.string.discover_filter_count, filters.size)) },
                     )
                 }
@@ -211,7 +229,7 @@ fun DiscoverScreen(
             null, DirectoryUiState.Loading -> LoadingHint()
 
             DirectoryUiState.Empty -> EmptyHint(
-                icon = Icons.AutoMirrored.Filled.List,
+                icon = Icons.AutoMirrored.Outlined.List,
                 title = stringResource(R.string.list_empty_title),
             )
 
@@ -296,7 +314,7 @@ private fun ChannelsContent(
         ChannelsUiState.Loading -> LoadingHint()
 
         ChannelsUiState.Empty -> EmptyHint(
-            icon = Icons.AutoMirrored.Filled.List,
+            icon = Icons.AutoMirrored.Outlined.List,
             title = stringResource(R.string.list_empty_title),
         )
 
@@ -365,7 +383,7 @@ private fun ChannelRow(name: String, onClick: () -> Unit) {
         ) {
             Text(text = name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )

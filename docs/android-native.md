@@ -74,7 +74,7 @@
 |---|---|---|
 | Compose BOM | **alpha 2026.11.00** | 统一 Compose 版本；material3 解析成 **1.5.0-rc01**、core 解析成 1.13.0-rc01（预发布栈） |
 | material3 / ui / ui-tooling-preview / debug ui-tooling | 由 BOM 决定 | UI；M3E 组件（Carousel / ShortNavigationBar / LoadingIndicator / ToggleButton 组）也在这里 |
-| material-icons-core | 由 BOM 决定 | 底部导航 4 个图标（不引 `icons-extended`，体积大） |
+| material-icons-extended | 由 BOM 决定 | 全界面统一 Outlined 图标；仅已收藏等明确状态用 Filled，release 由 R8 移除未使用字形 |
 | activity-compose | 1.13.0 | `setContent` / `enableEdgeToEdge` |
 | lifecycle-viewmodel-compose / lifecycle-runtime-compose | 2.11.0 | `viewModel()` / 生命周期感知的 `collectAsStateWithLifecycle()` |
 | navigation-compose | 2.10.2 | `NavHost` 单 Activity 路由 |

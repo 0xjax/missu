@@ -19,7 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
@@ -142,7 +142,7 @@ fun ErrorHint(message: String, onRetry: () -> Unit, modifier: Modifier = Modifie
             modifier = Modifier.padding(horizontal = 32.dp),
         ) {
             Icon(
-                imageVector = Icons.Filled.Warning,
+                imageVector = Icons.Outlined.Warning,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.error,
                 modifier = Modifier.size(40.dp),

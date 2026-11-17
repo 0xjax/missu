@@ -2,7 +2,7 @@ package app.missu.ui.components
 
 import android.content.res.Configuration
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import app.missu.data.model.VideoSummary
@@ -28,7 +28,7 @@ private fun ErrorHintPreview() {
 private fun EmptyHintPreview() {
     MissuTheme(darkTheme = true) {
         EmptyHint(
-            icon = Icons.Filled.Warning,
+            icon = Icons.Outlined.Warning,
             title = "No results for this unusually long search query",
             subtitle = "Try another code, actress or keyword. Long supporting text should remain readable at larger font sizes.",
             actionLabel = "Try again",

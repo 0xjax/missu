@@ -17,13 +17,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.automirrored.outlined.ExitToApp
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.outlined.List
+import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.DateRange
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Settings
 
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -75,7 +75,7 @@ fun AccountScreen(
                 // NOTE: 未登录也要够得到设置（主题 / 语言 / 播放），所以空态只占中间那块，
                 // 入口与登录后那张分组容器同一套样式——同一个入口不该因为有没有登录而换样子。
                 EmptyHint(
-                    icon = Icons.Filled.AccountCircle,
+                    icon = Icons.Outlined.AccountCircle,
                     title = stringResource(R.string.account_logged_out_title),
                     subtitle = stringResource(R.string.account_logged_out_subtitle),
                     actionLabel = stringResource(R.string.account_go_login),
@@ -83,7 +83,7 @@ fun AccountScreen(
                     modifier = Modifier.weight(1f),
                 )
                 GroupSurface(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    MenuRow(Icons.Filled.Settings, stringResource(R.string.account_settings), onSettings)
+                    MenuRow(Icons.Outlined.Settings, stringResource(R.string.account_settings), onSettings)
                 }
                 Spacer(Modifier.height(16.dp))
             }
@@ -97,20 +97,20 @@ fun AccountScreen(
                 Spacer(Modifier.height(16.dp))
 
                 GroupSurface(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    MenuRow(Icons.Filled.Favorite, stringResource(R.string.account_saved), onSaved)
+                    MenuRow(Icons.Outlined.FavoriteBorder, stringResource(R.string.account_saved), onSaved)
                     GroupDivider(start = 56.dp)
-                    MenuRow(Icons.AutoMirrored.Filled.List, stringResource(R.string.account_playlists), onPlaylists)
+                    MenuRow(Icons.AutoMirrored.Outlined.List, stringResource(R.string.account_playlists), onPlaylists)
                     GroupDivider(start = 56.dp)
-                    MenuRow(Icons.Filled.DateRange, stringResource(R.string.account_history), onHistory)
+                    MenuRow(Icons.Outlined.DateRange, stringResource(R.string.account_history), onHistory)
                     GroupDivider(start = 56.dp)
-                    MenuRow(Icons.Filled.Settings, stringResource(R.string.account_settings), onSettings)
+                    MenuRow(Icons.Outlined.Settings, stringResource(R.string.account_settings), onSettings)
                 }
 
                 Spacer(Modifier.height(12.dp))
 
                 GroupSurface(modifier = Modifier.padding(horizontal = 16.dp)) {
                     MenuRow(
-                        icon = Icons.AutoMirrored.Filled.ExitToApp,
+                        icon = Icons.AutoMirrored.Outlined.ExitToApp,
                         label = stringResource(R.string.account_logout),
                         onClick = onLogout,
                         destructive = true,
@@ -195,7 +195,7 @@ private fun MenuRow(
         trailingContent = {
             if (!destructive) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
