@@ -57,7 +57,6 @@ import androidx.compose.material3.SplitButtonLayout
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -80,7 +79,6 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -106,13 +104,8 @@ import app.missu.ui.components.GroupSurface
 import app.missu.ui.components.PageStateTransition
 import app.missu.ui.common.UiMessage
 import app.missu.ui.common.text
-import app.missu.ui.theme.LocalDarkTheme
 import app.missu.ui.components.heroKeyFor
 
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
-import androidx.core.view.WindowCompat
 import androidx.media3.common.Player
 
 import kotlinx.coroutines.launch
@@ -161,17 +154,6 @@ fun DetailScreen(
     var dragProgress by remember { mutableFloatStateOf(0f) }
     val animationScope = rememberCoroutineScope()
 
-    // NOTE: 状态栏那条是**黑的**，图标反过来用浅色：这一页顶上就是播放器，浅色页面底 + 深色图标
-    // 在转全屏那一下会闪一条白边；黑条和播放器/横屏全屏的黑底是同一种颜色，旋转就看不出来了。
-    // NOTE: 离开这一页必须还回去（按当前主题），否则回到列表还是浅色图标压在浅色页头上。
-    val view = LocalView.current
-    val darkTheme = LocalDarkTheme.current
-    val window = remember(view) { view.context.findActivity()?.window }
-    DisposableEffect(window, darkTheme) {
-        val controller = window?.let { WindowCompat.getInsetsController(it, view) }
-        controller?.isAppearanceLightStatusBars = false
-        onDispose { controller?.isAppearanceLightStatusBars = !darkTheme }
-    }
     val density = LocalDensity.current
     val statusBarInset = with(density) { WindowInsets.statusBars.getTop(this).toDp() }
 
@@ -183,16 +165,6 @@ fun DetailScreen(
             .fillMaxSize()
             .background(if (fullscreen) Color.Black else MaterialTheme.colorScheme.background),
     ) {
-        // 状态栏那条黑底：铺在页面底色之上、播放器之下（播放器本身也整体下移了同样高度）。
-        if (!fullscreen) {
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(statusBarInset)
-                    .background(Color.Black),
-            )
-        }
-
         // 内嵌播放器的高度：整宽 16:9。正文从这个高度之下开始。
         val videoHeight = maxWidth * 9f / 16f
         val screenHeightPx = with(LocalDensity.current) { maxHeight.toPx() }
@@ -743,17 +715,4 @@ private fun SeekControlButton(
             modifier = Modifier.clearAndSetSemantics { },
         )
     }
-}
-
-
-
-
-
-private fun Context.findActivity(): Activity? {
-    var current: Context? = this
-    while (current is ContextWrapper) {
-        if (current is Activity) return current
-        current = current.baseContext
-    }
-    return null
 }
