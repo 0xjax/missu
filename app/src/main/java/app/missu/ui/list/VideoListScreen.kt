@@ -88,7 +88,7 @@ fun VideoListScreen(
     onLoadMore: () -> Unit,
     onOpen: (id: String, thumbnail: String?) -> Unit,
     onBack: () -> Unit,
-    showPin: Boolean,
+    pinned: Boolean,
     onPin: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -107,7 +107,7 @@ fun VideoListScreen(
             onRetry = onRetry,
             onLoadMore = onLoadMore,
             onOpen = onOpen,
-            showPin = showPin,
+            pinned = pinned,
             onPin = onPin,
             modifier = Modifier.weight(1f),
         )
@@ -133,7 +133,7 @@ fun VideoListContent(
     onRetry: () -> Unit,
     onLoadMore: () -> Unit,
     onOpen: (id: String, thumbnail: String?) -> Unit,
-    showPin: Boolean,
+    pinned: Boolean,
     onPin: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -146,7 +146,7 @@ fun VideoListContent(
             filters = filters,
             onSortChange = onSortChange,
             onFilterChange = onFilterChange,
-            showPin = showPin,
+            pinned = pinned,
             onPin = onPin,
         )
 
@@ -177,7 +177,7 @@ private fun ListControls(
     filters: List<VideoListOptions.Filter>,
     onSortChange: (VideoListOptions.Sort?) -> Unit,
     onFilterChange: (VideoListOptions.Filter?) -> Unit,
-    showPin: Boolean,
+    pinned: Boolean,
     onPin: () -> Unit,
 ) {
     var sortMenuOpen by remember { mutableStateOf(false) }
@@ -231,14 +231,13 @@ private fun ListControls(
             }
         }
 
-        if (showPin) {
-            TooltipIconButton(
-                icon = Icons.Outlined.PushPin,
-                contentDescription = stringResource(R.string.list_pin_home),
-                onClick = onPin,
-                tonal = true,
-            )
-        }
+        TooltipIconButton(
+            icon = Icons.Outlined.PushPin,
+            contentDescription = stringResource(if (pinned) R.string.list_pinned_home else R.string.list_pin_home),
+            onClick = onPin,
+            tonal = true,
+            active = pinned,
+        )
     }
 }
 

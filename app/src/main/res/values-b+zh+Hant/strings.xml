@@ -69,6 +69,7 @@
     <string name="list_filter_multiple">多人作品</string>
     <string name="list_filter_chinese_subtitle">中文字幕</string>
     <string name="list_pin_home">置頂到首頁</string>
+    <string name="list_pinned_home">已置頂到首頁</string>
 
     <!-- 首頁 -->
     <string name="error_home_empty">未能讀取首頁區塊，請重試</string>

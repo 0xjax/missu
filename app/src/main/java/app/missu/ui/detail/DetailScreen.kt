@@ -40,8 +40,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
+import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.material3.ButtonDefaults
@@ -49,6 +49,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SplitButtonDefaults
@@ -417,24 +418,19 @@ private fun DetailBody(
         animationSpec = seekEffectsSpec,
         label = "detailTitleVisibility",
     )
-    val seekTriggerRotation by animateFloatAsState(
-        targetValue = if (seekControlsOpen) 180f else 0f,
-        animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
-        label = "seekControlsTriggerRotation",
-    )
     val titleThreeLineHeight = with(LocalDensity.current) {
         MaterialTheme.typography.titleMedium.lineHeight.toDp() * 3
     }
 
     // NOTE: 固定区（动作条 + 标题）**浮在列表上面**，不是和列表上下拼接。拼接时内容滚到标题
     // 下面会被一条看不见的边硬切断（2026-11-16 反馈「直接硬切割」）；浮起来之后卡片是从标题
-    // 底下滑进去的，再按滚动状态给 6dp 阴影，边界就自然读得出来。不滚动时没有阴影，不留痕迹。
+    // 底下滑进去的，再按滚动状态给 2dp 浅阴影。不滚动时没有阴影，不留痕迹。
     val listState = rememberLazyListState()
     val scrolled by remember { derivedStateOf { listState.canScrollBackward } }
     var headerHeightPx by remember { mutableIntStateOf(0) }
     val headerHeight = with(LocalDensity.current) { headerHeightPx.toDp() }
     val headerShadow by animateDpAsState(
-        targetValue = if (scrolled) 6.dp else 0.dp,
+        targetValue = if (scrolled) 2.dp else 0.dp,
         animationSpec = tween(durationMillis = 200),
         label = "headerShadow",
     )
@@ -443,9 +439,9 @@ private fun DetailBody(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            // NOTE: 顶部让出固定区的高度 + **8dp**，不是 16dp：固定区自己已经带了 4dp 下边距，
+            // NOTE: 顶部让出固定区的高度 + **8dp**，不是 16dp：固定区自己已经带了 8dp 下边距，
             // 标题的行身框底下也还有一截 descent——按 16 排下来，第一张卡上面的视觉间距会比
-            // 卡片之间（16dp）宽一档（2026-11-16 反馈）。4 + 8 + descent ≈ 16，看着才等距。
+            // 卡片之间（16dp）宽一档（2026-11-16 反馈）。8 + 8 + descent，看着才等距。
             contentPadding = PaddingValues(
                 start = 16.dp,
                 end = 16.dp,
@@ -491,20 +487,16 @@ private fun DetailBody(
             }
         }
 
-        Column(
-            Modifier
+        Surface(
+            modifier = Modifier
                 .fillMaxWidth()
                 .zIndex(1f)
-                // 阴影要在底色之前：先按矩形投影，再把整块盖成页面底色。
-                .shadow(headerShadow)
-                .background(MaterialTheme.colorScheme.background)
-                // NOTE: onSizeChanged 必须在 padding **之前**：量出来的高度要含这 4dp 下边距，
-                // 否则列表让出的位置比固定区矮一截，第一张卡会贴着它的下沿。
-                .onSizeChanged { headerHeightPx = it.height }
-                // NOTE: 固定区留一点下边距就够：阴影挂在**这一块的边**上，边上直接贴着标题文字
-                // 会粘在一起；但也不需要厚——4dp 刚好托住阴影，再多就是白占地方。
-                .padding(bottom = 4.dp),
+                .onSizeChanged { headerHeightPx = it.height },
+            shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            shadowElevation = headerShadow,
         ) {
+            Column(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
             // NOTE: 动作条贴在**视频正下方**（视频和它都是固定不滚的），不是常驻底栏。
             // 理由：这两个动作属于「这个视频」，玩家和它们是同一个决策块；而视频本身不滚，
             // 贴着它同样一屏可见，还省掉了底部那条栏：信息卡可以一直滚到屏幕底，也不存在
@@ -591,18 +583,24 @@ private fun DetailBody(
                         seekControlsOpen = !seekControlsOpen
                     },
                     enabled = onSeekBy != null || seekControlsOpen,
+                    colors = if (seekControlsOpen) {
+                        IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    } else {
+                        IconButtonDefaults.filledTonalIconButtonColors()
+                    },
                     modifier = Modifier
                         .padding(vertical = 4.dp)
-                        .size(width = 56.dp, height = 40.dp),
+                        .size(width = 64.dp, height = 40.dp),
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.KeyboardArrowDown,
+                        imageVector = Icons.Outlined.SwapHoriz,
                         contentDescription = stringResource(
                             if (seekControlsOpen) R.string.player_hide_seek_controls else R.string.player_show_seek_controls,
                         ),
-                        modifier = Modifier
-                            .size(24.dp)
-                            .graphicsLayer { rotationZ = seekTriggerRotation },
+                        modifier = Modifier.size(24.dp),
                     )
                 }
             }
@@ -645,6 +643,7 @@ private fun DetailBody(
                     SeekControlPanel(onSeekBy = onSeekBy, interactionsEnabled = settled)
                 }
             }
+        }
         }
     }
 

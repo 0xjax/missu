@@ -198,7 +198,7 @@ internal fun NavGraphBuilder.secondaryDestinations(
                     onLoadMore = viewModel::loadMore,
                     onOpen = { id, thumbnail -> onOpenDetail(id, thumbnail, "") },
                     onBack = onGoBack,
-                    showPin = effectivePinned?.sameSiteQuery(query) != true,
+                    pinned = effectivePinned?.sameSiteQuery(query) == true,
                     onPin = {
                         homeViewModel.pin(
                             pinned = PinnedHomeList(title = title, query = query),

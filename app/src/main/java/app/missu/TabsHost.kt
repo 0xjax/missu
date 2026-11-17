@@ -225,7 +225,7 @@ internal fun TabsHost(
                                 hotFilter = hotFilter,
                                 hotDetectedSort = hotDetectedSort,
                                 hotState = hotState,
-                                showHotPin = effectivePinned?.sameSiteQuery(hotQuery) != true,
+                                hotPinned = effectivePinned?.sameSiteQuery(hotQuery) == true,
                                 channels = channels,
                                 onLoad = discoverViewModel::load,
                                 onLoadMore = discoverViewModel::loadMore,

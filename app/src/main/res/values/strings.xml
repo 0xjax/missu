@@ -71,6 +71,7 @@
     <string name="list_filter_multiple">Multiple</string>
     <string name="list_filter_chinese_subtitle">Chinese subtitles</string>
     <string name="list_pin_home">Pin to home</string>
+    <string name="list_pinned_home">Pinned to home</string>
 
     <!-- 首页 -->
     <string name="error_home_empty">Couldn’t load the home sections. Try again.</string>
