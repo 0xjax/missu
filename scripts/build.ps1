@@ -2,7 +2,7 @@
 # 位置：  scripts\build.ps1（仓库根 = 本文件的父目录）
 # 用法：  .\scripts\build.ps1            （只构建 debug APK）
 #         .\scripts\build.ps1 install    （构建 + 装到已连接的设备）
-#         .\scripts\build.ps1 release    （构建 release APK，沿用 debug 签名）
+#         .\scripts\build.ps1 release    （构建并归档 release APK，沿用 debug 签名）
 #         .\scripts\build.ps1 check      （核心/应用测试 + lint + debug 构建）
 # 环境：  MISSU_NO_DAEMON=1       （不保留 Gradle daemon；自动化采集输出时必须开，
 #                                  否则 daemon 会一直占着 stdout，管道等不到 EOF）
@@ -60,6 +60,17 @@ try {
         Join-Path $root 'app\build\outputs\apk\debug\app-debug.apk'
     }
     if (Test-Path $apk) { "APK: $apk ($([math]::Round((Get-Item $apk).Length/1MB,2)) MB)" }
+    if ($Task -eq 'release') {
+        $raw = Get-Content (Join-Path $root 'app\build.gradle.kts') -Raw
+        $version = [regex]::Match($raw, 'versionName\s*=\s*"([^"]+)"').Groups[1].Value
+        if (-not $version) { throw '无法从 app/build.gradle.kts 读取 versionName' }
+        $archiveDir = Join-Path $root '.local\releases'
+        New-Item -ItemType Directory -Force $archiveDir | Out-Null
+        $archive = Join-Path $archiveDir "Missu-$version-arm64-v8a.apk"
+        Copy-Item $apk $archive -Force
+        "Archive: $archive"
+        "SHA256: $((Get-FileHash $archive -Algorithm SHA256).Hash)"
+    }
 } finally {
     Pop-Location
 }

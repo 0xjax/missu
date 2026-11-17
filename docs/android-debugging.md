@@ -127,6 +127,7 @@ adb shell am start -n app.missu/.MainActivity
 ```powershell
 .\scripts\build.ps1 release
 # 产物：app\build\outputs\apk\release\app-release.apk
+# 归档：.local\releases\Missu-<versionName>-arm64-v8a.apk（同时输出 SHA-256）
 ```
 
 release 沿用 debug 证书，仅适合自用侧载；换成正式 keystore 后，已安装的旧包必须先卸载才能覆盖安装。

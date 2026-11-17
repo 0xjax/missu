@@ -29,8 +29,8 @@ android {
         minSdk = 26
         //noinspection OldTargetApi — 行为仍按 36 验收；compileSdk 37.1 只为新编译 API。
         targetSdk = 36
-        versionCode = 6
-        versionName = "2.2.0"
+        versionCode = 7
+        versionName = "2.3.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // NOTE: 所有变体（debug / release）都只打 arm64-v8a。包里唯一的 native 库是
         // androidx.graphics.path（每个 ABI 7–12 KB），所以这不是为了省体积，而是让**产物只有
