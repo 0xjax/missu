@@ -72,7 +72,7 @@ fun AccountScreen(
             AuthUiState.Checking -> LoadingHint()
 
             AuthUiState.LoggedOut -> Column(Modifier.fillMaxSize()) {
-                // NOTE: 未登录也要够得到设置（主题 / 语言 / 播放），所以空态只占中间那块，
+                // NOTE: 历史与设置不依赖账号，未登录也要保留；空态只占中间那块，
                 // 入口与登录后那张分组容器同一套样式——同一个入口不该因为有没有登录而换样子。
                 EmptyHint(
                     icon = Icons.Outlined.AccountCircle,
@@ -83,6 +83,8 @@ fun AccountScreen(
                     modifier = Modifier.weight(1f),
                 )
                 GroupSurface(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    MenuRow(Icons.Outlined.DateRange, stringResource(R.string.account_history), onHistory)
+                    GroupDivider(start = 56.dp)
                     MenuRow(Icons.Outlined.Settings, stringResource(R.string.account_settings), onSettings)
                 }
                 Spacer(Modifier.height(16.dp))
