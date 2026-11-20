@@ -49,10 +49,12 @@
 | compileSdk | **37 + `compileSdkMinor = 1`** | Compose 1.13-rc 要求 ≥ 37.1；新 AndroidX 要求 ≥ 37 |
 | targetSdk / minSdk | 36 / 26 | 编译用新 API、运行时行为按 36 走 |
 | JDK | **独立 Temurin 21**（`D:\Android\jdk-21`）+ 回落 AS 自带 JBR | 目录名带版本；`scripts/build.ps1` **自动发现** `D:\Android\jdk-*` 并取 major 最高者，升级只需解压出 `jdk-25`，脚本不用改。版本信息见目录内 `MISSU-JDK-VERSION.txt` |
-| Android SDK | API **37.1** + **Build-Tools 36.0.0** + Platform-Tools 37.0.1 | `D:\Android\Sdk`（AGP 9.5.1 默认用 build-tools 36，与 compileSdk 37.1 无关；37.0 已卸载，只留 37.1 一个平台） |
-| Android Studio | **已卸载**（曾用 2026.2.2 / `AI-262.10968.63.2622.16840690`） | **构建不需要它**：JDK、SDK、Gradle wrapper 都是独立的。装它只是为了 IDE，不装也能构建、装机、跑测试 |
+| Android CLI | **1.1.16919734** | 独立安装于 `%USERPROFILE%\AppData\AndroidCLI\android.exe` 并加入用户 PATH；不放在 SDK 或 Low IL 工作区 |
+| Android SDK | 编译 API **37.1** + **Build-Tools 36.0.0** + Platform-Tools 37.0.1 | `D:\Android\Sdk`；另有 API 37.2 平台供模拟器使用（AGP 9.5.1 默认用 build-tools 36，与 compileSdk 37.1 无关） |
+| Android Emulator | **37.3.10** / `medium_phone` | Android **17.2（API 37.2）**、`google_apis_ps16k/x86_64`；日常设备命令默认使用 |
+| Android Studio | **已卸载**（曾用 2026.2.2 / `AI-262.10968.63.2622.16840690`） | **构建不需要它**：Android CLI、JDK、SDK、Gradle wrapper 都是独立的。装它只是为了 IDE，不装也能构建、装机、跑测试 |
 
-**SDK 与 JDK 是全局安装物**，不在项目里；项目只通过 `local.properties`（`sdk.dir=D:/Android/Sdk`，已 gitignore）和 `scripts/build.ps1` 引用它们。
+**Android CLI、SDK 与 JDK 都是全局安装物**，不在项目里；项目只通过 `local.properties`（`sdk.dir=D:/Android/Sdk`，已 gitignore）和 `scripts/build.ps1` 引用它们。CLI 的默认配置在 `%USERPROFILE%\.androidrc`，当前固定 `--no-metrics` 与 `--sdk=D:\Android\Sdk`。
 
 ## 依赖清单
 
@@ -74,6 +76,7 @@
 |---|---|---|
 | Compose BOM | **alpha 2026.11.00** | 统一 Compose 版本；material3 解析成 **1.5.0-rc01**、core 解析成 1.13.0-rc01（预发布栈） |
 | material3 / ui / ui-tooling-preview / debug ui-tooling | 由 BOM 决定 | UI；M3E 组件（Carousel / ShortNavigationBar / LoadingIndicator / ToggleButton 组）也在这里 |
+| runtime-tracing | 由 BOM 决定 | Android CLI Profiler 的 Compose composition/recomposition trace |
 | material-icons-extended | 由 BOM 决定 | 全界面统一 Outlined 图标；仅已收藏等明确状态用 Filled，release 由 R8 移除未使用字形 |
 | activity-compose | 1.13.0 | `setContent` / `enableEdgeToEdge` |
 | lifecycle-viewmodel-compose / lifecycle-runtime-compose | 2.11.0 | `viewModel()` / 生命周期感知的 `collectAsStateWithLifecycle()` |
@@ -91,23 +94,35 @@
 
 ```powershell
 cd D:\missu
-.\scripts\build.ps1            # debug APK
-.\scripts\build.ps1 install    # 构建 + 装到设备
+.\scripts\build.ps1            # Android CLI 构建 debug APK
+.\scripts\build.ps1 install    # 构建 + 装到设备，不启动
+.\scripts\build.ps1 run        # 构建 + 装机 + 启动 MainActivity
 .\scripts\build.ps1 release    # release（R8 + 资源压缩，沿用 debug 签名，仅自用侧载）
 .\scripts\build.ps1 check      # core/app 测试 + lint + debug 构建
+.\scripts\build.ps1 preview    # Compose Preview PNG + 组件树到 .local/previews
+.\scripts\build.ps1 analyze    # 构建并分析 debug APK
+.\scripts\build.ps1 analyze-release # 构建并分析 release APK
+.\scripts\build.ps1 emulator   # 创建/启动 Android 17.2 x86_64 模拟器
+.\scripts\build.ps1 layout     # 输出结构化 UI 布局
+.\scripts\build.ps1 screen     # 标注截图到 .local/device
+.\scripts\build.ps1 trace      # 10 秒启动 Perfetto trace 到 .local/profiler
+.\scripts\build.ps1 heapdump   # 应用 HPROF 到 .local/profiler
+.\scripts\build.ps1 hub        # Device Hub 实时镜像与控制
+.\scripts\build.ps1 describe   # 输出 CLI 识别到的变体与产物路径
 ```
 
 - **产物与留档**：`release` 命令生成 `app/build/outputs/apk/release/app-release.apk`，自动归档为 `.local/releases/Missu-<versionName>-arm64-v8a.apk`（已 gitignore，与 GitHub Release 附件同名）并输出 SHA-256；版本号从 `app/build.gradle.kts` 读取。
 
-- **所有变体都只打 `arm64-v8a`**：见 `app/build.gradle.kts` 的 `defaultConfig.ndk.abiFilters`。包里唯一的 native 库是 `libandroidx.graphics.path.so`（每个 ABI 7–12 KB），所以这不是为了省体积（只省 40 KB），而是让**归档名和包内容对得上**：真机 V2507A 的 `ro.product.cpu.abilist` 只有 `arm64-v8a`，legacy 的两个 release 也用的这个后缀。debug 同样只打 arm64——x86_64 模拟器/设备装不上，需要时按变体加过滤。
+- **release / 真机只打 `arm64-v8a`，debug 额外支持 `x86_64`**：见 `app/build.gradle.kts` 各 buildType 的 `ndk.abiFilters`。包里唯一的 native 库是 `libandroidx.graphics.path.so`；x86_64 仅供本机模拟器，release 归档名和包内容继续保持 `-arm64-v8a`。
 - **不要靠删文件或改文件名冒充架构**：签名覆盖整个包，删掉别的 `lib/<abi>/` 目录会让 v2/v3 签名失效、装不上；要换架构就改 `abiFilters` 重新构建。
 
-自动化场景（需要采集输出）加环境变量 `MISSU_NO_DAEMON=1`：**Gradle daemon 会一直占着 stdout，管道等不到 EOF，命令看起来"卡死"**——构建其实早就结束了。
+自动化场景加 `MISSU_NO_DAEMON=1`，脚本会向 Gradle 透传 `--no-daemon`；Android CLI 把详细构建日志写入系统临时目录下的 `build-log-*.log`。
 
 - **首次**构建要下载 Gradle 9.6.0（腾讯镜像）+ 全部依赖（阿里云），冷启动约几分钟；之后增量约 10–30 秒。
-- `scripts/build.ps1` **不跑测试**：测试用 `.\gradlew.bat :core:test`（见「测试」）。
+- 默认命令只构建；测试统一用 `.\scripts\build.ps1 check`（见「测试」）。
 - 如果 PowerShell 报「禁止运行脚本」（Restricted 执行策略）：用 `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build.ps1`，不要去改全局策略。
-- **`install` 会装到所有在线设备**：本机同时存在无线 serial 与 mDNS serial（同一台手机两条），日志会显示 `Installed on 2 devices`。只想装一次就设 `ANDROID_SERIAL=<serial>`。
+- **默认使用模拟器**：`install` / `run` 及其他设备命令按模板自动创建并以 **headless** 启动 `medium_phone`（Android 17.2 x86_64），需要完整窗口时用 `build.ps1 hub` 打开 Device Hub；设 `ANDROID_SERIAL=<serial>` 才指定真机或其他设备。
+- **性能分析使用 release**：`trace` / `heapdump` 自动构建并安装 release；清单的 `<profileable android:shell="true">` 只允许 shell 分析，不把 release 变成 debuggable。
 
 `scripts/build.ps1` 里固定了这些环境变量（**每次构建都自动设，不依赖系统环境**）：
 
@@ -115,16 +130,15 @@ cd D:\missu
 |---|---|---|
 | `JAVA_HOME` | 自动选 `D:\Android\jdk-N`（N 最大） | 独立 JDK；AS 已卸载，构建不依赖它（脚本仍保留 AS `jbr` 作为回落，装回 AS 时可用） |
 | `ANDROID_HOME` / `ANDROID_SDK_ROOT` | `D:\Android\Sdk` | 与 `local.properties` 的 `sdk.dir` 一致 |
-| `ANDROID_USER_HOME` | `.local/android-home` | `~/.android` 被拒写 |
 
-`TMP` / `TEMP` **不再覆盖**。2026-11-14 实测：`gradlew :app:assembleDebug --rerun-tasks --no-build-cache` 在系统默认 `%TEMP%` 下 `BUILD SUCCESSFUL`，Gradle 不需要工作区临时目录。唯一还需要可写临时目录的是 `adb server`（见「已知坑」）。
+`ANDROID_USER_HOME`、`GRADLE_USER_HOME`、`TMP` / `TEMP` 均使用用户默认位置；**不要把 Android CLI 或其运行包放进 Low IL 工作区**。WARNING: `ANDROID_USER_HOME` 也决定默认 debug 签名；2026-11-20 迁移时旧签名应用已在用户确认后卸载重装，之后统一使用 `%USERPROFILE%\.android\debug.keystore`，不要无提示地再换签名位置。`TMP` / `TEMP` **不再覆盖**。2026-11-14 实测：`gradlew :app:assembleDebug --rerun-tasks --no-build-cache` 在系统默认 `%TEMP%` 下 `BUILD SUCCESSFUL`，Gradle 不需要工作区临时目录。唯一还需要可写临时目录的是 `adb server`（见「已知坑」）。
 
-**只在本地、不进 Git 的东西**（`.gitignore` 已覆盖）：`local.properties`（sdk.dir）、`.local/`（android-home、截图、诊断输出）、`**/build/`、`.gradle/`、`.kotlin/`、`.idea/`。换机器时这些都要重新生成本地副本。
+**只在本地、不进 Git 的东西**（`.gitignore` 已覆盖）：`local.properties`（sdk.dir）、`.local/`（预览、截图、诊断输出）、`**/build/`、`.gradle/`、`.kotlin/`、`.idea/`。换机器时这些都要重新生成本地副本。
 
 ## 构建不依赖 Android Studio
 
 命令行构建只需要三样东西：**JDK 21+**、**Android SDK**（`platform-tools` + `platforms/android-37.1` + `build-tools/36.0.0`）、以及项目自带的 **Gradle wrapper**（首次构建自动下载）。
-`Android Studio` 只是 IDE。**本机已卸载 AS**：JDK 用 `D:\Android\jdk-21`，SDK 组件用 `sdkmanager`（`D:\Android\Sdk\cmdline-tools\bin`）装，`licenses` 也是独立目录——卸载后 `assembleDebug` / `installDebug` / `:core:test` 全部实测通过。
+`Android Studio` 只是 IDE。**本机已卸载 AS**：JDK 用 `D:\Android\jdk-21`，SDK 组件用独立 Android CLI 的 `android sdk` 安装，`licenses` 也是独立目录——卸载后 `assembleDebug` / `installDebug` / `:core:test` 全部实测通过。
 
 ### 从零装环境（无 AS，就是本机现在的样子）
 
@@ -142,17 +156,31 @@ Rename-Item 'D:\Android\jdk-21.0.13+9' 'jdk-21'
 D:\Android\jdk-21\bin\java.exe -version
 ```
 
-**2. Android SDK**：用 command-line tools 装，不需要 AS。
+**2. Android CLI + SDK**：使用独立 CLI，不需要 AS，也不再把 CLI 装进 SDK。
 
 ```powershell
-# cmdline-tools 从 https://developer.android.com/studio#command-tools 下 Windows 版 zip
-# 解压后必须落在 <sdk>\cmdline-tools\latest（目录名就叫 latest，否则 sdkmanager 不认）
-$sdk = 'D:\Android\Sdk'
-$env:JAVA_HOME = 'D:\Android\jdk-21'          # sdkmanager 也要 JDK
-$sm = "$sdk\cmdline-tools\latest\bin\sdkmanager.bat"
-& $sm --sdk_root=$sdk --licenses                  # 全部 y
-& $sm --sdk_root=$sdk "platform-tools" "platforms;android-37.1" "build-tools;36.0.0"
+# 官方 Windows 安装器：%USERPROFILE%\AppData\AndroidCLI，并加入用户 PATH
+curl.exe -fsSL https://dl.google.com/android/cli/latest/windows_x86_64/install.cmd -o "$env:TEMP\android-cli-install.cmd"
+& "$env:TEMP\android-cli-install.cmd"
+Set-Content "$env:USERPROFILE\.androidrc" -Encoding Ascii -Value @(
+    '--no-metrics',
+    '--sdk=D:\Android\Sdk'
+)
+
+# 重开终端，让 PATH 生效；在仓库根安装项目级技能，不写用户级技能目录
+# 位置：.agents\skills\android-cli（随仓库维护；显式选择 Kimi，避免其他代理副本）
+android skills add --agent=kimi-code-cli --project=. android-cli jetpack-compose-performance r8-analyzer
+android sdk install platform-tools platforms/android-37.1 build-tools/36.0.0  # 首次按提示接受许可
+# 日常开发模拟器：Android 17.2、x86_64、16 KB 页大小
+android sdk install emulator platforms/android-37.2 system-images/android-37.2/google_apis_ps16k/x86_64
+.\scripts\build.ps1 emulator
 ```
+
+`build.ps1` 用 `scripts/emulator/medium-phone.config.ini` 创建并启动 AVD。WARNING: x86_64 主机的 QEMU2 不支持 ARM64 系统镜像；不要用 `android emulator create` 的默认镜像选择，模板会固定上述 Android 17.2 x86_64 镜像。
+
+本机 `%USERPROFILE%\.androidrc` 固定 `--no-metrics` 与 `--sdk=D:\Android\Sdk`，日常命令无需重复这两个参数。
+
+WARNING: **不要把 CLI 或其 `ANDROID_USER_HOME` 放在 `D:\missu` 下**。工作区是 Low IL，会导致 CLI 无法写系统临时目录和正常 IL 的 SDK；两者都使用上述官方默认位置。
 
 只要这三个包（注意 **API 是 37.1**、**build-tools 是 36.0.0**，两者都是实测结论：Compose 1.13-rc 要求 compileSdk ≥ 37.1，而 AGP 9.5.1 默认只用 build-tools 36）：
 
@@ -163,23 +191,22 @@ $sm = "$sdk\cmdline-tools\latest\bin\sdkmanager.bat"
 | `build-tools;36.0.0` | 36.0.0 | aapt2 / d8 / zipalign；**AGP 9.5.1 不写 `buildToolsVersion` 时的默认值**（依据：`builder-9.5.1.jar` 里 `com.android.builder.core.ToolsRevisionUtils` 的静态初始化加载字面量 `36.0.0`） |
 
 > `platforms;android-37.0` 已在升到 37.1 后卸载（`sdkmanager --uninstall "platforms;android-37.0"`），
-> 本机现在只装 **37.1 一个平台**。删掉它就少一份不会被引用的 copy。
+> 编译仍只用 **37.1**；另装的 **37.2** 平台仅供最新版 Android 17 模拟器使用。
 
-**不要装**：NDK、CMake、LLDB、emulator、system-image、旧 API（见下方「精简安装」）。
+**不要装**：NDK、CMake、LLDB、其他 system-image、旧 API。模拟器只保留下文指定的 Android 17.2 x86_64 镜像（见「精简安装」）。
 
 **SDK 目录里每一项是什么**（回答「哪些能删」）：
 
 | 路径 | 要否 | 谁创建的 | 说明 |
 |---|---|---|---|
-| `platforms\android-37.1` | **必需** | `sdkmanager install "platforms;android-37.1"` | `compileSdk = 37` + `compileSdkMinor = 1` 的编译目标，AGP 直接读它 |
-| `build-tools\36.0.0` | **必需** | `sdkmanager install "build-tools;36.0.0"`（或 AGP 构建时自动装） | aapt2 / d8 / zipalign；AGP 9.5.1 默认选 36.0.0（删了它构建时会**自动装回**） |
-| `platform-tools` | **必需** | `sdkmanager install platform-tools` | `adb`（也用于安装/调试） |
-| `licenses` | **必需** | `sdkmanager --licenses`（或 AGP 首次构建时自动接受） | 8 个 42 字节的授权哈希；删了 AGP/sdkmanager 会认为许可未接受 |
-| `cmdline-tools` | 装包时才用 | 你手动解压的官方 zip | 构建不需要它；`sdkmanager` 在这里 |
-| `.knownPackages` | 可删 | sdkmanager 自建 | 包清单缓存，下次跑 sdkmanager 自动重建 |
-| `.temp` | 可删 | sdkmanager 自建 | sdkmanager 的临时目录，同样是自建 |
+| `platforms\android-37.1` | **必需** | `android sdk install platforms/android-37.1` | `compileSdk = 37` + `compileSdkMinor = 1` 的编译目标，AGP 直接读它 |
+| `build-tools\36.0.0` | **必需** | `android sdk install build-tools/36.0.0`（或 AGP 构建时自动装） | aapt2 / d8 / zipalign；AGP 9.5.1 默认选 36.0.0（删了它构建时会**自动装回**） |
+| `platform-tools` | **必需** | `android sdk install platform-tools` | `adb`（也用于安装/调试） |
+| `licenses` | **必需** | `android sdk install` 首次按提示接受（或 AGP 首次构建时自动接受） | 授权哈希；删了 AGP/SDK 工具会认为许可未接受 |
+| `.knownPackages` | 可删 | SDK 工具自建 | 包清单缓存，下次运行 SDK 工具时自动重建 |
+| `.temp` | 可删 | SDK 工具自建 | SDK 工具的临时目录，同样是自建 |
 
-> 换句话说：**`platforms` 与 `licenses` 不是你手动建的**，是第一次跑 `sdkmanager --licenses` 与 `sdkmanager install ...` 时自动生成的；它们此前不存在。装第二个平台/工具时，会在这个目录里多出对应的子目录。
+> 换句话说：**`platforms` 与 `licenses` 不是你手动建的**，是第一次运行 `android sdk install ...` 并接受许可时自动生成的；它们此前不存在。装第二个平台/工具时，会在这个目录里多出对应的子目录。
 
 > NOTE: **build-tools 版本与 compileSdk 无关，由 AGP 钉死**。AGP 解析的是它自己那个精确 revision
 > （9.5.1 与最新的 9.6.0-alpha03 都是 `36.0.0`），SDK 里没有就**自动下载装回**——不会因为装了 37 就改用 37。
@@ -196,62 +223,49 @@ $sm = "$sdk\cmdline-tools\latest\bin\sdkmanager.bat"
 
 **4. Gradle 不用装**：`gradlew.bat` 首次运行会自动下载 wrapper 指定的 9.6.0（腾讯镜像），之后走 `%USERPROFILE%\.gradle` 缓存。
 
-**5. 验证**：`.\scripts\build.ps1 install` → `BUILD SUCCESSFUL` + App 装到手机。
+**5. 验证**：`.\scripts\build.ps1 check` → `.\scripts\build.ps1 run` → App 装到手机并启动。
 
-> WARNING: **本机只能用 cmdline-tools 19.0；新版 Android CLI 在 SAC 强制下跑不了**。实测根因：
->
-> 1. 23.0 的 `sdkmanager` 已废弃，实际入口是 `android.exe`，而它只是**引导器**：运行时会下载一个 bundle
->    （约 174 MB 的 `main.jar` + **自带的 jre**）到 `$ANDROID_USER_HOME\cli\bundles\<hash>`，再启动那个 jre。
-> 2. 那个自带 jre 的 `jvm.dll` **没有 Authenticode 签名**（`NotSigned`），Windows 11 Smart App Control
->    （`VerifiedAndReputablePolicyState = 1`）拒绝加载未签名代码 → 报「应用程序控制策略阻止了文件」。
-> 3. 对照：19.0 用**系统的** `jvm.dll`（Temurin，签名者 Eclipse Foundation，状态 Valid），SAC 放行，所以 19.0 能跑。
->
-> 因此这不是 Google 与 Windows 不兼容，而是 SAC 拦未签名二进制；`Unblock-File` 无效（SAC 看签名，不看 MOTW），
-> 卡巴斯基的受信任/排除项也无效（不是它在拦）。**不关 SAC 就没有正路**——除非把 bundle 里那个未签名 jre 换掉（见下，未验证）。
->
-> 本机决定：**留在 19.0**。它的能力对本项目足够：
+> NOTE: **本机已迁移到独立 Android CLI 1.1.16919734**（2026-11-20 实测）。
+> 日常入口是 PATH 上的 `android`；SDK 内不再保留 cmdline-tools 副本。
 
 ```powershell
-$env:JAVA_HOME = 'D:\Android\jdk-21'
-$sm = 'D:\Android\Sdk\cmdline-tools\latest\bin\sdkmanager.bat'
-& $sm --sdk_root='D:\Android\Sdk' --list_installed
-& $sm --sdk_root='D:\Android\Sdk' --uninstall "build-tools;37.0.0"
+android sdk list
+android sdk install build-tools/36.0.0
+android sdk remove platforms/android-37.0
+android create empty-activity --name="My App" --output=./my-app  # 移植/新建项目时从官方模板起步
 ```
 
-> 唯一缺陷：列「全量可用包」时看不懂 API 37 的 v4 XML（会警告），装/卸**指定版本**不受影响。
-> 另外 AGP 在构建时会用**签名 JDK** 自动补装缺失的 SDK 包（实测自动装过 build-tools 36），所以日常根本不需要手动跑 sdkmanager。
+> Android CLI 首次运行会下载 bundle（`main.jar` + 自带 JRE）到
+> `$ANDROID_USER_HOME\cli\bundles\<hash>`。此前 SAC 强制（`VerifiedAndReputablePolicyState = 1`）时，未签名的
+> `jvm.dll` 会被拦截；本机现在 SAC=0，CLI 启动与 `sdk list` 均已通过。
 >
-> 真要用新版 CLI 的三条路（都不推荐）：① 关 Smart App Control（注册表 + 重启，削弱系统防护）；② 用 WSL2/Docker 里的 Linux 版
-> cmdline-tools（本机未装 WSL）；③ 把 bundle 里的未签名 jre 换成签名 JDK（未验证，且每次 CLI 更新都要重做）。
-### 升级 SDK 环境依赖前，先查 Android CLI 的最新情况
+> **Low IL 是另一个独立问题**：把 CLI 解压到 `D:\missu\build`，或把 `ANDROID_USER_HOME` 指到
+> `D:\missu\.local\android-home`，都会出现系统临时目录不可写、`D:\Android\Sdk\.sdk\lock` 拒绝访问。
+> 改到正常 IL 目录并使用默认 `%USERPROFILE%\.android` 后，同一 CLI 不做其他修改即可正常工作。
+> 不要为了绕过它去关闭安全功能或放宽 SDK 权限。
 
-Google 正在把 cmdline-tools 从「Java 版 sdkmanager」迁到「原生 Android CLI（`android sdk`）」，
-本机就是因为新版只带**未签名的自带 JRE** 而卡在 Smart App Control 上。所以每次要升级 SDK 环境依赖时，按顺序确认：
+### 升级 SDK / JDK / Android CLI
 
 ```powershell
-# 1) 官方仓库里 cmdline-tools 当前最新构建号（换掉 URL 里的版本号即可下载）
-$xml = (Invoke-WebRequest 'https://dl.google.com/android/repository/repository2-3.xml' -UseBasicParsing).Content
-[regex]::Matches($xml, 'commandlinetools-win-(\d+)_latest\.zip') | ForEach-Object { $_.Groups[1].Value } |
-  Sort-Object { [long]$_ } -Descending | Select-Object -First 1
+android update                    # 只更新 CLI
+android sdk list                  # 已装包与可用更新
+android sdk install <包>@<版本>    # SDK 按项目版本矩阵精确升级，不无差别 update 全部
 
-# 2) 本机 Smart App Control 状态（1=强制，会拦未签名代码）
+# SAC=1 时，新 CLI bundle 的未签名 JRE 会被拦截
 (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\CI\Policy').VerifiedAndReputablePolicyState
-
-# 3) 新版 zip 里是否还有 Java 版 sdkmanager（有 sdklib jar = 有纯 Java 退路）
-Get-ChildItem <解压目录>\lib -Filter 'sdklib*.jar'
 ```
 
 判断口径：
 
 | 情况 | 结论 |
 |---|---|
-| zip 里 `bin\sdkmanager.bat` 仍调用 `com.android.sdklib...`，且 `lib` 有 `sdklib*.jar` | 可用，直接升级（走签名 JDK，SAC 不拦） |
-| 只剩 `android.exe` + `lib` 无 sdklib jar | 要先跑一次，然后验它下载的 `%ANDROID_USER_HOME%\cli\bundles\<hash>\jre\bin\server\jvm.dll` 的签名 |
-| 那个 `jvm.dll` 是 `NotSigned` 且 SAC=1 | **升级会失败**，留在 19.0，并把结论记到下方「已知坑」 |
+| SAC=0，且 `android sdk list` 能列出本机 SDK | CLI 可用 |
+| SAC=1 | 先验 bundle 的 `jre\bin\server\jvm.dll` 签名；`NotSigned` 时会被拦截 |
+| 报临时目录或 `.sdk\lock` 不可写 | 检查 CLI 与 `ANDROID_USER_HOME` 是否位于 Low IL 目录，不要先改 SDK ACL |
+| 仓库连接失败 | 先排除 Low IL，再检查网络 |
 
-> 官方参考：[sdkmanager 文档（含废弃说明与 `android sdk` 用法）](https://developer.android.google.cn/tools/sdkmanager)、
-> [Android CLI 下载页](https://developer.android.com/tools/agents)。
-> NOTE: 日常其实不需要手动升级：**AGP 会在构建时用签名 JDK 自动补装缺失的 SDK 包**（本项目的 `build-tools;36.0.0` 就是它自动装的）。
+升级后跑 `.\scripts\build.ps1 check` 并回写本页版本矩阵。官方参考：[Android CLI 文档](https://developer.android.com/tools/agents/android-cli) 与 [命令参考](https://developer.android.com/tools/agents/android-cli/commands)。
+日常缺失的 SDK 包也可由 AGP 在构建时自动补装。
 
 **本机现状**：`D:\Android\jdk-21`（Temurin 21.0.13）已装好并被 `scripts/build.ps1` 自动选中；AS 已卸载（回收 3.3 GB）；`assembleDebug` / `installDebug` / `:core:test` 在无 AS 的状态下全部实测通过。
 
@@ -259,8 +273,8 @@ Get-ChildItem <解压目录>\lib -Filter 'sdklib*.jar'
 
 1. **Open** → 选 `D:\missu`（仓库根就是 Gradle 根；`legacy/expo/` 是归档的 Expo 工程，不要当 Android 工程打开）。
 2. Settings → Languages & Frameworks → **Android SDK** → Android SDK Location = `D:\Android\Sdk`
-   - 只应有：Android API 37.1（37.0 已卸载）、Build-Tools 36、Platform-Tools
-   - 不要装 NDK、CMake、system-image、Emulator、旧 API（本工程无原生代码，只跑真机）
+   - 只应有：编译用 Android API 37.1、模拟器用 API 37.2、Build-Tools 36、Platform-Tools、指定 ARM64 镜像
+   - 不要装 NDK、CMake、其他 system-image、旧 API；Emulator 只保留 Android 17.2 x86_64 开发镜像
 3. **Gradle JDK**：仍用 **Embedded JDK**（AS 自带的）即可——它与 `scripts/build.ps1` 用的不是同一个 JDK，不影响命令行构建；也可以指到 `D:\Android\jdk-21` 保持一致。
 4. 缓存走标准位置 `%USERPROFILE%\.gradle`，不要自定义 Gradle 主目录。
 5. **关掉「自动下载缺失的 SDK 组件」**（Settings → Build Tools → Gradle → 关闭 "Auto-install missing components"，或至少别在有 NDK/Emulator 的勾选下同步），
@@ -274,7 +288,7 @@ Get-ChildItem <解压目录>\lib -Filter 'sdklib*.jar'
 |---|---|
 | NDK（~2.2 GB） | 无 C/C++ 代码 |
 | CMake / LLDB | 同上 |
-| Emulator + system-image（每个 1–2 GB） | 只跑真机 |
+| 其他 Emulator system-image（每个 1–2 GB） | 只保留 Android 17.2 x86_64 开发镜像 |
 | 旧 API level（< 37） | `compileSdk = 37` 固定 |
 | 重复的 Android SDK 副本 | SDK Manager 里只能有一个 location（`D:\Android\Sdk`） |
 
@@ -477,11 +491,10 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
 - **compileSdk 必须是 37 + `compileSdkMinor = 1`** → `compose-bom-alpha:2026.11.00`（Compose 1.13-rc）要求 ≥ 37.1；只装 37.0 会解析失败。
 - **`scripts/build.ps1` 必须是 UTF-8 带 BOM** → Windows PowerShell 5.1 对无 BOM 的 UTF-8 按 ANSI 解码，中文全角字符会吞掉行尾换行，把下一行代码并进注释（曾导致 `JAVA_HOME` 从未生效）。**用工具/AI 改这个文件后一定要重新写回 BOM**（`[System.Text.UTF8Encoding]::new($true)`），否则一改就坏。同一条坑对**任何**含中文的源文件都成立：2026-11-14 用 `Get-Content -Raw` + `File.WriteAllText` 给 `DetailScreen.kt` 补 BOM，整份中文注释变成乱码，且一个替换字符吞掉换行、把 `//` 注释与下一行的 `videoId` 参数并成一行，编译报的是「`DetailScreen` 没有 `videoId` 参数」。**补 BOM 要按字节前置 `EF BB BF`，不要过文本 cmdlet。**
 - **Gradle daemon 占住 stdout** → 自动化采集输出时加 `MISSU_NO_DAEMON=1`，否则管道永远等不到 EOF。
-- **Windows 11 Smart App Control 会拦新 exe，且报错像是杀毒软件**：`VerifiedAndReputablePolicyState = 1` 时，没有 Microsoft 信誉背书的新二进制一律被拦，
-  提示是「应用程序控制策略阻止了文件」。本机表现：cmdline-tools 23.0 的 `android.exe`（Google 有效签名）跑不起来，
-  而**在卡巴斯基里加受信任/排除项毫无作用**——排查时先看注册表那个值，别在杀软里绕圈。关 SAC 不可逆（需重装 Windows 才能恢复）。
-  被拦时连 `sdkmanager` 都不可用（报 `Unable to load native library ... 应用程序控制策略阻止了文件`）。
-  要么放行该 exe/目录，要么继续用旧的纯 Java 版 19.0。
+- **Windows 11 Smart App Control 会拦新 exe，且报错像是杀毒软件**：`VerifiedAndReputablePolicyState = 1` 时，没有 Microsoft 信誉背书的新二进制会被拦，
+  提示是「应用程序控制策略阻止了文件」。本机此前因此无法运行 cmdline-tools 23.0 的自带 JRE，卡巴斯基受信任/排除项也无效；
+  2026-11-20 在 SAC=0 后已重新实测并升级，23.0 正常。关 SAC 不可逆（需重装 Windows 才能恢复），不要为了升级工具主动关闭它。
+  若 SAC=0 时仍报临时目录或 SDK 锁文件不可写，先检查 CLI 和 `ANDROID_USER_HOME` 是否落在本工作区的 Low IL 下。
 - **KDoc 里不能出现 `/*` 序列**（例如写 `` `/api/playlists/*` ``）：Kotlin 支持嵌套块注释，这会开启一个
   新注释，把后面的代码整段吃掉，最后在**文件末尾**报 `Syntax error`——错误位置和真正原因完全无关，很难查。
   注释里引用路径通配时写 `…` 或 `/api/playlists/all` 代替。

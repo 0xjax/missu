@@ -32,12 +32,6 @@ android {
         versionCode = 7
         versionName = "2.3.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        // NOTE: 所有变体（debug / release）都只打 arm64-v8a。包里唯一的 native 库是
-        // androidx.graphics.path（每个 ABI 7–12 KB），所以这不是为了省体积，而是让**产物只有
-        // 一个确定的架构**：归档名里的 `-arm64-v8a` 必须和包内容对得上，不能靠改名冒充。
-        // NOTE: 真机 V2507A 的 `ro.product.cpu.abilist` 只有 arm64-v8a；模拟器 / x86_64 设备
-        // 装不上（当前没有这种用法，需要时改这里或加按变体的过滤）。
-        ndk { abiFilters.add("arm64-v8a") }
     }
 
     buildFeatures {
@@ -45,7 +39,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            // NOTE: 真机用 ARM64；本机 x86_64 模拟器需要同名 ABI。release 仍只交付 ARM64。
+            ndk { abiFilters.addAll(listOf("arm64-v8a", "x86_64")) }
+        }
         release {
+            ndk { abiFilters.add("arm64-v8a") }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -78,11 +77,12 @@ dependencies {
     // NOTE: 用 alpha BOM 而不是 2026.09.00：全套 M3E 组件（FloatingToolbar / ButtonGroup /
     // LoadingIndicator / 柔性顶栏）只在 material3 1.5.0 线；1.4.0 稳定线只有「部分 Expressive」。
     // WARNING: 这是预发布栈（Compose 1.13-rc01 + material3 1.5.0-rc01），升级需按 README 的
-    // 「升级 SDK 环境依赖前」清单复核，并逐页真机复查。
+    // 「升级 SDK 环境依赖前」清单复核，并逐页用模拟器/真机复查。
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.material3)
     // 全界面统一使用官方 Outlined 图标；release 由 R8 移除未使用字形。
     implementation(libs.compose.material.icons)
+    implementation(libs.compose.runtime.tracing)
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.activity.compose)

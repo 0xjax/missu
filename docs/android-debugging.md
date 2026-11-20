@@ -1,6 +1,6 @@
-# Android 真机调试与自动化
+# Android 设备调试与自动化
 
-用 Android Platform-Tools 的 ADB 控制手机，无需完整 Android Studio。**现役应用是 Kotlin 工程（仓库根；Gradle 根 = 仓库根）**：改代码 → Gradle 编译 → `adb install` → 重启 Activity，没有 Metro 与 Fast Refresh。文末的「legacy Expo」一节只记录不再使用的旧流程与仍然成立的结论。
+日常通过独立 Android CLI 构建、装机、读屏和控制设备，无需 Android Studio；ADB 保留为配对、日志与底层诊断工具。**现役应用是 Kotlin 工程（仓库根；Gradle 根 = 仓库根）**：改代码 → `scripts/build.ps1 run` → Android CLI 调用 Gradle、装机并启动，没有 Metro 与 Fast Refresh。文末的「legacy Expo」一节只记录不再使用的旧流程与仍然成立的结论。
 
 ## adb 在哪（只有一份）
 
@@ -76,13 +76,25 @@ adb 按 serial（传输）记账，不按硬件去重。无线调试下同一台
 
 **二选一，不要混用：**
 
-- 只用自动发现：不要手敲 `adb connect`，日常用的就是 mDNS 那条 serial。
+- 自动发现正常时不要手敲 `adb connect`，日常用 mDNS 那条 serial；若 `mdns services` 已发现但 `devices` 始终无条目，按当前广播地址手动连接一次。
 - 只用手动：设 `ADB_MDNS_AUTO_CONNECT=0`，adb 不再自动连 mDNS，只保留 `adb connect` 建的那条（IP 固定、mDNS 偶发掉线时更稳）。
 
 出现重复时，删掉**你不用的那条**：
 
 - 默认用自动发现：删手动那条 —— `.\adb disconnect <IP>:<端口>`
 - 手动模式（已设 `ADB_MDNS_AUTO_CONNECT=0`）：删 mDNS 那条 —— `.\adb disconnect adb-<设备ID>-<随机后缀>._adb-tls-connect._tcp`
+
+## `adb devices` 为空时：先区分“发现”与“连接”
+
+**`adb devices` 无条目只表示当前没有已建立的 ADB transport**，不能据此声称设备离线、无线调试未开启或要求用户重复打开开关。先查广播：
+
+```powershell
+adb mdns services
+```
+
+- 有 `_adb-tls-connect._tcp` 服务：设备正在广播无线调试；若自动连接未完成，使用**该输出当前的 IP:端口**执行 `adb connect`，不要复用历史端口。
+- 没有任何服务：再检查手机无线调试、同一 Wi-Fi、组播/VPN/防火墙；到这一步才能说“未发现设备”，仍不能武断地说开关未打开。
+- `devices` 有 `offline`：这是已有 transport 失效，不是未发现设备；清掉该 transport 后按上面的 mDNS 结果重连。
 
 ## 重开无线调试为什么能自动恢复
 
@@ -114,13 +126,20 @@ JVM 写目录被拒但 PowerShell 可写时，用同一文件分别测试；只�
 ```powershell
 cd D:\missu
 .\scripts\build.ps1 check     # 测试 + lint + debug 构建
-.\scripts\build.ps1 install   # 构建并直接装到当前设备
-adb shell am start -n app.missu/.MainActivity
+.\scripts\build.ps1 run       # 默认 headless 启动 Android 17.2 x86_64 模拟器，再构建、装机、启动
+.\scripts\build.ps1 install   # 只构建与装机，不启动
+.\scripts\build.ps1 preview   # 常驻渲染 Compose Preview 到 .local\previews
+.\scripts\build.ps1 analyze   # 构建并分析 debug APK
+.\scripts\build.ps1 analyze-release # 构建并分析 release APK
+.\scripts\build.ps1 trace     # 采集启动 Perfetto trace
+.\scripts\build.ps1 heapdump  # 采集应用 HPROF
+.\scripts\build.ps1 hub       # 打开 Device Hub
 ```
 
-- 增量构建通常 10–30 秒；装机启动后默认交由用户验收，确认后再提交，不自动追加点击与截图。
-- 自动化采集输出时设 `MISSU_NO_DAEMON=1`，否则 Gradle daemon 会占着 stdout，管道等不到 EOF（命令看起来"卡死"，其实构建早已结束）。
-- `scripts/build.ps1` 里固定了 `JAVA_HOME`、`ANDROID_HOME`、`ANDROID_USER_HOME`；这些不是可选项，原因见 `docs/android-native.md` 的「已知坑」。（`TMP/TEMP` 已不再覆盖。）
+- 设备命令默认使用 `medium_phone` 模拟器；只有设 `ANDROID_SERIAL=<serial>` 才指定真机或其他设备。装机启动后默认交由用户验收，确认后再提交，不自动追加点击与截图。
+- 自动化采集输出时设 `MISSU_NO_DAEMON=1`；CLI 将详细构建日志写入系统临时目录。
+- `scripts/build.ps1` 固定 `JAVA_HOME` 与 `ANDROID_HOME`，其余用户目录保持默认。Android CLI 与 `ANDROID_USER_HOME` 不得放到 Low IL 工作区。
+- `trace` / `heapdump` 自动安装 profileable release，避免用 debuggable 构建的 ART 开销评估性能。Compose BOM 同时提供 `runtime-tracing`；`startup.zip` 包含系统与 Compose trace，`app.hprof` 为堆快照。
 
 独立 release 包：
 
@@ -134,48 +153,43 @@ release 沿用 debug 证书，仅适合自用侧载；换成正式 keystore 后�
 
 ## 常用自动化命令
 
-> 仅在用户明确要求的真机操作或视觉诊断中使用；默认流程在装机启动后交由用户验收。
+> 仅在用户明确要求的真机操作或视觉诊断中使用；默认流程在装机启动后交由用户验收。优先 CLI 的结构化布局与选择器，ADB 用于底层操作。
 
 ```powershell
-# 返回
-.\adb -t 2 shell input keyevent KEYCODE_BACK
+$serial = '<从 adb devices 复制>'
 
-# 点击，坐标单位是设备像素
-.\adb -t 2 shell input tap 630 1200
-
-# 向上滑动
-.\adb -t 2 shell input swipe 630 2200 630 900 500
-
-# 输入英文或数字；input text 不适合直接输入中文
-.\adb -t 2 shell input text "SONE"
-```
-
-PowerShell 5.1 的原生输出重定向可能破坏 PNG 二进制内容，截图使用设备端生成再拉取，不使用 `>`：
-
-```powershell
+# 结构化读屏：优先 layout；WebView 或图形内容再截图
+android layout --device=$serial --pretty
 New-Item -ItemType Directory -Force D:\missu\.local
-.\adb -t 2 shell screencap -p /sdcard/missu-debug.png
-.\adb -t 2 pull /sdcard/missu-debug.png D:\missu\.local\missu-debug.png
+android screen capture --device=$serial -o D:\missu\.local\missu-debug.png
+android screen capture --device=$serial --annotate -o D:\missu\.local\missu-annotated.png
+
+# 按语义定位，不手写坐标；文本匹配默认是不区分大小写的子串
+android input --device=$serial tap 'text=搜索,clickable=true'
+android input --device=$serial text 'SONE' 'class=EditText' --submit
+
+# 底层按键与日志仍用 adb
+adb -s $serial shell input keyevent KEYCODE_BACK
+adb -s $serial logcat -s AndroidRuntime:E ActivityManager:I
 ```
 
-查看日志（Kotlin/Java 与系统都在 logcat 里）：
+截图由 CLI 直接写 PNG，避免 PowerShell 5.1 原生输出重定向破坏二进制内容；截图后必须先查看图片，再继续判断或操作。
 
-```powershell
-.\adb -t 2 logcat -s AndroidRuntime:E ActivityManager:I
-```
+## Journey 关键路径
+
+`journeys/core-navigation.xml` 覆盖首页、发现、我的与设置导航。由 agent 按项目级 `android-cli` 技能逐条执行，使用 `layout` / `screen` 判读、语义选择器操作；失败时报告实际状态，不把 Journey 改写成固定坐标脚本。2026-11-20 模拟器复验全部通过；设置页语言区域以正常速度滚动后的截图确认，不以 CLI 的滚动状态或单次布局快照代替视觉验收。
 
 ## 截图黑屏时读取界面文本
 
-> Agent 侧优先 `android_ui_tree`（结构化节点）；`uiautomator dump` 是人工兜底。
-
-部分页面/报错状态截图为全黑（安全窗口或渲染层在截屏时不可见），但视图层级仍然可读。用 `uiautomator` 导出后按 `text` 字段查看当前页面内容：
+部分页面/报错状态截图为全黑（安全窗口或渲染层在截屏时不可见），但视图层级仍然可读。优先用 `android layout --full --pretty` 获取 JSON 节点；需要完整原始 XML 时才用 `uiautomator dump` 兜底：
 
 ```powershell
-.\adb -t 2 shell uiautomator dump /sdcard/ui.xml
-.\adb -t 2 shell cat /sdcard/ui.xml
+android layout --device=$serial --full --pretty
+adb -s $serial shell uiautomator dump /sdcard/ui.xml
+adb -s $serial shell cat /sdcard/ui.xml
 ```
 
-在输出中筛 `text="..."` 即可拿到按钮、输入框和错误提示文字；`bounds="[x1,y1][x2,y2]"` 可直接用于计算点击坐标。比反复截图更可靠。
+布局输出包含 `text`、`content-desc`、`interactions`、`state` 与 `bounds`；优先把这些字段交给 `android input` 选择器，不手算坐标。
 
 ## 结束调试
 

@@ -7,8 +7,9 @@ Expo / React Native 的旧实现已归档到 [`legacy/expo/`](legacy/expo/)，�
 
 ```powershell
 .\scripts\build.ps1 check           # 测试 + lint + debug 构建
-.\scripts\build.ps1 install         # 构建 debug APK 并装到已连接的设备
-adb shell am start -n app.missu/.MainActivity
+.\scripts\build.ps1 run             # 构建并启动到 Android 17.2 x86_64 模拟器（ANDROID_SERIAL 可指定真机）
+.\scripts\build.ps1 preview         # 渲染 Compose Preview 到 .local/previews
+.\scripts\build.ps1 analyze         # 构建并分析 debug APK
 ```
 
 首次或换机器时的工具链配置、版本矩阵、环境清单、已知构建坑，见 [`docs/android-native.md`](docs/android-native.md)。
@@ -19,8 +20,10 @@ adb shell am start -n app.missu/.MainActivity
 app/                  Android 应用模块（UI + 平台适配）→ 交付包 app.missu
 core/                 纯 JVM 模块（取数 / 解析 / 模型，不许 android.* / androidx.*）
 baselineprofile/      独立启动 Profile 生成器（仅测试，不进入交付 APK）
+journeys/              Android CLI Journey 关键路径用例
 gradle/libs.versions.toml      依赖与插件版本唯一来源
-scripts/build.ps1     构建 / 安装 / 检查脚本（配好 JDK / SDK / ANDROID_USER_HOME）
+scripts/build.ps1     Android CLI 统一入口：构建 / 装机 / 运行 / 检查 / 预览 / 分析 / 调试
+scripts/emulator/     medium_phone AVD 的确定性架构与硬件规格模板
 settings.gradle.kts   Gradle 根配置（:app + :core + :baselineprofile）
 gradlew(.bat)         Gradle wrapper 9.6.0
 
@@ -37,7 +40,9 @@ docs/api/                     站点接口的 OpenAPI 记录
 
 | 件 | 位置 |
 |---|---|
-| Android SDK | `D:\Android\Sdk`（API 37.1 + Build-Tools 36 + Platform-Tools） |
+| Android CLI | `%USERPROFILE%\AppData\AndroidCLI\android.exe`（已加入用户 PATH；配置 `%USERPROFILE%\.androidrc`） |
+| Android SDK | `D:\Android\Sdk`（编译 API 37.1 + Build-Tools 36 + Platform-Tools） |
+| Android Emulator | `medium_phone`：Android 17.2（API 37.2）、x86_64、16 KB 页大小；日常 install/run 默认 headless 使用，Device Hub 提供完整窗口 |
 | JDK | `D:\Android\jdk-21`（Temurin 21，免安装；AS 已卸载） |
 | Gradle | wrapper 9.6.0（发行包走腾讯镜像），缓存 `%USERPROFILE%\.gradle` |
 | adb | `D:\Android\Sdk\platform-tools\adb.exe`（在 SDK 里，只有一份；用户级 PATH 已包含该目录） |

@@ -10,28 +10,34 @@
 ## 命令
 
 ```powershell
-.\scripts\build.ps1              # debug APK
+.\scripts\build.ps1              # Android CLI 构建 debug APK
 .\scripts\build.ps1 install      # 构建 + 装到设备
+.\scripts\build.ps1 run          # 构建 + 装机 + 启动
 .\scripts\build.ps1 release      # R8 + 资源压缩，归档到 .local/releases，沿用 debug 签名
 .\scripts\build.ps1 check        # core/app 测试 + lint + debug 构建
+.\scripts\build.ps1 emulator     # 按模板创建/启动 Android 17.2 x86_64 模拟器
+.\scripts\build.ps1 preview      # 常驻渲染 Compose Preview 到 .local/previews
+.\scripts\build.ps1 analyze      # 构建并分析 debug APK
+.\scripts\build.ps1 analyze-release # 构建并分析 release APK
 ```
 
-`scripts/build.ps1` 自动配置 JDK（`D:\Android\jdk-*` 取最高版本）、`ANDROID_HOME=D:\Android\Sdk` 和项目级 `ANDROID_USER_HOME`。自动化采集输出加 `MISSU_NO_DAEMON=1`，避免 daemon 占住 stdout。Gradle wrapper 9.6.0；Android Studio 不是构建依赖。
+`scripts/build.ps1` 经独立 Android CLI（`android`）调用 Gradle，自动配置 JDK（`D:\Android\jdk-*` 取最高版本）与 `ANDROID_HOME=D:\Android\Sdk`。`ANDROID_USER_HOME` 不得指向 Low IL 工作区。自动化采集输出加 `MISSU_NO_DAEMON=1`。Gradle wrapper 9.6.0；Android Studio 不是构建依赖。
 
 ## 开发流程
 
 - 业务模块：`:core` 为纯 JVM 取数/解析/模型，禁止 `android.*` / `androidx.*`；`:app` 为 UI 与平台适配，单向依赖 `:core`。`:baselineprofile` 仅生成启动 Profile，不进交付 APK。
-- 修改后默认跑定向测试（确有覆盖时）或直接 `build.ps1 install` 启动；功能完成时才执行一次 `build.ps1 check` → `install` → `adb shell am start -n app.missu/.MainActivity`，**用户验收后再提交**。连续修正中间不反复 `check`，纯文档修改不跑。
-- 未经用户明确要求，构建装机后**不继续点击、截屏、dump UI 或抓日志**；视觉缺陷诊断和用户指定的真机操作除外。
+- 修改后默认跑定向测试（确有覆盖时）或直接 `build.ps1 run`；功能完成时才执行一次 `build.ps1 check` → `run`，**用户验收后再提交**。连续修正中间不反复 `check`，纯文档修改不跑。`install/run` 默认用 Android 17.2 x86_64 模拟器，设 `ANDROID_SERIAL` 才指定真机。
+- 未经用户明确要求，构建装机后**不继续点击、截屏、dump UI 或抓日志**；视觉缺陷诊断、用户指定操作和 `journeys/*.xml` 验证除外。Journey 按 `android-cli` 技能逐步执行，不改写成坐标脚本。
 - 观感缺陷先量化并定位到窗口底色 / 转场 / 状态机 / 组合生命周期；同层连续两次调参仍复现 → 换层排查。
 - 真机纯操作长链路交给用户；需要读屏判断的操作才由 agent 明确驱动。调试细节见 `docs/android-debugging.md`。
+- `adb devices` 无条目 → 先查 `adb mdns services`；不得据此声称设备离线或无线调试未开启。发现服务后按当前广播地址连接，禁止复用旧端口。
 - adb 的 `%TEMP%\adb.log` 拒写 → 预建文件并 `icacls <file> /setintegritylevel L`，不要覆盖 `TMP/TEMP`。
 
 ## 真机权限边界
 
 无线 adb 默认禁止，仅放行：
 
-- `build.ps1 install`；启动/停止本应用；本应用内的 `input tap/swipe/text` 与留在本应用的 `keyevent`；只读 `screencap` / `uiautomator` / `dumpsys` / `logcat`（尽量 `--pid`）。
+- `build.ps1 install/run`；启动/停止本应用；本应用内的 `android input` / `adb shell input` 与留在本应用的 `keyevent`；只读 `android screen/layout` / `screencap` / `uiautomator` / `dumpsys` / `logcat`（尽量 `--pid`）。
 - 操作前 `dumpsys window | grep mCurrentFocus` 必须指向 `app.missu`；误落别处可直接启动本应用返回。
 - 其他操作先说明目的与恢复方式：系统设置、`cmd`、指向别处的 `pm/am`、`pm clear` / `uninstall`、HOME/RECENTS/POWER、系统弹窗、桌面、通知栏。
 - 解锁、授权、连网、点系统弹窗交给用户。禁止 `reboot`、`fastboot`、`su`、`pm disable-user`、分区或格式化。
@@ -39,6 +45,7 @@
 ## 工程约束
 
 - UI 使用 **Material 3 Expressive + 自己的 Compose**，不引第三方 UI 组件库；行为不可配置的组件宁自绘或换库。
+- Android API/工具用法先用 `android docs search/fetch`；性能与 R8 分析分别使用项目级 `jetpack-compose-performance` / `r8-analyzer` 技能。
 - MD3E 选型先查 `.agents/skills/md3e`；当前 material3 `1.5.0-rc01`，不用 `SegmentedButton` / `NavigationBar` / `Medium|LargeTopAppBar`。图标统一 `material-icons-extended` Outlined，仅明确状态语义用 Filled，不自绘或混入其他图标源。
 - 不做无实测需求的状态管理、查询缓存、绘图库或抽象；优先简单实现，不顺手改相邻代码。
 - 版本与插件坐标统一在 `gradle/libs.versions.toml`；站点、播放器、Coil 共享 `AppDependencies` 的 OkHttp 基础设施，各自保留请求头、Cookie 与超时。

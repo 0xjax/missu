@@ -40,6 +40,8 @@
           `UNSPECIFIED`），退出后回不回竖屏由用户自己的旋转锁定决定（见 `FullscreenEffect`）
           ——App 不替系统定这件事。
         -->
+        <profileable android:shell="true" />
+
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize|keyboardHidden|uiMode"
