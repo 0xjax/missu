@@ -49,8 +49,6 @@ import app.missu.ui.discover.DiscoverViewModel
 import app.missu.ui.discover.HOT_PATH
 import app.missu.ui.home.HomeScreen
 import app.missu.ui.home.HomeViewModel
-import app.missu.ui.home.effectivePinnedQuery
-import app.missu.data.model.PinnedHomeList
 import app.missu.data.model.VideoListQuery
 import app.missu.ui.list.AutoLoadVideoList
 import app.missu.ui.list.VideoListUiState
@@ -91,7 +89,6 @@ internal fun TabsHost(
     auth: AuthViewModel,
     onOpenDetail: (String, String?, String) -> Unit,
     onOpenList: (String, String) -> Unit,
-    onOpenPinnedList: (PinnedHomeList) -> Unit,
 ) {
     val discoverViewModel: DiscoverViewModel = viewModel(factory = missuViewModelFactory { DiscoverViewModel(api) })
     val searchViewModel: SearchViewModel = viewModel(
@@ -142,8 +139,6 @@ internal fun TabsHost(
                 "home" -> {
                     val state by homeViewModel.state.collectAsStateWithLifecycle()
                     val refreshing by homeViewModel.refreshing.collectAsStateWithLifecycle()
-                    val pinned by homeViewModel.pinned.collectAsStateWithLifecycle()
-                    val pinnedState by homeViewModel.pinnedState.collectAsStateWithLifecycle()
                     val refreshingRandom by homeViewModel.refreshingRandom.collectAsStateWithLifecycle()
                     val randomRefreshError by homeViewModel.randomRefreshError.collectAsStateWithLifecycle()
                     val searchState by searchViewModel.state.collectAsStateWithLifecycle()
@@ -162,20 +157,15 @@ internal fun TabsHost(
                                 PageSurface(card = false, contentInset = false) {
                                     HomeScreen(
                                         state = state,
-                                        pinned = pinned,
-                                        pinnedState = pinnedState,
                                         refreshing = refreshing,
                                         refreshingRandom = refreshingRandom,
                                         randomRefreshError = randomRefreshError,
                                         onRefresh = homeViewModel::refresh,
                                         onRefreshRandom = homeViewModel::refreshRandom,
                                         onClearRandomRefreshError = homeViewModel::clearRandomRefreshError,
-                                        onRetryPinned = homeViewModel::retryPinned,
                                         onRetry = homeViewModel::load,
                                         onOpen = onOpenDetail,
                                         onOpenList = onOpenList,
-                                        onOpenPinnedList = onOpenPinnedList,
-                                        onPin = { homeViewModel.pin(it, emptyList()) },
                                     )
                                 }
                             } else {
@@ -209,10 +199,6 @@ internal fun TabsHost(
                         )
                         val hotState by hotViewModel.state.collectAsStateWithLifecycle()
                         val hotDetectedSort by hotViewModel.detectedSort.collectAsStateWithLifecycle()
-                        val pinnedHome by homeViewModel.pinned.collectAsStateWithLifecycle()
-                        val homeState by homeViewModel.state.collectAsStateWithLifecycle()
-                        val effectivePinned = effectivePinnedQuery(pinnedHome, homeState)
-                        val hotTitle = stringResource(R.string.discover_section_hot)
                         AutoLoadVideoList(hotViewModel, hotViewModel.state, hotViewModel::load)
 
                         PageSurface(card = false) {
@@ -225,7 +211,6 @@ internal fun TabsHost(
                                 hotFilter = hotFilter,
                                 hotDetectedSort = hotDetectedSort,
                                 hotState = hotState,
-                                hotPinned = effectivePinned?.sameSiteQuery(hotQuery) == true,
                                 channels = channels,
                                 onLoad = discoverViewModel::load,
                                 onLoadMore = discoverViewModel::loadMore,
@@ -242,16 +227,6 @@ internal fun TabsHost(
                                 },
                                 onHotLoadMore = hotViewModel::loadMore,
                                 onHotRetry = hotViewModel::load,
-                                onHotPin = {
-                                    homeViewModel.pin(
-                                        pinned = PinnedHomeList(
-                                            title = hotTitle,
-                                            query = hotQuery,
-                                        ),
-                                        currentVideos = (hotState as? VideoListUiState.Content)?.videos.orEmpty(),
-                                        currentNextPage = (hotState as? VideoListUiState.Content)?.nextPage,
-                                    )
-                                },
                                 onOpen = onOpenList,
                                 onOpenVideo = { id, thumbnail -> onOpenDetail(id, thumbnail, "") },
                                 onSortChange = discoverViewModel::setSort,

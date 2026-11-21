@@ -30,6 +30,11 @@ class HistoryViewModel(
         _entries.value = emptyList()
     }
 
+    fun toggleListPin(entry: ListHistoryEntry) {
+        listHistory.togglePin(entry.query)
+        _listEntries.value = listHistory.recent()
+    }
+
     fun clearLists() {
         listHistory.clear()
         _listEntries.value = emptyList()

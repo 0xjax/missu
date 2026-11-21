@@ -23,7 +23,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.List
-import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
@@ -52,12 +51,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.missu.R
 import app.missu.data.model.HomeSection
-import app.missu.data.model.PinnedHomeList
-import app.missu.data.model.VideoListQuery
 import app.missu.data.model.VideoSummary
 import app.missu.ui.common.UiMessage
 import app.missu.ui.common.text
-import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.LocalVideoListColumns
@@ -66,7 +62,6 @@ import app.missu.ui.components.TooltipIconButton
 import app.missu.ui.components.VideoGridCard
 import app.missu.ui.components.heroKeyFor
 import app.missu.ui.components.videoHero
-import app.missu.ui.list.VideoListUiState
 import app.missu.ui.search.LocalSearchBarInset
 import coil3.compose.AsyncImage
 
@@ -75,20 +70,15 @@ private const val SECTION_PREVIEW_ROWS = 3
 @Composable
 fun HomeScreen(
     state: HomeUiState,
-    pinned: PinnedHomeList?,
-    pinnedState: VideoListUiState?,
     refreshing: Boolean,
     refreshingRandom: Boolean,
     randomRefreshError: UiMessage?,
     onRefresh: () -> Unit,
     onRefreshRandom: () -> Unit,
     onClearRandomRefreshError: () -> Unit,
-    onRetryPinned: () -> Unit,
     onRetry: () -> Unit,
     onOpen: (id: String, thumbnail: String?, heroTag: String) -> Unit,
     onOpenList: (path: String, title: String) -> Unit,
-    onOpenPinnedList: (PinnedHomeList) -> Unit,
-    onPin: (PinnedHomeList) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     PageStateTransition(state = state, modifier = modifier.fillMaxSize()) { current ->
@@ -99,46 +89,31 @@ fun HomeScreen(
 
             is HomeUiState.Content -> HomeContent(
                 sections = current.sections,
-                pinned = pinned,
-                pinnedState = pinnedState,
                 refreshing = refreshing,
                 refreshingRandom = refreshingRandom,
                 randomRefreshError = randomRefreshError,
                 onRefresh = onRefresh,
                 onRefreshRandom = onRefreshRandom,
                 onClearRandomRefreshError = onClearRandomRefreshError,
-                onRetryPinned = onRetryPinned,
                 onOpen = onOpen,
                 onOpenList = onOpenList,
-                onOpenPinnedList = onOpenPinnedList,
-                onPin = onPin,
                 modifier = Modifier.fillMaxSize(),
             )
         }
     }
 }
 
-internal fun orderHomeSections(sections: List<HomeSection>, pinned: PinnedHomeList?): List<HomeSection> {
-    val native = pinned?.let { nativePinnedSection(it, HomeUiState.Content(sections)) } ?: return sections
-    return listOf(native) + sections.filterNot { it.id == native.id }
-}
-
 @Composable
 private fun HomeContent(
     sections: List<HomeSection>,
-    pinned: PinnedHomeList?,
-    pinnedState: VideoListUiState?,
     refreshing: Boolean,
     refreshingRandom: Boolean,
     randomRefreshError: UiMessage?,
     onRefresh: () -> Unit,
     onRefreshRandom: () -> Unit,
     onClearRandomRefreshError: () -> Unit,
-    onRetryPinned: () -> Unit,
     onOpen: (id: String, thumbnail: String?, heroTag: String) -> Unit,
     onOpenList: (path: String, title: String) -> Unit,
-    onOpenPinnedList: (PinnedHomeList) -> Unit,
-    onPin: (PinnedHomeList) -> Unit,
     modifier: Modifier,
 ) {
     val barInset = LocalSearchBarInset.current
@@ -180,72 +155,12 @@ private fun HomeContent(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                val genericPinned = pinned?.takeIf { nativePinnedSection(it, HomeUiState.Content(sections)) == null }
-                if (genericPinned != null) {
-                    when (val current = pinnedState) {
-                        is VideoListUiState.Content -> homeSection(
-                            section = HomeSection(
-                                id = "pinned-${genericPinned.query.cacheKey}",
-                                title = genericPinned.title,
-                                videos = current.videos,
-                            ),
-                            columns = columns,
-                            carousel = true,
-                            onMore = { onOpenPinnedList(genericPinned) },
-                            onPin = null,
-                            onOpen = onOpen,
-                        )
-
-                        VideoListUiState.Loading, null -> {
-                            homeSectionHeader(
-                                genericPinned,
-                                onMore = { onOpenPinnedList(genericPinned) },
-                            )
-                            item(key = "pinned-loading", span = { GridItemSpan(maxLineSpan) }) {
-                                Box(Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                                    LoadingIndicator()
-                                }
-                            }
-                        }
-
-                        is VideoListUiState.Error -> {
-                            homeSectionHeader(
-                                genericPinned,
-                                onMore = { onOpenPinnedList(genericPinned) },
-                            )
-                            item(key = "pinned-error", span = { GridItemSpan(maxLineSpan) }) {
-                                ErrorHint(current.message.text(), onRetryPinned, Modifier.height(220.dp))
-                            }
-                        }
-
-                        VideoListUiState.Empty -> {
-                            homeSectionHeader(
-                                genericPinned,
-                                onMore = { onOpenPinnedList(genericPinned) },
-                            )
-                            item(key = "pinned-empty", span = { GridItemSpan(maxLineSpan) }) {
-                                EmptyHint(
-                                    icon = Icons.AutoMirrored.Outlined.List,
-                                    title = stringResource(R.string.list_empty_title),
-                                    modifier = Modifier.height(200.dp),
-                                )
-                            }
-                        }
-                    }
-                }
-
-                val effectivePinned = effectivePinnedQuery(pinned, HomeUiState.Content(sections))
-                orderHomeSections(sections, pinned).forEachIndexed { index, section ->
-                    val listPath = homeSectionListPath(section)
+                sections.forEachIndexed { index, section ->
                     homeSection(
                         section = section,
                         columns = columns,
-                        carousel = genericPinned == null && index == 0,
+                        carousel = index == 0,
                         onMore = section.morePath?.let { path -> { onOpenList(path, section.title) } },
-                        onPin = listPath?.let { path ->
-                            { onPin(PinnedHomeList(section.title, VideoListQuery(path))) }
-                        },
-                        pinned = listPath?.let { effectivePinned?.sameSiteQuery(VideoListQuery(it)) } == true,
                         refreshingRandom = refreshingRandom,
                         onRefreshRandom = onRefreshRandom.takeIf { section.id == "random" },
                         onOpen = onOpen,
@@ -257,22 +172,11 @@ private fun HomeContent(
     }
 }
 
-private fun LazyGridScope.homeSectionHeader(
-    pinned: PinnedHomeList,
-    onMore: () -> Unit,
-) {
-    item(key = "header-pinned-${pinned.query.cacheKey}", span = { GridItemSpan(maxLineSpan) }) {
-        HomeSectionHeader(title = pinned.title, onMore = onMore, onPin = null)
-    }
-}
-
 private fun LazyGridScope.homeSection(
     section: HomeSection,
     columns: Int,
     carousel: Boolean,
     onMore: (() -> Unit)?,
-    onPin: (() -> Unit)?,
-    pinned: Boolean = false,
     onOpen: (id: String, thumbnail: String?, heroTag: String) -> Unit,
     refreshingRandom: Boolean = false,
     onRefreshRandom: (() -> Unit)? = null,
@@ -281,8 +185,6 @@ private fun LazyGridScope.homeSection(
         HomeSectionHeader(
             title = section.title,
             onMore = onMore,
-            onPin = onPin,
-            pinned = pinned,
             refreshingRandom = refreshingRandom,
             onRefreshRandom = onRefreshRandom,
         )
@@ -310,8 +212,6 @@ private fun LazyGridScope.homeSection(
 private fun HomeSectionHeader(
     title: String,
     onMore: (() -> Unit)?,
-    onPin: (() -> Unit)?,
-    pinned: Boolean = false,
     refreshingRandom: Boolean = false,
     onRefreshRandom: (() -> Unit)? = null,
 ) {
@@ -322,15 +222,6 @@ private fun HomeSectionHeader(
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.weight(1f),
         )
-        if (onPin != null) {
-            TooltipIconButton(
-                icon = Icons.Outlined.PushPin,
-                contentDescription = stringResource(if (pinned) R.string.list_pinned_home else R.string.list_pin_home),
-                onClick = onPin,
-                tonal = true,
-                active = pinned,
-            )
-        }
         if (onRefreshRandom != null) {
             if (refreshingRandom) {
                 Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {

@@ -17,11 +17,11 @@
 - ✅ **收藏列表**：`/saved` 分页网格；**实测**游客态会被误报成「空收藏」，现用 `reloginWithRemembered()` 确认会话后重取
 - ✅ **播放器控件**：**整套自绘**（不再用 media3 `PlayerDefaults`）——设置 / 播放暂停 / 时间胶囊 / YouTube 式进度条 / 全屏，全部黑底白图标圆底；点画面切换显隐，播放中 3 秒自动隐藏；双击左右两侧 ∓10 秒；上滑进全屏、下滑退出（跟手）；设置是两级抽屉（倍速 + 画面：适应/填充）
 - ✅ **设置 + 内容语言**：7 种语言（繁體/简体/英/日/韩/马来/泰），写进站点路径段；切换后首页立即重拉，重启后保持
-- ✅ **观看 / 列表历史**：本地存观看进度（每 5 秒 + 退出时上报），视频可续播；历史页分「视频 / 列表」，最近列表按路径去重、保存最新口径，上限 20 条，可分别清空
+- ✅ **观看 / 列表历史**：本地存观看进度（每 5 秒 + 退出时上报），视频可续播；历史页分「视频 / 列表」，列表按完整查询口径去重，另存最近 20 条，可分别清空。列表记录可本地置顶，置顶项排在最前、不被最近记录上限挤出，不影响首页请求
 - ✅ **片单成员管理**：详情页「片单」底部面板，勾选即写入 `/api/playlists/add|remove`；重开面板读回服务端状态（实测 false → true → 重启后仍 true）
 - ✅ **列表页**：`MissavApi.getVideos(path, page)` 通用列表 + 分页；详情页信息行里带路径的值（女优/类型/厂商…）可点，跳到对应列表（实测点「RARA」进入其作品页）；用户排序 / 过滤按列表类别持久化，女优、类型、厂商各自整类共享
 - ✅ **视频单列/双列**：设置页全局切换，首页、热门、搜索、收藏、历史与片单共用 `LocalVideoListColumns`；只重组布局，不重取数据，偏好持久化
-- ✅ **任意列表首页置顶 + 随机刷新**：共享列表口径行末尾图钉保存完整 `VideoListQuery`，普通列表与一级热门同享；首页板块标题行也可直接置顶（含没有「更多」的随机）。首页只保留一个置顶预览，当前生效项（默认第一板块或显式置顶）不显示图钉，其他内容点击直接覆盖；复用当前列表或原生板块数据，「更多」恢复同口径分页。随机「刷新」只替换该板块，失败可重试
+- ✅ **随机板块刷新**：复用一次首页 `GET /`，只替换随机板块，失败保留旧内容并可通过 Snackbar 重试
 - ✅ **底部导航 + 发现**：`首页 / 发现 / 我的` 三个一级页签；发现页只有三个目录「女优 / 类型 / 厂商」（`DirectoryParser`，分页），手动搜索入口只在首页顶部，详情番号可直达对应搜索页
 - ✅ **女优筛选与排序**：身高 12 档 / 罩杯 A–Q / 年龄 6 档 / 出道年份（N 年以前），排序 `影片 / 出道`（实测 161–165cm 与按出道年排序都生效）
 - ✅ **搜索历史**：成功搜索后记入本地（上限 20，重复置顶），空输入时展示为可点胶囊，可清空
@@ -305,7 +305,7 @@ core/          纯 JVM 库（非 UI 层）——**不许出现 android.* / andro
     api/    SourceConfig（语言前缀 /dm 前缀）、MissavClient（OkHttp + 挑战翻译 + JSON 请求）、
             MissavApi（getHome / getVideoDetail / searchVideos / getSaved / getVideos /
             getDirectory / login / 收藏 / 片单）、CredentialsProvider、Errors
-    model/  VideoSummary · HomeSection · VideoListQuery · PinnedHomeList · VideoDetail · VideoList ·
+    model/  VideoSummary · HomeSection · VideoListQuery · VideoDetail · VideoList ·
             DirectoryList · DirectoryItem · PlaylistSummary · PlaylistDetail · VideoPlaylist · AccountUser · DetailInfoRow ·
             FilterOption · FilterSection
     parse/  HomeParser · DetailParser（含 Dean Edwards 解包）· DirectoryParser · ApiJson ·
@@ -324,9 +324,9 @@ app/           Android 应用（UI + 平台适配）
     data/api/              AppDependencies（共享 OkHttp / MissavApi / Coil 数据源）·
                            AndroidCookieJar（CookieManager 适配）· AndroidApi（把 ChallengeState 注入取数层）
     data/store/            ProfileStore（邮箱）· CredentialStore（Keystore 加密的账号密码）·
-                           SettingsStore（语言 / 外观 / 视频列数 / 首页置顶 / 播放偏好）· HistoryStore（观看进度）·
+                           SettingsStore（语言 / 外观 / 视频列数 / 播放偏好）· HistoryStore（观看进度）·
                            ListSortStore（站点默认序）· ListQueryStore（用户列表口径）·
-                           ListHistoryStore（最近列表）· SearchHistoryStore（最近搜索）
+                           ListHistoryStore（最近列表与本地置顶）· SearchHistoryStore（最近搜索）
   src/test/            ViewModel 协程测试 + Robolectric Compose 交互测试
 
 baselineprofile/  独立 com.android.test 模块，只负责启动 Profile 采集；targetProjectPath = :app，
@@ -434,7 +434,7 @@ cd D:\missu
 | `ApiJsonTest` | 收藏状态与片单 JSON 的字段缺失/类型异常兜底 |
 | `SearchViewModelTest` | 连续搜索取消、分页失败重试、重叠数据去重、空关键词清理 |
 | `PageStatesTest` | Robolectric + Compose v2 规则：错误重试、空态动作、分页脚注交互 |
-| `SettingsStoreTest` / `HomeSectionOrderTest` | 置顶完整口径持久化、默认第一板块的有效置顶状态；原生板块跨语言路径匹配、带口径列表不复用默认预览 |
+| `SettingsStoreTest` / `ListHistoryStoreTest` | 视频列数偏好；列表完整口径去重、置顶切换与持久化、置顶项免受最近 20 条上限淘汰、清空 |
 
 fixture 都是**真机抓的真实页面**（`home-cn.html` / `detail.html` / `search.html` / `playlists.html` / `playlist-create.html` / `playlist-edit.html` / `directory-makers.html`）。
 
@@ -515,7 +515,6 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
   `key` 就是片单 id）；片单详情页是 `DELETE /api/playlists/{片单id}/{影片id}`（页面内联脚本
   `deletePlaylistItem()` 里的原始调用）。片单页只有片单 id，走前者需要先查一次 `key`，没必要。
 - **首页 4 个板块来自同一次请求**：`GET /` 的 HTML 里就是 4 个兄弟 `<h2>`（新作上市 / 最近更新 / 無碼影片 / 隨機），不是 4 个接口——`getHome()` 只发一次请求。真正各自独立的是各板块「更多」指向的列表页（`/cn/new`、`/cn/release`、`/cn/uncensored-leak`、`/cn/random`），打开时才各发一次。随机板块的「刷新」也复用 `GET /` 并只替换随机块。
-- **任意置顶列表只多一次第一页请求**：置顶时优先复用当前列表；命中原生首页的默认口径则复用板块。冷启动、语言变化和手动下拉刷新才重新取置顶预览，返回详情、切页签与列数变化都不取；请求与首页依次执行，不做额外预取或自动重试。「更多」进入同一口径的完整列表时交接首屏与 `nextPage`，不重复请求第一页。
 - **seek 画面预览不是 JSON 接口或 VTT**：详情页内联 Plyr `thumbnail` 配置直出 `pic_num`、单帧宽高、行列数与雪碧图 `urls`；`js/plyr-plugin-thumbnail.js` 用 `floor(目标时间 × pic_num / 视频时长)` 定位帧，再按行列裁切。只消费页面直出的 URL，不按番号或 UUID 推导；雪碧图 CDN 与媒体流一样要求站点 `Referer` 和 Android UA（缺省实测 403），Coil 请求必须显式携带。`DetailFixtureTest` 用真实 `detail.html` 锁住解析和帧定位。
 - **筛选生效时 `sort=` 会挪到第二个参数、并被 HTML 实体化成 `&amp;sort=`**：`/today-hot?filters=chinese-subtitle` 的排序下拉
   链接是 `…?filters=chinese-subtitle&amp;sort=today_views`（2026-11-15 真机实测）。`parseListSort` 第一版只认 `?sort=` / `&sort=`，

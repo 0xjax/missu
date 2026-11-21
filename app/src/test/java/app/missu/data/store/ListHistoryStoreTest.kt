@@ -31,7 +31,7 @@ class ListHistoryStoreTest {
     }
 
     @Test
-    fun `revisiting a normalized path moves it to front with its latest query`() {
+    fun `different queries for a normalized path remain separate`() {
         val store = ListHistoryStore(context)
         store.record(ListHistoryEntry("Other", VideoListQuery("/latest"), updatedAt = 1))
         store.record(ListHistoryEntry("New", VideoListQuery("/new"), updatedAt = 2))
@@ -47,12 +47,36 @@ class ListHistoryStoreTest {
 
         store.record(latest)
 
-        assertEquals(listOf(latest, ListHistoryEntry("Other", VideoListQuery("/latest"), 1)), store.recent())
-        assertEquals(listOf(latest), ListHistoryStore(context).recent().take(1))
+        assertEquals(
+            listOf(
+                latest,
+                ListHistoryEntry("New", VideoListQuery("/new"), 2),
+                ListHistoryEntry("Other", VideoListQuery("/latest"), 1),
+            ),
+            store.recent(),
+        )
     }
 
     @Test
-    fun `history keeps only the twenty most recent lists and can be cleared`() {
+    fun `revisiting a pinned query preserves its pin across reloads`() {
+        val store = ListHistoryStore(context)
+        store.record(ListHistoryEntry("Other", VideoListQuery("/latest"), updatedAt = 1))
+        store.record(ListHistoryEntry("New", VideoListQuery("/new"), updatedAt = 2))
+        store.togglePin(VideoListQuery("/en/new"))
+        val revisited = ListHistoryEntry("New", VideoListQuery("/cn/new"), updatedAt = 3, pinned = true)
+
+        store.record(ListHistoryEntry("New", VideoListQuery("/cn/new"), updatedAt = 3))
+
+        assertEquals(listOf(revisited, ListHistoryEntry("Other", VideoListQuery("/latest"), 1)), store.recent())
+        assertEquals(listOf(revisited), ListHistoryStore(context).recent().take(1))
+
+        store.togglePin(revisited.query)
+
+        assertEquals(ListHistoryEntry("New", VideoListQuery("/cn/new"), 3), store.recent().first())
+    }
+
+    @Test
+    fun `history keeps only the twenty most recent unpinned lists and can be cleared`() {
         val store = ListHistoryStore(context)
         (1..21).forEach { index ->
             store.record(ListHistoryEntry("List $index", VideoListQuery("/list/$index"), index.toLong()))
@@ -65,6 +89,20 @@ class ListHistoryStoreTest {
         store.clear()
 
         assertEquals(emptyList<ListHistoryEntry>(), store.recent())
+    }
+
+    @Test
+    fun `pinned lists survive the recent history limit`() {
+        val store = ListHistoryStore(context)
+        store.record(ListHistoryEntry("Pinned", VideoListQuery("/list/1"), updatedAt = 1))
+        store.togglePin(VideoListQuery("/list/1"))
+        (2..21).forEach { index ->
+            store.record(ListHistoryEntry("List $index", VideoListQuery("/list/$index"), index.toLong()))
+        }
+
+        assertEquals(21, store.recent().size)
+        assertEquals(ListHistoryEntry("Pinned", VideoListQuery("/list/1"), 1, pinned = true), store.recent().first())
+        assertEquals(20, store.recent().count { !it.pinned })
     }
 
     private fun preferences() = context.getSharedPreferences("missu:list-history", Context.MODE_PRIVATE)

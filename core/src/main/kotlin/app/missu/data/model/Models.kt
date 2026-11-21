@@ -16,9 +16,6 @@ data class VideoListQuery(
             sort == other.sort && filter == other.filter
 }
 
-/** 单一首页置顶：保留完整列表口径，视频数据只在内存里缓存。 */
-data class PinnedHomeList(val title: String, val query: VideoListQuery)
-
 /** 一张视频卡片的摘要信息；字段与 legacy 的 VideoSummary 一一对应。 */
 data class VideoSummary(
     val id: String,

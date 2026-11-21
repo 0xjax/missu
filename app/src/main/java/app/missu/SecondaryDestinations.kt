@@ -37,9 +37,6 @@ import app.missu.ui.detail.DetailScreen
 import app.missu.ui.detail.DetailViewModel
 import app.missu.ui.history.HistoryScreen
 import app.missu.ui.history.HistoryViewModel
-import app.missu.ui.home.HomeViewModel
-import app.missu.ui.home.effectivePinnedQuery
-import app.missu.data.model.PinnedHomeList
 import app.missu.data.model.VideoListQuery
 import app.missu.ui.list.AutoLoadVideoList
 import app.missu.ui.list.VideoListScreen
@@ -81,7 +78,6 @@ internal fun NavGraphBuilder.secondaryDestinations(
     backStackEntry: State<NavBackStackEntry?>,
     tabRoute: State<String>,
     api: MissavApi,
-    homeViewModel: HomeViewModel,
     settings: SettingsStore,
     settingsState: AppSettingsState,
     settingsActions: AppSettingsActions,
@@ -159,18 +155,9 @@ internal fun NavGraphBuilder.secondaryDestinations(
         LaunchedEffect(query, title) {
             listHistoryStore.record(ListHistoryEntry(title, query, System.currentTimeMillis()))
         }
-        val pinnedHome by homeViewModel.pinned.collectAsStateWithLifecycle()
-        val pinnedHomeState by homeViewModel.pinnedState.collectAsStateWithLifecycle()
-        val homeState by homeViewModel.state.collectAsStateWithLifecycle()
-        val effectivePinned = effectivePinnedQuery(pinnedHome, homeState)
-        val initialContent = (pinnedHomeState as? VideoListUiState.Content)?.takeIf {
-            pinnedHome?.query?.sameSiteQuery(query) == true
-        }
         val viewModel: VideoListViewModel = viewModel(
             key = "list-${query.cacheKey}",
-            factory = missuViewModelFactory {
-                VideoListViewModel(api, query, listSortStore, initialContent = initialContent)
-            },
+            factory = missuViewModelFactory { VideoListViewModel(api, query, listSortStore) },
         )
         val state by viewModel.state.collectAsStateWithLifecycle()
         val detectedSort by viewModel.detectedSort.collectAsStateWithLifecycle()
@@ -198,14 +185,6 @@ internal fun NavGraphBuilder.secondaryDestinations(
                     onLoadMore = viewModel::loadMore,
                     onOpen = { id, thumbnail -> onOpenDetail(id, thumbnail, "") },
                     onBack = onGoBack,
-                    pinned = effectivePinned?.sameSiteQuery(query) == true,
-                    onPin = {
-                        homeViewModel.pin(
-                            pinned = PinnedHomeList(title = title, query = query),
-                            currentVideos = (state as? VideoListUiState.Content)?.videos.orEmpty(),
-                            currentNextPage = (state as? VideoListUiState.Content)?.nextPage,
-                        )
-                    },
                 )
             }
         }
@@ -226,6 +205,7 @@ internal fun NavGraphBuilder.secondaryDestinations(
                     listEntries = listEntries,
                     onOpen = { id, thumbnail -> onOpenDetail(id, thumbnail, "") },
                     onOpenList = { onOpenListQuery(it.query, it.title) },
+                    onToggleListPin = viewModel::toggleListPin,
                     onClearVideos = viewModel::clearVideos,
                     onClearLists = viewModel::clearLists,
                     onBack = onGoBack,

@@ -23,9 +23,9 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.List
 import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
@@ -54,6 +54,7 @@ import app.missu.data.store.ListHistoryEntry
 import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.LocalVideoListColumns
 import app.missu.ui.components.PageTopBar
+import app.missu.ui.components.TooltipIconButton
 import app.missu.ui.components.videoHero
 import app.missu.ui.list.filterLabel
 import app.missu.ui.list.sortLabel
@@ -65,6 +66,7 @@ fun HistoryScreen(
     listEntries: List<ListHistoryEntry>,
     onOpen: (id: String, thumbnail: String?) -> Unit,
     onOpenList: (ListHistoryEntry) -> Unit,
+    onToggleListPin: (ListHistoryEntry) -> Unit,
     onClearVideos: () -> Unit,
     onClearLists: () -> Unit,
     onBack: () -> Unit,
@@ -110,6 +112,7 @@ fun HistoryScreen(
                 entries = listEntries,
                 state = listState,
                 onOpen = onOpenList,
+                onTogglePin = onToggleListPin,
             )
         }
     }
@@ -148,6 +151,7 @@ private fun ListHistory(
     entries: List<ListHistoryEntry>,
     state: LazyListState,
     onOpen: (ListHistoryEntry) -> Unit,
+    onTogglePin: (ListHistoryEntry) -> Unit,
 ) {
     if (entries.isEmpty()) {
         EmptyHint(
@@ -161,15 +165,19 @@ private fun ListHistory(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(top = 8.dp, bottom = 32.dp),
         ) {
-            items(items = entries, key = { it.query.path }) { entry ->
-                ListHistoryRow(entry = entry, onClick = { onOpen(entry) })
+            items(items = entries, key = { it.query.cacheKey }) { entry ->
+                ListHistoryRow(
+                    entry = entry,
+                    onClick = { onOpen(entry) },
+                    onTogglePin = { onTogglePin(entry) },
+                )
             }
         }
     }
 }
 
 @Composable
-private fun ListHistoryRow(entry: ListHistoryEntry, onClick: () -> Unit) {
+private fun ListHistoryRow(entry: ListHistoryEntry, onClick: () -> Unit, onTogglePin: () -> Unit) {
     val queryLabels = listOfNotNull(
         entry.query.sort?.let { sortLabel(it) },
         entry.query.filter?.let { filterLabel(it) },
@@ -187,10 +195,15 @@ private fun ListHistoryRow(entry: ListHistoryEntry, onClick: () -> Unit) {
             }
         },
         trailingContent = {
-            Icon(
-                imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            TooltipIconButton(
+                icon = Icons.Outlined.PushPin,
+                contentDescription = stringResource(
+                    if (entry.pinned) R.string.history_unpin_list else R.string.history_pin_list,
+                ),
+                onClick = onTogglePin,
+                tonal = true,
+                active = entry.pinned,
+                activeClickable = true,
             )
         },
     ) {

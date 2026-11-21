@@ -86,6 +86,7 @@ fun TooltipIconButton(
     tint: Color? = null,
     tonal: Boolean = false,
     active: Boolean = false,
+    activeClickable: Boolean = false,
 ) {
     TooltipBox(
         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
@@ -96,7 +97,7 @@ fun TooltipIconButton(
             FilledTonalIconButton(
                 onClick = onClick,
                 modifier = modifier.minimumInteractiveComponentSize(),
-                enabled = enabled && !active,
+                enabled = enabled && (!active || activeClickable),
                 colors = if (active) {
                     IconButtonDefaults.filledTonalIconButtonColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer,

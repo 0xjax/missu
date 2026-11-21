@@ -20,7 +20,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.List
 import androidx.compose.material.icons.outlined.ArrowDropDown
-import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -52,7 +51,6 @@ import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.LocalVideoListColumns
 import app.missu.ui.components.PageStateTransition
 import app.missu.ui.components.PageTopBar
-import app.missu.ui.components.TooltipIconButton
 import app.missu.ui.components.VideoGridCard
 
 @Composable
@@ -88,8 +86,6 @@ fun VideoListScreen(
     onLoadMore: () -> Unit,
     onOpen: (id: String, thumbnail: String?) -> Unit,
     onBack: () -> Unit,
-    pinned: Boolean,
-    onPin: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxSize()) {
@@ -107,8 +103,6 @@ fun VideoListScreen(
             onRetry = onRetry,
             onLoadMore = onLoadMore,
             onOpen = onOpen,
-            pinned = pinned,
-            onPin = onPin,
             modifier = Modifier.weight(1f),
         )
     }
@@ -133,8 +127,6 @@ fun VideoListContent(
     onRetry: () -> Unit,
     onLoadMore: () -> Unit,
     onOpen: (id: String, thumbnail: String?) -> Unit,
-    pinned: Boolean,
-    onPin: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier) {
@@ -146,8 +138,6 @@ fun VideoListContent(
             filters = filters,
             onSortChange = onSortChange,
             onFilterChange = onFilterChange,
-            pinned = pinned,
-            onPin = onPin,
         )
 
         VideoListBody(
@@ -161,7 +151,7 @@ fun VideoListContent(
 }
 
 /**
- * 口径行：左边是排序（当前值 + 下拉菜单），中间是可横向滚动的过滤，末尾固定首页置顶。
+ * 口径行：左边是排序（当前值 + 下拉菜单），右边是可横向滚动的过滤。
  *
  * NOTE: 排序档位有 7 档 + 「默认」，平铺会把页头撑死，所以用菜单；≤3 档的平铺形态见发现页
  * 「女优」页签的三档排序组（同一个 ToggleButton 家族）。触发器只显示当前值，不加「排序」前缀。
@@ -177,8 +167,6 @@ private fun ListControls(
     filters: List<VideoListOptions.Filter>,
     onSortChange: (VideoListOptions.Sort?) -> Unit,
     onFilterChange: (VideoListOptions.Filter?) -> Unit,
-    pinned: Boolean,
-    onPin: () -> Unit,
 ) {
     var sortMenuOpen by remember { mutableStateOf(false) }
     // 站点点明了它自己当前的排序（页面头部「排序: X」），所以「默认」不再是一档：直接显示那一项。
@@ -231,13 +219,6 @@ private fun ListControls(
             }
         }
 
-        TooltipIconButton(
-            icon = Icons.Outlined.PushPin,
-            contentDescription = stringResource(if (pinned) R.string.list_pinned_home else R.string.list_pin_home),
-            onClick = onPin,
-            tonal = true,
-            active = pinned,
-        )
     }
 }
 

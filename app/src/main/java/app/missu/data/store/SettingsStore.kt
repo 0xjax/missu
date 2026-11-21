@@ -3,9 +3,6 @@ package app.missu.data.store
 import android.content.Context
 import androidx.core.content.edit
 import app.missu.data.api.SourceConfig
-import app.missu.data.api.VideoListOptions
-import app.missu.data.model.PinnedHomeList
-import app.missu.data.model.VideoListQuery
 
 /** 明暗模式：跟随系统 / 强制浅色 / 强制深色。 */
 enum class ThemeMode {
@@ -122,29 +119,6 @@ class SettingsStore(context: Context) {
         prefs.edit { putBoolean(KEY_SINGLE_COLUMN_VIDEOS, enabled) }
     }
 
-    /** 首页只保留一个置顶列表；路径、排序与过滤共同标识它。 */
-    fun pinnedHomeList(): PinnedHomeList? {
-        val path = prefs.getString(KEY_PINNED_HOME_PATH, null) ?: return null
-        val title = prefs.getString(KEY_PINNED_HOME_TITLE, null) ?: return null
-        return PinnedHomeList(
-            title = title,
-            query = VideoListQuery(
-                path = path,
-                sort = VideoListOptions.Sort.fromKey(prefs.getString(KEY_PINNED_HOME_SORT, null)),
-                filter = VideoListOptions.Filter.fromKey(prefs.getString(KEY_PINNED_HOME_FILTER, null)),
-            ),
-        )
-    }
-
-    fun setPinnedHomeList(value: PinnedHomeList) {
-        prefs.edit {
-            putString(KEY_PINNED_HOME_PATH, value.query.path)
-            putString(KEY_PINNED_HOME_TITLE, value.title)
-            putString(KEY_PINNED_HOME_SORT, value.query.sort?.name)
-            putString(KEY_PINNED_HOME_FILTER, value.query.filter?.name)
-        }
-    }
-
     /**
      * 播放倍速（1f = 原速）。全局一个值，对所有影片生效。
      *
@@ -192,10 +166,6 @@ class SettingsStore(context: Context) {
         const val KEY_FOLLOW_THEME_ICON = "followThemeIcon"
         const val KEY_PURE_BLACK = "pureBlack"
         const val KEY_SINGLE_COLUMN_VIDEOS = "singleColumnVideos"
-        const val KEY_PINNED_HOME_PATH = "pinnedHomePath"
-        const val KEY_PINNED_HOME_TITLE = "pinnedHomeTitle"
-        const val KEY_PINNED_HOME_SORT = "pinnedHomeSort"
-        const val KEY_PINNED_HOME_FILTER = "pinnedHomeFilter"
         const val KEY_PLAYBACK_SPEED = "playbackSpeed"
         const val KEY_AUTOPLAY = "autoplay"
         const val KEY_FILL_SCREEN = "fillScreen"

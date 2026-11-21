@@ -52,6 +52,8 @@
     <string name="history_empty_subtitle">打開任意影片開始播放後，這裡會記下看到第幾分鐘</string>
     <string name="history_lists_empty_title">還沒有最近清單</string>
     <string name="history_lists_empty_subtitle">開啟過的影片清單會顯示在這裡</string>
+    <string name="history_pin_list">置頂清單</string>
+    <string name="history_unpin_list">取消置頂</string>
 
     <!-- 列表 -->
     <string name="list_empty_title">這裡還沒有內容</string>
@@ -68,8 +70,6 @@
     <string name="list_filter_individual">單人作品</string>
     <string name="list_filter_multiple">多人作品</string>
     <string name="list_filter_chinese_subtitle">中文字幕</string>
-    <string name="list_pin_home">置頂到首頁</string>
-    <string name="list_pinned_home">已置頂到首頁</string>
 
     <!-- 首頁 -->
     <string name="error_home_empty">未能讀取首頁區塊，請重試</string>

@@ -13,21 +13,32 @@ data class ListHistoryEntry(
     val title: String,
     val query: VideoListQuery,
     val updatedAt: Long,
+    val pinned: Boolean = false,
 )
 
-/** 本地最近列表：同一路径去重并更新口径，最多保留 20 条。 */
+/** 本地列表入口：置顶项始终保留，另按完整口径最多保存 20 条最近记录。 */
 class ListHistoryStore(context: Context) {
 
     private val prefs = context.getSharedPreferences("missu:list-history", Context.MODE_PRIVATE)
 
-    fun recent(): List<ListHistoryEntry> = readAll().sortedByDescending { it.updatedAt }
+    fun recent(): List<ListHistoryEntry> = readAll().sortedWith(historyOrder)
 
     fun record(entry: ListHistoryEntry) {
-        val path = normalizedPath(entry.query.path)
-        val next = (listOf(entry) + readAll().filterNot { normalizedPath(it.query.path) == path })
-            .sortedByDescending { it.updatedAt }
-            .take(MAX_ENTRIES)
-        writeAll(next)
+        val entries = readAll()
+        val pinned = entries.firstOrNull { sameQuery(it.query, entry.query) }?.pinned == true
+        val next = listOf(entry.copy(pinned = pinned)) +
+            entries.filterNot { sameQuery(it.query, entry.query) }
+        val pinnedEntries = next.filter { it.pinned }
+        val recentEntries = next.filterNot { it.pinned }.sortedByDescending { it.updatedAt }.take(MAX_ENTRIES)
+        writeAll(pinnedEntries + recentEntries)
+    }
+
+    fun togglePin(query: VideoListQuery) {
+        writeAll(
+            readAll().map { entry ->
+                if (sameQuery(entry.query, query)) entry.copy(pinned = !entry.pinned) else entry
+            },
+        )
     }
 
     fun clear() = prefs.edit { remove(KEY) }
@@ -48,6 +59,7 @@ class ListHistoryStore(context: Context) {
                         filter = VideoListOptions.Filter.fromKey(json.optString("filter").ifEmpty { null }),
                     ),
                     updatedAt = json.optLong("updatedAt"),
+                    pinned = json.optBoolean("pinned"),
                 )
             }
         }.getOrDefault(emptyList())
@@ -63,15 +75,22 @@ class ListHistoryStore(context: Context) {
                     put("sort", entry.query.sort?.name.orEmpty())
                     put("filter", entry.query.filter?.name.orEmpty())
                     put("updatedAt", entry.updatedAt)
+                    put("pinned", entry.pinned)
                 },
             )
         }
         prefs.edit { putString(KEY, array.toString()) }
     }
 
+    private fun sameQuery(first: VideoListQuery, second: VideoListQuery): Boolean =
+        normalizedPath(first.path) == normalizedPath(second.path) &&
+            first.sort == second.sort && first.filter == second.filter
+
     private fun normalizedPath(path: String) = SourceConfig.contentPath(path.substringBefore('?'))
 
     private companion object {
+        val historyOrder = compareByDescending<ListHistoryEntry> { it.pinned }
+            .thenByDescending { it.updatedAt }
         const val KEY = "entries"
         const val MAX_ENTRIES = 20
     }

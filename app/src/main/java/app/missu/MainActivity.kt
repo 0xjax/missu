@@ -51,7 +51,6 @@ import androidx.navigation.compose.rememberNavController
 import app.missu.data.api.AppDependencies
 import app.missu.data.api.LocalAppDependencies
 import app.missu.data.api.SourceConfig
-import app.missu.data.model.PinnedHomeList
 import app.missu.data.model.VideoListQuery
 import app.missu.data.store.AppLanguage
 import app.missu.data.store.ColorSource
@@ -262,10 +261,6 @@ private fun MissuApp(
         openListQuery(listQueryStore.get(path), title)
     }
 
-    fun openPinnedList(pinned: PinnedHomeList) {
-        openListQuery(pinned.query, pinned.title)
-    }
-
     fun goBack() {
         buttonPopId = navController.currentBackStackEntry?.id
         navController.popBackStack()
@@ -281,7 +276,7 @@ private fun MissuApp(
         },
     )
     val homeViewModel: HomeViewModel = viewModel(
-        factory = missuViewModelFactory { HomeViewModel(api, settings) },
+        factory = missuViewModelFactory { HomeViewModel(api) },
     )
     val historyStore = remember { HistoryStore(context.applicationContext) }
     val listHistoryStore = remember { ListHistoryStore(context.applicationContext) }
@@ -356,7 +351,6 @@ private fun MissuApp(
                     auth = auth,
                     onOpenDetail = ::openDetail,
                     onOpenList = ::openList,
-                    onOpenPinnedList = ::openPinnedList,
                 )
             }
             secondaryDestinations(
@@ -364,7 +358,6 @@ private fun MissuApp(
                 backStackEntry = backStackEntry,
                 tabRoute = tabRouteState,
                 api = api,
-                homeViewModel = homeViewModel,
                 settings = settings,
                 settingsState = settingsState,
                 settingsActions = settingsActions,
