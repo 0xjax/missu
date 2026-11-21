@@ -67,7 +67,7 @@ private fun deviceCardCorner(): Dp {
 fun PageSurface(
     modifier: Modifier = Modifier,
     contentInset: Boolean = true,
-    /** 一级页（三个页签）永远不会被缩成卡片，关掉这一层，别在上面留下痕迹。 */
+    /** 一级页签永远不会被缩成卡片，关掉这一层，别在上面留下痕迹。 */
     card: Boolean = true,
 
     content: @Composable () -> Unit,

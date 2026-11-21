@@ -17,6 +17,7 @@
 
     <!-- 底部页签 -->
     <string name="nav_home">Home</string>
+    <string name="nav_study">Reading</string>
     <string name="nav_discover">Discover</string>
     <string name="nav_account">Me</string>
 
@@ -111,6 +112,51 @@
         <item>Afterwards, one sentence of your own is enough. Which image stayed with you? Whose perspective changed yours? What would you like to explore next? A single note turns brief entertainment into an experience connected to your life.</item>
         <item>This weekend, choose a short film or documentary and give it uninterrupted time. Desire can still have its place; your attention can also nourish a larger world.</item>
     </string-array>
+
+    <!-- 书房 -->
+    <string name="study_poetry_tab">Poetry</string>
+    <string name="study_english_tab">English</string>
+    <string name="poetry_intro">Read a poem slowly. No recitation targets, check-ins or scores.</string>
+    <string name="poetry_translation">Modern reading</string>
+    <string name="poetry_appreciation">Appreciation</string>
+    <string name="poem_theme_longing">Longing</string>
+    <string name="poem_theme_self">A place within</string>
+    <string name="poem_theme_life">Life</string>
+    <string name="poem_quiet_night_title" translatable="false">静夜思</string>
+    <string name="poem_quiet_night_author" translatable="false">唐 · 李白</string>
+    <string name="poem_quiet_night_text" translatable="false">床前明月光，疑是地上霜。\n举头望明月，低头思故乡。</string>
+    <string name="poem_quiet_night_translation">Moonlight falls before my bed, so bright that I mistake it for frost. I raise my head to the moon, then lower it and think of home.</string>
+    <string name="poem_quiet_night_appreciation">Four plain lines hold one small movement: looking up at something shared by everyone, then looking down into a longing that is entirely one’s own. The poem leaves the feeling unnamed until the final word, allowing home to arrive with quiet force.</string>
+    <string name="poem_drinking_wine_title" translatable="false">饮酒 · 其五</string>
+    <string name="poem_drinking_wine_author" translatable="false">东晋 · 陶渊明</string>
+    <string name="poem_drinking_wine_text" translatable="false">结庐在人境，而无车马喧。\n问君何能尔？心远地自偏。\n采菊东篱下，悠然见南山。\n山气日夕佳，飞鸟相与还。\n此中有真意，欲辨已忘言。</string>
+    <string name="poem_drinking_wine_translation">I live among people, yet the noise of carriages does not reach me. How is that possible? When the mind is distant, the place becomes secluded. I pick chrysanthemums by the eastern fence and glimpse the southern mountain at ease. In the evening air, birds return together. There is a truth here, but when I try to name it, words fall away.</string>
+    <string name="poem_drinking_wine_appreciation">Distance here is not a place to escape to, but a way of paying attention. The chrysanthemums, mountain and returning birds are not trophies of a perfect life; they become visible when the mind stops treating noise as its master.</string>
+    <string name="poem_calming_waves_title" translatable="false">定风波 · 莫听穿林打叶声</string>
+    <string name="poem_calming_waves_author" translatable="false">北宋 · 苏轼</string>
+    <string name="poem_calming_waves_text" translatable="false">莫听穿林打叶声，何妨吟啸且徐行。\n竹杖芒鞋轻胜马，谁怕？一蓑烟雨任平生。\n料峭春风吹酒醒，微冷，山头斜照却相迎。\n回首向来萧瑟处，归去，也无风雨也无晴。</string>
+    <string name="poem_calming_waves_translation">Do not listen to the rain beating through the trees. Why not sing and walk slowly? A bamboo staff and straw sandals feel lighter than a horse. Who is afraid? I will meet a lifetime of mist and rain in one straw cape. The spring wind sobers me with a slight chill, while sunlight from the mountain comes to meet me. Looking back at the bleak place I passed through, I return with neither rain nor clear sky in mind.</string>
+    <string name="poem_calming_waves_appreciation">The turning point is not that the rain stops. Cold remains, and sunlight arrives only on the mountain ahead. Freedom comes from refusing to let either weather decide the meaning of the whole journey: neither storm nor sunshine has the final word.</string>
+    <string name="english_intro">Read real articles in English and Chinese. Tap highlighted words for meaning and examples; there are no streaks or grades.</string>
+    <string name="english_bilingual_reading">Bilingual reading · Tap to learn</string>
+    <string name="english_tap_hint">Tap a highlighted word to see its meaning and an example.</string>
+    <string name="english_example">Example</string>
+    <string name="vocab_urge">Urge; a strong impulse or desire to do something.</string>
+    <string name="vocab_conscious">Conscious; made with awareness and deliberate attention.</string>
+    <string name="vocab_inertia">Inertia; the tendency to keep doing the same thing without making a new choice.</string>
+    <string name="vocab_recognise">Recognise; to identify a feeling or understand what it is.</string>
+    <string name="vocab_consumption">Consumption; the act of using or taking in content, often without active engagement.</string>
+    <string name="vocab_concrete">Concrete; specific and definite rather than vague.</string>
+    <string name="vocab_prestigious">Prestigious; respected because it carries status or reputation.</string>
+    <string name="vocab_nourish">Nourish; to support growth or give something what it needs to thrive.</string>
+    <string name="vocab_urge_example" translatable="false">an automatic urge</string>
+    <string name="vocab_conscious_example" translatable="false">a conscious choice</string>
+    <string name="vocab_inertia_example" translatable="false">closer to your real need than inertia</string>
+    <string name="vocab_recognise_example" translatable="false">recognise a feeling</string>
+    <string name="vocab_consumption_example" translatable="false">passive consumption</string>
+    <string name="vocab_concrete_example" translatable="false">a concrete subject</string>
+    <string name="vocab_prestigious_example" translatable="false">a prestigious list</string>
+    <string name="vocab_nourish_example" translatable="false">nourish a larger world</string>
 
     <!-- 搜索 -->
     <string name="search_placeholder">Search code, actress or keyword</string>

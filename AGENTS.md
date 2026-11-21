@@ -70,7 +70,7 @@
 
 ## Git / Secrets / Tools
 
-- 当前分支提交，不建 PR 或 worktree；用户验收后再提交。git writes 逐命令确认，批准不跨命令继承；历史改写每次单独确认精确命令与范围；不得把一个文件的改动拆进两个提交。
+- 当前分支提交，不建 PR 或 worktree；用户验收后再提交。`git add` 等本地可恢复操作无需确认；`git commit` 每次确认一次，批准后可与暂存合并执行；push、merge、rebase、reset、分支/标签删除及历史改写逐操作确认，force push / 历史改写必须明确精确命令与范围。不得把一个文件的改动拆进两个提交。
 - 禁止读取 `.env*`、SSH 私钥等秘密文件；禁止在日志、注释、提交、工具输出或命令参数中暴露秘密。需要环境变量值时直接向用户索取。
 - 内容搜索用 Grep，文件定位用 Glob，读写编辑用 Read / Edit / Write；长文件分批处理。
 - `legacy/expo/` 不参与验证。结构变化后同步 `AGENTS.md` / `DESIGN.md` / `docs/android-native.md`。

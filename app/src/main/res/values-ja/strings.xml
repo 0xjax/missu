@@ -11,6 +11,7 @@
 
     <!-- ボトムタブ -->
     <string name="nav_home">ホーム</string>
+    <string name="nav_study">書斎</string>
     <string name="nav_discover">さがす</string>
     <string name="nav_account">マイページ</string>
 
@@ -105,6 +106,34 @@
         <item>見終わったら、自分の言葉を一文だけ残します。どの場面が残ったか。誰の視点が自分を変えたか。次に何を知りたいか。短いメモが、一時の娯楽を自分の人生につながる体験に変えます。</item>
         <item>今週末は短編かドキュメンタリーを一本選び、中断されない時間をつくってみましょう。欲求にも居場所があり、注意はもっと広い世界を育てるためにも使えます。</item>
     </string-array>
+
+    <!-- 書斎 -->
+    <string name="study_poetry_tab">詩詞</string>
+    <string name="study_english_tab">英語</string>
+    <string name="poetry_intro">一編をゆっくり読みます。暗唱の課題も、継続日数も、採点もありません。</string>
+    <string name="poetry_translation">現代語訳</string>
+    <string name="poetry_appreciation">鑑賞</string>
+    <string name="poem_theme_longing">望郷</string>
+    <string name="poem_theme_self">自分と向き合う</string>
+    <string name="poem_theme_life">人生</string>
+    <string name="poem_quiet_night_translation">床の前に月明かりが差し、床に霜がおりたかと思うほど明るい。顔を上げて月を見つめ、下を向くと、ふるさとへの思いがこみ上げる。</string>
+    <string name="poem_quiet_night_appreciation">素朴な四句に、小さな動作が収められています。誰もが共有する月を見上げ、次にうつむいて自分だけの思いに戻ります。故郷は最後まで名づけられず、静かに、しかし確かな重みで現れます。</string>
+    <string name="poem_drinking_wine_translation">人の世に住みながら、車馬の騒音は聞こえない。なぜだろうか。心が遠く離れていれば、場所も自然に静かになる。東の垣根で菊を摘み、ふと南山を見る。夕暮れの山の空気が美しく、鳥たちが連れ立って帰る。そこには真の意味があるが、言い表そうとすると、言葉を忘れてしまう。</string>
+    <string name="poem_drinking_wine_appreciation">ここでの「遠さ」は、逃げ込む場所ではなく、注意の向け方です。菊、山、帰る鳥は完璧な生活の飾りではありません。心が騒音に支配されなくなったとき、初めてはっきり見えてくるものです。</string>
+    <string name="poem_calming_waves_translation">林を抜けて葉を打つ雨音に耳を貸すことはない。歌いながらゆっくり歩けばよい。竹の杖とわらじは、馬より軽やかだ。何を恐れることがあろうか。蓑を一枚まとい、煙雨の一生を受け入れる。冷たい春風に酔いが醒め、少し寒いが、山の斜陽が迎えてくれる。通り過ぎた寂しい場所を振り返り、帰る。心には雨も晴れもない。</string>
+    <string name="poem_calming_waves_appreciation">転換点は雨がやむことではありません。寒さは残り、日差しは先の山に現れるだけです。どちらの天気にも旅全体の意味を決めさせないところに、自由があります。嵐も晴れも、最後の言葉を独占しません。</string>
+    <string name="english_intro">英語と中国語の文章を読み、色のついた語をタップして意味と例を確かめます。継続日数や成績はありません。</string>
+    <string name="english_bilingual_reading">バイリンガル読書 · タップして学ぶ</string>
+    <string name="english_tap_hint">色のついた単語をタップすると、意味と例を表示します。</string>
+    <string name="english_example">例文・表現</string>
+    <string name="vocab_urge">名詞：衝動、強い欲求。すぐに何かをしたいという内側の押し動かす力。</string>
+    <string name="vocab_conscious">形容詞：意識的な。はっきり気づき、自分から選んで行うこと。</string>
+    <string name="vocab_inertia">名詞：慣性、惰性。新しい選択をせず、同じ行動を続ける傾向。</string>
+    <string name="vocab_recognise">動詞：識別する、気づく。感情を見分け、それが何かを理解すること。</string>
+    <string name="vocab_consumption">名詞：消費。ここでは能動的に関わらず、コンテンツを受け身で取り込むこと。</string>
+    <string name="vocab_concrete">形容詞：具体的な、明確な。曖昧ではないこと。</string>
+    <string name="vocab_prestigious">形容詞：名門の、声望のある。地位や評判ゆえに尊重されること。</string>
+    <string name="vocab_nourish">動詞：育む、滋養を与える。成長に必要なものを与え、支えること。</string>
 
     <!-- 検索 -->
     <string name="search_placeholder">品番・女優・キーワードで検索</string>

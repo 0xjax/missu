@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.List
+import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Icon
@@ -55,6 +56,7 @@ import app.missu.ui.search.SearchBody
 import app.missu.ui.search.SearchHost
 import app.missu.ui.search.SearchUiState
 import app.missu.ui.search.SearchViewModel
+import app.missu.ui.study.StudyScreen
 
 internal const val TABS_ROUTE = "tabs"
 
@@ -66,6 +68,7 @@ internal data class TopLevel(
 
 internal val topLevels = listOf(
     TopLevel("home", R.string.nav_home, Icons.Outlined.Home),
+    TopLevel("study", R.string.nav_study, Icons.Outlined.AutoStories),
     TopLevel("discover", R.string.nav_discover, Icons.AutoMirrored.Outlined.List),
     TopLevel("account", R.string.nav_account, Icons.Outlined.Person),
 )
@@ -160,6 +163,15 @@ internal fun TabsHost(
                                 )
                             }
                         }
+                    }
+                }
+
+                "study" -> {
+                    PageSurface(card = false) {
+                        StudyScreen(
+                            onOpenPoem = { navController.navigate("poem/$it") },
+                            onOpenEnglish = { navController.navigate("english/$it") },
+                        )
                     }
                 }
 

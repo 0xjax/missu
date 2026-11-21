@@ -15,6 +15,7 @@
 
     <!-- 底部頁籤 -->
     <string name="nav_home">首頁</string>
+    <string name="nav_study">書房</string>
     <string name="nav_discover">發現</string>
     <string name="nav_account">我的</string>
 
@@ -109,6 +110,34 @@
         <item>看完之後，留下一句自己的話就夠：哪個畫面留了下來？哪個人讓我改變了看法？我想再了解什麼？一句記錄會把短暫娛樂變成與自己有關的經驗。</item>
         <item>這個週末，可以選一部短片或紀錄片，為它留出不被打斷的時間。慾望仍然可以有位置，注意力也可以用來滋養更大的世界。</item>
     </string-array>
+
+    <!-- 書房 -->
+    <string name="study_poetry_tab">詩詞</string>
+    <string name="study_english_tab">英語</string>
+    <string name="poetry_intro">慢慢讀一首，不求背誦，不設打卡，也不替感受評分。</string>
+    <string name="poetry_translation">白話意譯</string>
+    <string name="poetry_appreciation">賞析</string>
+    <string name="poem_theme_longing">思鄉</string>
+    <string name="poem_theme_self">自處</string>
+    <string name="poem_theme_life">人生</string>
+    <string name="poem_quiet_night_translation">月光灑在床前，明亮得像是地上結了一層霜。抬頭望向明月，再低下頭，故鄉便湧上心頭。</string>
+    <string name="poem_quiet_night_appreciation">四句樸素的話，裝著一次很小的動作：先抬頭看人人共有的月亮，再低頭回到只屬於自己的思念。詩意不在奇巧，而在故鄉直到最後才出現，安靜卻有分量。</string>
+    <string name="poem_drinking_wine_translation">住在人群之中，卻聽不見車馬的喧鬧。為什麼能做到？心若遠離了紛擾，所在之處自然顯得僻靜。在東籬下採菊，悠然間看見南山。傍晚山色正好，飛鳥結伴歸來。其中自有真意，想要分辨說明時，卻已經忘了語言。</string>
+    <string name="poem_drinking_wine_appreciation">「遠」不是逃到某個地方，而是重新安排自己的心。菊花、南山與歸鳥並非完美生活的裝飾；當心不再被喧聲牽著走，它們才重新變得可見。</string>
+    <string name="poem_calming_waves_translation">不必理會雨點穿林打葉的聲音，不妨一邊吟詠長嘯，一邊慢慢走。竹杖草鞋，輕便得勝過騎馬。有什麼可怕？披一件蓑衣，就任憑一生煙雨。微寒的春風吹醒酒意，山頭斜陽卻迎面而來。回望方才蕭瑟的地方，回去吧，心中已無所謂風雨，也無所謂晴。</string>
+    <string name="poem_calming_waves_appreciation">轉折並不在於雨停了：寒意仍在，陽光也只在山頭出現。自由來自不再讓天氣替整段路下定義。風雨與晴朗都會經過，卻都不能獨占人生的最終解釋權。</string>
+    <string name="english_intro">讀真實的英漢短文，點有顏色的詞語查看釋義與例句；不設連續天數，也不評定成績。</string>
+    <string name="english_bilingual_reading">雙語閱讀 · 點詞學習</string>
+    <string name="english_tap_hint">點一下有顏色的詞語，查看釋義與例句。</string>
+    <string name="english_example">例句與搭配</string>
+    <string name="vocab_urge">名詞：衝動；強烈慾望。指想立刻做某件事的內心推動。</string>
+    <string name="vocab_conscious">形容詞：有意識的；經過清楚覺察與主動選擇的。</string>
+    <string name="vocab_inertia">名詞：慣性；惰性。指不作新選擇而繼續維持原來的行為。</string>
+    <string name="vocab_recognise">動詞：辨認；意識到。指識別並理解一種感受。</string>
+    <string name="vocab_consumption">名詞：消耗；消費。文中指沒有主動參與的被動內容消費。</string>
+    <string name="vocab_concrete">形容詞：具體的；明確的，而不是空泛的。</string>
+    <string name="vocab_prestigious">形容詞：有名望的；因地位或聲譽而受推崇的。</string>
+    <string name="vocab_nourish">動詞：滋養；培育。提供成長所需的養分或支持。</string>
 
     <!-- 搜尋 -->
     <string name="search_placeholder">搜尋番號、女優、關鍵字</string>

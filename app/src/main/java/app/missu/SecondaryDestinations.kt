@@ -56,6 +56,10 @@ import app.missu.ui.search.SearchBody
 import app.missu.ui.search.SearchHost
 import app.missu.ui.search.SearchViewModel
 import app.missu.ui.settings.SettingsScreen
+import app.missu.ui.study.EnglishArticleScreen
+import app.missu.ui.study.PoetryScreen
+import app.missu.ui.study.englishArticleById
+import app.missu.ui.study.poemById
 
 internal data class AppSettingsState(
     val appLanguage: AppLanguage,
@@ -105,6 +109,22 @@ internal fun NavGraphBuilder.secondaryDestinations(
                     navController.popBackStack()
                 },
             )
+        }
+    }
+
+    composable("poem/{id}") { entry ->
+        poemById(entry.arguments?.getString("id").orEmpty())?.let { poem ->
+            PageSurface {
+                PoetryScreen(poem = poem, onBack = onGoBack)
+            }
+        }
+    }
+
+    composable("english/{id}") { entry ->
+        englishArticleById(entry.arguments?.getString("id").orEmpty())?.let { article ->
+            PageSurface {
+                EnglishArticleScreen(article = article, onBack = onGoBack)
+            }
         }
     }
 

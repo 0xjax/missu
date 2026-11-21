@@ -11,6 +11,7 @@
 
     <!-- 底部页签 -->
     <string name="nav_home">首页</string>
+    <string name="nav_study">书房</string>
     <string name="nav_discover">发现</string>
     <string name="nav_account">我的</string>
 
@@ -105,6 +106,34 @@
         <item>看完之后，留下一句自己的话就够：哪个画面留了下来？哪个人让我改变了看法？我想再了解什么？一句记录会把短暂娱乐变成与自己有关的经验。</item>
         <item>这个周末，可以选一部短片或纪录片，为它留出不被打断的时间。欲望仍然可以有位置，注意力也可以用来滋养更大的世界。</item>
     </string-array>
+
+    <!-- 书房 -->
+    <string name="study_poetry_tab">诗词</string>
+    <string name="study_english_tab">英语</string>
+    <string name="poetry_intro">慢慢读一首，不求背诵，不设打卡，也不给感受打分。</string>
+    <string name="poetry_translation">白话意译</string>
+    <string name="poetry_appreciation">赏析</string>
+    <string name="poem_theme_longing">思乡</string>
+    <string name="poem_theme_self">自处</string>
+    <string name="poem_theme_life">人生</string>
+    <string name="poem_quiet_night_translation">月光洒在床前，明亮得像是地上结了一层霜。抬头望向明月，再低下头，故乡便涌上心头。</string>
+    <string name="poem_quiet_night_appreciation">四句朴素的话，装着一次很小的动作：先抬头看人人共有的月亮，再低头回到只属于自己的思念。诗意不在奇巧，而在故乡直到最后才出现，安静却有分量。</string>
+    <string name="poem_drinking_wine_translation">住在人群之中，却听不见车马的喧闹。为什么能做到？心若远离了纷扰，所在之处自然显得僻静。在东篱下采菊，悠然间看见南山。傍晚山色正好，飞鸟结伴归来。其中自有真意，想要分辨说明时，却已经忘了语言。</string>
+    <string name="poem_drinking_wine_appreciation">「远」不是逃到某个地方，而是重新安排自己的心。菊花、南山与归鸟并非完美生活的装饰；当心不再被喧声牵着走，它们才重新变得可见。</string>
+    <string name="poem_calming_waves_translation">不必理会雨点穿林打叶的声音，不妨一边吟咏长啸，一边慢慢走。竹杖草鞋，轻便得胜过骑马。有什么可怕？披一件蓑衣，就任凭一生烟雨。微寒的春风吹醒酒意，山头斜阳却迎面而来。回望方才萧瑟的地方，回去吧，心中已无所谓风雨，也无所谓晴。</string>
+    <string name="poem_calming_waves_appreciation">转折并不在于雨停了：寒意仍在，阳光也只在山头出现。自由来自不再让天气替整段路下定义。风雨与晴朗都会经过，却都不能独占人生的最终解释权。</string>
+    <string name="english_intro">读真实的英汉短文，点带色词语查看释义与例句；不设连续天数，也不评定成绩。</string>
+    <string name="english_bilingual_reading">双语阅读 · 点词学习</string>
+    <string name="english_tap_hint">点一下带色词语，查看释义与例句。</string>
+    <string name="english_example">例句与搭配</string>
+    <string name="vocab_urge">名词：冲动；强烈欲望。指想立刻做某件事的内心推动。</string>
+    <string name="vocab_conscious">形容词：有意识的；经过清楚觉察与主动选择的。</string>
+    <string name="vocab_inertia">名词：惯性；惰性。指不作新选择而继续维持原来的行为。</string>
+    <string name="vocab_recognise">动词：辨认；意识到。指识别并理解一种感受。</string>
+    <string name="vocab_consumption">名词：消耗；消费。文中指没有主动参与的被动内容消费。</string>
+    <string name="vocab_concrete">形容词：具体的；明确的，而不是空泛的。</string>
+    <string name="vocab_prestigious">形容词：有名望的；因地位或声誉而受推崇的。</string>
+    <string name="vocab_nourish">动词：滋养；培育。提供成长所需的养分或支持。</string>
 
     <!-- 搜索 -->
     <string name="search_placeholder">搜索番号、女优、关键词</string>
