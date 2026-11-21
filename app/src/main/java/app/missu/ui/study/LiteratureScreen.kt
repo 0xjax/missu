@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import app.missu.R
 import app.missu.data.literature.LiteraryKind
 import app.missu.data.literature.LiteraryWork
+import app.missu.data.literature.LiteraryWorkSummary
 import app.missu.data.literature.LiteratureFilter
 import app.missu.ui.common.LoadMoreState
 import app.missu.ui.common.text
@@ -203,7 +204,7 @@ private fun LiteratureContent(
 
 @Composable
 private fun LiteratureCard(
-    work: LiteraryWork,
+    work: LiteraryWorkSummary,
     favorite: Boolean,
     onToggleFavorite: () -> Unit,
     onClick: () -> Unit,

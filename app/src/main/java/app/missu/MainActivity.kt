@@ -6,6 +6,7 @@ import android.app.Activity
 import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -82,6 +83,7 @@ import coil3.ImageLoader
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.compose.setSingletonImageLoaderFactory
 import coil3.request.crossfade
+import kotlinx.coroutines.CancellationException
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -116,6 +118,15 @@ private fun MissuRoot() {
     val previewState = remember { VideoPreviewState() }
     val challengeState = remember { ChallengeState() }
     val dependencies = remember { AppDependencies(context.applicationContext, challengeState) }
+    LaunchedEffect(dependencies) {
+        try {
+            dependencies.literatureRepository.warmUp()
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Log.w("Literature", "Warm-up failed", error)
+        }
+    }
     setSingletonImageLoaderFactory { imageContext ->
         ImageLoader.Builder(imageContext)
             .components {

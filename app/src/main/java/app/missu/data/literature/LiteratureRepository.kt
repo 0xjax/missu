@@ -7,6 +7,10 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.util.Locale
 
 class LiteratureRepository(private val database: LiteratureDatabase) {
+    suspend fun warmUp() {
+        database.dao().warmUp()
+    }
+
     suspend fun findById(id: String): LiteraryWork? = database.dao().findById(id)?.toModel()
 
     suspend fun getPage(
@@ -27,7 +31,7 @@ class LiteratureRepository(private val database: LiteratureDatabase) {
             LiteratureFilter.BOOK -> LiteraryKind.BOOK.name
             else -> null
         }
-        val rows = database.dao().queryWorks(
+        val rows = database.dao().queryWorkSummaries(
             kind = kind,
             favoriteOnly = filter == LiteratureFilter.FAVORITES,
             favorites = favorites.sorted(),
@@ -40,6 +44,14 @@ class LiteratureRepository(private val database: LiteratureDatabase) {
             nextOffset = if (rows.size > limit) offset + limit else null,
         )
     }
+
+    private fun LiteraryWorkSummaryEntity.toModel(): LiteraryWorkSummary = LiteraryWorkSummary(
+        id = id,
+        kind = LiteraryKind.valueOf(kind),
+        title = title,
+        author = author,
+        themes = Json.decodeFromString(theme),
+    )
 
     private fun LiteraryWorkEntity.toModel(): LiteraryWork = LiteraryWork(
         id = id,

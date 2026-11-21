@@ -17,7 +17,7 @@ import kotlinx.coroutines.Dispatchers
 
 @Entity(
     tableName = "works",
-    indices = [Index(value = ["kind"]), Index(value = ["prominence"])],
+    indices = [Index(value = ["kind", "prominence"]), Index(value = ["prominence"])],
 )
 data class LiteraryWorkEntity(
     @PrimaryKey val id: String,
@@ -34,6 +34,14 @@ data class LiteraryWorkEntity(
     val appreciation: String,
 )
 
+data class LiteraryWorkSummaryEntity(
+    val id: String,
+    val kind: String,
+    val title: String,
+    val author: String,
+    val theme: String,
+)
+
 @Fts5(tokenizer = FtsOptions.TOKENIZER_UNICODE61)
 @Entity(tableName = "works_search")
 data class LiteratureSearchEntity(
@@ -43,12 +51,15 @@ data class LiteratureSearchEntity(
 
 @Dao
 interface LiteratureDao {
+    @Query("SELECT 1")
+    suspend fun warmUp(): Int
+
     @Query("SELECT * FROM works WHERE id = :id")
     suspend fun findById(id: String): LiteraryWorkEntity?
 
     @Query(
         """
-        SELECT * FROM works
+        SELECT id, kind, title, author, theme FROM works
         WHERE (:kind IS NULL OR kind = :kind)
         AND (:favoriteOnly = 0 OR id IN (:favorites))
         AND (:search IS NULL OR rowid IN (
@@ -57,19 +68,19 @@ interface LiteratureDao {
         ORDER BY prominence DESC, rowid LIMIT :limit OFFSET :offset
         """,
     )
-    suspend fun queryWorks(
+    suspend fun queryWorkSummaries(
         kind: String?,
         favoriteOnly: Boolean,
         favorites: List<String>,
         search: String?,
         limit: Int,
         offset: Int,
-    ): List<LiteraryWorkEntity>
+    ): List<LiteraryWorkSummaryEntity>
 }
 
 @Database(
     entities = [LiteraryWorkEntity::class, LiteratureSearchEntity::class],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 abstract class LiteratureDatabase : RoomDatabase() {

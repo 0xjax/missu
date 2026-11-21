@@ -317,7 +317,7 @@ works.push(makeWork("shiji", "BOOK", "史记", "西汉 · 司马迁", "", "baoji
 const uniqueWorks = [...new Map(works.map((work) => [work.id, work])).values()];
 await Bun.write(output, `${JSON.stringify(uniqueWorks, null, 2)}\n`);
 const manifest = await Bun.file(manifestPath).json();
-manifest.databaseVersion = 5;
+manifest.databaseVersion = 6;
 manifest.sources = manifest.sources.filter((source: any) => !["gushiwen", "daizhige", "four-novels", "shiji"].includes(source.id));
 manifest.composition.classicCollections = manifest.composition.classicCollections.filter((book: any) => !expandedBookIds.has(book.id));
 manifest.sources.push(

@@ -24,6 +24,16 @@ data class LiteraryChapter(
     val text: String,
 )
 
+data class LiteraryWorkSummary(
+    val id: String,
+    val kind: LiteraryKind,
+    val title: String,
+    val author: String,
+    val themes: Map<String, String>,
+) {
+    fun theme(locale: String): String = themes.localized(locale)
+}
+
 data class LiteraryWork(
     val id: String,
     val kind: LiteraryKind,
@@ -45,7 +55,7 @@ data class LiteraryWork(
 }
 
 data class LiteraturePage(
-    val works: List<LiteraryWork>,
+    val works: List<LiteraryWorkSummary>,
     val nextOffset: Int?,
 )
 

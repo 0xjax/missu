@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "databaseVersion": 5,
+  "databaseVersion": 6,
   "sources": [
     {
       "id": "chinese-poetry",
@@ -1304,7 +1304,7 @@
       "PROSE": 1681,
       "BOOK": 36
     },
-    "databaseSha256": "a583d9965d10d8be733872b796b43b0d6433dd076b2c768d49f159aa62169fbc"
+    "databaseSha256": "16ffa05ef49c873f70557cc5f5f768b4a4a2e72c44ea58b18423b12c68fd6b50"
   },
   "expansion": {
     "previousCount": 90292,

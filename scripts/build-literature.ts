@@ -4,7 +4,7 @@ import { mkdir, unlink } from "node:fs/promises";
 const root = new URL("..", import.meta.url).pathname.replace(/^\/(?:([A-Za-z]:))/, "$1");
 const sourcePath = `${root}/content/literature/works.json`;
 const outputPath = `${root}/app/src/main/assets/literature.db`;
-const databaseVersion = 5;
+const databaseVersion = 6;
 const schemaDirectory = `${root}/app/schemas/app.missu.data.literature.LiteratureDatabase`;
 const schemaPath = `${schemaDirectory}/${databaseVersion}.json`;
 const locales = ["en", "zh", "zh-Hant", "ja"];
@@ -122,7 +122,7 @@ db.exec(`
     appreciation TEXT NOT NULL,
     PRIMARY KEY(id)
   );
-  CREATE INDEX index_works_kind ON works(kind);
+  CREATE INDEX index_works_kind_prominence ON works(kind, prominence);
   CREATE INDEX index_works_prominence ON works(prominence);
   CREATE VIRTUAL TABLE IF NOT EXISTS \`works_search\` USING FTS5(\`tokens\`, tokenize=\`unicode61\`);
   CREATE TABLE room_master_table (id INTEGER PRIMARY KEY, identity_hash TEXT);

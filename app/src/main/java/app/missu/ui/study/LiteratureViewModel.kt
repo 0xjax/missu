@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.missu.data.literature.LiteraryWork
+import app.missu.data.literature.LiteraryWorkSummary
 import app.missu.data.literature.LiteratureFilter
 import app.missu.data.literature.LiteratureRepository
 import app.missu.data.store.LiteratureStore
@@ -21,7 +22,7 @@ sealed interface LiteratureUiState {
     data object Loading : LiteratureUiState
     data class Error(val message: UiMessage) : LiteratureUiState
     data class Content(
-        val works: List<LiteraryWork>,
+        val works: List<LiteraryWorkSummary>,
         val nextOffset: Int?,
         val more: LoadMoreState = LoadMoreState.Idle,
     ) : LiteratureUiState
