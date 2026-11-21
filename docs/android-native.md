@@ -23,7 +23,7 @@
 - ✅ **视频单列/双列**：设置页全局切换，首页、热门、搜索、收藏、历史与片单共用 `LocalVideoListColumns`；只重组布局，不重取数据，偏好持久化
 - ✅ **价值导向首页**：不禁止或羞辱成人内容选择，用本地短篇指南提供另一种默认入口；不加入观看评分、强制暂停或提醒，指南正文为应用资源，离线可读且无需新增内容接口
 - ✅ **底部导航 + 书房 + 发现**：`首页 / 书房 / 发现 / 我的` 四个一级页签；书房内分「诗词 / 英语」，均为本地内容；发现页保留目录、热门与频道，手动搜索入口只在首页顶部，详情番号可直达对应搜索页
-- ✅ **诗文与英语学习**：诗文已迁入 Room 3 + 预打包 SQLite，规模与构成见 `content/literature/manifest.json`；FTS5 中文一元 / 二元索引支持篇名、作者与原文搜索，列表按 50 篇分页并按上游知名度排序；体裁筛选、持久化收藏、已有精读内容保留，其余明确标注待完善。两篇英语双语阅读复用指南的中英正文，重点词可点击查看释义与例句。所有内容离线可用，无打卡、评分或连续天数
+- ✅ **诗文与英语学习**：诗文已迁入 Room 3 + 预打包 SQLite，规模与构成见 `content/literature/manifest.json`；FTS5 中文一元 / 二元索引支持篇名、作者与原文搜索，列表按 50 篇分页并按上游知名度排序；体裁筛选、持久化收藏、已有精读内容保留，其余明确标注待完善。两篇英语双语阅读复用指南的中英正文，重点词可点击查看释义与例句。文库在应用首帧后通过 IO 协程后台预热，避免首次进入书房才复制预打包数据库。所有内容离线可用，无打卡、评分或连续天数
 - ✅ **女优筛选与排序**：身高 12 档 / 罩杯 A–Q / 年龄 6 档 / 出道年份（N 年以前），排序 `影片 / 出道`（实测 161–165cm 与按出道年排序都生效）
 - ✅ **搜索历史**：成功搜索后记入本地（上限 20，重复置顶），空输入时展示为可点胶囊，可清空
 - ✅ **我的片单**：`/playlists` 列表（名字 · 可见性 · 更新时间）+ 片单详情网格；真实页面 fixture 测试锁住解析规则
@@ -124,9 +124,9 @@ bun run literature:build  # 校验内容，重建 assets/literature.db 与中文
 - **release / 真机只打 `arm64-v8a`，debug 额外支持 `x86_64`**：见 `app/build.gradle.kts` 各 buildType 的 `ndk.abiFilters`。包里唯一的 native 库是 `libandroidx.graphics.path.so`；x86_64 仅供本机模拟器，release 归档名和包内容继续保持 `-arm64-v8a`。
 - **不要靠删文件或改文件名冒充架构**：签名覆盖整个包，删掉别的 `lib/<abi>/` 目录会让 v2/v3 签名失效、装不上；要换架构就改 `abiFilters` 重新构建。
 
-自动化场景加 `MISSU_NO_DAEMON=1`，脚本会向 Gradle 透传 `--no-daemon`；Android CLI 把详细构建日志写入系统临时目录下的 `build-log-*.log`。
+自动化场景加 `MISSU_NO_DAEMON=1`，脚本会向 Gradle 透传 `--no-daemon`；Android CLI 把详细构建日志写入系统临时目录下的 `build-log-*.log`。`install` / `run` 与性能分析的预装显式启用 `--use-delta-install=true`，优先通过补丁通道减少传输，不裁减 APK 内容；APK 未变化时 CLI 仍可能为重装发送较大补丁。
 
-- **首次**构建要下载 Gradle 9.6.0（腾讯镜像）+ 全部依赖（阿里云），冷启动约几分钟；之后增量约 10–30 秒。
+- **首次**构建要下载 Gradle 9.6.0（腾讯镜像）+ 全部依赖（阿里云），冷启动约几分钟；后续增量会复用配置与构建缓存，但代码变化仍需经过 KSP、编译、DEX 和 APK 打包，大型离线文库会增加打包与安装耗时。
 - 默认命令只构建；测试统一用 `.\scripts\build.ps1 check`（见「测试」）。
 - 如果 PowerShell 报「禁止运行脚本」（Restricted 执行策略）：用 `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build.ps1`，不要去改全局策略。
 - **默认使用模拟器**：`install` / `run` 及其他设备命令按模板自动创建并以 **headless** 启动 `medium_phone`（Android 17.2 x86_64），需要完整窗口时用 `build.ps1 hub` 打开 Device Hub；设 `ANDROID_SERIAL=<serial>` 才指定真机或其他设备。

@@ -90,14 +90,14 @@ try {
         & $android --no-metrics build :app@release -- @gradleArgs
         if ($LASTEXITCODE -ne 0) { throw "Android CLI release 构建退出码 $LASTEXITCODE" }
         $profileApk = Join-Path $root 'app\build\outputs\apk\release\app-release.apk'
-        & $android --no-metrics install @deviceArgs "--apks=$profileApk"
+        & $android --no-metrics install @deviceArgs --use-delta-install=true "--apks=$profileApk"
         if ($LASTEXITCODE -ne 0) { throw '性能分析用 release 安装失败' }
     }
     switch ($Task) {
         "assembleDebug"   { & $android --no-metrics build :app@debug -- @gradleArgs }
         "assembleRelease" { & $android --no-metrics build :app@release -- @gradleArgs }
-        "install" { & $android --no-metrics install :app@debug @deviceArgs -- @gradleArgs }
-        "run"     { & $android --no-metrics run :app@debug @deviceArgs -- @gradleArgs }
+        "install" { & $android --no-metrics install :app@debug @deviceArgs --use-delta-install=true -- @gradleArgs }
+        "run"     { & $android --no-metrics run :app@debug @deviceArgs --use-delta-install=true -- @gradleArgs }
         "release" { & $android --no-metrics build :app@release -- @gradleArgs }
         "check"   { & $android --no-metrics build :app@debug -- :core:test :app:testDebugUnitTest :app:lintDebug @gradleArgs }
         "analyze" {
