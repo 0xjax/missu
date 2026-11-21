@@ -177,7 +177,7 @@ adb -s $serial logcat -s AndroidRuntime:E ActivityManager:I
 
 ## Journey 关键路径
 
-`journeys/core-navigation.xml` 覆盖首页、发现、我的与设置导航。由 agent 按项目级 `android-cli` 技能逐条执行，使用 `layout` / `screen` 判读、语义选择器操作；失败时报告实际状态，不把 Journey 改写成固定坐标脚本。2026-11-20 模拟器复验全部通过；设置页语言区域以正常速度滚动后的截图确认，不以 CLI 的滚动状态或单次布局快照代替视觉验收。
+`journeys/core-navigation.xml` 覆盖首页、影片、我的与设置导航。由 agent 按项目级 `android-cli` 技能逐条执行，使用 `layout` / `screen` 判读、语义选择器操作；失败时报告实际状态，不把 Journey 改写成固定坐标脚本。2026-11-20 模拟器复验全部通过；设置页语言区域以正常速度滚动后的截图确认，不以 CLI 的滚动状态或单次布局快照代替视觉验收。
 
 ## 截图黑屏时读取界面文本
 

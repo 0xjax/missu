@@ -44,12 +44,10 @@ import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.GroupDivider
 import app.missu.ui.components.GroupSurface
 import app.missu.ui.components.LoadingHint
-import app.missu.ui.components.PageTopBar
 
 /**
  * 「我的」页：账号资料 + 二三级入口。
  *
- * NOTE: 这是三个一级页签里唯一需要「账号」的页面，所以顶栏没有返回键（[PageTopBar] 的 onBack 传空）。
  * NOTE: 结构改成 M3E 的分组列表——资料卡（extraLarge 圆角的大容器）在上，下面一张
  * `surfaceContainer` 的分组容器装四个入口，退出登录单独一张容器并挂 error 色：
  * 破坏性动作不能和普通入口混在同一条视觉层里。
@@ -66,8 +64,6 @@ fun AccountScreen(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxSize()) {
-        PageTopBar(title = stringResource(R.string.account_title))
-
         when (state) {
             AuthUiState.Checking -> LoadingHint()
 

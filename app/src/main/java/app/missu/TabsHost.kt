@@ -12,10 +12,10 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.List
 import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ShortNavigationBar
@@ -72,7 +72,7 @@ internal data class TopLevel(
 internal val topLevels = listOf(
     TopLevel("home", R.string.nav_home, Icons.Outlined.Home),
     TopLevel("study", R.string.nav_study, Icons.Outlined.AutoStories),
-    TopLevel("discover", R.string.nav_discover, Icons.AutoMirrored.Outlined.List),
+    TopLevel("discover", R.string.nav_discover, Icons.Outlined.VideoLibrary),
     TopLevel("account", R.string.nav_account, Icons.Outlined.Person),
 )
 

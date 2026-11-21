@@ -2,7 +2,7 @@
   <description>Verify the primary tabs and open settings without changing user data.</description>
   <actions>
     <action>Verify that the "Home" tab is visible</action>
-    <action>Tap the "Discover" tab</action>
+    <action>Tap the "Videos" tab</action>
     <action>Verify that "Actresses", "Genres" and "Makers" are visible</action>
     <action>Tap the "Me" tab</action>
     <action>Verify that "Settings" is visible</action>

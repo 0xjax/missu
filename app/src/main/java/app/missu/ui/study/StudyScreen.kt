@@ -15,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import app.missu.R
 import app.missu.data.literature.LiteratureFilter
-import app.missu.ui.components.PageTopBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,7 +34,6 @@ fun StudyScreen(
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     Column(modifier.fillMaxSize()) {
-        PageTopBar(title = stringResource(R.string.nav_study))
         PrimaryTabRow(selectedTabIndex = selectedTab) {
             Tab(
                 selected = selectedTab == 0,

@@ -16,7 +16,7 @@
     <!-- 底部頁籤 -->
     <string name="nav_home">首頁</string>
     <string name="nav_study">書房</string>
-    <string name="nav_discover">發現</string>
+    <string name="nav_discover">影片</string>
     <string name="nav_account">我的</string>
 
     <!-- 我的 -->
@@ -154,7 +154,7 @@
     <string name="search_recent">最近搜尋</string>
     <string name="search_results_count">「%1$s」共 %2$d 筆</string>
 
-    <!-- 發現 -->
+    <!-- 影片 -->
     <string name="discover_clear">清除</string>
     <string name="discover_filter">篩選</string>
     <string name="discover_filter_count">篩選 (%1$d)</string>
@@ -269,7 +269,7 @@
     <string name="settings_language_system">跟隨系統</string>
     <string name="settings_language_note">同時決定介面語言與從站點取回的內容語言。「跟隨系統」時，介面會退回英文（該語言尚未翻譯），內容仍照系統語言取。</string>
 
-    <!-- 發現頁的目錄分類 -->
+    <!-- 影片頁的目錄分類 -->
     <string name="discover_section_actresses">女優</string>
     <string name="discover_section_genres">類型</string>
     <string name="discover_section_makers">廠商</string>

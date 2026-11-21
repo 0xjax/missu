@@ -12,7 +12,7 @@
     <!-- 底部页签 -->
     <string name="nav_home">首页</string>
     <string name="nav_study">书房</string>
-    <string name="nav_discover">发现</string>
+    <string name="nav_discover">影片</string>
     <string name="nav_account">我的</string>
 
     <!-- 我的 -->
@@ -150,7 +150,7 @@
     <string name="search_recent">最近搜索</string>
     <string name="search_results_count">「%1$s」共 %2$d 条</string>
 
-    <!-- 发现 -->
+    <!-- 影片 -->
     <string name="discover_clear">清除</string>
     <string name="discover_filter">筛选</string>
     <string name="discover_filter_count">筛选 (%1$d)</string>
@@ -265,7 +265,7 @@
     <string name="settings_language_system">跟随系统</string>
     <string name="settings_language_note">同时决定界面语言与从站点取回的内容语言。「跟随系统」时，界面会回退到英文（该语言尚未翻译），内容仍按系统语言取。</string>
 
-    <!-- 发现页的目录分类 -->
+    <!-- 影片页的目录分类 -->
     <string name="discover_section_actresses">女优</string>
     <string name="discover_section_genres">类型</string>
     <string name="discover_section_makers">厂商</string>

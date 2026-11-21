@@ -10,7 +10,7 @@
 - ✅ 工具链已收口：SDK/JDK 全局唯一，NDK/CMake/重复 SDK 已删（回收约 5.6 GB）
 - ✅ 数据层首块：`data/api` + `data/parse`，`getHome` 已用**真实抓取的首页**验证（4 个板块 / 56 条视频）
 - ✅ **真机端到端**：vivo V2507A 上点按钮 → `getHome` 直接拿到 HTML 并解析出同样 4 板块 / 56 条（未触发人机验证）
-- ✅ **首页 UI**：默认展示非露骨的探索首页，三篇内置原创指南覆盖理解欲望、亲密关系与主动观看，支持四种界面语言与离线完整阅读；不请求站点首页、不展示成人封面。影片库入口切到发现页，顶部搜索与底部发现继续承接主动观影
+- ✅ **首页 UI**：默认展示非露骨的探索首页，三篇内置原创指南覆盖理解欲望、亲密关系与主动观看，支持四种界面语言与离线完整阅读；不请求站点首页、不展示成人封面。影片库入口切到影片页，顶部搜索与底部影片继续承接主动观影
 - ✅ **详情 + 播放**：点卡片进详情（标题/时长/8 行信息/简介），ExoPlayer 播 HLS；已验证真机出画面
 - ✅ **搜索**：关键词搜索 + 分页（「加载更多」实测 12 → 24 条），结果网格与首页共用 `VideoGridCard`；详情页番号可点击，复用 `SearchHost` 打开对应二级搜索页，返回详情
 - ✅ **收藏**：详情页收藏/取消收藏，状态来自 `/api/items/{id}/view`；**实测**删掉会话后点收藏会先自动重登再重试（`/api/items/{id}/save` 401 → `withAuthRetry`）
@@ -22,7 +22,7 @@
 - ✅ **列表页**：`MissavApi.getVideos(path, page)` 通用列表 + 分页；详情页信息行里带路径的值（女优/类型/厂商…）可点，跳到对应列表（实测点「RARA」进入其作品页）；用户排序 / 过滤按列表类别持久化，女优、类型、厂商各自整类共享
 - ✅ **视频单列/双列**：设置页全局切换，首页、热门、搜索、收藏、历史与片单共用 `LocalVideoListColumns`；只重组布局，不重取数据，偏好持久化
 - ✅ **价值导向首页**：不禁止或羞辱成人内容选择，用本地短篇指南提供另一种默认入口；不加入观看评分、强制暂停或提醒，指南正文为应用资源，离线可读且无需新增内容接口
-- ✅ **底部导航 + 书房 + 发现**：`首页 / 书房 / 发现 / 我的` 四个一级页签；书房内分「诗词 / 英语」，均为本地内容；发现页保留目录、热门与频道，手动搜索入口只在首页顶部，详情番号可直达对应搜索页
+- ✅ **底部导航 + 书房 + 影片**：`首页 / 书房 / 影片 / 我的` 四个一级页签；书房内分「诗词 / 英语」，均为本地内容；影片页保留目录、热门与频道，手动搜索入口只在首页顶部，详情番号可直达对应搜索页
 - ✅ **诗文与英语学习**：诗文已迁入 Room 3 + 预打包 SQLite，规模与构成见 `content/literature/manifest.json`；FTS5 中文一元 / 二元索引支持篇名、作者与原文搜索，列表按 50 篇分页并按上游知名度排序；体裁筛选、持久化收藏、已有精读内容保留，其余明确标注待完善。两篇英语双语阅读复用指南的中英正文，重点词可点击查看释义与例句。文库在应用首帧后通过 IO 协程后台预热，避免首次进入书房才复制预打包数据库。所有内容离线可用，无打卡、评分或连续天数
 - ✅ **女优筛选与排序**：身高 12 档 / 罩杯 A–Q / 年龄 6 档 / 出道年份（N 年以前），排序 `影片 / 出道`（实测 161–165cm 与按出道年排序都生效）
 - ✅ **搜索历史**：成功搜索后记入本地（上限 20，重复置顶），空输入时展示为可点胶囊，可清空
@@ -34,8 +34,8 @@
 - ✅ **搜索栏**：M3E slot + `SearchBarState`，**就地展开**——首页顶部直接是这条真 `SearchBar`，点一下在当前页展开成全屏 `ExpandedFullScreenSearchBar`（放最近搜索），提交后同一屏收成带返回箭头的折叠态显示结果。首页手动搜索不再另开路由：之前首页那只 44dp/10dp 圆角的假框跳到一个 56dp 胶囊的搜索页，是"割裂感"的来源；详情番号搜索复用同一 `SearchHost` 作为二级路由，以保留返回详情的导航语义
 - ✅ **新建片单**：站点只有 Blade 表单（`/playlists/create`），先 GET 读 `_token` 与字段名再 urlencoded POST；实测建出 `test` 后列表自动刷新
 - ✅ **编辑 / 删除片单**：详情页页头「编辑」→ 改名/描述/公开 + 删除（二次确认）；实测改名 `test→test2`、删除后列表只剩 `精选`
-- ✅ **M3E 主题与组件**：`MaterialExpressiveTheme` + `MotionScheme.expressive()`；二级页统一 `PageTopBar`（up 图标 + Tooltip）；底栏换 `ShortNavigationBar`；转圈换 `LoadingIndicator`；首页指南使用可点击 `Card`，发现页支持下拉刷新（`PullToRefreshBox`）；女优排序换连通 `ToggleButton` 组（`SegmentedButton` 在 M3E 已退役）
-- ✅ **桌面图标**：五套 adaptive icon（纯色底 + 白色播放三角，共用一个前景）+ 五个 `activity-alias`；设置里「图标跟随主题色」默认关，开启后**离开应用才生效**。实测 vivo 桌面/启动动画/概览都跟着换，应用信息页保持品牌粉（机制边界，见「桌面图标」）
+- ✅ **M3E 主题与组件**：`MaterialExpressiveTheme` + `MotionScheme.expressive()`；二级页统一 `PageTopBar`（up 图标 + Tooltip）；底栏换 `ShortNavigationBar`；转圈换 `LoadingIndicator`；首页指南使用可点击 `Card`，影片页支持下拉刷新（`PullToRefreshBox`）；女优排序换连通 `ToggleButton` 组（`SegmentedButton` 在 M3E 已退役）
+- ✅ **桌面图标**：五套 adaptive icon（纯色底 + 白色 `M` 品牌字母，共用一个矢量前景）+ 五个 `activity-alias`；设置里「图标跟随主题色」默认关，开启后**离开应用才生效**。实测 vivo 桌面/启动动画/概览都跟着换，应用信息页保持品牌粉（机制边界，见「桌面图标」）
 
 
 ## 版本矩阵（实测钉死）
@@ -51,7 +51,7 @@
 | KSP / Room / bundled SQLite | 2.3.14 / 3.0.3 / 2.7.1 | Room 3 稳定版；本地诗文库与 FTS5 索引，不依赖系统 SQLite 能力 |
 | compileSdk | **37 + `compileSdkMinor = 1`** | Compose 1.13-rc 要求 ≥ 37.1；新 AndroidX 要求 ≥ 37 |
 | targetSdk / minSdk | 36 / 26 | 编译用新 API、运行时行为按 36 走 |
-| JDK | **独立 Temurin 21**（`D:\Android\jdk-21`）+ 回落 AS 自带 JBR | 目录名带版本；`scripts/build.ps1` **自动发现** `D:\Android\jdk-*` 并取 major 最高者，升级只需解压出 `jdk-25`，脚本不用改。版本信息见目录内 `MISSU-JDK-VERSION.txt` |
+| JDK | **独立 Temurin 21**（`D:\Android\jdk-21`）+ 回落 AS 自带 JBR | 目录名带版本；`scripts/build.ps1` **自动影片** `D:\Android\jdk-*` 并取 major 最高者，升级只需解压出 `jdk-25`，脚本不用改。版本信息见目录内 `MISSU-JDK-VERSION.txt` |
 | Android CLI | **1.1.16919734** | 独立安装于 `%USERPROFILE%\AppData\AndroidCLI\android.exe` 并加入用户 PATH；不放在 SDK 或 Low IL 工作区 |
 | Android SDK | 编译 API **37.1** + **Build-Tools 36.0.0** + Platform-Tools 37.0.1 | `D:\Android\Sdk`；另有 API 37.2 平台供模拟器使用（AGP 9.5.1 默认用 build-tools 36，与 compileSdk 37.1 无关） |
 | Android Emulator | **37.3.10** / `medium_phone` | Android **17.2（API 37.2）**、`google_apis_ps16k/x86_64`；日常设备命令默认使用 |
@@ -323,7 +323,7 @@ core/          纯 JVM 库（非 UI 层）——**不许出现 android.* / andro
 app/           Android 应用（UI + 平台适配）
   src/main/java/app/missu/
     MainActivity.kt        应用根：主题 / 语言 / 全局浮层 / NavHost 装配
-    TabsHost.kt            首页 / 书房 / 发现 / 我的四个一级页签与底部导航
+    TabsHost.kt            首页 / 书房 / 影片 / 我的四个一级页签与底部导航
     SecondaryDestinations.kt  详情 / 列表 / 设置 / 片单等二级路由
     NavMotion.kt           前进、返回与预测式返回转场
     ViewModelFactories.kt  Lifecycle initializer 工厂
@@ -351,9 +351,8 @@ Android 的清 Cookie 操作等待 `CookieManager.removeAllCookies` 的完成回
 设置里的「图标跟随主题色」（默认关）会让桌面图标跟当前色板换色。机制是 **五个 `activity-alias` + 五个 adaptive icon**，任意时刻只启用一个 alias。
 
 - **入口在 alias 上，不在 `MainActivity` 上**：桌面枚举的是「带 MAIN/LAUNCHER 的组件」，`<application android:icon>` 只决定读 `ApplicationInfo` 的界面（应用信息、权限弹窗、分享面板）。所以启动画面会跟着 alias 一起变（`ComponentInfo.getIconResource()` 取的就是启动组件的图标），而应用信息永远是品牌粉——这是机制边界，不是 bug。
-- **五套图标共用一个前景**：`drawable-nodpi/ic_launcher_foreground.png` 与 legacy 的 `android-icon-foreground.png` **逐像素相同**（原样复用、不缩放）。三角高占画布 27.5%，在真机上表现为可见图标的 **46%**。
-  **CRITICAL：别把「画布百分比」当「显示百分比」。** 可见视口只有 108dp 画布的中心约 60%（再加桌面蒙版裁一圈），所以画布上 52% 的前景在屏幕上会变成 86%——三角几乎吞掉背景。第一版就是这么错的。
-  另外三角按**质心**居中，不是按包围盒居中：右向三角的重心偏底边一侧，按包围盒居中会有肉眼可见的偏移（实测质心偏左 18px @180px 图标）。
+- **五套图标共用一个前景**：`drawable/ic_launcher_foreground.xml` 是 108dp 自适应图标画布上的白色圆角线条 `M`，不再复用 legacy 的播放三角。笔画位于中央安全区，矢量资源直接适配不同桌面密度。
+  **CRITICAL：别把「画布百分比」当「显示百分比」。** 可见视口只有 108dp 画布的中心约 60%（再加桌面蒙版裁一圈），前景不能按普通图片的边距设计。
   背景色在 `values/colors.xml`，与 `Palettes.kt` 的深色 `primary` 手工同步。
 - **不提供 monochrome 层**：图标的身分就是背景色，主题化图标会把它抹成单色；Android 16 QPR 2 起系统会强制给没有 monochrome 的应用自动上色，那是系统的选择。
 
@@ -422,7 +421,7 @@ adb shell am start -n app.missu/.LauncherTeal
 
 - 内置指南首页、详情（无返回行、固定标题头、梗概完整展示、信息行里带路径的值可点进列表）、播放（全屏 / 倍速 / 画面适应·填充 / ±10 秒 / 进度 / 上下滑切换全屏）
 - 搜索（分页）、收藏 + 收藏列表、片单成员、观看历史 + 继续播放、设置 + 7 种内容语言
-- 底部导航：首页 / 发现（女优 · 类型 · 厂商）/ 我的；片单支持列表、详情、成员勾选、单条移除、新建、编辑（含删除）
+- 底部导航：首页 / 影片（女优 · 类型 · 厂商）/ 我的；片单支持列表、详情、成员勾选、单条移除、新建、编辑（含删除）
 
 ## 测试
 
@@ -710,7 +709,7 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
 - **系统栏内边距只在壳层处理一次**（`Scaffold` + `WindowInsets.safeDrawing`）；页面里各自加 `statusBarsPadding`
   会变成"每加一个页面都要记得加"，而且极易漏。需要贴边的页面单独 opt-out。
 - **列表页的空/错状态要区分**：网络上失败不能显示成"内容为空"，否则用户以为数据丢了。
-- **列表 key 必须在数据里唯一，跨页拼接时按 key 去重**：`LazyVerticalGrid(items, key = …)` 的 key 重复会直接抛 `IllegalArgumentException: Key "…" was already used`，崩掉整个页面（真机踩过：发现页女优目录翻页后重复了一个 `/actresses/…`，位置在 2026-11-14 的 `adb logcat -b crash`）。站点的分页会**重叠**（下一页开头又出现上一页的条目），所以 `current + page` 之后必须 `distinctBy { 与 key 相同的表达式 }`；单页来源（片单列表/片单详情）同理——站点可能把同一项列两次。
+- **列表 key 必须在数据里唯一，跨页拼接时按 key 去重**：`LazyVerticalGrid(items, key = …)` 的 key 重复会直接抛 `IllegalArgumentException: Key "…" was already used`，崩掉整个页面（真机踩过：影片页女优目录翻页后重复了一个 `/actresses/…`，位置在 2026-11-14 的 `adb logcat -b crash`）。站点的分页会**重叠**（下一页开头又出现上一页的条目），所以 `current + page` 之后必须 `distinctBy { 与 key 相同的表达式 }`；单页来源（片单列表/片单详情）同理——站点可能把同一项列两次。
 - **整屏页面的转场不能用 alpha**：交叉淡入 = 两页文字叠在一起；顺序淡出再淡入 = 中间整屏空底色（"闪一下"）。用 shared axis 整幅横滑（两页全程不透明），方向按底栏顺序定。选型判据见 `.agents/skills/md3e` 的运动系统（有无持续容器 → container transform / shared axis / fade through / fade），本工程各场景的落点与时长见 `DESIGN.md` 的「Motion」小节。
   **例外是卡片 → 详情**：那里有持续容器（封面 → 播放器框），所以走 container transform + fade through（`ui/components/HeroMotion.kt`），页面横滑只在其余路由用。
 - **共享元素的三个硬条件**（缺一个就静默不播，看起来像"没做"）：

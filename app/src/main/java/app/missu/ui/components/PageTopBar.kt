@@ -36,7 +36,6 @@ import app.missu.R
  * NOTE: 以前每个页面各自拼一行 `TextButton("← 返回") + Text(标题)`，字号、间距、返回语义都不统一；
  * 换成官方 [TopAppBar] 后标题会按 M3E 字号自动处理，返回键也拿到标准的 up 语义与无障碍标签。
  * NOTE: 返回图标是纯图标按钮，按 M3E 规范挂一个 [PlainTooltip] 说明（长按显示）。
- * NOTE: [onBack] 可空——「我的」这类一级页签没有上一页，只借用同一条栏放标题，不要伪造返回键。
  * WARNING: 容器色必须给 [Color.Transparent]（**不能**给 background）。两个理由：
  * 1. M3 的 `TopAppBar` 会把容器色做一次 `animateColorAsState` 渐变（`AppBarKt` 内部的 targetColor），
  *    而页面其余部分是瞬时换色——切深浅色时这一横条会比整页慢半拍，看起来「一前一后」。
@@ -48,23 +47,20 @@ import app.missu.R
 fun PageTopBar(
     title: String,
     modifier: Modifier = Modifier,
-    onBack: (() -> Unit)? = null,
+    onBack: () -> Unit,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
-    val back = onBack
     TopAppBar(
         modifier = modifier,
         title = {
             Text(text = title, maxLines = 1, overflow = TextOverflow.Ellipsis)
         },
         navigationIcon = {
-            if (back != null) {
-                TooltipIconButton(
-                    icon = Icons.AutoMirrored.Outlined.ArrowBack,
-                    contentDescription = stringResource(R.string.common_back),
-                    onClick = back,
-                )
-            }
+            TooltipIconButton(
+                icon = Icons.AutoMirrored.Outlined.ArrowBack,
+                contentDescription = stringResource(R.string.common_back),
+                onClick = onBack,
+            )
         },
         actions = actions,
         colors = TopAppBarDefaults.topAppBarColors(
