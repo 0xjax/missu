@@ -37,6 +37,8 @@ import app.missu.ui.detail.DetailScreen
 import app.missu.ui.detail.DetailViewModel
 import app.missu.ui.history.HistoryScreen
 import app.missu.ui.history.HistoryViewModel
+import app.missu.ui.home.GuideScreen
+import app.missu.ui.home.guideById
 import app.missu.data.model.VideoListQuery
 import app.missu.ui.list.AutoLoadVideoList
 import app.missu.ui.list.VideoListScreen
@@ -103,6 +105,14 @@ internal fun NavGraphBuilder.secondaryDestinations(
                     navController.popBackStack()
                 },
             )
+        }
+    }
+
+    composable("guide/{id}") { entry ->
+        guideById(entry.arguments?.getString("id").orEmpty())?.let { guide ->
+            PageSurface {
+                GuideScreen(guide = guide, onBack = onGoBack)
+            }
         }
     }
 

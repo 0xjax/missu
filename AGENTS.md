@@ -44,6 +44,10 @@
 
 ## 工程约束
 
+- 默认首页只呈现非露骨、有实际价值的内容；禁止用成人封面、热度或连续刺激争夺默认注意力。
+- 成人内容入口必须清晰且由用户主动触发；禁止暗中限制、羞辱或制造罪恶感。
+- 禁止惩罚性障碍、观看/自控力评分和强迫打卡；提醒、专注功能须可选。
+- 新内容、推荐和增长功能不得绕开以上原则；实现细节只记 `DESIGN.md`。
 - UI 使用 **Material 3 Expressive + 自己的 Compose**，不引第三方 UI 组件库；行为不可配置的组件宁自绘或换库。
 - Android API/工具用法先用 `android docs search/fetch`；性能与 R8 分析分别使用项目级 `jetpack-compose-performance` / `r8-analyzer` 技能。
 - MD3E 选型先查 `.agents/skills/md3e`；当前 material3 `1.5.0-rc01`，不用 `SegmentedButton` / `NavigationBar` / `Medium|LargeTopAppBar`。图标统一 `material-icons-extended` Outlined，仅明确状态语义用 Filled，不自绘或混入其他图标源。

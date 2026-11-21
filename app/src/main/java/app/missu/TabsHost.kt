@@ -21,7 +21,6 @@ import androidx.compose.material3.ShortNavigationBar
 import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -48,7 +47,6 @@ import app.missu.ui.discover.DiscoverScreen
 import app.missu.ui.discover.DiscoverViewModel
 import app.missu.ui.discover.HOT_PATH
 import app.missu.ui.home.HomeScreen
-import app.missu.ui.home.HomeViewModel
 import app.missu.data.model.VideoListQuery
 import app.missu.ui.list.AutoLoadVideoList
 import app.missu.ui.list.VideoListUiState
@@ -80,9 +78,7 @@ internal fun TabsHost(
     navController: NavHostController,
     tabRoute: String,
     onTabChange: (String) -> Unit,
-    contentLanguage: String,
     api: MissavApi,
-    homeViewModel: HomeViewModel,
     searchHistory: SearchHistoryStore,
     listSortStore: ListSortStore,
     listQueryStore: ListQueryStore,
@@ -95,8 +91,6 @@ internal fun TabsHost(
         factory = missuViewModelFactory { SearchViewModel(api, searchHistory) },
     )
     val authState by auth.state.collectAsStateWithLifecycle()
-
-    LaunchedEffect(contentLanguage) { homeViewModel.loadIfNeeded(contentLanguage) }
 
     val startTab = topLevels.first().route
     BackHandler(enabled = tabRoute != startTab) { onTabChange(startTab) }
@@ -137,10 +131,6 @@ internal fun TabsHost(
         ) { current ->
             when (current) {
                 "home" -> {
-                    val state by homeViewModel.state.collectAsStateWithLifecycle()
-                    val refreshing by homeViewModel.refreshing.collectAsStateWithLifecycle()
-                    val refreshingRandom by homeViewModel.refreshingRandom.collectAsStateWithLifecycle()
-                    val randomRefreshError by homeViewModel.randomRefreshError.collectAsStateWithLifecycle()
                     val searchState by searchViewModel.state.collectAsStateWithLifecycle()
                     val recent by searchViewModel.recent.collectAsStateWithLifecycle()
                     ProvideHeroVisibility(navScope, namespace = "home") {
@@ -156,16 +146,8 @@ internal fun TabsHost(
                             if (searchState is SearchUiState.Idle) {
                                 PageSurface(card = false, contentInset = false) {
                                     HomeScreen(
-                                        state = state,
-                                        refreshing = refreshing,
-                                        refreshingRandom = refreshingRandom,
-                                        randomRefreshError = randomRefreshError,
-                                        onRefresh = homeViewModel::refresh,
-                                        onRefreshRandom = homeViewModel::refreshRandom,
-                                        onClearRandomRefreshError = homeViewModel::clearRandomRefreshError,
-                                        onRetry = homeViewModel::load,
-                                        onOpen = onOpenDetail,
-                                        onOpenList = onOpenList,
+                                        onOpenGuide = { navController.navigate("guide/$it") },
+                                        onOpenVideos = { onTabChange("discover") },
                                     )
                                 }
                             } else {

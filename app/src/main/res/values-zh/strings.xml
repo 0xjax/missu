@@ -67,10 +67,44 @@
     <string name="list_filter_multiple">多人作品</string>
     <string name="list_filter_chinese_subtitle">中文字幕</string>
 
-    <!-- 首页 -->
-    <string name="error_home_empty">未能读取首页板块，请重试</string>
-    <string name="home_more">更多</string>
-    <string name="home_refresh_random">刷新</string>
+    <!-- 首页与内置指南 -->
+    <string name="home_intro_kicker">给好奇心多一点空间</string>
+    <string name="home_intro_title">今天，想靠近什么？</string>
+    <string name="home_intro_body">不必抗拒欲望，也不必把全部时间交给它。从一篇短文开始，让理解、连接与兴趣也成为选择。</string>
+    <string name="home_guides_title">此刻，值得读一点</string>
+    <string name="home_videos_title">影片库</string>
+    <string name="home_videos_body">想看影片时，由你主动打开；首页不做成人内容推送。</string>
+    <string name="guide_read_time">约 3 分钟</string>
+    <string name="guide_desire_category">理解自己</string>
+    <string name="guide_desire_title">欲望来了，不必立刻回答</string>
+    <string name="guide_desire_summary">把冲动与行动之间的一点空隙，还给自己。</string>
+    <string-array name="guide_desire_body">
+        <item>欲望不是错误，也不是必须马上执行的命令。它只是身心在某个时刻发出的信号：也许是好奇，也许是疲惫、孤独、压力，或只是习惯被熟悉的画面唤醒。先承认「我现在有这种感受」，不必急着评价自己。</item>
+        <item>试着给冲动留十分钟。不是强迫自己忍住，而是把注意力带到身体：双脚踩地，慢慢呼吸，看看周围，再喝一点水。冲动通常会变化；即使最后仍选择观看，这十分钟也让它从自动反应变回一次有意识的选择。</item>
+        <item>接着问一句：「我此刻真正需要的是什么？」如果想放松，可以出门走一小段；如果想被理解，可以联系信任的人；如果只是无聊，可以挑一件能在二十分钟内完成的小事。替代不必崇高，只要它比惯性更贴近你的真实需要。</item>
+        <item>不要把偶尔的反复理解成失败。习惯来自长期重复，改变也来自反复练习。每一次多停顿一点、多辨认出一种感受，都是在增加选择，而不是给自控力打分。</item>
+        <item>今晚可以只做一个小实验：打开影片库之前，先说出自己此刻的一种感受，再决定是否继续。无论答案是什么，都把它当作对自己的了解，而不是审判。</item>
+    </string-array>
+    <string name="guide_intimacy_category">性与关系</string>
+    <string name="guide_intimacy_title">亲密，不只是更强的刺激</string>
+    <string name="guide_intimacy_summary">同意、边界与沟通，让愉悦不必以忽略自己或他人为代价。</string>
+    <string-array name="guide_intimacy_body">
+        <item>屏幕里的片段经过选择、剪辑和表演，不能直接当作亲密关系的说明书。真实的亲密不只关于刺激，也关于双方是否自在、是否愿意，以及能否在任何时刻说「不」。</item>
+        <item>知情同意不是开场时的一句确认，而是持续、清醒、可撤回的意愿。沉默、犹豫、醉酒或害怕拒绝，都不等于同意。尊重对方停下来，也同样允许自己停下来。</item>
+        <item>可以从简单的话开始：「你喜欢这样吗？」「有什么不想尝试的？」「如果中途不舒服，我们怎么告诉彼此？」这些问题不会破坏气氛，它们减少猜测，让双方更容易放松。</item>
+        <item>也不必把身体表现当成价值证明。亲密可以包含拥抱、谈话、陪伴和共同探索；没有某种反应，不代表失败。若存在持续的疼痛、功能困扰或强烈焦虑，适合向正规医疗机构或合格专业人士求助。</item>
+        <item>今天可以记住一个判断：好的亲密不会让任何一方必须忽略自己的边界。欲望值得被理解，安全、尊严与真实意愿同样值得。</item>
+    </string-array>
+    <string name="guide_attention_category">影像与文化</string>
+    <string name="guide_attention_title">把观看，变成一次真正的发现</string>
+    <string name="guide_attention_summary">少看一段自动播放，多给一部作品一点完整注意力。</string>
+    <string-array name="guide_attention_body">
+        <item>观看不一定是被动消磨。电影、纪录片、摄影和文学都能让我们进入别人的处境，重新看见习以为常的生活。差别往往不在内容有多高深，而在我们是否给了它完整的注意力。</item>
+        <item>下一次想看点什么时，可以先选一个具体主题：一座陌生城市、一种职业、一段历史，或一位创作者。主动提出一个问题——「我想理解什么？」——比让首页替自己决定，更容易找到真正有兴趣的方向。</item>
+        <item>观看时不必同时开着第二个屏幕。先试二十分钟；如果被吸引，就继续，如果不是，就坦然换一部。目标不是完成一份高雅清单，而是练习辨认：什么让我只是麻木，什么让我真的好奇。</item>
+        <item>看完之后，留下一句自己的话就够：哪个画面留了下来？哪个人让我改变了看法？我想再了解什么？一句记录会把短暂娱乐变成与自己有关的经验。</item>
+        <item>这个周末，可以选一部短片或纪录片，为它留出不被打断的时间。欲望仍然可以有位置，注意力也可以用来滋养更大的世界。</item>
+    </string-array>
 
     <!-- 搜索 -->
     <string name="search_placeholder">搜索番号、女优、关键词</string>

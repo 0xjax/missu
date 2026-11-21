@@ -71,10 +71,44 @@
     <string name="list_filter_multiple">多人作品</string>
     <string name="list_filter_chinese_subtitle">中文字幕</string>
 
-    <!-- 首頁 -->
-    <string name="error_home_empty">未能讀取首頁區塊，請重試</string>
-    <string name="home_more">更多</string>
-    <string name="home_refresh_random">重新整理</string>
+    <!-- 首頁與內建指南 -->
+    <string name="home_intro_kicker">給好奇心多一點空間</string>
+    <string name="home_intro_title">今天，想靠近什麼？</string>
+    <string name="home_intro_body">不必抗拒慾望，也不必把全部時間交給它。從一篇短文開始，讓理解、連結與興趣也成為選擇。</string>
+    <string name="home_guides_title">此刻，值得讀一點</string>
+    <string name="home_videos_title">影片庫</string>
+    <string name="home_videos_body">想看影片時，由你主動開啟；首頁不推送成人內容。</string>
+    <string name="guide_read_time">約 3 分鐘</string>
+    <string name="guide_desire_category">理解自己</string>
+    <string name="guide_desire_title">慾望來了，不必立刻回答</string>
+    <string name="guide_desire_summary">把衝動與行動之間的一點空隙，還給自己。</string>
+    <string-array name="guide_desire_body">
+        <item>慾望不是錯誤，也不是必須馬上執行的命令。它只是身心在某個時刻發出的訊號：也許是好奇，也許是疲憊、孤獨、壓力，或只是習慣被熟悉的畫面喚醒。先承認「我現在有這種感受」，不必急著評價自己。</item>
+        <item>試著給衝動留十分鐘。不是強迫自己忍住，而是把注意力帶到身體：雙腳踩地，慢慢呼吸，看看周圍，再喝一點水。衝動通常會變化；即使最後仍選擇觀看，這十分鐘也讓它從自動反應變回一次有意識的選擇。</item>
+        <item>接著問一句：「我此刻真正需要的是什麼？」如果想放鬆，可以出門走一小段；如果想被理解，可以聯絡信任的人；如果只是無聊，可以挑一件能在二十分鐘內完成的小事。替代不必崇高，只要它比慣性更貼近你的真實需要。</item>
+        <item>不要把偶爾的反覆理解成失敗。習慣來自長期重複，改變也來自反覆練習。每一次多停頓一點、多辨認出一種感受，都是在增加選擇，而不是替自控力評分。</item>
+        <item>今晚可以只做一個小實驗：開啟影片庫之前，先說出自己此刻的一種感受，再決定是否繼續。無論答案是什麼，都把它當作對自己的了解，而不是審判。</item>
+    </string-array>
+    <string name="guide_intimacy_category">性與關係</string>
+    <string name="guide_intimacy_title">親密，不只是更強的刺激</string>
+    <string name="guide_intimacy_summary">同意、界線與溝通，讓愉悅不必以忽略自己或他人為代價。</string>
+    <string-array name="guide_intimacy_body">
+        <item>螢幕裡的片段經過選擇、剪輯和表演，不能直接當作親密關係的說明書。真實的親密不只關於刺激，也關於雙方是否自在、是否願意，以及能否在任何時刻說「不」。</item>
+        <item>知情同意不是開場時的一句確認，而是持續、清醒、可撤回的意願。沉默、猶豫、醉酒或害怕拒絕，都不等於同意。尊重對方停下來，也同樣允許自己停下來。</item>
+        <item>可以從簡單的話開始：「你喜歡這樣嗎？」「有什麼不想嘗試的？」「如果中途不舒服，我們怎麼告訴彼此？」這些問題不會破壞氣氛，它們減少猜測，讓雙方更容易放鬆。</item>
+        <item>也不必把身體表現當成價值證明。親密可以包含擁抱、談話、陪伴和共同探索；沒有某種反應，不代表失敗。若存在持續的疼痛、功能困擾或強烈焦慮，適合向正規醫療機構或合格專業人士求助。</item>
+        <item>今天可以記住一個判斷：好的親密不會讓任何一方必須忽略自己的界線。慾望值得被理解，安全、尊嚴與真實意願同樣值得。</item>
+    </string-array>
+    <string name="guide_attention_category">影像與文化</string>
+    <string name="guide_attention_title">把觀看，變成一次真正的發現</string>
+    <string name="guide_attention_summary">少看一段自動播放，多給一部作品一點完整注意力。</string>
+    <string-array name="guide_attention_body">
+        <item>觀看不一定是被動消磨。電影、紀錄片、攝影和文學都能讓我們進入別人的處境，重新看見習以為常的生活。差別往往不在內容有多高深，而在我們是否給了它完整的注意力。</item>
+        <item>下一次想看點什麼時，可以先選一個具體主題：一座陌生城市、一種職業、一段歷史，或一位創作者。主動提出一個問題——「我想理解什麼？」——比讓首頁替自己決定，更容易找到真正有興趣的方向。</item>
+        <item>觀看時不必同時開著第二個螢幕。先試二十分鐘；如果被吸引，就繼續，如果不是，就坦然換一部。目標不是完成一份高雅清單，而是練習辨認：什麼讓我只是麻木，什麼讓我真的好奇。</item>
+        <item>看完之後，留下一句自己的話就夠：哪個畫面留了下來？哪個人讓我改變了看法？我想再了解什麼？一句記錄會把短暫娛樂變成與自己有關的經驗。</item>
+        <item>這個週末，可以選一部短片或紀錄片，為它留出不被打斷的時間。慾望仍然可以有位置，注意力也可以用來滋養更大的世界。</item>
+    </string-array>
 
     <!-- 搜尋 -->
     <string name="search_placeholder">搜尋番號、女優、關鍵字</string>

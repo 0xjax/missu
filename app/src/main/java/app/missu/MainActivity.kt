@@ -71,7 +71,6 @@ import app.missu.ui.challenge.ChallengeOverlayHost
 import app.missu.ui.challenge.ChallengeState
 import app.missu.ui.components.LocalSharedTransitionScope
 import app.missu.ui.components.LocalVideoListColumns
-import app.missu.ui.home.HomeViewModel
 import app.missu.ui.preview.LocalVideoPreview
 import app.missu.ui.preview.VideoPreviewHost
 import app.missu.ui.preview.VideoPreviewState
@@ -144,7 +143,7 @@ private fun MissuRoot() {
 
     // 在第一次请求前同步内容语言；localizedContext 同时跟踪系统配置与全屏旋转。
     val systemConfiguration = LocalConfiguration.current
-    val contentLanguage = remember(appLanguage) {
+    remember(appLanguage) {
         appLanguage.contentLanguage(systemConfiguration).also { SourceConfig.contentLanguage = it }
     }
     val localizedContext = remember(appLanguage, systemConfiguration) {
@@ -180,7 +179,6 @@ private fun MissuRoot() {
                         settings = settings,
                         challengeState = challengeState,
                         appLanguage = appLanguage,
-                        contentLanguage = contentLanguage,
                         themeMode = themeMode,
                         colorSource = colorSource,
                         followThemeIcon = followThemeIcon,
@@ -234,7 +232,6 @@ private fun MissuApp(
     onPureBlackChange: (Boolean) -> Unit,
     onSingleColumnVideosChange: (Boolean) -> Unit,
     appLanguage: AppLanguage,
-    contentLanguage: String,
     onAppLanguageChange: (AppLanguage) -> Unit,
 ) {
     val navController = rememberNavController()
@@ -274,9 +271,6 @@ private fun MissuApp(
                 CredentialStore(context.applicationContext),
             )
         },
-    )
-    val homeViewModel: HomeViewModel = viewModel(
-        factory = missuViewModelFactory { HomeViewModel(api) },
     )
     val historyStore = remember { HistoryStore(context.applicationContext) }
     val listHistoryStore = remember { ListHistoryStore(context.applicationContext) }
@@ -342,9 +336,7 @@ private fun MissuApp(
                     navController = navController,
                     tabRoute = tabRoute,
                     onTabChange = { tabRoute = it },
-                    contentLanguage = contentLanguage,
                     api = api,
-                    homeViewModel = homeViewModel,
                     searchHistory = searchHistory,
                     listSortStore = listSortStore,
                     listQueryStore = listQueryStore,

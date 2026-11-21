@@ -73,10 +73,44 @@
     <string name="list_filter_multiple">Multiple</string>
     <string name="list_filter_chinese_subtitle">Chinese subtitles</string>
 
-    <!-- 首页 -->
-    <string name="error_home_empty">Couldn’t load the home sections. Try again.</string>
-    <string name="home_more">More</string>
-    <string name="home_refresh_random">Refresh</string>
+    <!-- 首页与内置指南 -->
+    <string name="home_intro_kicker">More room for curiosity</string>
+    <string name="home_intro_title">What would you like to move towards today?</string>
+    <string name="home_intro_body">There is no need to fight desire or give it all your time. Start with a short read and let understanding, connection and interest become options too.</string>
+    <string name="home_guides_title">A thoughtful place to begin</string>
+    <string name="home_videos_title">Video library</string>
+    <string name="home_videos_body">Open it when you choose to watch. Adult content is not promoted on Home.</string>
+    <string name="guide_read_time">About 3 min</string>
+    <string name="guide_desire_category">Understanding yourself</string>
+    <string name="guide_desire_title">Desire does not need an immediate answer</string>
+    <string name="guide_desire_summary">Give yourself a little space between an urge and an action.</string>
+    <string-array name="guide_desire_body">
+        <item>Desire is not a mistake or a command that must be obeyed. It is a signal from body and mind: perhaps curiosity, fatigue, loneliness or stress, or simply a habit awakened by a familiar image. Start by admitting, “This is how I feel right now,” without rushing to judge yourself.</item>
+        <item>Try giving the urge ten minutes. This is not about forcing yourself to resist. Bring your attention to your body: plant your feet, breathe slowly, look around and drink some water. Urges change. Even if you still choose to watch afterwards, those ten minutes turn an automatic reaction back into a conscious choice.</item>
+        <item>Then ask, “What do I actually need right now?” To unwind, take a short walk. To feel understood, contact someone you trust. If you are simply bored, choose a small task you can finish in twenty minutes. An alternative does not have to be noble; it only needs to be closer to your real need than inertia.</item>
+        <item>Do not treat occasional repetition as failure. Habits come from repetition, and change comes from practice too. Each pause and each feeling you recognise adds another choice. This is not a self-control score.</item>
+        <item>Tonight, try one small experiment: before opening the video library, name one feeling you have right now, then decide whether to continue. Whatever you choose, treat it as understanding yourself, not judging yourself.</item>
+    </string-array>
+    <string name="guide_intimacy_category">Sex and relationships</string>
+    <string name="guide_intimacy_title">Intimacy is more than stronger stimulation</string>
+    <string name="guide_intimacy_summary">Consent, boundaries and communication make room for pleasure without ignoring yourself or anyone else.</string>
+    <string-array name="guide_intimacy_body">
+        <item>Scenes on a screen are selected, edited and performed; they are not instructions for real intimacy. Intimacy is not only about stimulation. It is also about whether both people feel at ease, genuinely want to participate and can say no at any moment.</item>
+        <item>Consent is not one confirmation at the beginning. It is ongoing, informed and can be withdrawn. Silence, hesitation, intoxication or fear of rejection are not consent. Respect another person’s choice to stop, and allow yourself to stop too.</item>
+        <item>Start with simple words: “Do you like this?” “Is there anything you do not want to try?” “If one of us feels uncomfortable, how should we tell each other?” These questions do not ruin the moment. They reduce guesswork and make it easier for both people to relax.</item>
+        <item>Physical performance is not proof of your worth. Intimacy can include touch, conversation, companionship and discovery together. A particular response, or the lack of one, is not failure. For persistent pain, functional concerns or intense anxiety, seek help from a qualified medical or other appropriate professional.</item>
+        <item>Remember one measure today: good intimacy does not require either person to ignore their boundaries. Desire deserves understanding; so do safety, dignity and genuine willingness.</item>
+    </string-array>
+    <string name="guide_attention_category">Film and culture</string>
+    <string name="guide_attention_title">Turn watching into a real discovery</string>
+    <string name="guide_attention_summary">Give one complete work your attention instead of another automatic clip.</string>
+    <string-array name="guide_attention_body">
+        <item>Watching does not have to be passive consumption. Film, documentary, photography and literature can place us inside someone else’s experience and help us see ordinary life anew. The difference is often not how sophisticated the work is, but whether we give it our full attention.</item>
+        <item>Next time you want something to watch, choose a concrete subject: an unfamiliar city, an occupation, a period of history or one creator. Ask, “What would I like to understand?” A question you choose yourself is more likely to reveal a real interest than a feed chosen for you.</item>
+        <item>Try not to keep a second screen open while watching. Start with twenty minutes. Continue if the work draws you in; change to something else if it does not. The goal is not to finish a prestigious list, but to recognise the difference between feeling numb and feeling genuinely curious.</item>
+        <item>Afterwards, one sentence of your own is enough. Which image stayed with you? Whose perspective changed yours? What would you like to explore next? A single note turns brief entertainment into an experience connected to your life.</item>
+        <item>This weekend, choose a short film or documentary and give it uninterrupted time. Desire can still have its place; your attention can also nourish a larger world.</item>
+    </string-array>
 
     <!-- 搜索 -->
     <string name="search_placeholder">Search code, actress or keyword</string>

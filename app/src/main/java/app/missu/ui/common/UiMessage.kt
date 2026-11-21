@@ -19,7 +19,6 @@ import java.io.IOException
  */
 sealed interface UiMessage {
     data object Network : UiMessage
-    data object HomeEmpty : UiMessage
     data class Http(val status: Int) : UiMessage
     data object Challenge : UiMessage
     data object SessionExpired : UiMessage
@@ -51,7 +50,6 @@ fun Throwable.toUiMessage(): UiMessage = when (this) {
 @Composable
 fun UiMessage.text(): String = when (this) {
     UiMessage.Network -> stringResource(R.string.error_network)
-    UiMessage.HomeEmpty -> stringResource(R.string.error_home_empty)
     is UiMessage.Http -> stringResource(R.string.error_http, status)
     UiMessage.Challenge -> stringResource(R.string.error_challenge)
     UiMessage.SessionExpired -> stringResource(R.string.error_session_expired)

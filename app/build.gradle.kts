@@ -29,8 +29,8 @@ android {
         minSdk = 26
         //noinspection OldTargetApi — 行为仍按 36 验收；compileSdk 37.1 只为新编译 API。
         targetSdk = 36
-        versionCode = 7
-        versionName = "2.3.0"
+        versionCode = 8
+        versionName = "3.0.0-alpha.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
