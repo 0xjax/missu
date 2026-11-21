@@ -22,6 +22,8 @@ core/                 纯 JVM 模块（取数 / 解析 / 模型，不许 android
 baselineprofile/      独立启动 Profile 生成器（仅测试，不进入交付 APK）
 journeys/              Android CLI Journey 关键路径用例
 gradle/libs.versions.toml      依赖与插件版本唯一来源
+content/literature/   诗文可读内容源（原文、注释、意译、赏析与多语言元数据）
+scripts/build-literature.ts  校验内容源并生成带 FTS5 索引的预打包 literature.db
 scripts/build.ps1     Android CLI 统一入口：构建 / 装机 / 运行 / 检查 / 预览 / 分析 / 调试
 scripts/emulator/     medium_phone AVD 的确定性架构与硬件规格模板
 settings.gradle.kts   Gradle 根配置（:app + :core + :baselineprofile）
@@ -51,7 +53,7 @@ docs/api/                     站点接口的 OpenAPI 记录
 
 当前版本 **3.0.0-alpha.1**（`versionCode = 8`）。3.0 已立项，仍处于开发阶段，不代表正式完工。Kotlin 版是基线实现：
 
-- 首页（非露骨内置指南 + 主动影片入口）、书房（古诗词原文/意译/赏析 + 英语双语阅读/点词释义）、详情、搜索（M3E 搜索栏 + 历史）
+- 首页（非露骨内置指南 + 主动影片入口）、书房（诗文原文/注释/意译/赏析/搜索/收藏 + 英语双语阅读/点词释义）、详情、搜索（M3E 搜索栏 + 历史）
 - 发现（女优 / 类型 / 厂商，女优筛选与排序）、收藏、观看历史 + 继续播放
 - 片单：列表、详情、批量移除、新建、编辑（含删除）
 - 设置（视频单列/双列、外观、播放）+ 7 种内容语言、记住账号（Keystore 加密存凭据、失效自动重登）

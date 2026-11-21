@@ -1,0 +1,67 @@
+[
+  {
+    "id": "yuefu-shangxie",
+    "kind": "POEM",
+    "title": "上邪",
+    "author": "汉 · 佚名",
+    "text": "上邪！我欲与君相知，长命无绝衰。\n山无陵，江水为竭，冬雷震震，夏雨雪，天地合，乃敢与君绝。",
+    "source": "汉乐府",
+    "prominence": 1900000000,
+    "theme": {"en": "", "zh": "", "zh-Hant": "", "ja": ""},
+    "notes": {"en": [], "zh": [], "zh-Hant": [], "ja": []},
+    "translation": {"en": "", "zh": "", "zh-Hant": "", "ja": ""},
+    "appreciation": {"en": "", "zh": "", "zh-Hant": "", "ja": ""}
+  },
+  {
+    "id": "yuefu-changge",
+    "kind": "POEM",
+    "title": "长歌行",
+    "author": "汉 · 佚名",
+    "text": "青青园中葵，朝露待日晞。\n阳春布德泽，万物生光辉。\n常恐秋节至，焜黄华叶衰。\n百川东到海，何时复西归？\n少壮不努力，老大徒伤悲。",
+    "source": "汉乐府",
+    "prominence": 1899999999,
+    "theme": {"en": "", "zh": "", "zh-Hant": "", "ja": ""},
+    "notes": {"en": [], "zh": [], "zh-Hant": [], "ja": []},
+    "translation": {"en": "", "zh": "", "zh-Hant": "", "ja": ""},
+    "appreciation": {"en": "", "zh": "", "zh-Hant": "", "ja": ""}
+  },
+  {
+    "id": "yuefu-jiangnan",
+    "kind": "POEM",
+    "title": "江南",
+    "author": "汉 · 佚名",
+    "text": "江南可采莲，莲叶何田田，鱼戏莲叶间。\n鱼戏莲叶东，鱼戏莲叶西，鱼戏莲叶南，鱼戏莲叶北。",
+    "source": "汉乐府",
+    "prominence": 1899999998,
+    "theme": {"en": "", "zh": "", "zh-Hant": "", "ja": ""},
+    "notes": {"en": [], "zh": [], "zh-Hant": [], "ja": []},
+    "translation": {"en": "", "zh": "", "zh-Hant": "", "ja": ""},
+    "appreciation": {"en": "", "zh": "", "zh-Hant": "", "ja": ""}
+  },
+  {
+    "id": "folk-mulan",
+    "kind": "POEM",
+    "title": "木兰诗",
+    "author": "北朝 · 佚名",
+    "text": "唧唧复唧唧，木兰当户织。不闻机杼声，唯闻女叹息。\n问女何所思，问女何所忆。女亦无所思，女亦无所忆。昨夜见军帖，可汗大点兵，军书十二卷，卷卷有爷名。阿爷无大儿，木兰无长兄，愿为市鞍马，从此替爷征。\n东市买骏马，西市买鞍鞯，南市买辔头，北市买长鞭。旦辞爷娘去，暮宿黄河边，不闻爷娘唤女声，但闻黄河流水鸣溅溅。旦辞黄河去，暮至黑山头，不闻爷娘唤女声，但闻燕山胡骑鸣啾啾。\n万里赴戎机，关山度若飞。朔气传金柝，寒光照铁衣。将军百战死，壮士十年归。\n归来见天子，天子坐明堂。策勋十二转，赏赐百千强。可汗问所欲，木兰不用尚书郎，愿驰千里足，送儿还故乡。\n爷娘闻女来，出郭相扶将；阿姊闻妹来，当户理红妆；小弟闻姊来，磨刀霍霍向猪羊。\n开我东阁门，坐我西阁床，脱我战时袍，著我旧时裳。当窗理云鬓，对镜帖花黄。\n出门看火伴，火伴皆惊忙：同行十二年，不知木兰是女郎。\n雄兔脚扑朔，雌兔眼迷离；双兔傍地走，安能辨我是雄雌？",
+    "source": "北朝民歌",
+    "prominence": 1899999997,
+    "theme": {"en": "", "zh": "", "zh-Hant": "", "ja": ""},
+    "notes": {"en": [], "zh": [], "zh-Hant": [], "ja": []},
+    "translation": {"en": "", "zh": "", "zh-Hant": "", "ja": ""},
+    "appreciation": {"en": "", "zh": "", "zh-Hant": "", "ja": ""}
+  },
+  {
+    "id": "folk-chile",
+    "kind": "POEM",
+    "title": "敕勒歌",
+    "author": "北朝 · 佚名",
+    "text": "敕勒川，阴山下。天似穹庐，笼盖四野。\n天苍苍，野茫茫，风吹草低见牛羊。",
+    "source": "北朝民歌",
+    "prominence": 1899999996,
+    "theme": {"en": "", "zh": "", "zh-Hant": "", "ja": ""},
+    "notes": {"en": [], "zh": [], "zh-Hant": [], "ja": []},
+    "translation": {"en": "", "zh": "", "zh-Hant": "", "ja": ""},
+    "appreciation": {"en": "", "zh": "", "zh-Hant": "", "ja": ""}
+  }
+]

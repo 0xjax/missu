@@ -1,0 +1,1330 @@
+{
+  "schemaVersion": 1,
+  "databaseVersion": 5,
+  "sources": [
+    {
+      "id": "chinese-poetry",
+      "repository": "https://github.com/chinese-poetry/chinese-poetry",
+      "revision": "b8594f81a89752241442f2ce267d6f66f96704ee",
+      "revisionDate": "2026-06-17T01:56:08Z",
+      "license": "MIT",
+      "datasets": [
+        {
+          "id": "tang",
+          "rawCount": 57607,
+          "selectedCount": 57603
+        },
+        {
+          "id": "song-ci",
+          "rawCount": 21050,
+          "selectedCount": 21050
+        },
+        {
+          "id": "shijing",
+          "rawCount": 305,
+          "selectedCount": 305
+        },
+        {
+          "id": "lunyu",
+          "rawCount": 20,
+          "selectedCount": 1
+        },
+        {
+          "id": "chuci",
+          "rawCount": 65,
+          "selectedCount": 1
+        },
+        {
+          "id": "guwen-guanzhi",
+          "rawCount": 222,
+          "selectedCount": 1
+        },
+        {
+          "id": "baijiaxing",
+          "rawCount": 1,
+          "selectedCount": 1
+        },
+        {
+          "id": "dizigui",
+          "rawCount": 8,
+          "selectedCount": 1
+        },
+        {
+          "id": "qianziwen",
+          "rawCount": 1,
+          "selectedCount": 1
+        },
+        {
+          "id": "sanzijing-new",
+          "rawCount": 1,
+          "selectedCount": 1
+        },
+        {
+          "id": "shenglvqimeng",
+          "rawCount": 30,
+          "selectedCount": 1
+        },
+        {
+          "id": "youxueqionglin",
+          "rawCount": 33,
+          "selectedCount": 1
+        },
+        {
+          "id": "zengguangxianwen",
+          "rawCount": 2,
+          "selectedCount": 1
+        },
+        {
+          "id": "zhuzijiaxun",
+          "rawCount": 1,
+          "selectedCount": 1
+        },
+        {
+          "id": "yuanqu",
+          "rawCount": 11057,
+          "selectedCount": 10914,
+          "skippedEmptyCount": 143
+        },
+        {
+          "id": "nalan",
+          "rawCount": 258,
+          "selectedCount": 258
+        }
+      ]
+    },
+    {
+      "id": "longyusheng-tangsong-mingjia",
+      "title": "唐宋名家词选",
+      "editor": "龙榆生",
+      "url": "https://longyusheng.org/tangsongci/mulu.html",
+      "pageUpdatedAt": "2026-01-18",
+      "retrievedAt": "2026-11-21",
+      "role": "选本目录"
+    },
+    {
+      "id": "gushiwen",
+      "repository": "https://github.com/yht050511/gushiwen",
+      "revision": "409df701b3f91a41c87e5979b092c8c3c42c2123",
+      "revisionDate": "2022-12-29T05:59:54Z",
+      "license": "MIT；含开放声明的译文、注释与赏析"
+    },
+    {
+      "id": "daizhige",
+      "repository": "https://github.com/daizhige-org/daizhigev20",
+      "revision": "409cd37f76567ba5631a0a0557b18566b0f20054",
+      "revisionDate": "2026-10-28T23:07:36Z",
+      "license": "典籍原文公有领域",
+      "note": "官方维护 Markdown 版；提供道德经、资治通鉴及四书五经、诸子、史地典籍，剥离 frontmatter 后按篇卷拆分并校验章数"
+    },
+    {
+      "id": "four-novels",
+      "repository": "https://github.com/Jiasheng-Shi/Dream-of-the-Red-Chamber",
+      "revision": "c5ce96aca36c6a3cb4da5f0ff7d2d5fa30c32aea",
+      "revisionDate": "2019-03-22T06:50:04Z",
+      "license": "典籍原文公有领域",
+      "note": "四大名著完整分回文本；选用标题结构完整的版本"
+    },
+    {
+      "id": "shiji",
+      "repository": "https://github.com/baojie/shiji-kb",
+      "revision": "6b836e3fac1b900ccc6e9299fd6896c0e18ec132",
+      "revisionDate": "2026-08-31T01:54:33Z",
+      "license": "原文公有领域；剥离实体标注",
+      "note": "殆知阁史记文件缺少部分正文标题，故仅史记使用 GitHub 分篇原文"
+    }
+  ],
+  "selection": {
+    "minimumRankedLimit": 10000,
+    "anthologyMaxRank": 67097,
+    "adoptedRankedLimit": 78653,
+    "rule": "先以 N = max(10000, Rmax) 计算候选范围；本次在候选范围接近完整语料后采用完整语料，再与选本、典籍和本地内容取并集",
+    "rationale": "选本决定价值基线，常见度排名决定补充范围。候选边界 67097 由完整覆盖选本计算得出，已接近完整唐宋语料 78653 篇；为消除截断并保留完整来源，本次采用完整语料，而不是直接按篇数凑量。",
+    "anthologiesAlwaysIncluded": [
+      "唐诗三百首",
+      "宋词三百首",
+      "唐宋名家词选"
+    ],
+    "longyushengEntries": 878,
+    "longyushengMatched": 878,
+    "longyushengUnmatched": 0,
+    "longyushengSupplemental": 151,
+    "ranking": "各搜索引擎结果数分别取 log1p 后求和；词牌别名共享排名",
+    "missingRank": "选本作品仍保留，但不参与 Rmax 计算；其他作品 prominence = 0"
+  },
+  "composition": {
+    "rankedRangeCount": 78653,
+    "anthologyUnionCount": 1318,
+    "sharedRankedAndAnthologyCount": 1167,
+    "rankedOnlyCount": 77486,
+    "anthologyBeyondRangeCount": 151,
+    "longyushengUniqueWorkCount": 863,
+    "anthologySupplementalWorks": [
+      {
+        "id": "longyusheng-liuyuxi-20",
+        "title": "浪淘沙 · 日照澄州江雾开",
+        "author": "刘禹锡",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-wentingyun-34",
+        "title": "遐方怨 · 花半坼",
+        "author": "温庭筠",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-wentingyun-41",
+        "title": "诉衷情 · 莺语",
+        "author": "温庭筠",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-huangfusong-44",
+        "title": "浪淘沙 · 滩头细草接疏林",
+        "author": "皇甫松",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-weizhuang-51",
+        "title": "浣溪沙 · 惆怅梦馀山月斜",
+        "author": "韦庄",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-weizhuang-60",
+        "title": "诉衷情 · 烛香残帘半卷",
+        "author": "韦庄",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-guxiong-84",
+        "title": "虞美人 · 深闺春色劳思想",
+        "author": "顾夐",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-guxiong-85",
+        "title": "河传 · 棹举",
+        "author": "顾夐",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-guxiong-86",
+        "title": "浣溪沙 · 红藕香寒翠渚平",
+        "author": "顾夐",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-guxiong-87",
+        "title": "诉衷情 · 永夜抛人何处去",
+        "author": "顾夐",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-guxiong-88",
+        "title": "醉公子 · 漠漠秋云澹",
+        "author": "顾夐",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-guxiong-89",
+        "title": "荷叶杯 · 一去又乖期信",
+        "author": "顾夐",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-lixun-95",
+        "title": "南乡子 · 兰棹举",
+        "author": "李珣",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-sunguangqian-103",
+        "title": "竹枝 · 竹枝",
+        "author": "孙光宪",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-lijing-116",
+        "title": "浣溪沙 · 菡萏香销翠叶残",
+        "author": "李璟",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-lijing-117",
+        "title": "浣溪沙 · 手卷珠帘上玉钩",
+        "author": "李璟",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-fengyanji-118",
+        "title": "鹊踏枝 · 谁道闲情抛掷久",
+        "author": "冯延己",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-fengyanji-119",
+        "title": "鹊踏枝 · 花外寒鸡天欲曙",
+        "author": "冯延己",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-fengyanji-120",
+        "title": "采桑子 · 笙歌放散人归去",
+        "author": "冯延己",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-fengyanji-121",
+        "title": "酒泉子 · 芳草长川",
+        "author": "冯延己",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-fengyanji-122",
+        "title": "清平乐 · 雨晴烟晚",
+        "author": "冯延己",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-fengyanji-123",
+        "title": "谒金门 · 杨柳陌",
+        "author": "冯延己",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-fengyanji-124",
+        "title": "谒金门 · 秋已暮",
+        "author": "冯延己",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-fengyanji-125",
+        "title": "归自谣 · 何处笛",
+        "author": "冯延己",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-fengyanji-126",
+        "title": "归自谣 · 春艳艳",
+        "author": "冯延己",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-fengyanji-127",
+        "title": "长命女 · 春日宴",
+        "author": "冯延己",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-fengyanji-128",
+        "title": "喜迁莺 · 宿莺啼",
+        "author": "冯延己",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-fengyanji-129",
+        "title": "抛球乐 · 酒罢歌馀兴未阑",
+        "author": "冯延己",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-fengyanji-130",
+        "title": "三台令 · 春色",
+        "author": "冯延己",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-fengyanji-131",
+        "title": "三台令 · 明月",
+        "author": "冯延己",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-fengyanji-132",
+        "title": "三台令 · 南浦",
+        "author": "冯延己",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-fengyanji-133",
+        "title": "点绛唇 · 荫绿围红",
+        "author": "冯延己",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-fengyanji-134",
+        "title": "临江仙 · 冷红飘起桃花片",
+        "author": "冯延己",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-fengyanji-135",
+        "title": "南乡子 · 细雨湿流光",
+        "author": "冯延己",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-liyu-136",
+        "title": "虞美人 · 春花秋月何时了",
+        "author": "李煜",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-liyu-137",
+        "title": "子夜歌 · 人生愁恨何能免",
+        "author": "李煜",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-liyu-138",
+        "title": "喜迁莺 · 晓月坠",
+        "author": "李煜",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-liyu-139",
+        "title": "清平乐 · 别来春半",
+        "author": "李煜",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-liyu-140",
+        "title": "蝶恋花 · 遥夜亭皋闲信步",
+        "author": "李煜",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-liyu-141",
+        "title": "乌夜啼 · 林花谢了春红",
+        "author": "李煜",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-liyu-142",
+        "title": "长相思 · 云一緺",
+        "author": "李煜",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-liyu-143",
+        "title": "捣练子令 · 深院静",
+        "author": "李煜",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-liyu-144",
+        "title": "浣溪沙 · 转烛飘蓬一梦归",
+        "author": "李煜",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-liyu-145",
+        "title": "浪淘沙 · 往事只堪哀",
+        "author": "李煜",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-liyu-146",
+        "title": "虞美人 · 风回小院庭芜绿",
+        "author": "李煜",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-liyu-147",
+        "title": "破阵子 · 四十年来家国",
+        "author": "李煜",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-liyu-148",
+        "title": "浪淘沙 · 帘外雨潺潺",
+        "author": "李煜",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-liyu-149",
+        "title": "忆江南 · 多少恨",
+        "author": "李煜",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-liyu-150",
+        "title": "乌夜啼 · 无言独上西楼",
+        "author": "李煜",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-liyu-151",
+        "title": "临江仙 · 樱桃落尽春归去",
+        "author": "李煜",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-fanzhongyan-158",
+        "title": "御街行 · 纷纷坠叶飘香砌",
+        "author": "范仲淹",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-zhangxian-168",
+        "title": "千秋岁 · 数声鹈鴂",
+        "author": "张先",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-zhangxian-173",
+        "title": "菩萨蛮 · 哀筝一弄湘江曲",
+        "author": "张先",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-zhangxian-174",
+        "title": "偷声木兰花 · 画楼浅映横塘路",
+        "author": "张先",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-yanshu-177",
+        "title": "清商怨 · 关河愁思望处满",
+        "author": "晏殊",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-zhangsheng-189",
+        "title": "离亭燕 · 一带江山如画",
+        "author": "张升",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-songqi-191",
+        "title": "锦缠道 · 燕子呢喃",
+        "author": "宋祁",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-ouyangxiu-194",
+        "title": "朝中措 · 平山栏槛倚晴空",
+        "author": "欧阳修",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-ouyangxiu-198",
+        "title": "瑞鹧鸪 · 楚王台上一神仙",
+        "author": "欧阳修",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-ouyangxiu-204",
+        "title": "青玉案 · 一年春事都来几",
+        "author": "欧阳修",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-liuyong-217",
+        "title": "卜算子 · 江枫渐老",
+        "author": "柳永",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-liuyong-232",
+        "title": "忆帝京 · 薄衾小枕凉天气",
+        "author": "柳永",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-sushi-265",
+        "title": "浣溪沙 · 醉梦昏昏晓未苏",
+        "author": "苏轼",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-sushi-280",
+        "title": "浣溪沙 · 细雨斜风作小寒",
+        "author": "苏轼",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-sushi-289",
+        "title": "行香子 · 一叶舟轻",
+        "author": "苏轼",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-yanjidao-296",
+        "title": "蝶恋花 · 初捻霜纨生怅望",
+        "author": "晏几道",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-yanjidao-297",
+        "title": "鹧鸪天 · 彩袖殷勤捧玉钟",
+        "author": "晏几道",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-huangtingjian-340",
+        "title": "喝火令 · 见晚晴如旧",
+        "author": "黄庭坚",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-hezhu-352",
+        "title": "愁风月 · 生查子",
+        "author": "贺铸",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-hezhu-354",
+        "title": "陌上郎 · 生查子",
+        "author": "贺铸",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-hezhu-356",
+        "title": "惜馀春 · 踏莎行",
+        "author": "贺铸",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-hezhu-358",
+        "title": "芳心苦 · 踏莎行",
+        "author": "贺铸",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-hezhu-360",
+        "title": "掩萧斋 · 减字浣溪沙",
+        "author": "贺铸",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-hezhu-362",
+        "title": "将进酒 · 小梅花",
+        "author": "贺铸",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-hezhu-366",
+        "title": "凌歊 · 铜人捧露盘引",
+        "author": "贺铸",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-hezhu-370",
+        "title": "水调歌头 · 南国本萧洒",
+        "author": "贺铸",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-hezhu-371",
+        "title": "宛溪柳 · 六幺令",
+        "author": "贺铸",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-hezhu-375",
+        "title": "人南渡 · 感皇恩",
+        "author": "贺铸",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-hezhu-378",
+        "title": "伴云来 · 天香",
+        "author": "贺铸",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-hezhu-383",
+        "title": "拥鼻吟 · 吴音子",
+        "author": "贺铸",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-hezhu-393",
+        "title": "江城子 · 麝熏微度绣芙容",
+        "author": "贺铸",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-hezhu-396",
+        "title": "石州引 · 薄雨收寒",
+        "author": "贺铸",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-hezhu-400",
+        "title": "柳梢青 · 子规啼血",
+        "author": "贺铸",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-qinguan-411",
+        "title": "画堂春 · 落红铺径水平池",
+        "author": "秦观",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-qinguan-420",
+        "title": "鹧鸪天 · 枕上流莺和泪闻",
+        "author": "秦观",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-qinguan-421",
+        "title": "行香子 · 树绕村庄",
+        "author": "秦观",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-chaobuzhi-425",
+        "title": "黄莺儿 · 南园佳致偏宜暑",
+        "author": "晁补之",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-chaobuzhi-427",
+        "title": "金凤钩 · 春辞我",
+        "author": "晁补之",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-wangfang-436",
+        "title": "倦寻芳 · 露晞向晓",
+        "author": "王雱",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-wangfang-437",
+        "title": "眼儿媚 · 杨柳丝丝弄轻柔",
+        "author": "王雱",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-lizhi-447",
+        "title": "虞美人 · 玉阑干外清江浦",
+        "author": "李廌",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-shudan-450",
+        "title": "菩萨蛮 · 画船捶鼓催君去",
+        "author": "舒亶",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-senghui-455",
+        "title": "诉衷情 · 清波门外拥轻衣",
+        "author": "僧挥",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-senghui-456",
+        "title": "诉衷情 · 涌金门外小瀛洲",
+        "author": "僧挥",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-senghui-457",
+        "title": "南柯子 · 十里青山远",
+        "author": "僧挥",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-senghui-458",
+        "title": "柳梢青 · 岸草平沙",
+        "author": "僧挥",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-senghui-459",
+        "title": "夏云峰 · 天阔云高",
+        "author": "僧挥",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-zhoubangyan-471",
+        "title": "宴清都 · 地僻无钟鼓",
+        "author": "周邦彦",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-zhoubangyan-487",
+        "title": "关河令 · 秋阴时晴渐向暝",
+        "author": "周邦彦",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-zhoubangyan-488",
+        "title": "解语花 · 风销绛蜡",
+        "author": "周邦彦",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-zhoubangyan-497",
+        "title": "浪淘沙慢 · 晓阴重",
+        "author": "周邦彦",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-zhoubangyan-502",
+        "title": "烛影摇红 · 芳脸轻匀",
+        "author": "周邦彦",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-luyizhong-518",
+        "title": "南浦 · 风悲画角",
+        "author": "鲁逸仲",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-chenke-519",
+        "title": "菩萨蛮 · 赤栏桥尽香街直",
+        "author": "陈克",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-liqingzhao-526",
+        "title": "鹧鸪天 · 寒日萧萧上琐窗",
+        "author": "李清照",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-liqingzhao-529",
+        "title": "蝶恋花 · 暖雨晴风初破冻",
+        "author": "李清照",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-liqingzhao-535",
+        "title": "添字采桑子 · 窗前种得芭蕉树",
+        "author": "李清照",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-liqingzhao-538",
+        "title": "浣溪沙 · 楼上晴天碧四垂",
+        "author": "李清照",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-sundaoxuan-542",
+        "title": "清平乐 · 悠悠飏飏",
+        "author": "孙道绚",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-zhangyuangan-547",
+        "title": "兰陵王 · 卷珠箔",
+        "author": "张元干",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-yemengde-552",
+        "title": "贺新郎 · 睡起流莺语",
+        "author": "叶梦得",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-zhangxiaoxiang-589",
+        "title": "六州歌头 · 长淮望断",
+        "author": "张孝祥",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-zhangxiaoxiang-594",
+        "title": "浣溪沙 · 霜日明霄水蘸空",
+        "author": "张孝祥",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-luyou-606",
+        "title": "齐天乐 · 角残钟晚关山路",
+        "author": "陆游",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-luyou-608",
+        "title": "桃园忆故人 · 中原当日山川震",
+        "author": "陆游",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-xinqiji-640",
+        "title": "水龙吟 · 听兮清佩琼瑶",
+        "author": "辛弃疾",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-liuguo-670",
+        "title": "醉太平 · 情高意真",
+        "author": "刘过",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-jiangkui-672",
+        "title": "霓裳中序第一 · 括",
+        "author": "姜夔",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-jiangkui-673",
+        "title": "霓裳中序第一 · 《梦溪笔谈》",
+        "author": "姜夔",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-jiangkui-674",
+        "title": "霓裳中序第一 · 白居易《霓裳羽衣歌曲》",
+        "author": "姜夔",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-jiangkui-684",
+        "title": "满江红 · 一一九一",
+        "author": "姜夔",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-jiangkui-686",
+        "title": "一萼红 · 一一八六",
+        "author": "姜夔",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-jiangkui-695",
+        "title": "淡黄柳 · 空城晓角",
+        "author": "姜夔",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-chenliang-709",
+        "title": "念奴娇 · 危楼还望",
+        "author": "陈亮",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-chenliang-712",
+        "title": "虞美人 · 东风荡飏轻云缕",
+        "author": "陈亮",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-zhushuzhen-731",
+        "title": "绛都春 · 寒阴渐晓",
+        "author": "朱淑真",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-wuwenying-761",
+        "title": "祝英台近 · 剪红情",
+        "author": "吴文英",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-wuwenying-767",
+        "title": "玉胡蝶 · 角断签鸣疏点",
+        "author": "吴文英",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-wuwenying-768",
+        "title": "绛都春 · 情粘舞线",
+        "author": "吴文英",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-liuchenweng-786",
+        "title": "踏莎行 · 日月跳丸",
+        "author": "刘辰翁",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-zhoumi-811",
+        "title": "曲游春 · 禁苑东风外",
+        "author": "周密",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-wangyisun-828",
+        "title": "高阳台 · 残雪庭除",
+        "author": "王沂孙",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-yuanhaowen-859",
+        "title": "水调歌头 · 牛羊散平楚",
+        "author": "元好问",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-yuanhaowen-860",
+        "title": "摸鱼儿 · 恨人间、情为何物",
+        "author": "元好问",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-yuanhaowen-861",
+        "title": "摸鱼儿 · 问莲根、有丝多少",
+        "author": "元好问",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-yuanhaowen-862",
+        "title": "水龙吟 · 少年射虎名豪",
+        "author": "元好问",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-yuanhaowen-863",
+        "title": "江城子 · 旗亭谁唱渭城诗",
+        "author": "元好问",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-yuanhaowen-864",
+        "title": "临江仙 · 邂逅一尊文字饮",
+        "author": "元好问",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-yuanhaowen-865",
+        "title": "临江仙 · 明月清风无尽岁",
+        "author": "元好问",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-yuanhaowen-866",
+        "title": "鹊桥仙 · 孤根渐暖",
+        "author": "元好问",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-yuanhaowen-867",
+        "title": "鹊桥仙 · 梨花春暮",
+        "author": "元好问",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-yuanhaowen-868",
+        "title": "鹧鸪天 · 临锦堂前春水波",
+        "author": "元好问",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-yuanhaowen-869",
+        "title": "鹧鸪天 · 零落栖迟感兴多",
+        "author": "元好问",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-yuanhaowen-870",
+        "title": "鹧鸪天 · 只近浮名不近情",
+        "author": "元好问",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-yuanhaowen-871",
+        "title": "鹧鸪天 · 枕上清风午梦残",
+        "author": "元好问",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-yuanhaowen-872",
+        "title": "鹧鸪天 · 复幕重帘十二楼",
+        "author": "元好问",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-yuanhaowen-873",
+        "title": "鹧鸪天 · 颜色如花画不成",
+        "author": "元好问",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-yuanhaowen-874",
+        "title": "鹧鸪天 · 一日春光一日深",
+        "author": "元好问",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-yuanhaowen-875",
+        "title": "鹧鸪天 · 玉立芙蓉镜里看",
+        "author": "元好问",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-yuanhaowen-876",
+        "title": "朝中措 · 时情天意枉论量",
+        "author": "元好问",
+        "source": "龙榆生 · 唐宋名家词选"
+      },
+      {
+        "id": "longyusheng-yuanhaowen-877",
+        "title": "好事近 · 梦里十年心",
+        "author": "元好问",
+        "source": "龙榆生 · 唐宋名家词选"
+      }
+    ],
+    "classicCollections": [
+      {
+        "id": "lunyu",
+        "sourceChapterCount": 20,
+        "title": "论语",
+        "workCount": 1
+      },
+      {
+        "id": "chuci",
+        "sourceChapterCount": 65,
+        "title": "楚辞",
+        "workCount": 1
+      },
+      {
+        "id": "guwen-guanzhi",
+        "sourceChapterCount": 222,
+        "title": "古文观止",
+        "workCount": 1
+      },
+      {
+        "id": "baijiaxing",
+        "sourceChapterCount": 1,
+        "title": "百家姓",
+        "workCount": 1
+      },
+      {
+        "id": "dizigui",
+        "sourceChapterCount": 8,
+        "title": "弟子规",
+        "workCount": 1
+      },
+      {
+        "id": "qianziwen",
+        "sourceChapterCount": 1,
+        "title": "千字文",
+        "workCount": 1
+      },
+      {
+        "id": "sanzijing-new",
+        "sourceChapterCount": 1,
+        "title": "三字经",
+        "workCount": 1
+      },
+      {
+        "id": "shenglvqimeng",
+        "sourceChapterCount": 30,
+        "title": "声律启蒙",
+        "workCount": 1
+      },
+      {
+        "id": "youxueqionglin",
+        "sourceChapterCount": 33,
+        "title": "幼学琼林",
+        "workCount": 1
+      },
+      {
+        "id": "zengguangxianwen",
+        "sourceChapterCount": 2,
+        "title": "增广贤文",
+        "workCount": 1
+      },
+      {
+        "id": "zhuzijiaxun",
+        "sourceChapterCount": 1,
+        "title": "朱子家训",
+        "workCount": 1
+      },
+      {
+        "id": "daodejing",
+        "title": "道德经",
+        "sourceChapterCount": 81,
+        "workCount": 1
+      },
+      {
+        "id": "tongjian",
+        "title": "资治通鉴",
+        "sourceChapterCount": 294,
+        "workCount": 1
+      },
+      {
+        "id": "daxue",
+        "title": "大学",
+        "sourceChapterCount": 1,
+        "workCount": 1
+      },
+      {
+        "id": "zhongyong",
+        "title": "中庸",
+        "sourceChapterCount": 1,
+        "workCount": 1
+      },
+      {
+        "id": "mengzi",
+        "title": "孟子",
+        "sourceChapterCount": 14,
+        "workCount": 1
+      },
+      {
+        "id": "zhouyi",
+        "title": "周易",
+        "sourceChapterCount": 69,
+        "workCount": 1
+      },
+      {
+        "id": "shangshu",
+        "title": "尚书",
+        "sourceChapterCount": 58,
+        "workCount": 1
+      },
+      {
+        "id": "liji",
+        "title": "礼记",
+        "sourceChapterCount": 47,
+        "workCount": 1
+      },
+      {
+        "id": "chunqiu-zuozhuan",
+        "title": "春秋左传",
+        "sourceChapterCount": 12,
+        "workCount": 1
+      },
+      {
+        "id": "xiaojing",
+        "title": "孝经",
+        "sourceChapterCount": 18,
+        "workCount": 1
+      },
+      {
+        "id": "mozi",
+        "title": "墨子",
+        "sourceChapterCount": 53,
+        "workCount": 1
+      },
+      {
+        "id": "zhuangzi",
+        "title": "庄子",
+        "sourceChapterCount": 33,
+        "workCount": 1
+      },
+      {
+        "id": "xunzi",
+        "title": "荀子",
+        "sourceChapterCount": 32,
+        "workCount": 1
+      },
+      {
+        "id": "hanfeizi",
+        "title": "韩非子",
+        "sourceChapterCount": 55,
+        "workCount": 1
+      },
+      {
+        "id": "sunzi",
+        "title": "孙子兵法",
+        "sourceChapterCount": 13,
+        "workCount": 1
+      },
+      {
+        "id": "lvshi-chunqiu",
+        "title": "吕氏春秋",
+        "sourceChapterCount": 26,
+        "workCount": 1
+      },
+      {
+        "id": "huainanzi",
+        "title": "淮南子",
+        "sourceChapterCount": 21,
+        "workCount": 1
+      },
+      {
+        "id": "guoyu",
+        "title": "国语",
+        "sourceChapterCount": 21,
+        "workCount": 1
+      },
+      {
+        "id": "zhanguoce",
+        "title": "战国策",
+        "sourceChapterCount": 33,
+        "workCount": 1
+      },
+      {
+        "id": "shanhaijing",
+        "title": "山海经",
+        "sourceChapterCount": 18,
+        "workCount": 1
+      },
+      {
+        "id": "sanguo",
+        "title": "三国演义",
+        "sourceChapterCount": 120,
+        "workCount": 1
+      },
+      {
+        "id": "shuihu",
+        "title": "水浒传",
+        "sourceChapterCount": 120,
+        "workCount": 1
+      },
+      {
+        "id": "xiyouji",
+        "title": "西游记",
+        "sourceChapterCount": 100,
+        "workCount": 1
+      },
+      {
+        "id": "hongloumeng",
+        "title": "红楼梦",
+        "sourceChapterCount": 120,
+        "workCount": 1
+      },
+      {
+        "id": "shiji",
+        "title": "史记",
+        "sourceChapterCount": 130,
+        "workCount": 1
+      }
+    ],
+    "notes": "选本并集与排名范围取并集；详情页补充作品只计算一次。诗经、典籍及本地精读另列来源，不与选本补充重复计算。典籍按一部作品及内部篇章收录，原始篇章数与库内作品数分别记录。"
+  },
+  "transformation": {
+    "traditionalToSimplified": "opencc-js@1.4.2"
+  },
+  "result": {
+    "rawCount": 90661,
+    "importedCount": 167210,
+    "canonicalCount": 1328,
+    "curatedCount": 6,
+    "supplementalCount": 5,
+    "duplicateCount": 9,
+    "finalCount": 167212,
+    "byKind": {
+      "POEM": 128744,
+      "CI": 25225,
+      "QU": 11526,
+      "PROSE": 1681,
+      "BOOK": 36
+    },
+    "databaseSha256": "a583d9965d10d8be733872b796b43b0d6433dd076b2c768d49f159aa62169fbc"
+  },
+  "expansion": {
+    "previousCount": 90292,
+    "gushiwenRawCount": 108197,
+    "gushiwenAddedCount": 76893,
+    "gushiwenDuplicateCount": 31055,
+    "gushiwenEnrichedCount": 2902,
+    "nalanReplacementCount": 249,
+    "addedCount": 76918,
+    "resultCount": 167210,
+    "note": "主原文库按作者与规范化全文去重并补充精读字段；纳兰性德以完整诗集为唯一正文版本，旧来源同作者条目整体替换；整书选用标题结构完整的 GitHub 存档，均以一部作品和内部章节保存。"
+  },
+  "localSources": [
+    {
+      "path": "content/literature/works.json",
+      "count": 6
+    },
+    {
+      "path": "content/literature/supplemental.json",
+      "count": 5
+    }
+  ]
+}

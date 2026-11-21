@@ -53,6 +53,7 @@
 - MD3E 选型先查 `.agents/skills/md3e`；当前 material3 `1.5.0-rc01`，不用 `SegmentedButton` / `NavigationBar` / `Medium|LargeTopAppBar`。图标统一 `material-icons-extended` Outlined，仅明确状态语义用 Filled，不自绘或混入其他图标源。
 - 不做无实测需求的状态管理、查询缓存、绘图库或抽象；优先简单实现，不顺手改相邻代码。
 - 版本与插件坐标统一在 `gradle/libs.versions.toml`；站点、播放器、Coil 共享 `AppDependencies` 的 OkHttp 基础设施，各自保留请求头、Cookie 与超时。
+- 诗文精读与补充源在 `content/literature/`；语料变更执行 `bun run literature:import`，内容变更执行 `bun run literature:build`。不得手改 `literature.db` / `manifest.json` 或把正文迁回界面资源。
 - 播放画面和进度状态优先 Media3 Compose 原生 API；控件外观与手势按 `DESIGN.md` 自绘。
 - 仅适配 Android；注释用中文，提交信息用英文 Conventional Commits；注释标签只用 `CRITICAL` / `WARNING` / `TODO` / `NOTE`。
 - 浮点比较、累计或链式计算前先按业务精度舍入，禁止原始 `==`。

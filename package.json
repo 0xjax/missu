@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "scripts": {
+    "literature:import": "bun scripts/import-longyusheng.ts && bun scripts/import-literature.ts && bun scripts/import-expanded.ts",
+    "literature:sample": "bun scripts/sample-literature.ts",
+    "literature:build": "bun scripts/build-literature.ts"
+  },
+  "devDependencies": {
+    "opencc-js": "1.4.2"
+  }
+}

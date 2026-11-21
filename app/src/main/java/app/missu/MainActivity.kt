@@ -59,6 +59,7 @@ import app.missu.data.store.HistoryStore
 import app.missu.data.store.ListHistoryStore
 import app.missu.data.store.ListQueryStore
 import app.missu.data.store.ListSortStore
+import app.missu.data.store.LiteratureStore
 import app.missu.data.store.ProfileStore
 import app.missu.data.store.SearchHistoryStore
 import app.missu.data.store.SettingsStore
@@ -237,7 +238,9 @@ private fun MissuApp(
     val navController = rememberNavController()
     var buttonPopId by remember { mutableStateOf<String?>(null) }
     var tabRoute by rememberSaveable { mutableStateOf("home") }
-    val api = LocalAppDependencies.current.api
+    val dependencies = LocalAppDependencies.current
+    val api = dependencies.api
+    val literatureRepository = dependencies.literatureRepository
     val context = LocalContext.current
     val listQueryStore = remember { ListQueryStore(context.applicationContext) }
 
@@ -276,6 +279,7 @@ private fun MissuApp(
     val listHistoryStore = remember { ListHistoryStore(context.applicationContext) }
     val searchHistory = remember { SearchHistoryStore(context.applicationContext) }
     val listSortStore = remember { ListSortStore(context.applicationContext) }
+    val literatureStore = remember { LiteratureStore(context.applicationContext) }
     val backStackEntry = navController.currentBackStackEntryAsState()
     val tabRouteState = remember { derivedStateOf { tabRoute } }
     val settingsState = AppSettingsState(
@@ -337,9 +341,11 @@ private fun MissuApp(
                     tabRoute = tabRoute,
                     onTabChange = { tabRoute = it },
                     api = api,
+                    literatureRepository = literatureRepository,
                     searchHistory = searchHistory,
                     listSortStore = listSortStore,
                     listQueryStore = listQueryStore,
+                    literatureStore = literatureStore,
                     auth = auth,
                     onOpenDetail = ::openDetail,
                     onOpenList = ::openList,
@@ -350,6 +356,7 @@ private fun MissuApp(
                 backStackEntry = backStackEntry,
                 tabRoute = tabRouteState,
                 api = api,
+                literatureRepository = literatureRepository,
                 settings = settings,
                 settingsState = settingsState,
                 settingsActions = settingsActions,
@@ -358,6 +365,7 @@ private fun MissuApp(
                 searchHistory = searchHistory,
                 listSortStore = listSortStore,
                 listQueryStore = listQueryStore,
+                literatureStore = literatureStore,
                 auth = auth,
                 onGoBack = ::goBack,
                 onOpenDetail = ::openDetail,

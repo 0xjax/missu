@@ -19,6 +19,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import app.missu.data.api.MissavApi
 import app.missu.data.api.VideoListOptions
+import app.missu.data.literature.LiteratureRepository
 import app.missu.data.store.AppLanguage
 import app.missu.data.store.ColorSource
 import app.missu.data.store.HistoryStore
@@ -26,11 +27,15 @@ import app.missu.data.store.ListHistoryEntry
 import app.missu.data.store.ListHistoryStore
 import app.missu.data.store.ListQueryStore
 import app.missu.data.store.ListSortStore
+import app.missu.data.store.LiteratureStore
 import app.missu.data.store.SearchHistoryStore
 import app.missu.data.store.SettingsStore
 import app.missu.data.store.ThemeMode
 import app.missu.ui.account.AuthViewModel
 import app.missu.ui.account.LoginScreen
+import app.missu.ui.common.text
+import app.missu.ui.components.ErrorHint
+import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.PageSurface
 import app.missu.ui.components.ProvideHeroVisibility
 import app.missu.ui.detail.DetailScreen
@@ -57,9 +62,10 @@ import app.missu.ui.search.SearchHost
 import app.missu.ui.search.SearchViewModel
 import app.missu.ui.settings.SettingsScreen
 import app.missu.ui.study.EnglishArticleScreen
-import app.missu.ui.study.PoetryScreen
+import app.missu.ui.study.LiteratureDetailUiState
+import app.missu.ui.study.LiteratureDetailViewModel
+import app.missu.ui.study.LiteratureScreen
 import app.missu.ui.study.englishArticleById
-import app.missu.ui.study.poemById
 
 internal data class AppSettingsState(
     val appLanguage: AppLanguage,
@@ -84,6 +90,7 @@ internal fun NavGraphBuilder.secondaryDestinations(
     backStackEntry: State<NavBackStackEntry?>,
     tabRoute: State<String>,
     api: MissavApi,
+    literatureRepository: LiteratureRepository,
     settings: SettingsStore,
     settingsState: AppSettingsState,
     settingsActions: AppSettingsActions,
@@ -92,6 +99,7 @@ internal fun NavGraphBuilder.secondaryDestinations(
     searchHistory: SearchHistoryStore,
     listSortStore: ListSortStore,
     listQueryStore: ListQueryStore,
+    literatureStore: LiteratureStore,
     auth: AuthViewModel,
     onGoBack: () -> Unit,
     onOpenDetail: (String, String?, String) -> Unit,
@@ -112,10 +120,25 @@ internal fun NavGraphBuilder.secondaryDestinations(
         }
     }
 
-    composable("poem/{id}") { entry ->
-        poemById(entry.arguments?.getString("id").orEmpty())?.let { poem ->
-            PageSurface {
-                PoetryScreen(poem = poem, onBack = onGoBack)
+    composable("literature/{id}") { entry ->
+        val id = entry.arguments?.getString("id").orEmpty()
+        val viewModel: LiteratureDetailViewModel = viewModel(
+            key = "literature-$id",
+            factory = missuViewModelFactory { LiteratureDetailViewModel(literatureRepository, id) },
+        )
+        val state by viewModel.state.collectAsStateWithLifecycle()
+        val favorites by literatureStore.favorites.collectAsStateWithLifecycle()
+        LaunchedEffect(id) { viewModel.loadIfNeeded() }
+        PageSurface {
+            when (val current = state) {
+                LiteratureDetailUiState.Loading -> LoadingHint()
+                is LiteratureDetailUiState.Error -> ErrorHint(current.message.text(), viewModel::load)
+                is LiteratureDetailUiState.Content -> LiteratureScreen(
+                    work = current.work,
+                    favorite = current.work.id in favorites,
+                    onToggleFavorite = { literatureStore.toggleFavorite(current.work.id) },
+                    onBack = onGoBack,
+                )
             }
         }
     }

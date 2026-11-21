@@ -1,0 +1,312 @@
+[
+  {
+    "id": "quiet-night",
+    "kind": "POEM",
+    "title": "静夜思",
+    "author": "唐 · 李白",
+    "text": "床前明月光，疑是地上霜。\n举头望明月，低头思故乡。",
+    "theme": {
+      "en": "Longing",
+      "zh": "思乡",
+      "zh-Hant": "思鄉",
+      "ja": "望郷"
+    },
+    "notes": {
+      "en": [
+        "疑 — to wonder; here, the moonlight is so pale that it seems to be frost.",
+        "举头 / 低头 — to raise / lower one’s head. The two movements carry the turn from the moon to home."
+      ],
+      "zh": [
+        "疑：这里是“好像”的意思。月光皎洁，让人一时以为地上结了霜。",
+        "举头 / 低头：抬头 / 低头。两个动作完成从望月走向思乡的自然转折。"
+      ],
+      "zh-Hant": [
+        "疑：這裡是「好像」的意思。月光皎潔，讓人一時以為地上結了霜。",
+        "舉頭 / 低頭：抬頭 / 低頭。兩個動作完成從望月走向思鄉的自然轉折。"
+      ],
+      "ja": [
+        "疑 — ここでは「～かと思う」の意。月光があまりに白く、霜かと見まがう。",
+        "挙頭 / 低頭 — 顔を上げる / 下げる。月を見ることから故郷を思うことへの転換を表す。"
+      ]
+    },
+    "translation": {
+      "en": "Moonlight falls before my bed, so bright that I mistake it for frost. I raise my head to the moon, then lower it and think of home.",
+      "zh": "月光洒在床前，明亮得像是地上结了一层霜。抬头望向明月，再低下头，故乡便涌上心头。",
+      "zh-Hant": "月光灑在床前，明亮得像是地上結了一層霜。抬頭望向明月，再低下頭，故鄉便湧上心頭。",
+      "ja": "床の前に月明かりが差し、床に霜がおりたかと思うほど明るい。顔を上げて月を見つめ、下を向くと、ふるさとへの思いがこみ上げる。"
+    },
+    "appreciation": {
+      "en": "Four plain lines hold one small movement: looking up at something shared by everyone, then looking down into a longing that is entirely one’s own. The poem leaves the feeling unnamed until the final word, allowing home to arrive with quiet force.",
+      "zh": "四句朴素的话，装着一次很小的动作：先抬头看人人共有的月亮，再低头回到只属于自己的思念。诗意不在奇巧，而在故乡直到最后才出现，安静却有分量。",
+      "zh-Hant": "四句樸素的話，裝著一次很小的動作：先抬頭看人人共有的月亮，再低頭回到只屬於自己的思念。詩意不在奇巧，而在故鄉直到最後才出現，安靜卻有分量。",
+      "ja": "素朴な四句に、小さな動作が収められています。誰もが共有する月を見上げ、次にうつむいて自分だけの思いに戻ります。故郷は最後まで名づけられず、静かに、しかし確かな重みで現れます。"
+    }
+  },
+  {
+    "id": "drinking-wine",
+    "kind": "POEM",
+    "title": "饮酒 · 其五",
+    "author": "东晋 · 陶渊明",
+    "text": "结庐在人境，而无车马喧。\n问君何能尔？心远地自偏。\n采菊东篱下，悠然见南山。\n山气日夕佳，飞鸟相与还。\n此中有真意，欲辨已忘言。",
+    "theme": {
+      "en": "A place within",
+      "zh": "自处",
+      "zh-Hant": "自處",
+      "ja": "自分と向き合う"
+    },
+    "notes": {
+      "en": [
+        "结庐在人境 — to build one’s dwelling among people, rather than retreat to a wilderness.",
+        "心远地自偏 — when the mind is beyond worldly noise, even an inhabited place feels secluded.",
+        "悠然 — at ease, without strain or deliberate effort.",
+        "真意 — the genuine meaning perceived in nature and life, beyond easy verbal explanation."
+      ],
+      "zh": [
+        "结庐在人境：在人们聚居的地方建造住所，并非隐居到无人山林。",
+        "心远地自偏：精神远离尘俗，即使住在人境，也自然觉得僻静。",
+        "悠然：闲适自在，没有刻意与用力。",
+        "真意：从自然与生活中体会到的真趣，难以用言语完全说明。"
+      ],
+      "zh-Hant": [
+        "結廬在人境：在人們聚居的地方建造住所，並非隱居到無人山林。",
+        "心遠地自偏：精神遠離塵俗，即使住在人境，也自然覺得僻靜。",
+        "悠然：閒適自在，沒有刻意與用力。",
+        "真意：從自然與生活中體會到的真趣，難以用言語完全說明。"
+      ],
+      "ja": [
+        "結廬在人境 — 人里に住まいを構えること。無人の山に隠れるのではない。",
+        "心遠地自偏 — 心が俗世から離れていれば、人里も自然に静かな場所となる。",
+        "悠然 — 気ままで、無理や造作のないさま。",
+        "真意 — 自然と人生から感じ取った本当の意味。言葉では尽くせないもの。"
+      ]
+    },
+    "translation": {
+      "en": "I live among people, yet the noise of carriages does not reach me. How is that possible? When the mind is distant, the place becomes secluded. I pick chrysanthemums by the eastern fence and glimpse the southern mountain at ease. In the evening air, birds return together. There is a truth here, but when I try to name it, words fall away.",
+      "zh": "住在人群之中，却听不见车马的喧闹。为什么能做到？心若远离了纷扰，所在之处自然显得僻静。在东篱下采菊，悠然间看见南山。傍晚山色正好，飞鸟结伴归来。其中自有真意，想要分辨说明时，却已经忘了语言。",
+      "zh-Hant": "住在人群之中，卻聽不見車馬的喧鬧。為什麼能做到？心若遠離了紛擾，所在之處自然顯得僻靜。在東籬下採菊，悠然間看見南山。傍晚山色正好，飛鳥結伴歸來。其中自有真意，想要分辨說明時，卻已經忘了語言。",
+      "ja": "人の世に住みながら、車馬の騒音は聞こえない。なぜだろうか。心が遠く離れていれば、場所も自然に静かになる。東の垣根で菊を摘み、ふと南山を見る。夕暮れの山の空気が美しく、鳥たちが連れ立って帰る。そこには真の意味があるが、言い表そうとすると、言葉を忘れてしまう。"
+    },
+    "appreciation": {
+      "en": "Distance here is not a place to escape to, but a way of paying attention. The chrysanthemums, mountain and returning birds are not trophies of a perfect life; they become visible when the mind stops treating noise as its master.",
+      "zh": "「远」不是逃到某个地方，而是重新安排自己的心。菊花、南山与归鸟并非完美生活的装饰；当心不再被喧声牵着走，它们才重新变得可见。",
+      "zh-Hant": "「遠」不是逃到某個地方，而是重新安排自己的心。菊花、南山與歸鳥並非完美生活的裝飾；當心不再被喧聲牽著走，它們才重新變得可見。",
+      "ja": "ここでの「遠さ」は、逃げ込む場所ではなく、注意の向け方です。菊、山、帰る鳥は完璧な生活の飾りではありません。心が騒音に支配されなくなったとき、初めてはっきり見えてくるものです。"
+    }
+  },
+  {
+    "id": "calming-waves",
+    "kind": "CI",
+    "title": "定风波 · 莫听穿林打叶声",
+    "author": "北宋 · 苏轼",
+    "text": "莫听穿林打叶声，何妨吟啸且徐行。\n竹杖芒鞋轻胜马，谁怕？一蓑烟雨任平生。\n料峭春风吹酒醒，微冷，山头斜照却相迎。\n回首向来萧瑟处，归去，也无风雨也无晴。",
+    "theme": {
+      "en": "Life",
+      "zh": "人生",
+      "zh-Hant": "人生",
+      "ja": "人生"
+    },
+    "notes": {
+      "en": [
+        "吟啸 — to chant or sing freely while walking.",
+        "芒鞋 — straw sandals; together with the bamboo staff, they suggest a simple journey.",
+        "一蓑烟雨任平生 — to meet a lifetime of mist and rain wearing one straw cape: acceptance, not conquest.",
+        "向来萧瑟处 — the bleak, rain-swept place just passed through."
+      ],
+      "zh": [
+        "吟啸：放声吟咏、长啸，写出雨中徐行的自在。",
+        "芒鞋：草鞋。与竹杖一起，构成简朴轻便的行路形象。",
+        "一蓑烟雨任平生：披一件蓑衣，任凭一生烟雨，是接纳而不是征服。",
+        "向来萧瑟处：方才经过的风雨萧瑟之地。向来，这里是“刚才”的意思。"
+      ],
+      "zh-Hant": [
+        "吟嘯：放聲吟詠、長嘯，寫出雨中徐行的自在。",
+        "芒鞋：草鞋。與竹杖一起，構成簡樸輕便的行路形象。",
+        "一蓑煙雨任平生：披一件蓑衣，任憑一生煙雨，是接納而不是征服。",
+        "向來蕭瑟處：方才經過的風雨蕭瑟之地。向來，這裡是「剛才」的意思。"
+      ],
+      "ja": [
+        "吟嘯 — 声に出して詠み、歌うこと。雨中を歩く自在さを表す。",
+        "芒鞋 — わらじ。竹の杖とともに、簡素で軽やかな旅の姿を作る。",
+        "一蓑煙雨任平生 — 蓑一枚で一生の煙雨に身を任せる。征服ではなく受容の姿勢。",
+        "向來蕭瑟處 — 先ほど通り過ぎた、雨に寂しげな場所。向來はここで「さっき」の意。"
+      ]
+    },
+    "translation": {
+      "en": "Do not listen to the rain beating through the trees. Why not sing and walk slowly? A bamboo staff and straw sandals feel lighter than a horse. Who is afraid? I will meet a lifetime of mist and rain in one straw cape. The spring wind sobers me with a slight chill, while sunlight from the mountain comes to meet me. Looking back at the bleak place I passed through, I return with neither rain nor clear sky in mind.",
+      "zh": "不必理会雨点穿林打叶的声音，不妨一边吟咏长啸，一边慢慢走。竹杖草鞋，轻便得胜过骑马。有什么可怕？披一件蓑衣，就任凭一生烟雨。微寒的春风吹醒酒意，山头斜阳却迎面而来。回望方才萧瑟的地方，回去吧，心中已无所谓风雨，也无所谓晴。",
+      "zh-Hant": "不必理會雨點穿林打葉的聲音，不妨一邊吟詠長嘯，一邊慢慢走。竹杖草鞋，輕便得勝過騎馬。有什麼可怕？披一件蓑衣，就任憑一生煙雨。微寒的春風吹醒酒意，山頭斜陽卻迎面而來。回望方才蕭瑟的地方，回去吧，心中已無所謂風雨，也無所謂晴。",
+      "ja": "林を抜けて葉を打つ雨音に耳を貸すことはない。歌いながらゆっくり歩けばよい。竹の杖とわらじは、馬より軽やかだ。何を恐れることがあろうか。蓑を一枚まとい、煙雨の一生を受け入れる。冷たい春風に酔いが醒め、少し寒いが、山の斜陽が迎えてくれる。通り過ぎた寂しい場所を振り返り、帰る。心には雨も晴れもない。"
+    },
+    "appreciation": {
+      "en": "The turning point is not that the rain stops. Cold remains, and sunlight arrives only on the mountain ahead. Freedom comes from refusing to let either weather decide the meaning of the whole journey: neither storm nor sunshine has the final word.",
+      "zh": "转折并不在于雨停了：寒意仍在，阳光也只在山头出现。自由来自不再让天气替整段路下定义。风雨与晴朗都会经过，却都不能独占人生的最终解释权。",
+      "zh-Hant": "轉折並不在於雨停了：寒意仍在，陽光也只在山頭出現。自由來自不再讓天氣替整段路下定義。風雨與晴朗都會經過，卻都不能獨占人生的最終解釋權。",
+      "ja": "転換点は雨がやむことではありません。寒さは残り、日差しは先の山に現れるだけです。どちらの天気にも旅全体の意味を決めさせないところに、自由があります。嵐も晴れも、最後の言葉を独占しません。"
+    }
+  },
+  {
+    "id": "humble-room",
+    "kind": "PROSE",
+    "title": "陋室铭",
+    "author": "唐 · 刘禹锡",
+    "text": "山不在高，有仙则名。水不在深，有龙则灵。\n斯是陋室，惟吾德馨。苔痕上阶绿，草色入帘青。\n谈笑有鸿儒，往来无白丁。可以调素琴，阅金经。\n无丝竹之乱耳，无案牍之劳形。\n南阳诸葛庐，西蜀子云亭。孔子云：何陋之有？",
+    "theme": {
+      "en": "A place within",
+      "zh": "自处",
+      "zh-Hant": "自處",
+      "ja": "自分と向き合う"
+    },
+    "notes": {
+      "en": [
+        "铭 — an inscription, often concise and rhythmic, originally carved on an object.",
+        "德馨 — virtue that gives a place its worth; literally, virtue spreading like fragrance.",
+        "鸿儒 / 白丁 — learned scholars / people without scholarly rank.",
+        "丝竹 / 案牍 — string and wind instruments / official documents. Here they suggest social noise and bureaucratic toil.",
+        "何陋之有 — “What is humble about it?”: a rhetorical question that reverses outward judgement."
+      ],
+      "zh": [
+        "铭：古代刻在器物上用来警戒或称述功德的文字，后来成为一种文体。",
+        "德馨：品德高尚。馨，香气散布得远；这里指德行让陋室有了真正的价值。",
+        "鸿儒 / 白丁：博学的人 / 没有功名的平民。",
+        "丝竹 / 案牍：琴瑟箫管等乐器 / 官府公文。这里借指世俗应酬与公务劳碌。",
+        "何陋之有：有什么简陋的呢？用反问推翻只从外在条件衡量居所的眼光。"
+      ],
+      "zh-Hant": [
+        "銘：古代刻在器物上用來警戒或稱述功德的文字，後來成為一種文體。",
+        "德馨：品德高尚。馨，香氣散布得遠；這裡指德行讓陋室有了真正的價值。",
+        "鴻儒 / 白丁：博學的人 / 沒有功名的平民。",
+        "絲竹 / 案牘：琴瑟簫管等樂器 / 官府公文。這裡借指世俗應酬與公務勞碌。",
+        "何陋之有：有什麼簡陋的呢？用反問推翻只從外在條件衡量居所的眼光。"
+      ],
+      "ja": [
+        "銘 — 器物に刻まれた簡潔な韻文から生まれた文体。自戒や徳を述べる。",
+        "徳馨 — 高い徳。馨は香りが遠くまで広がること。陋室に本当の価値を与えるもの。",
+        "鴻儒 / 白丁 — 博学な人 / 学問の位を持たない人。",
+        "絲竹 / 案牘 — 弦楽器と管楽器 / 役所の文書。世俗の騒音と事務労働を示す。",
+        "何陋之有 — 「何が陋しいことがあろうか」。外見の評価を覆す反語。"
+      ]
+    },
+    "translation": {
+      "en": "A mountain need not be high; an immortal makes it known. Water need not be deep; a dragon makes it sacred. This is a humble room, but my virtue gives it fragrance. Moss climbs the steps green; grass enters the curtain blue. Learned friends talk and laugh here, and no unlearned visitors pass through. I can play a plain zither and read scripture. No instruments confuse my ears, no documents weary my body. It recalls Zhuge Liang’s hut in Nanyang and Yang Xiong’s pavilion in western Shu. As Confucius asked, what is humble about it?",
+      "zh": "山不一定要高，有仙人居住就会出名；水不一定要深，有龙潜藏就会显得神异。这是一间简陋的屋子，只因我的品德美好，便不觉得简陋。苔痕蔓延到台阶上，映得台阶碧绿；草色映入竹帘，染得室内青葱。在这里谈笑的都是博学之人，来往的没有无功名者。可以弹不加装饰的琴，阅读佛经。没有奏乐声扰乱耳朵，没有公文使身体劳累。它就像南阳诸葛亮的草庐、西蜀扬子云的亭子。孔子说：有什么简陋的呢？",
+      "zh-Hant": "山不一定要高，有仙人居住就會出名；水不一定要深，有龍潛藏就會顯得神異。這是一間簡陋的屋子，只因我的品德美好，便不覺得簡陋。苔痕蔓延到台階上，映得台階碧綠；草色映入竹簾，染得室內青蔥。在這裡談笑的都是博學之人，來往的沒有無功名者。可以彈不加裝飾的琴，閱讀佛經。沒有奏樂聲擾亂耳朵，沒有公文使身體勞累。它就像南陽諸葛亮的草廬、西蜀揚子雲的亭子。孔子說：有什麼簡陋的呢？",
+      "ja": "山は高くなくても、仙人が住めば名を知られる。水は深くなくても、龍が潜めば霊妙となる。これは陋しい部屋だが、私の徳が香りを与える。苔は階段に緑色を上り、草色は簾を青く通す。ここで談笑するのは博学な人々で、教養のない客はいない。飾らない琴を弾き、経典を読むことができる。楽器の音に耳を乱されず、公文書に体を疲れさせない。南陽の諸葛亮の庵、西蜀の揚子雲の亭のようだ。孔子も言うではないか。何が陋しいことがあろうか。"
+    },
+    "appreciation": {
+      "en": "The room is never described as luxurious, because its defence rests elsewhere: living plants, chosen company, music and reading. The closing question does not prove that poverty is pleasant; it asks why status should be allowed to measure a life richer than its walls.",
+      "zh": "文章始终没有把陋室写成华屋，因为回答在别处：生意盎然的草木、可以交谈的朋友、琴与书。结尾的反问不是证明贫穷值得赞美，而是在问：为什么外在地位可以衡量一间屋子，却衡量不了住在其中的人生？",
+      "zh-Hant": "文章始終沒有把陋室寫成華屋，因為回答在別處：生意盎然的草木、可以交談的朋友、琴與書。結尾的反問不是證明貧窮值得讚美，而是在問：為什麼外在地位可以衡量一間屋子，卻衡量不了住在其中的人生？",
+      "ja": "部屋が豪華だとは一度も書かれません。価値の根拠は、生き生きした草木、選ばれた友人、琴と読書にあります。結びの反語は貧しさを褒めるのではなく、地位や外観では測れない人生の豊かさを問いかけます。"
+    }
+  },
+  {
+    "id": "love-lotus",
+    "kind": "PROSE",
+    "title": "爱莲说",
+    "author": "北宋 · 周敦颐",
+    "text": "水陆草木之花，可爱者甚蕃。晋陶渊明独爱菊。自李唐来，世人甚爱牡丹。\n予独爱莲之出淤泥而不染，濯清涟而不妖，中通外直，不蔓不枝，香远益清，亭亭净植，可远观而不可亵玩焉。\n予谓菊，花之隐逸者也；牡丹，花之富贵者也；莲，花之君子者也。\n噫！菊之爱，陶后鲜有闻。莲之爱，同予者何人？牡丹之爱，宜乎众矣。",
+    "theme": {
+      "en": "Character",
+      "zh": "品格",
+      "zh-Hant": "品格",
+      "ja": "品格"
+    },
+    "notes": {
+      "en": [
+        "蕃 — many, numerous.",
+        "出淤泥而不染 — emerging from mud without being stained: the central image of moral independence.",
+        "濯清涟而不妖 — washed by clear ripples without becoming showy or seductive.",
+        "中通外直，不蔓不枝 — hollow and upright within, without sprawling vines or branches.",
+        "亵玩 — to handle or enjoy something disrespectfully at close range.",
+        "鲜 — few; pronounced xiǎn in 陶后鲜有闻."
+      ],
+      "zh": [
+        "蕃：多。",
+        "出淤泥而不染：从淤泥中生长出来，却不沾染污秽，是全文品格寓意的中心。",
+        "濯清涟而不妖：经过清水洗涤，却不显得妖艳。濯，洗涤；妖，艳丽而不庄重。",
+        "中通外直，不蔓不枝：内部贯通，外形挺直，不横生藤蔓，不旁生枝茎。",
+        "亵玩：靠近而不庄重地赏玩。亵，亲近而不庄重。",
+        "鲜：少。在“陶后鲜有闻”中读 xiǎn。"
+      ],
+      "zh-Hant": [
+        "蕃：多。",
+        "出淤泥而不染：從淤泥中生長出來，卻不沾染汙穢，是全文品格寓意的中心。",
+        "濯清漣而不妖：經過清水洗滌，卻不顯得妖豔。濯，洗滌；妖，豔麗而不莊重。",
+        "中通外直，不蔓不枝：內部貫通，外形挺直，不橫生藤蔓，不旁生枝莖。",
+        "褻玩：靠近而不莊重地賞玩。褻，親近而不莊重。",
+        "鮮：少。在「陶后鮮有聞」中讀 xiǎn。"
+      ],
+      "ja": [
+        "蕃 — 多いこと。",
+        "出淤泥而不染 — 泥から生えながら汚れない。道徳的な独立を表す中心の意象。",
+        "濯清漣而不妖 — 清い波に洗われても、艶やかに誇示しない。",
+        "中通外直，不蔓不枝 — 内が通じて外がまっすぐで、つるや枝を横に伸ばさない。",
+        "褻玩 — 近づいて軽々しくもてあそぶこと。",
+        "鮮 — 少ない。「陶后鮮有聞」では xiǎn と読む。"
+      ]
+    },
+    "translation": {
+      "en": "Among the flowers of water and land, many deserve love. Tao Yuanming of Jin loved only the chrysanthemum; since the Tang, most people have loved the peony. I alone love the lotus, which rises from mud unstained and is washed by clear water without becoming showy. It is open within and straight without, neither sprawling nor branching; its fragrance grows clearer over distance. It stands clean and upright, to be admired from afar, not handled disrespectfully. I call the chrysanthemum the flower of seclusion, the peony the flower of wealth, and the lotus the flower of moral character. Alas, love of chrysanthemums has rarely been heard since Tao. Who shares my love of lotus? Love of peonies is rightly common.",
+      "zh": "水上和陆地上的草木之花，值得喜爱的很多。晋代陶渊明只喜爱菊花；自唐朝以来，世人大多喜爱牡丹。我唯独喜爱莲花：它从淤泥里长出却不被沾染，经过清水洗涤却不显得妖艳；内部贯通，外形挺直，不横生藤蔓，不旁生枝茎；香气传得越远越清幽，洁净而挺直地立着。人们可以远远观赏，却不能靠近随意玩弄。我认为菊花是花中的隐士，牡丹是花中的富贵者，莲花是花中的君子。唉！对菊花的喜爱，陶渊明以后就很少听到了。对莲花的喜爱，有谁与我相同呢？对牡丹的喜爱，自然应当很多了。",
+      "zh-Hant": "水上和陸地上的草木之花，值得喜愛的很多。晉代陶淵明只喜愛菊花；自唐朝以來，世人大多喜愛牡丹。我唯獨喜愛蓮花：它從淤泥裡長出卻不被沾染，經過清水洗滌卻不顯得妖豔；內部貫通，外形挺直，不橫生藤蔓，不旁生枝莖；香氣傳得越遠越清幽，潔淨而挺直地立著。人們可以遠遠觀賞，卻不能靠近隨意玩弄。我認為菊花是花中的隱士，牡丹是花中的富貴者，蓮花是花中的君子。唉！對菊花的喜愛，陶淵明以後就很少聽到了。對蓮花的喜愛，有誰與我相同呢？對牡丹的喜愛，自然應當很多了。",
+      "ja": "水陸の草木の花には、愛するに値するものが多い。晋の陶淵明は菊だけを愛し、唐以来、世の人は牡丹を好んだ。私は蓮だけを愛する。泥から出ても染まらず、清らかな水に洗われても華美にならない。内は通じ、外はまっすぐで、つるも枝も伸ばさない。香りは遠くほど清らかで、浄く直立している。遠くから眺めることはできても、近づいて軽々しくもてあそぶことはできない。菊は隠逸の花、牡丹は富貴の花、蓮は君子の花だと思う。菊を愛する風潮は陶淵明の後、めったに聞かない。蓮への愛を分かつ人はいるだろうか。牡丹への愛は多くて当然だ。"
+    },
+    "appreciation": {
+      "en": "The lotus is admired through precise contradictions: rooted in mud yet unstained, washed yet not showy, approachable in beauty yet not available for careless possession. Its final contrast with the popular peony leaves an uncomfortable question: whether our preferences express character or merely join the crowd.",
+      "zh": "莲花的品格通过一组组矛盾被看清：生于淤泥却不受沾染，经过洗涤却不炫耀，美丽可赏却不可随意占有。结尾把莲花与众人喜爱的牡丹并置，留下一个不太舒服的问题：我们的偏爱究竟表达了品格，还是只是在加入人群？",
+      "zh-Hant": "蓮花的品格透過一組組矛盾被看清：生於淤泥卻不受沾染，經過洗滌卻不炫耀，美麗可賞卻不可隨意占有。結尾把蓮花與眾人喜愛的牡丹並置，留下一個不太舒服的問題：我們的偏愛究竟表達了品格，還是只是在加入人群？",
+      "ja": "蓮は、正確な対比によって描かれます。泥に根ざしながら汚れず、洗われても誇示せず、美しくても軽々しく所有できません。終わりに人気の牡丹と対置し、私たちの好みが品格を表すのか、ただ多数に加わるのかを問います。"
+    }
+  },
+  {
+    "id": "analects",
+    "kind": "PROSE",
+    "title": "论语 · 学习三则",
+    "author": "春秋 · 孔子及其弟子",
+    "text": "子曰：“学而时习之，不亦说乎？有朋自远方来，不亦乐乎？人不知而不愠，不亦君子乎？”\n子曰：“三人行，必有我师焉。择其善者而从之，其不善者而改之。”\n子曰：“知之者不如好之者，好之者不如乐之者。”",
+    "theme": {
+      "en": "Learning",
+      "zh": "学习",
+      "zh-Hant": "學習",
+      "ja": "学び"
+    },
+    "notes": {
+      "en": [
+        "时习 — to review or practise at the right time; learning is completed through use, not first exposure.",
+        "说 — read yuè, used here like 悦: pleased.",
+        "愠 — resentment or irritation. 人不知而不愠 means not resenting others for failing to recognise you.",
+        "好 / 乐 — in the final passage, read hào / lè: to be fond of / to find joy in."
+      ],
+      "zh": [
+        "时习：按时温习、实践。学习不停在第一次知道，而在之后的反复运用。",
+        "说：同“悦”，读 yuè，喜悦。",
+        "愠：恼怒、怨恨。“人不知而不愠”是别人不了解自己，也不因此怨恨。",
+        "好 / 乐：最后一则分别读 hào / lè，喜爱 / 以之为乐。"
+      ],
+      "zh-Hant": [
+        "時習：按時溫習、實踐。學習不停在第一次知道，而在之後的反覆運用。",
+        "說：同「悅」，讀 yuè，喜悅。",
+        "慍：惱怒、怨恨。「人不知而不慍」是別人不了解自己，也不因此怨恨。",
+        "好 / 樂：最後一則分別讀 hào / lè，喜愛 / 以之為樂。"
+      ],
+      "ja": [
+        "時習 — 適切なときに復習し、実践すること。学びは初めて知るだけでは完成しない。",
+        "説 — ここでは「悦」と同じ yuè と読み、喜ぶこと。",
+        "愠 — 怒り、恨み。「人不知而不愠」は、他人に理解されなくても恨まないこと。",
+        "好 / 楽 — 最後の一節では hào / lè と読み、好む / 楽しむこと。"
+      ]
+    },
+    "translation": {
+      "en": "Confucius said: Is it not a pleasure to learn and practise at the right times? Is it not happiness to have friends come from afar? Is it not moral character to remain free of resentment when others do not understand you? Confucius said: When walking with others, there must be someone I can learn from. I follow their strengths and use their faults to correct my own. Confucius said: To know something is not as good as to be fond of it; to be fond of it is not as good as to find joy in it.",
+      "zh": "孔子说：“学习了知识，又按时温习实践，不也很喜悦吗？有志同道合的朋友从远方来，不也很快乐吗？别人不了解我，我却不恼怒，不也是有修养的人吗？”孔子说：“几个人同行，其中一定有可以做我老师的人。选择他们的长处来学习，看到他们的短处，就对照着改正自己。”孔子说：“知道它的人，不如喜爱它的人；喜爱它的人，不如以它为乐的人。”",
+      "zh-Hant": "孔子說：「學習了知識，又按時溫習實踐，不也很喜悅嗎？有志同道合的朋友從遠方來，不也很快樂嗎？別人不了解我，我卻不惱怒，不也是有修養的人嗎？」孔子說：「幾個人同行，其中一定有可以做我老師的人。選擇他們的長處來學習，看到他們的短處，就對照著改正自己。」孔子說：「知道它的人，不如喜愛它的人；喜愛它的人，不如以它為樂的人。」",
+      "ja": "孔子が言った。学び、時にこれを習うのは喜びではないか。友が遠方から来るのは楽しみではないか。人が自分を知らなくても怒らないのは、君子ではないか。孔子が言った。何人かと行動すれば、必ず私の師となる人がいる。その善い点を選んで従い、不善な点を自分に照らして改める。孔子が言った。知っている人は好む人に及ばず、好む人はそれを楽しむ人に及ばない。"
+    },
+    "appreciation": {
+      "en": "These passages make learning social rather than competitive. Practice turns knowledge into ability, companions give it warmth, and other people—even their faults—become material for reflection. The final progression from knowing to liking to joy places genuine interest above achievement.",
+      "zh": "三则文字把学习写成人与人之间的关系，而不是竞赛。温习让知识成为能力，朋友让学习有了温度，别人的长处与短处都能成为反观自己的材料。最后从“知道”到“喜爱”再到“以之为乐”，把真实兴趣放在了成绩之前。",
+      "zh-Hant": "三則文字把學習寫成人與人之間的關係，而不是競賽。溫習讓知識成為能力，朋友讓學習有了溫度，別人的長處與短處都能成為反觀自己的材料。最後從「知道」到「喜愛」再到「以之為樂」，把真實興趣放在了成績之前。",
+      "ja": "学びは競争ではなく、人との関係として描かれます。実践が知識を能力に変え、友が温かさを与え、他人の長所と短所の両方が自分を省みる材料になります。知る、好む、楽しむという順序は、成績より本当の興味を重んじます。"
+    }
+  }
+]

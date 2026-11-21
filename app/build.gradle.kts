@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.ksp)
 }
 
 // NOTE: 1.13.0-rc01 的 ui-test Android 构件未发布；应用 implementation 的 alpha BOM 也会约束
@@ -14,6 +15,10 @@ configurations.configureEach {
         "androidx.compose.ui:ui-test-manifest:${libs.versions.composeTestVersion.get()}",
         "androidx.compose.ui:ui-test-manifest-android:${libs.versions.composeTestVersion.get()}",
     )
+}
+
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 android {
@@ -98,6 +103,12 @@ dependencies {
     // Jsoup 只在 :core 里用，app 不再声明。
     implementation(libs.okhttp)
     implementation(libs.coroutines.android)
+    implementation(libs.serialization.json)
+
+    // 本地诗文库：Room 3 + bundled SQLite，预打包数据库与全文索引不依赖系统 SQLite 版本。
+    implementation(libs.room3.runtime)
+    ksp(libs.room3.compiler)
+    implementation(libs.sqlite.bundled)
 
     // 图片：Coil 3（Compose 原生 API + 自带内存/磁盘缓存）。
     implementation(libs.coil.compose)

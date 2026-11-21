@@ -23,7 +23,7 @@
 - ✅ **视频单列/双列**：设置页全局切换，首页、热门、搜索、收藏、历史与片单共用 `LocalVideoListColumns`；只重组布局，不重取数据，偏好持久化
 - ✅ **价值导向首页**：不禁止或羞辱成人内容选择，用本地短篇指南提供另一种默认入口；不加入观看评分、强制暂停或提醒，指南正文为应用资源，离线可读且无需新增内容接口
 - ✅ **底部导航 + 书房 + 发现**：`首页 / 书房 / 发现 / 我的` 四个一级页签；书房内分「诗词 / 英语」，均为本地内容；发现页保留目录、热门与频道，手动搜索入口只在首页顶部，详情番号可直达对应搜索页
-- ✅ **诗词与英语学习**：三首古诗词提供原文、意译与原创赏析；两篇英语双语阅读复用指南的中英正文，重点词可点击查看释义与例句。所有内容离线可用，无打卡、评分或连续天数
+- ✅ **诗文与英语学习**：诗文已迁入 Room 3 + 预打包 SQLite，规模与构成见 `content/literature/manifest.json`；FTS5 中文一元 / 二元索引支持篇名、作者与原文搜索，列表按 50 篇分页并按上游知名度排序；体裁筛选、持久化收藏、已有精读内容保留，其余明确标注待完善。两篇英语双语阅读复用指南的中英正文，重点词可点击查看释义与例句。所有内容离线可用，无打卡、评分或连续天数
 - ✅ **女优筛选与排序**：身高 12 档 / 罩杯 A–Q / 年龄 6 档 / 出道年份（N 年以前），排序 `影片 / 出道`（实测 161–165cm 与按出道年排序都生效）
 - ✅ **搜索历史**：成功搜索后记入本地（上限 20，重复置顶），空输入时展示为可点胶囊，可清空
 - ✅ **我的片单**：`/playlists` 列表（名字 · 可见性 · 更新时间）+ 片单详情网格；真实页面 fixture 测试锁住解析规则
@@ -48,6 +48,7 @@
 | Kotlin | 2.4.21 | 只通过 `org.jetbrains.kotlin.plugin.compose` 参与 |
 | Compose BOM | **alpha 2026.11.00** | 走 alpha 线：全套 M3E 组件只在 material3 **1.5.0-rc01**；稳定线 1.4.0 只有部分 Expressive（主题/动效/ShortNavigationBar 有，FloatingToolbar/ButtonGroup/LoadingIndicator/柔性顶栏没有） |
 | activity / navigation / lifecycle-vm | 1.13.0 / 2.10.2 / 2.11.0 (compose 版) | |
+| KSP / Room / bundled SQLite | 2.3.14 / 3.0.3 / 2.7.1 | Room 3 稳定版；本地诗文库与 FTS5 索引，不依赖系统 SQLite 能力 |
 | compileSdk | **37 + `compileSdkMinor = 1`** | Compose 1.13-rc 要求 ≥ 37.1；新 AndroidX 要求 ≥ 37 |
 | targetSdk / minSdk | 36 / 26 | 编译用新 API、运行时行为按 36 走 |
 | JDK | **独立 Temurin 21**（`D:\Android\jdk-21`）+ 回落 AS 自带 JBR | 目录名带版本；`scripts/build.ps1` **自动发现** `D:\Android\jdk-*` 并取 major 最高者，升级只需解压出 `jdk-25`，脚本不用改。版本信息见目录内 `MISSU-JDK-VERSION.txt` |
@@ -88,6 +89,7 @@
 | media3-datasource-okhttp | 1.11.1 | ExoPlayer 走 OkHttp（默认 HttpURLConnection 被媒体主机 403） |
 | Coil 3（coil-compose + coil-network-okhttp） | 3.6.3 | 封面图 |
 | coroutines-android | 1.11.0 | 主线程调度 |
+| Room 3 / KSP / bundled SQLite | 3.0.3 / 2.3.14 / 2.7.1 | 预打包诗文库、分页与 FTS5 搜索 |
 | OkHttp | 5.5.1 | 显式列出便于阅读（`:core` 已 `api` 暴露） |
 
 **镜像**：`settings.gradle.kts` 里把阿里云（gradle-plugin / google / central / public）放在 `google()`、`mavenCentral()` 之前，换机器也能用；Gradle 发行包走腾讯镜像（`gradle-wrapper.properties`）。本机 `GRADLE_USER_HOME/init.d/mirrors.gradle` 还会注入一次阿里云镜像，所以 `dependencyResolutionManagement` **不能**设 `FAIL_ON_PROJECT_REPOS`。
@@ -111,7 +113,11 @@ cd D:\missu
 .\scripts\build.ps1 heapdump   # 应用 HPROF 到 .local/profiler
 .\scripts\build.ps1 hub        # Device Hub 实时镜像与控制
 .\scripts\build.ps1 describe   # 输出 CLI 识别到的变体与产物路径
+bun run literature:import # 固定上游版本，导入诗文、典籍并计算收录范围、校验整书章数
+bun run literature:build  # 校验内容，重建 assets/literature.db 与中文 FTS5 索引
 ```
+
+- 文库由 chinese-poetry、古诗文网与固定版本典籍存档按职责取并集：前者提供原文、排名、选本及结构化典籍，古诗文网补充原文及开放精读内容，殆知阁官方维护的 `daizhige-org/daizhigev20` Markdown 版与四大名著、史记分篇仓库提供整书。整书按篇卷回拆分并校验预期章数；《墨子》以子藏本为主、道藏本补入《尚贤下》《鲁问》。固定版本、构成与许可记录于 `manifest.json`；维基文库已弃用，不使用明确禁止抓取的 ctext。繁转简使用 OpenCC 1.4.2，相关许可文件随 APK 保留在 `assets/`。
 
 - **产物与留档**：`release` 命令生成 `app/build/outputs/apk/release/app-release.apk`，自动归档为 `.local/releases/Missu-<versionName>-arm64-v8a.apk`（已 gitignore，与 GitHub Release 附件同名）并输出 SHA-256；版本号从 `app/build.gradle.kts` 读取。
 

@@ -112,20 +112,26 @@
     </string-array>
 
     <!-- 書房 -->
-    <string name="study_poetry_tab">詩詞</string>
+    <string name="study_literature_tab">詩文</string>
+    <string name="literature_kind_poem">詩</string>
+    <string name="literature_kind_ci">詞</string>
+    <string name="literature_kind_qu">曲</string>
+    <string name="literature_chapters">目錄</string>
+    <string name="literature_kind_prose">文</string>
+    <string name="literature_kind_book">典籍</string>
+    <string name="literature_filter_all">全部</string>
+    <string name="literature_filter_favorites">收藏</string>
+    <string name="literature_search_hint">搜尋篇名、作者或原文</string>
+    <string name="literature_empty_title">沒有找到作品</string>
+    <string name="literature_empty_subtitle">換個關鍵字或篩選條件試試</string>
+    <string name="literature_favorite_add">收藏作品</string>
+    <string name="literature_favorite_remove">取消收藏</string>
+    <string name="poetry_notes">字詞注釋</string>
+    <string name="literature_content_pending">本篇的注釋、意譯與賞析尚未完善，目前僅提供原文。</string>
     <string name="study_english_tab">英語</string>
     <string name="poetry_intro">慢慢讀一首，不求背誦，不設打卡，也不替感受評分。</string>
     <string name="poetry_translation">白話意譯</string>
     <string name="poetry_appreciation">賞析</string>
-    <string name="poem_theme_longing">思鄉</string>
-    <string name="poem_theme_self">自處</string>
-    <string name="poem_theme_life">人生</string>
-    <string name="poem_quiet_night_translation">月光灑在床前，明亮得像是地上結了一層霜。抬頭望向明月，再低下頭，故鄉便湧上心頭。</string>
-    <string name="poem_quiet_night_appreciation">四句樸素的話，裝著一次很小的動作：先抬頭看人人共有的月亮，再低頭回到只屬於自己的思念。詩意不在奇巧，而在故鄉直到最後才出現，安靜卻有分量。</string>
-    <string name="poem_drinking_wine_translation">住在人群之中，卻聽不見車馬的喧鬧。為什麼能做到？心若遠離了紛擾，所在之處自然顯得僻靜。在東籬下採菊，悠然間看見南山。傍晚山色正好，飛鳥結伴歸來。其中自有真意，想要分辨說明時，卻已經忘了語言。</string>
-    <string name="poem_drinking_wine_appreciation">「遠」不是逃到某個地方，而是重新安排自己的心。菊花、南山與歸鳥並非完美生活的裝飾；當心不再被喧聲牽著走，它們才重新變得可見。</string>
-    <string name="poem_calming_waves_translation">不必理會雨點穿林打葉的聲音，不妨一邊吟詠長嘯，一邊慢慢走。竹杖草鞋，輕便得勝過騎馬。有什麼可怕？披一件蓑衣，就任憑一生煙雨。微寒的春風吹醒酒意，山頭斜陽卻迎面而來。回望方才蕭瑟的地方，回去吧，心中已無所謂風雨，也無所謂晴。</string>
-    <string name="poem_calming_waves_appreciation">轉折並不在於雨停了：寒意仍在，陽光也只在山頭出現。自由來自不再讓天氣替整段路下定義。風雨與晴朗都會經過，卻都不能獨占人生的最終解釋權。</string>
     <string name="english_intro">讀真實的英漢短文，點有顏色的詞語查看釋義與例句；不設連續天數，也不評定成績。</string>
     <string name="english_bilingual_reading">雙語閱讀 · 點詞學習</string>
     <string name="english_tap_hint">點一下有顏色的詞語，查看釋義與例句。</string>

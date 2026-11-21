@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Warning
@@ -237,6 +238,28 @@ fun LoadMoreOnScroll(
                 // NOTE: `canLoad` 只在**发信号的那一刻**读一次，不参与信号本身。某一页没加进任何
                 // 内容时 total 不变、信号不重放，就不会在原地循环请求；Loading / Failed 期间它
                 // 自然是 false，所以既不会重入也不会失败后偷偷重试。
+                if (canLoad && total > 0 && total - 1 - last <= LoadMorePrefetchItems) load()
+            }
+    }
+}
+
+
+/** LazyColumn 与网格共用同一套末尾预取语义。 */
+@Composable
+fun LoadMoreOnScroll(
+    state: LazyListState,
+    enabled: Boolean,
+    onLoadMore: () -> Unit,
+) {
+    val canLoad by rememberUpdatedState(enabled)
+    val load by rememberUpdatedState(onLoadMore)
+    LaunchedEffect(state) {
+        snapshotFlow {
+            val layout = state.layoutInfo
+            layout.totalItemsCount to (layout.visibleItemsInfo.lastOrNull()?.index ?: -1)
+        }
+            .distinctUntilChanged()
+            .collect { (total, last) ->
                 if (canLoad && total > 0 && total - 1 - last <= LoadMorePrefetchItems) load()
             }
     }

@@ -36,8 +36,10 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import app.missu.data.api.MissavApi
 import app.missu.data.api.VideoListOptions
+import app.missu.data.literature.LiteratureRepository
 import app.missu.data.store.ListQueryStore
 import app.missu.data.store.ListSortStore
+import app.missu.data.store.LiteratureStore
 import app.missu.data.store.SearchHistoryStore
 import app.missu.ui.account.AccountScreen
 import app.missu.ui.account.AuthViewModel
@@ -56,6 +58,7 @@ import app.missu.ui.search.SearchBody
 import app.missu.ui.search.SearchHost
 import app.missu.ui.search.SearchUiState
 import app.missu.ui.search.SearchViewModel
+import app.missu.ui.study.LiteratureViewModel
 import app.missu.ui.study.StudyScreen
 
 internal const val TABS_ROUTE = "tabs"
@@ -82,9 +85,11 @@ internal fun TabsHost(
     tabRoute: String,
     onTabChange: (String) -> Unit,
     api: MissavApi,
+    literatureRepository: LiteratureRepository,
     searchHistory: SearchHistoryStore,
     listSortStore: ListSortStore,
     listQueryStore: ListQueryStore,
+    literatureStore: LiteratureStore,
     auth: AuthViewModel,
     onOpenDetail: (String, String?, String) -> Unit,
     onOpenList: (String, String) -> Unit,
@@ -167,9 +172,27 @@ internal fun TabsHost(
                 }
 
                 "study" -> {
+                    val literatureViewModel: LiteratureViewModel = viewModel(
+                        factory = missuViewModelFactory {
+                            LiteratureViewModel(literatureRepository, literatureStore)
+                        },
+                    )
+                    val literatureState by literatureViewModel.state.collectAsStateWithLifecycle()
+                    val query by literatureViewModel.query.collectAsStateWithLifecycle()
+                    val filter by literatureViewModel.filter.collectAsStateWithLifecycle()
+                    val favorites by literatureStore.favorites.collectAsStateWithLifecycle()
                     PageSurface(card = false) {
                         StudyScreen(
-                            onOpenPoem = { navController.navigate("poem/$it") },
+                            literatureState = literatureState,
+                            query = query,
+                            filter = filter,
+                            favorites = favorites,
+                            onQueryChange = literatureViewModel::setQuery,
+                            onFilterChange = literatureViewModel::setFilter,
+                            onToggleFavorite = literatureStore::toggleFavorite,
+                            onLoadMore = literatureViewModel::loadMore,
+                            onRetry = literatureViewModel::refresh,
+                            onOpenLiterature = { navController.navigate("literature/$it") },
                             onOpenEnglish = { navController.navigate("english/$it") },
                         )
                     }

@@ -14,12 +14,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import app.missu.R
+import app.missu.data.literature.LiteratureFilter
 import app.missu.ui.components.PageTopBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StudyScreen(
-    onOpenPoem: (String) -> Unit,
+    literatureState: LiteratureUiState,
+    query: String,
+    filter: LiteratureFilter,
+    favorites: Set<String>,
+    onQueryChange: (String) -> Unit,
+    onFilterChange: (LiteratureFilter) -> Unit,
+    onToggleFavorite: (String) -> Unit,
+    onLoadMore: () -> Unit,
+    onRetry: () -> Unit,
+    onOpenLiterature: (String) -> Unit,
     onOpenEnglish: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -30,7 +40,7 @@ fun StudyScreen(
             Tab(
                 selected = selectedTab == 0,
                 onClick = { selectedTab = 0 },
-                text = { Text(stringResource(R.string.study_poetry_tab)) },
+                text = { Text(stringResource(R.string.study_literature_tab)) },
             )
             Tab(
                 selected = selectedTab == 1,
@@ -39,7 +49,18 @@ fun StudyScreen(
             )
         }
         when (selectedTab) {
-            0 -> PoetryList(onOpen = onOpenPoem)
+            0 -> LiteratureList(
+                state = literatureState,
+                query = query,
+                filter = filter,
+                favorites = favorites,
+                onQueryChange = onQueryChange,
+                onFilterChange = onFilterChange,
+                onToggleFavorite = onToggleFavorite,
+                onLoadMore = onLoadMore,
+                onRetry = onRetry,
+                onOpen = onOpenLiterature,
+            )
             else -> EnglishList(onOpen = onOpenEnglish)
         }
     }
