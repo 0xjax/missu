@@ -2,11 +2,8 @@
 
 package app.missu.ui.home
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,7 +19,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.outlined.List
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
@@ -31,9 +27,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
-import androidx.compose.material3.carousel.CarouselDefaults
-import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
-import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -42,16 +35,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.missu.R
 import app.missu.data.model.HomeSection
-import app.missu.data.model.VideoSummary
 import app.missu.ui.common.UiMessage
 import app.missu.ui.common.text
 import app.missu.ui.components.ErrorHint
@@ -60,10 +47,7 @@ import app.missu.ui.components.LocalVideoListColumns
 import app.missu.ui.components.PageStateTransition
 import app.missu.ui.components.TooltipIconButton
 import app.missu.ui.components.VideoGridCard
-import app.missu.ui.components.heroKeyFor
-import app.missu.ui.components.videoHero
 import app.missu.ui.search.LocalSearchBarInset
-import coil3.compose.AsyncImage
 
 private const val SECTION_PREVIEW_ROWS = 3
 
@@ -155,11 +139,10 @@ private fun HomeContent(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                sections.forEachIndexed { index, section ->
+                sections.forEach { section ->
                     homeSection(
                         section = section,
                         columns = columns,
-                        carousel = index == 0,
                         onMore = section.morePath?.let { path -> { onOpenList(path, section.title) } },
                         refreshingRandom = refreshingRandom,
                         onRefreshRandom = onRefreshRandom.takeIf { section.id == "random" },
@@ -175,7 +158,6 @@ private fun HomeContent(
 private fun LazyGridScope.homeSection(
     section: HomeSection,
     columns: Int,
-    carousel: Boolean,
     onMore: (() -> Unit)?,
     onOpen: (id: String, thumbnail: String?, heroTag: String) -> Unit,
     refreshingRandom: Boolean = false,
@@ -190,21 +172,15 @@ private fun LazyGridScope.homeSection(
         )
     }
 
-    if (carousel) {
-        item(key = "carousel-${section.id}", span = { GridItemSpan(maxLineSpan) }) {
-            RecommendedCarousel(videos = section.videos, heroTag = section.id, onOpen = onOpen)
-        }
-    } else {
-        items(
-            items = section.videos.take(SECTION_PREVIEW_ROWS * columns),
-            key = { video -> "${section.id}-${video.id}" },
-        ) { video ->
-            VideoGridCard(
-                video = video,
-                heroTag = section.id,
-                onClick = { onOpen(video.id, video.thumbnailUrl, section.id) },
-            )
-        }
+    items(
+        items = section.videos.take(SECTION_PREVIEW_ROWS * columns),
+        key = { video -> "${section.id}-${video.id}" },
+    ) { video ->
+        VideoGridCard(
+            video = video,
+            heroTag = section.id,
+            onClick = { onOpen(video.id, video.thumbnailUrl, section.id) },
+        )
     }
 }
 
@@ -245,61 +221,3 @@ private fun HomeSectionHeader(
     }
 }
 
-@Composable
-private fun RecommendedCarousel(
-    videos: List<VideoSummary>,
-    heroTag: String,
-    onOpen: (id: String, thumbnail: String?, heroTag: String) -> Unit,
-) {
-    if (videos.isEmpty()) return
-    val state = rememberCarouselState(itemCount = { videos.size })
-
-    HorizontalMultiBrowseCarousel(
-        state = state,
-        preferredItemWidth = 264.dp,
-        modifier = Modifier.fillMaxWidth().height(200.dp),
-        flingBehavior = CarouselDefaults.multiBrowseFlingBehavior(state),
-    ) { index ->
-        val video = videos[index]
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .videoHero(heroKeyFor(heroTag, video.id), MaterialTheme.shapes.large)
-                .clip(MaterialTheme.shapes.large)
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                .clickable { onOpen(video.id, video.thumbnailUrl, heroTag) },
-        ) {
-            AsyncImage(
-                model = video.thumbnailUrl,
-                contentDescription = video.title,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(Color.Transparent, Color(0x00000000), Color(0xD9000000)),
-                        ),
-                    ),
-            )
-            Column(modifier = Modifier.align(Alignment.BottomStart).padding(12.dp)) {
-                Text(
-                    text = video.title,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                video.duration?.let { duration ->
-                    Text(
-                        text = duration,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White.copy(alpha = 0.85f),
-                    )
-                }
-            }
-        }
-    }
-}
