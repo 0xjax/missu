@@ -56,11 +56,14 @@ import app.missu.data.comic.ComicSource
 import app.missu.data.model.VideoListQuery
 import app.missu.data.store.AppLanguage
 import app.missu.data.store.ColorSource
+import app.missu.data.store.ComicFavoriteStore
+import app.missu.data.store.ComicHistoryStore
 import app.missu.data.store.CredentialStore
 import app.missu.data.store.HistoryStore
 import app.missu.data.store.ListHistoryStore
 import app.missu.data.store.ListQueryStore
 import app.missu.data.store.ListSortStore
+import app.missu.data.store.LiteratureHistoryStore
 import app.missu.data.store.LiteratureStore
 import app.missu.data.store.ProfileStore
 import app.missu.data.store.SearchHistoryStore
@@ -294,6 +297,12 @@ private fun MissuApp(
     val historyStore = remember { HistoryStore(context.applicationContext) }
     val listHistoryStore = remember { ListHistoryStore(context.applicationContext) }
     val searchHistory = remember { SearchHistoryStore(context.applicationContext) }
+    val comicSearchHistory = remember {
+        SearchHistoryStore(context.applicationContext, "missu:comic-search-history")
+    }
+    val comicHistoryStore = remember { ComicHistoryStore(context.applicationContext) }
+    val comicFavoriteStore = remember { ComicFavoriteStore(context.applicationContext) }
+    val literatureHistoryStore = remember { LiteratureHistoryStore(context.applicationContext) }
     val listSortStore = remember { ListSortStore(context.applicationContext) }
     val literatureStore = remember { LiteratureStore(context.applicationContext) }
     val backStackEntry = navController.currentBackStackEntryAsState()
@@ -360,10 +369,10 @@ private fun MissuApp(
                     comicRepository = dependencies.comicRepository,
                     literatureRepository = literatureRepository,
                     searchHistory = searchHistory,
+                    comicSearchHistory = comicSearchHistory,
                     listSortStore = listSortStore,
                     listQueryStore = listQueryStore,
                     literatureStore = literatureStore,
-                    auth = auth,
                     onOpenDetail = ::openDetail,
                     onOpenList = ::openList,
                     onOpenComic = ::openComic,
@@ -382,6 +391,9 @@ private fun MissuApp(
                 historyStore = historyStore,
                 listHistoryStore = listHistoryStore,
                 searchHistory = searchHistory,
+                comicHistoryStore = comicHistoryStore,
+                comicFavoriteStore = comicFavoriteStore,
+                literatureHistoryStore = literatureHistoryStore,
                 listSortStore = listSortStore,
                 listQueryStore = listQueryStore,
                 literatureStore = literatureStore,

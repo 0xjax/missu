@@ -6,9 +6,8 @@ import app.missu.data.comic.ComicFeed
 import app.missu.data.comic.ComicListPage
 import app.missu.data.comic.ComicRepository
 import app.missu.data.comic.ComicSource
-import app.missu.data.comic.ComicSummary
-import app.missu.data.comic.KalamCategory
 import app.missu.data.store.ComicSourceStore
+import app.missu.data.store.SearchHistory
 import app.missu.ui.common.LoadMoreState
 import app.missu.ui.common.UiMessage
 import app.missu.ui.common.toUiMessage
@@ -24,15 +23,21 @@ sealed interface ComicListUiState {
     data object Empty : ComicListUiState
     data class Error(val message: UiMessage) : ComicListUiState
     data class Content(
-        val items: List<ComicSummary>,
+        val items: List<app.missu.data.comic.ComicSummary>,
         val nextPage: Int?,
         val more: LoadMoreState = LoadMoreState.Idle,
     ) : ComicListUiState
 }
 
+enum class ComicSearchScope {
+    CURRENT,
+    ALL,
+}
+
 class ComicNavigationViewModel(
     private val repository: ComicRepository,
     private val store: ComicSourceStore,
+    private val history: SearchHistory,
 ) : ViewModel() {
     private val _source = MutableStateFlow(store.source())
     val source: StateFlow<ComicSource> = _source.asStateFlow()
@@ -40,8 +45,8 @@ class ComicNavigationViewModel(
     private val _feed = MutableStateFlow(ComicFeed.POPULAR)
     val feed: StateFlow<ComicFeed> = _feed.asStateFlow()
 
-    private val _category = MutableStateFlow(KalamCategory.ALL)
-    val category: StateFlow<KalamCategory> = _category.asStateFlow()
+    private val _category = MutableStateFlow(app.missu.data.comic.KalamCategory.ALL)
+    val category: StateFlow<app.missu.data.comic.KalamCategory> = _category.asStateFlow()
 
     private val _listState = MutableStateFlow<ComicListUiState>(ComicListUiState.Loading)
     val listState: StateFlow<ComicListUiState> = _listState.asStateFlow()
@@ -49,11 +54,21 @@ class ComicNavigationViewModel(
     private val _searchState = MutableStateFlow<ComicListUiState>(ComicListUiState.Empty)
     val searchState: StateFlow<ComicListUiState> = _searchState.asStateFlow()
 
+    private val _aggregateSearchState = MutableStateFlow<Map<ComicSource, ComicListUiState>>(emptyMap())
+    val aggregateSearchState: StateFlow<Map<ComicSource, ComicListUiState>> = _aggregateSearchState.asStateFlow()
+
+    private val _searchScope = MutableStateFlow(ComicSearchScope.CURRENT)
+    val searchScope: StateFlow<ComicSearchScope> = _searchScope.asStateFlow()
+
     private val _keyword = MutableStateFlow("")
     val keyword: StateFlow<String> = _keyword.asStateFlow()
 
+    private val _recent = MutableStateFlow(history.recent())
+    val recent: StateFlow<List<String>> = _recent.asStateFlow()
+
     private var listJob: Job? = null
     private var searchJob: Job? = null
+    private val aggregateJobs = mutableMapOf<ComicSource, Job>()
 
     fun load() {
         if (_listState.value !is ComicListUiState.Loading) return
@@ -68,14 +83,13 @@ class ComicNavigationViewModel(
     fun setSource(value: ComicSource) {
         if (_source.value == value) return
         listJob?.cancel()
-        searchJob?.cancel()
+        cancelSearch()
         store.setSource(value)
         _source.value = value
         _feed.value = ComicFeed.POPULAR
-        _category.value = KalamCategory.ALL
+        _category.value = app.missu.data.comic.KalamCategory.ALL
         _listState.value = ComicListUiState.Loading
-        _searchState.value = ComicListUiState.Empty
-        _keyword.value = ""
+        clearSearchState()
         load()
     }
 
@@ -86,7 +100,7 @@ class ComicNavigationViewModel(
         load()
     }
 
-    fun setCategory(value: KalamCategory) {
+    fun setCategory(value: app.missu.data.comic.KalamCategory) {
         if (_category.value == value || _source.value != ComicSource.KALAM) return
         _category.value = value
         _listState.value = ComicListUiState.Loading
@@ -97,17 +111,57 @@ class ComicNavigationViewModel(
         val value = query.trim()
         if (value.isEmpty()) return
         _keyword.value = value
-        _searchState.value = ComicListUiState.Loading
         loadSearch(value, page = 1, append = false)
     }
 
+    fun setSearchScope(value: ComicSearchScope) {
+        if (_searchScope.value == value) return
+        _searchScope.value = value
+        _keyword.value.takeIf { it.isNotBlank() }?.let { loadSearch(it, page = 1, append = false) }
+    }
+
+    fun openSourceSearch(value: ComicSource) {
+        store.setSource(value)
+        _source.value = value
+        _feed.value = ComicFeed.POPULAR
+        _category.value = app.missu.data.comic.KalamCategory.ALL
+        _listState.value = ComicListUiState.Loading
+        _searchScope.value = ComicSearchScope.CURRENT
+        _keyword.value.takeIf { it.isNotBlank() }?.let { loadSearch(it, page = 1, append = false) }
+    }
+
+    fun retrySourceSearch(value: ComicSource) {
+        val query = _keyword.value.takeIf { it.isNotBlank() } ?: return
+        aggregateJobs.remove(value)?.cancel()
+        _aggregateSearchState.value = _aggregateSearchState.value + (value to ComicListUiState.Loading)
+        aggregateJobs[value] = viewModelScope.launch { loadAggregateSource(value, query) }
+    }
+
     fun clearSearch() {
-        searchJob?.cancel()
+        cancelSearch()
+        clearSearchState()
+    }
+
+    fun clearSearchHistory() {
+        history.clear()
+        _recent.value = emptyList()
+    }
+
+    private fun clearSearchState() {
         _keyword.value = ""
         _searchState.value = ComicListUiState.Empty
+        _aggregateSearchState.value = emptyMap()
+        _searchScope.value = ComicSearchScope.CURRENT
+    }
+
+    private fun cancelSearch() {
+        searchJob?.cancel()
+        aggregateJobs.values.forEach { it.cancel() }
+        aggregateJobs.clear()
     }
 
     fun loadMore(search: Boolean = false) {
+        if (search && _searchScope.value == ComicSearchScope.ALL) return
         val state = if (search) _searchState.value else _listState.value
         val content = state as? ComicListUiState.Content ?: return
         val next = content.nextPage ?: return
@@ -143,14 +197,30 @@ class ComicNavigationViewModel(
     }
 
     private fun loadSearch(query: String, page: Int, append: Boolean) {
-        searchJob?.cancel()
+        cancelSearch()
+        if (_searchScope.value == ComicSearchScope.ALL) {
+            _aggregateSearchState.value = repository.available.associate { it.source to ComicListUiState.Loading }
+            repository.available.forEach { api ->
+                aggregateJobs[api.source] = viewModelScope.launch { loadAggregateSource(api.source, query) }
+            }
+            return
+        }
+        loadCurrentSearch(query, page, append)
+    }
+
+    private fun loadCurrentSearch(query: String, page: Int, append: Boolean) {
         val previous = _searchState.value as? ComicListUiState.Content
-        if (append && previous != null) _searchState.value = previous.copy(more = LoadMoreState.Loading)
+        _searchState.value = if (append && previous != null) {
+            previous.copy(more = LoadMoreState.Loading)
+        } else {
+            ComicListUiState.Loading
+        }
         val source = _source.value
         searchJob = viewModelScope.launch {
             runCatching {
                 repository[source].search(query, page)
             }.onSuccess { result ->
+                recordSearch(query)
                 _searchState.value = result.toState(previous, append)
             }.onFailure { error ->
                 if (error is CancellationException) throw error
@@ -161,6 +231,24 @@ class ComicNavigationViewModel(
                 }
             }
         }
+    }
+
+    private suspend fun loadAggregateSource(source: ComicSource, query: String) {
+        val result = runCatching { repository[source].search(query, 1) }
+        result.onSuccess { page ->
+            recordSearch(query)
+            _aggregateSearchState.value = _aggregateSearchState.value +
+                (source to page.toState(previous = null, append = false))
+        }.onFailure { error ->
+            if (error is CancellationException) throw error
+            _aggregateSearchState.value = _aggregateSearchState.value +
+                (source to ComicListUiState.Error(error.toUiMessage()))
+        }
+    }
+
+    private fun recordSearch(query: String) {
+        history.record(query)
+        _recent.value = history.recent()
     }
 
     private fun ComicListPage.toState(previous: ComicListUiState.Content?, append: Boolean): ComicListUiState {

@@ -53,14 +53,12 @@ import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.PageStateTransition
-import app.missu.ui.components.PageTopBar
 
 @Composable
-fun PlaylistsScreen(
+fun PlaylistsContent(
     state: PlaylistsUiState,
     onRetry: () -> Unit,
     onOpen: (PlaylistSummary) -> Unit,
-    onBack: () -> Unit,
     modifier: Modifier = Modifier,
     createMessage: UiMessage? = null,
     creating: Boolean = false,
@@ -70,8 +68,6 @@ fun PlaylistsScreen(
     var fabExpanded by rememberSaveable { mutableStateOf(false) }
 
     Column(modifier.fillMaxSize()) {
-        PageTopBar(title = stringResource(R.string.playlists_title), onBack = onBack)
-
         if (dialogOpen) {
             CreateDialog(
                 message = createMessage?.text(),

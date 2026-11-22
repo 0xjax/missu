@@ -1,9 +1,13 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package app.missu.ui.comics
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -11,13 +15,21 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.MenuBook
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
@@ -28,10 +40,11 @@ import app.missu.R
 import app.missu.data.comic.ComicFeed
 import app.missu.data.comic.ComicSource
 import app.missu.data.comic.KalamCategory
-import app.missu.ui.components.EmptyHint
+import app.missu.ui.common.text
 import app.missu.ui.list.VideoOptionMenu
 import app.missu.ui.list.VideoToolbarContainer
 import app.missu.ui.search.LocalSearchBarInset
+import app.missu.ui.search.RecentSearches
 import app.missu.ui.search.SearchHostShell
 import app.missu.ui.search.SearchTopVeil
 import app.missu.ui.search.SearchTriggerHeight
@@ -43,7 +56,10 @@ fun ComicNavigationScreen(
     category: KalamCategory,
     state: ComicListUiState,
     searchState: ComicListUiState,
+    aggregateSearchState: Map<ComicSource, ComicListUiState>,
+    searchScope: ComicSearchScope,
     keyword: String,
+    recent: List<String>,
     onSourceChange: (ComicSource) -> Unit,
     onFeedChange: (ComicFeed) -> Unit,
     onCategoryChange: (KalamCategory) -> Unit,
@@ -52,8 +68,13 @@ fun ComicNavigationScreen(
     onRetry: () -> Unit,
     onSearch: (String) -> Unit,
     onClearSearch: () -> Unit,
+    onClearSearchHistory: () -> Unit,
+    onSearchScopeChange: (ComicSearchScope) -> Unit,
+    onOpenSourceSearch: (ComicSource) -> Unit,
+    onRetrySourceSearch: (ComicSource) -> Unit,
     onSearchLoadMore: () -> Unit,
     onOpen: (ComicSource, String) -> Unit,
+    libraryAction: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     scrollToTopSignal: Int = 0,
 ) {
@@ -66,11 +87,11 @@ fun ComicNavigationScreen(
         initialKeyword = keyword,
         placeholder = stringResource(R.string.comic_search_placeholder),
         inlineTrigger = true,
-        idleContent = {
-            EmptyHint(
-                icon = Icons.Outlined.MenuBook,
-                title = stringResource(R.string.comic_search_hint),
-                subtitle = source.displayName,
+        idleContent = { pick ->
+            RecentSearches(
+                keywords = recent,
+                onPick = pick,
+                onClear = onClearSearchHistory,
             )
         },
     ) { searchAction ->
@@ -87,6 +108,7 @@ fun ComicNavigationScreen(
                 onRetry = onRetry,
                 onLoadMore = onLoadMore,
                 onOpen = onOpen,
+                libraryAction = libraryAction,
                 searchAction = searchAction,
             )
         } else {
@@ -94,8 +116,13 @@ fun ComicNavigationScreen(
                 scrollToTopSignal = scrollToTopSignal,
                 source = source,
                 state = searchState,
+                aggregateState = aggregateSearchState,
+                scope = searchScope,
                 keyword = keyword,
                 onSourceChange = onSourceChange,
+                onScopeChange = onSearchScopeChange,
+                onOpenSourceSearch = onOpenSourceSearch,
+                onRetrySourceSearch = onRetrySourceSearch,
                 onRetry = onSearch,
                 onLoadMore = onSearchLoadMore,
                 onOpen = onOpen,
@@ -118,6 +145,7 @@ private fun ComicBrowseContent(
     onRetry: () -> Unit,
     onLoadMore: () -> Unit,
     onOpen: (ComicSource, String) -> Unit,
+    libraryAction: @Composable () -> Unit,
     searchAction: @Composable () -> Unit,
 ) {
     Box(Modifier.fillMaxSize()) {
@@ -137,6 +165,7 @@ private fun ComicBrowseContent(
             onSourceChange = onSourceChange,
             onFeedChange = onFeedChange,
             onCategoryChange = onCategoryChange,
+            libraryAction = libraryAction,
             searchAction = searchAction,
         )
     }
@@ -147,32 +176,151 @@ private fun ComicSearchResults(
     scrollToTopSignal: Int,
     source: ComicSource,
     state: ComicListUiState,
+    aggregateState: Map<ComicSource, ComicListUiState>,
+    scope: ComicSearchScope,
     keyword: String,
     onSourceChange: (ComicSource) -> Unit,
+    onScopeChange: (ComicSearchScope) -> Unit,
+    onOpenSourceSearch: (ComicSource) -> Unit,
+    onRetrySourceSearch: (ComicSource) -> Unit,
     onRetry: (String) -> Unit,
     onLoadMore: () -> Unit,
     onOpen: (ComicSource, String) -> Unit,
     searchAction: @Composable () -> Unit,
 ) {
     Box(Modifier.fillMaxSize()) {
-        ComicListBody(
-            state = state,
-            onRetry = { onRetry(keyword) },
-            onLoadMore = onLoadMore,
-            onOpen = { onOpen(source, it.id) },
-            contentTopInset = LocalSearchBarInset.current,
-            scrollToTopSignal = scrollToTopSignal,
-        )
+        if (scope == ComicSearchScope.ALL) {
+            ComicAggregateResults(
+                states = aggregateState,
+                scrollToTopSignal = scrollToTopSignal,
+                onOpen = onOpen,
+                onViewAll = onOpenSourceSearch,
+                onRetry = onRetrySourceSearch,
+            )
+        } else {
+            ComicListBody(
+                state = state,
+                onRetry = { onRetry(keyword) },
+                onLoadMore = onLoadMore,
+                onOpen = { onOpen(source, it.id) },
+                contentTopInset = LocalSearchBarInset.current,
+                scrollToTopSignal = scrollToTopSignal,
+            )
+        }
         ComicTopVeil()
-        ComicToolbar(
-            source = source,
-            feed = null,
-            category = KalamCategory.ALL,
-            onSourceChange = onSourceChange,
-            onFeedChange = {},
-            onCategoryChange = {},
-            searchAction = searchAction,
-        )
+        Box(Modifier.fillMaxWidth().padding(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding())) {
+            VideoToolbarContainer {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Row(
+                        Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        if (scope == ComicSearchScope.CURRENT) {
+                            VideoOptionMenu(
+                                text = source.displayName,
+                                options = ComicSource.entries,
+                                selected = source,
+                                onSelect = onSourceChange,
+                                optionLabel = { it.displayName },
+                            )
+                        }
+                        VideoOptionMenu(
+                            text = stringResource(scope.labelRes),
+                            options = ComicSearchScope.entries,
+                            selected = scope,
+                            onSelect = onScopeChange,
+                            optionLabel = { stringResource(it.labelRes) },
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    searchAction()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ComicAggregateResults(
+    states: Map<ComicSource, ComicListUiState>,
+    scrollToTopSignal: Int,
+    onOpen: (ComicSource, String) -> Unit,
+    onViewAll: (ComicSource) -> Unit,
+    onRetry: (ComicSource) -> Unit,
+) {
+    val gridState = rememberLazyGridState()
+    LaunchedEffect(scrollToTopSignal) {
+        if (scrollToTopSignal > 0) gridState.animateScrollToItem(0)
+    }
+    LazyVerticalGrid(
+        state = gridState,
+        modifier = Modifier.fillMaxSize(),
+        columns = GridCells.Fixed(3),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            top = LocalSearchBarInset.current + 12.dp,
+            bottom = 24.dp,
+        ),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        ComicSource.entries.forEach { source ->
+            val state = states[source] ?: ComicListUiState.Loading
+            item(key = "header-${source.id}", span = { GridItemSpan(maxLineSpan) }) {
+                Row(
+                    Modifier.fillMaxWidth().padding(top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = source.displayName,
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (state is ComicListUiState.Content) {
+                        TextButton(onClick = { onViewAll(source) }) {
+                            Text(stringResource(R.string.comic_search_view_all))
+                        }
+                    }
+                }
+            }
+            when (state) {
+                ComicListUiState.Loading -> item(key = "loading-${source.id}", span = { GridItemSpan(maxLineSpan) }) {
+                    Box(Modifier.fillMaxWidth().height(72.dp), contentAlignment = Alignment.Center) {
+                        LoadingIndicator(Modifier.size(36.dp))
+                    }
+                }
+                ComicListUiState.Empty -> item(key = "empty-${source.id}", span = { GridItemSpan(maxLineSpan) }) {
+                    Text(
+                        text = stringResource(R.string.comic_empty),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                is ComicListUiState.Error -> item(key = "error-${source.id}", span = { GridItemSpan(maxLineSpan) }) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = state.message.text(),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(onClick = { onRetry(source) }) {
+                            Text(stringResource(R.string.common_retry))
+                        }
+                    }
+                }
+                is ComicListUiState.Content -> items(
+                    items = state.items.take(3),
+                    key = { "${source.id}:${it.id}" },
+                ) { comic ->
+                    ComicGridCard(comic, onClick = { onOpen(source, comic.id) })
+                }
+            }
+        }
     }
 }
 
@@ -194,6 +342,7 @@ private fun ComicToolbar(
     onSourceChange: (ComicSource) -> Unit,
     onFeedChange: (ComicFeed) -> Unit,
     onCategoryChange: (KalamCategory) -> Unit,
+    libraryAction: @Composable () -> Unit,
     searchAction: @Composable () -> Unit,
 ) {
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
@@ -205,7 +354,10 @@ private fun ComicToolbar(
             ) {
                 ComicOptions(source, feed, category, onSourceChange, onFeedChange, onCategoryChange)
                 Spacer(Modifier.width(12.dp))
-                searchAction()
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    libraryAction()
+                    searchAction()
+                }
             }
         }
     }
@@ -252,6 +404,12 @@ private fun RowScope.ComicOptions(
         }
     }
 }
+
+private val ComicSearchScope.labelRes: Int
+    get() = when (this) {
+        ComicSearchScope.CURRENT -> R.string.comic_search_current_source
+        ComicSearchScope.ALL -> R.string.comic_search_all_sources
+    }
 
 private val KalamCategory.labelRes: Int
     get() = when (this) {

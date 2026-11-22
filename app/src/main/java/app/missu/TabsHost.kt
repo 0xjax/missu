@@ -15,7 +15,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.MenuBook
-import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
@@ -46,8 +45,7 @@ import app.missu.data.store.ListQueryStore
 import app.missu.data.store.ListSortStore
 import app.missu.data.store.LiteratureStore
 import app.missu.data.store.SearchHistoryStore
-import app.missu.ui.account.AccountScreen
-import app.missu.ui.account.AuthViewModel
+import app.missu.ui.components.ContentLibraryButton
 import app.missu.ui.components.PageSurface
 import app.missu.ui.components.ProvideHeroVisibility
 import app.missu.ui.components.underScrim
@@ -65,8 +63,8 @@ import app.missu.ui.search.SearchBody
 import app.missu.ui.search.SearchHost
 import app.missu.ui.search.SearchUiState
 import app.missu.ui.search.SearchViewModel
-import app.missu.ui.study.LiteratureViewModel
-import app.missu.ui.study.StudyScreen
+import app.missu.ui.literature.LiteratureViewModel
+import app.missu.ui.literature.LiteratureNavigationScreen
 
 internal const val TABS_ROUTE = "tabs"
 
@@ -78,10 +76,9 @@ internal data class TopLevel(
 
 internal val topLevels = listOf(
     TopLevel("home", R.string.nav_home, Icons.Outlined.Home),
-    TopLevel("study", R.string.nav_study, Icons.Outlined.AutoStories),
+    TopLevel("literature", R.string.nav_literature, Icons.Outlined.AutoStories),
     TopLevel("videos", R.string.nav_videos, Icons.Outlined.VideoLibrary),
     TopLevel("comics", R.string.nav_comics, Icons.Outlined.MenuBook),
-    TopLevel("account", R.string.nav_account, Icons.Outlined.Person),
 )
 
 @Composable
@@ -96,10 +93,10 @@ internal fun TabsHost(
     comicRepository: ComicRepository,
     literatureRepository: LiteratureRepository,
     searchHistory: SearchHistoryStore,
+    comicSearchHistory: SearchHistoryStore,
     listSortStore: ListSortStore,
     listQueryStore: ListQueryStore,
     literatureStore: LiteratureStore,
-    auth: AuthViewModel,
     onOpenDetail: (String, String?, String) -> Unit,
     onOpenList: (String, String) -> Unit,
     onOpenComic: (app.missu.data.comic.ComicSource, String) -> Unit,
@@ -111,9 +108,10 @@ internal fun TabsHost(
     val context = LocalContext.current
     val comicSourceStore = remember { ComicSourceStore(context.applicationContext) }
     val comicNavigationViewModel: ComicNavigationViewModel = viewModel(
-        factory = missuViewModelFactory { ComicNavigationViewModel(comicRepository, comicSourceStore) },
+        factory = missuViewModelFactory {
+            ComicNavigationViewModel(comicRepository, comicSourceStore, comicSearchHistory)
+        },
     )
-    val authState by auth.state.collectAsStateWithLifecycle()
     var tabReselectVersion by remember { mutableIntStateOf(0) }
 
     val startTab = topLevels.first().route
@@ -163,12 +161,13 @@ internal fun TabsHost(
                                 scrollToTopSignal = tabReselectVersion,
                                 onOpenGuide = { navController.navigate("guide/$it") },
                                 onOpenVideos = { onTabChange("videos") },
+                                onOpenAccount = { navController.navigate("account") },
                             )
                         }
                     }
                 }
 
-                "study" -> {
+                "literature" -> {
                     val literatureViewModel: LiteratureViewModel = viewModel(
                         factory = missuViewModelFactory {
                             LiteratureViewModel(literatureRepository, literatureStore)
@@ -179,7 +178,7 @@ internal fun TabsHost(
                     val filter by literatureViewModel.filter.collectAsStateWithLifecycle()
                     val favorites by literatureStore.favorites.collectAsStateWithLifecycle()
                     PageSurface(card = false) {
-                        StudyScreen(
+                        LiteratureNavigationScreen(
                             scrollToTopSignal = tabReselectVersion,
                             literatureState = literatureState,
                             query = query,
@@ -191,7 +190,12 @@ internal fun TabsHost(
                             onLoadMore = literatureViewModel::loadMore,
                             onRetry = literatureViewModel::refresh,
                             onOpenLiterature = { navController.navigate("literature/$it") },
-                            onOpenEnglish = { navController.navigate("english/$it") },
+                            libraryAction = {
+                                ContentLibraryButton(
+                                    contentDescription = stringResource(R.string.literature_library_title),
+                                    onClick = { navController.navigate("literature-library") },
+                                )
+                            },
                         )
                     }
                 }
@@ -237,6 +241,12 @@ internal fun TabsHost(
                                         scrollToTopSignal = tabReselectVersion,
                                         states = states,
                                         searchAction = searchAction,
+                                        libraryAction = {
+                                            ContentLibraryButton(
+                                                contentDescription = stringResource(R.string.video_library_title),
+                                                onClick = { navController.navigate("video-library") },
+                                            )
+                                        },
                                         sort = sort,
                                         filters = filters,
                                         refreshingKinds = refreshingKinds,
@@ -293,7 +303,10 @@ internal fun TabsHost(
                     val category by comicNavigationViewModel.category.collectAsStateWithLifecycle()
                     val comicState by comicNavigationViewModel.listState.collectAsStateWithLifecycle()
                     val comicSearchState by comicNavigationViewModel.searchState.collectAsStateWithLifecycle()
+                    val comicAggregateState by comicNavigationViewModel.aggregateSearchState.collectAsStateWithLifecycle()
+                    val comicSearchScope by comicNavigationViewModel.searchScope.collectAsStateWithLifecycle()
                     val comicKeyword by comicNavigationViewModel.keyword.collectAsStateWithLifecycle()
+                    val comicRecent by comicNavigationViewModel.recent.collectAsStateWithLifecycle()
                     PageSurface(card = false, contentInset = false) {
                         ComicNavigationScreen(
                             scrollToTopSignal = tabReselectVersion,
@@ -302,7 +315,10 @@ internal fun TabsHost(
                             category = category,
                             state = comicState,
                             searchState = comicSearchState,
+                            aggregateSearchState = comicAggregateState,
+                            searchScope = comicSearchScope,
                             keyword = comicKeyword,
+                            recent = comicRecent,
                             onSourceChange = comicNavigationViewModel::setSource,
                             onFeedChange = comicNavigationViewModel::setFeed,
                             onCategoryChange = comicNavigationViewModel::setCategory,
@@ -311,23 +327,18 @@ internal fun TabsHost(
                             onRetry = comicNavigationViewModel::refresh,
                             onSearch = comicNavigationViewModel::search,
                             onClearSearch = comicNavigationViewModel::clearSearch,
+                            onClearSearchHistory = comicNavigationViewModel::clearSearchHistory,
+                            onSearchScopeChange = comicNavigationViewModel::setSearchScope,
+                            onOpenSourceSearch = comicNavigationViewModel::openSourceSearch,
+                            onRetrySourceSearch = comicNavigationViewModel::retrySourceSearch,
                             onSearchLoadMore = { comicNavigationViewModel.loadMore(search = true) },
                             onOpen = onOpenComic,
-                        )
-                    }
-                }
-
-                "account" -> {
-                    PageSurface(card = false) {
-                        AccountScreen(
-                            scrollToTopSignal = tabReselectVersion,
-                            state = authState,
-                            onLogin = { navController.navigate("login") },
-                            onSaved = { navController.navigate("saved") },
-                            onHistory = { navController.navigate("history") },
-                            onPlaylists = { navController.navigate("playlists") },
-                            onSettings = { navController.navigate("settings") },
-                            onLogout = auth::logout,
+                            libraryAction = {
+                                ContentLibraryButton(
+                                    contentDescription = stringResource(R.string.comic_history_title),
+                                    onClick = { navController.navigate("comic-library") },
+                                )
+                            },
                         )
                     }
                 }

@@ -11,7 +11,7 @@
 
     <!-- ボトムタブ -->
     <string name="nav_home">ホーム</string>
-    <string name="nav_study">書斎</string>
+    <string name="nav_literature">詩文</string>
     <string name="nav_videos">動画</string>
     <string name="nav_comics">漫画</string>
     <string name="nav_account">マイページ</string>
@@ -35,6 +35,19 @@
     <string name="comic_page_number">%1$d ページ</string>
     <string name="comic_order_ascending">昇順</string>
     <string name="comic_order_descending">降順</string>
+    <string name="comic_history_title">漫画の記録</string>
+    <string name="comic_history_empty_title">閲覧履歴はまだありません</string>
+    <string name="comic_history_empty_subtitle">話を開くと、読んだ位置がここに記録されます</string>
+    <string name="comic_history_page">%1$d ページ</string>
+    <string name="comic_reading_history_tab">閲覧履歴</string>
+    <string name="comic_favorites_tab">お気に入り</string>
+    <string name="comic_favorite_add">お気に入りに追加</string>
+    <string name="comic_favorite_remove">お気に入りから削除</string>
+    <string name="comic_favorites_empty_title">お気に入りはまだありません</string>
+    <string name="comic_favorites_empty_subtitle">漫画の詳細ページで追加すると、ここに表示されます</string>
+    <string name="comic_search_current_source">現在のソース</string>
+    <string name="comic_search_all_sources">すべてのソース</string>
+    <string name="comic_search_view_all">すべて見る</string>
 
     <!-- マイページ -->
     <string name="account_title">マイページ</string>
@@ -72,6 +85,7 @@
     <string name="history_lists_empty_subtitle">開いた動画一覧がここに表示されます</string>
     <string name="history_pin_list">一覧を固定</string>
     <string name="history_unpin_list">一覧の固定を解除</string>
+    <string name="video_library_title">動画ライブラリ</string>
 
     <!-- 一覧 -->
     <string name="list_empty_title">まだ何もありません</string>
@@ -94,7 +108,7 @@
     <string name="home_intro_title">今日は何に心を向けたい？</string>
     <string name="home_intro_body">欲求に抗う必要も、すべての時間を渡す必要もありません。短い読み物から始めて、理解・つながり・興味も選択肢に加えましょう。</string>
     <string name="home_guides_title">今読みたい、小さなガイド</string>
-    <string name="home_videos_title">動画ライブラリ</string>
+    <string name="home_videos_title">動画を見る</string>
     <string name="home_videos_body">見たいときに自分から開けます。ホームでアダルト動画はおすすめしません。</string>
     <string name="guide_read_time">約 3 分</string>
     <string name="guide_desire_category">自分を理解する</string>
@@ -129,7 +143,6 @@
     </string-array>
 
     <!-- 書斎 -->
-    <string name="study_literature_tab">詩文</string>
     <string name="literature_kind_poem">詩</string>
     <string name="literature_kind_ci">詞</string>
     <string name="literature_kind_qu">曲</string>
@@ -143,24 +156,16 @@
     <string name="literature_empty_subtitle">別の言葉や条件でお試しください</string>
     <string name="literature_favorite_add">お気に入りに追加</string>
     <string name="literature_favorite_remove">お気に入りから削除</string>
+    <string name="literature_library_title">詩文の記録</string>
+    <string name="literature_history_tab">閲覧履歴</string>
+    <string name="literature_favorites_tab">お気に入り</string>
+    <string name="literature_history_empty_title">閲覧履歴はまだありません</string>
+    <string name="literature_history_empty_subtitle">開いた作品がここに表示されます</string>
     <string name="poetry_notes">語句の注釈</string>
     <string name="literature_content_pending">本篇の注釈・現代語訳・鑑賞はまだありません。原文を表示しています。</string>
-    <string name="study_english_tab">英語</string>
     <string name="poetry_intro">一編をゆっくり読みます。暗唱の課題も、継続日数も、採点もありません。</string>
     <string name="poetry_translation">現代語訳</string>
     <string name="poetry_appreciation">鑑賞</string>
-    <string name="english_intro">英語と中国語の文章を読み、色のついた語をタップして意味と例を確かめます。継続日数や成績はありません。</string>
-    <string name="english_bilingual_reading">バイリンガル読書 · タップして学ぶ</string>
-    <string name="english_tap_hint">色のついた単語をタップすると、意味と例を表示します。</string>
-    <string name="english_example">例文・表現</string>
-    <string name="vocab_urge">名詞：衝動、強い欲求。すぐに何かをしたいという内側の押し動かす力。</string>
-    <string name="vocab_conscious">形容詞：意識的な。はっきり気づき、自分から選んで行うこと。</string>
-    <string name="vocab_inertia">名詞：慣性、惰性。新しい選択をせず、同じ行動を続ける傾向。</string>
-    <string name="vocab_recognise">動詞：識別する、気づく。感情を見分け、それが何かを理解すること。</string>
-    <string name="vocab_consumption">名詞：消費。ここでは能動的に関わらず、コンテンツを受け身で取り込むこと。</string>
-    <string name="vocab_concrete">形容詞：具体的な、明確な。曖昧ではないこと。</string>
-    <string name="vocab_prestigious">形容詞：名門の、声望のある。地位や評判ゆえに尊重されること。</string>
-    <string name="vocab_nourish">動詞：育む、滋養を与える。成長に必要なものを与え、支えること。</string>
 
     <!-- 検索 -->
     <string name="search_open">検索を開く</string>
@@ -282,9 +287,7 @@
     <string name="settings_video_list_double">2列</string>
 
     <!-- 再生 -->
-    <string name="settings_playback">再生</string>
     <string name="settings_autoplay">自動再生</string>
-    <string name="settings_autoplay_note">オフにすると、動画は最初のフレームで停止した状態で開きます</string>
     <string name="settings_language_system">端末の設定に合わせる</string>
     <string name="settings_language_note">アプリの表示言語と、サイトから取得するコンテンツの言語をまとめて切り替えます。未対応の言語では表示が英語になり、コンテンツは端末の言語のままになります。</string>
 

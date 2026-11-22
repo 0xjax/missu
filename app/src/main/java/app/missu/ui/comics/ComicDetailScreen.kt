@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.MenuBook
@@ -47,12 +49,15 @@ import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.PageStateTransition
 import app.missu.ui.components.PageTopBar
+import app.missu.ui.components.TooltipIconButton
 
 @Composable
 fun ComicDetailScreen(
     sourceName: String,
     state: ComicDetailUiState,
     chapterDescending: Boolean,
+    favorite: Boolean,
+    onToggleFavorite: () -> Unit,
     onToggleChapterOrder: () -> Unit,
     onRetry: () -> Unit,
     onBack: () -> Unit,
@@ -60,7 +65,20 @@ fun ComicDetailScreen(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxSize()) {
-        PageTopBar(title = (state as? ComicDetailUiState.Content)?.detail?.title ?: sourceName, onBack = onBack)
+        PageTopBar(
+            title = (state as? ComicDetailUiState.Content)?.detail?.title ?: sourceName,
+            onBack = onBack,
+            actions = {
+                TooltipIconButton(
+                    icon = if (favorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                    contentDescription = stringResource(
+                        if (favorite) R.string.comic_favorite_remove else R.string.comic_favorite_add,
+                    ),
+                    onClick = onToggleFavorite,
+                    tint = if (favorite) MaterialTheme.colorScheme.primary else null,
+                )
+            },
+        )
         PageStateTransition(state = state, modifier = Modifier.weight(1f)) { current ->
             when (current) {
                 ComicDetailUiState.Loading -> LoadingHint()

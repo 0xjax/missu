@@ -16,9 +16,12 @@ interface SearchHistory {
     fun clear()
 }
 
-class SearchHistoryStore(context: Context) : SearchHistory {
+class SearchHistoryStore(
+    context: Context,
+    preferencesName: String = "missu:search-history",
+) : SearchHistory {
 
-    private val prefs = context.getSharedPreferences("missu:search-history", Context.MODE_PRIVATE)
+    private val prefs = context.getSharedPreferences(preferencesName, Context.MODE_PRIVATE)
 
     override fun recent(): List<String> {
         val raw = prefs.getString(KEY, null) ?: return emptyList()

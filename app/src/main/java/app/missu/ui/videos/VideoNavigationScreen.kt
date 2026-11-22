@@ -98,6 +98,7 @@ import coil3.compose.AsyncImage
 fun VideoNavigationScreen(
     states: Map<String, DirectoryUiState>,
     searchAction: @Composable () -> Unit,
+    libraryAction: @Composable () -> Unit,
     sort: String,
     filters: Map<String, String>,
     refreshingKinds: Set<String>,
@@ -256,12 +257,14 @@ fun VideoNavigationScreen(
                             onSelect = { tabIndex = it.ordinal },
                         )
                     },
-                    controlsTrailing = searchAction,
+                    controlsTrailing = {
+                        VideoNavigationActions(libraryAction = libraryAction, searchAction = searchAction)
+                    },
                 )
 
                 VideoSection.ACTRESSES -> {
                     val ranking = sort == ActressFilterOptions.SORT_RANKING
-                    VideoNavigationControlsRow(searchAction = searchAction) {
+                    VideoNavigationControlsRow(searchAction = searchAction, libraryAction = libraryAction) {
                         VideoSectionControl(
                             selected = tab,
                             onSelect = { tabIndex = it.ordinal },
@@ -291,7 +294,7 @@ fun VideoNavigationScreen(
                     }
                 }
 
-                else -> VideoNavigationControlsRow(searchAction = searchAction) {
+                else -> VideoNavigationControlsRow(searchAction = searchAction, libraryAction = libraryAction) {
                     VideoSectionControl(
                         selected = tab,
                         onSelect = { tabIndex = it.ordinal },
@@ -315,6 +318,7 @@ fun VideoNavigationScreen(
 @Composable
 private fun VideoNavigationControlsRow(
     searchAction: @Composable () -> Unit,
+    libraryAction: @Composable () -> Unit,
     content: @Composable RowScope.() -> Unit,
 ) {
     VideoToolbarContainer {
@@ -329,8 +333,19 @@ private fun VideoNavigationControlsRow(
                 content = content,
             )
             Spacer(Modifier.width(12.dp))
-            searchAction()
+            VideoNavigationActions(libraryAction = libraryAction, searchAction = searchAction)
         }
+    }
+}
+
+@Composable
+private fun VideoNavigationActions(
+    libraryAction: @Composable () -> Unit,
+    searchAction: @Composable () -> Unit,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        libraryAction()
+        searchAction()
     }
 }
 

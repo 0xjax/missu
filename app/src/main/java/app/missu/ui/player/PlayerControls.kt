@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -62,6 +63,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.SelectableChipColors
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -685,9 +687,8 @@ private fun RoundButton(
 /**
  * 播放器设置面板：**两级**。
  *
- * 一级只列设置项（倍速 / 画面），每行右边是当前值；点进去才在同一个抽屉里展开那一组选项
- * 并给一个返回箭头。一级永远只有两行高，绝不把六档倍速铺在一级里——那样光倍速就占掉半个
- * 屏幕（2026-11-16 反复反馈）。
+ * 一级列出倍速、画面与自动播放；前两项点进去才在同一个抽屉里展开选项并给一个返回箭头，
+ * 自动播放直接用开关。绝不把六档倍速铺在一级里——那样光倍速就占掉半个屏幕。
  *
  * NOTE: 抽屉本身**窄**（`PlayerSheetMaxWidth`），不是横屏整条白板。
  * NOTE: 由播放器持有、不放进控件层——放在会被自动隐藏的控件树里会跟着一起被销毁
@@ -701,6 +702,8 @@ fun PlayerSettingsSheet(
     onSpeedChange: (Float) -> Unit,
     fill: Boolean,
     onFillChange: (Boolean) -> Unit,
+    autoplay: Boolean,
+    onAutoplayChange: (Boolean) -> Unit,
 ) {
     // 一个抽屉、两级内容。切换只做「共享轴 X」：水平滑 1/10 屏宽 + 交叉淡入淡出，
     // 规范从 `MaterialTheme.motionScheme` 取（不写死时长，见 md3e 的动效规则）。
@@ -752,6 +755,11 @@ fun PlayerSettingsSheet(
                                             },
                                         ),
                                         onClick = { level = PlayerSection.Aspect },
+                                    )
+                                    PlayerSwitchRow(
+                                        label = stringResource(R.string.settings_autoplay),
+                                        checked = autoplay,
+                                        onCheckedChange = onAutoplayChange,
                                     )
                                 }
 
@@ -828,6 +836,22 @@ private fun PlayerSettingRow(label: String, value: String, onClick: () -> Unit) 
     }
 }
 
+@Composable
+private fun PlayerSwitchRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange)
+            .padding(start = 24.dp, end = 16.dp, top = 14.dp, bottom = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(text = label, style = MaterialTheme.typography.bodyLarge)
+        Spacer(Modifier.weight(1f))
+        Switch(checked = checked, onCheckedChange = null)
+    }
+}
+
 /** 二级的标题行：返回箭头 + 这一组的名字。返回键和系统返回都只回一级。 */
 @Composable
 private fun PlayerSectionHeader(title: String, onBack: () -> Unit) {
@@ -847,7 +871,7 @@ private fun PlayerSectionHeader(title: String, onBack: () -> Unit) {
     }
 }
 
-/** 设置抽屉的宽度：一级只是两行设置项，不该占满横屏（YouTube 的一级抽屉也是窄的一列）。 */
+/** 设置抽屉的宽度：一级只有少量设置项，不该占满横屏。 */
 private val PlayerSheetMaxWidth = 360.dp
 
 /** 抽屉的固定高度：一级/二级切换时高度不变，同时给将来新增的设置项留出余量。 */

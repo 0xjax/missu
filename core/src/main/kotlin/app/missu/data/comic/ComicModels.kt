@@ -79,7 +79,8 @@ interface ComicSourceApi {
 }
 
 class ComicRepository(sources: List<ComicSourceApi>) {
-    private val sources = sources.associateBy { it.source }
+    val available: List<ComicSourceApi> = sources.distinctBy { it.source }
+    private val sources = available.associateBy { it.source }
 
     operator fun get(source: ComicSource): ComicSourceApi =
         sources.getValue(source)

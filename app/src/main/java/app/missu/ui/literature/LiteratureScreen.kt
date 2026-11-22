@@ -1,4 +1,4 @@
-package app.missu.ui.study
+package app.missu.ui.literature
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -66,17 +66,15 @@ import kotlinx.coroutines.launch
 @Composable
 fun LiteratureList(
     state: LiteratureUiState,
-    query: String,
-    filter: LiteratureFilter,
     favorites: Set<String>,
-    onQueryChange: (String) -> Unit,
-    onFilterChange: (LiteratureFilter) -> Unit,
     onToggleFavorite: (String) -> Unit,
     onLoadMore: () -> Unit,
     onRetry: () -> Unit,
     onOpen: (String) -> Unit,
     modifier: Modifier = Modifier,
     scrollToTopSignal: Int = 0,
+    showIntro: Boolean = false,
+    contentTopInset: androidx.compose.ui.unit.Dp = 0.dp,
 ) {
     PageStateTransition(state = state, modifier = modifier.fillMaxSize()) { current ->
         when (current) {
@@ -84,15 +82,13 @@ fun LiteratureList(
             is LiteratureUiState.Error -> ErrorHint(current.message.text(), onRetry)
             is LiteratureUiState.Content -> LiteratureContent(
                 state = current,
-                query = query,
-                filter = filter,
                 favorites = favorites,
-                onQueryChange = onQueryChange,
-                onFilterChange = onFilterChange,
                 onToggleFavorite = onToggleFavorite,
                 onLoadMore = onLoadMore,
                 onOpen = onOpen,
                 scrollToTopSignal = scrollToTopSignal,
+                showIntro = showIntro,
+                contentTopInset = contentTopInset,
             )
         }
     }
@@ -101,15 +97,13 @@ fun LiteratureList(
 @Composable
 private fun LiteratureContent(
     state: LiteratureUiState.Content,
-    query: String,
-    filter: LiteratureFilter,
     favorites: Set<String>,
-    onQueryChange: (String) -> Unit,
-    onFilterChange: (LiteratureFilter) -> Unit,
     onToggleFavorite: (String) -> Unit,
     onLoadMore: () -> Unit,
     onOpen: (String) -> Unit,
-    scrollToTopSignal: Int = 0,
+    scrollToTopSignal: Int,
+    showIntro: Boolean,
+    contentTopInset: androidx.compose.ui.unit.Dp,
 ) {
     val focusManager = LocalFocusManager.current
     val listState = rememberLazyListState()
@@ -129,49 +123,22 @@ private fun LiteratureContent(
         modifier = Modifier.fillMaxSize().pointerInput(Unit) {
             detectTapGestures { focusManager.clearFocus() }
         },
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            top = contentTopInset + 16.dp,
+            bottom = 16.dp,
+        ),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item {
-            Text(
-                text = stringResource(R.string.poetry_intro),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp),
-            )
-        }
-        item {
-            OutlinedTextField(
-                value = query,
-                onValueChange = onQueryChange,
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                placeholder = { Text(stringResource(R.string.literature_search_hint)) },
-                leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
-                trailingIcon = {
-                    if (query.isNotEmpty()) {
-                        IconButton(onClick = { onQueryChange("") }) {
-                            Icon(
-                                imageVector = Icons.Outlined.Close,
-                                contentDescription = stringResource(R.string.common_clear),
-                            )
-                        }
-                    }
-                },
-            )
-        }
-        item {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(LiteratureFilter.entries) { option ->
-                    FilterChip(
-                        selected = filter == option,
-                        onClick = {
-                            focusManager.clearFocus()
-                            onFilterChange(option)
-                        },
-                        label = { Text(stringResource(option.labelRes())) },
-                    )
-                }
+        if (showIntro) {
+            item {
+                Text(
+                    text = stringResource(R.string.poetry_intro),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp),
+                )
             }
         }
         if (state.works.isEmpty()) {
@@ -209,7 +176,7 @@ private fun LiteratureContent(
 }
 
 @Composable
-private fun LiteratureCard(
+internal fun LiteratureCard(
     work: LiteraryWorkSummary,
     favorite: Boolean,
     onToggleFavorite: () -> Unit,
@@ -429,7 +396,7 @@ private fun literatureLocale(): String {
     }
 }
 
-private fun LiteraryKind.labelRes(): Int = when (this) {
+internal fun LiteraryKind.labelRes(): Int = when (this) {
     LiteraryKind.POEM -> R.string.literature_kind_poem
     LiteraryKind.CI -> R.string.literature_kind_ci
     LiteraryKind.QU -> R.string.literature_kind_qu
@@ -437,7 +404,7 @@ private fun LiteraryKind.labelRes(): Int = when (this) {
     LiteraryKind.BOOK -> R.string.literature_kind_book
 }
 
-private fun LiteratureFilter.labelRes(): Int = when (this) {
+internal fun LiteratureFilter.labelRes(): Int = when (this) {
     LiteratureFilter.ALL -> R.string.literature_filter_all
     LiteratureFilter.POEM -> R.string.literature_kind_poem
     LiteratureFilter.CI -> R.string.literature_kind_ci

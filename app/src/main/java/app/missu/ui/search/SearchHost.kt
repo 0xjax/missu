@@ -59,6 +59,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
@@ -93,6 +94,7 @@ import app.missu.ui.components.LocalVideoListColumns
 import app.missu.ui.components.PageStateTransition
 import app.missu.ui.components.VideoGridCard
 import app.missu.ui.list.VideoListControls
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 /**
@@ -149,6 +151,8 @@ internal fun SearchHostShell(
     placeholder: String,
     onExit: (() -> Unit)? = null,
     inlineTrigger: Boolean = false,
+    onQueryChange: ((String) -> Unit)? = null,
+    expandedContent: (@Composable () -> Unit)? = null,
     idleContent: @Composable (onPick: (String) -> Unit) -> Unit,
     content: @Composable ColumnScope.(searchAction: @Composable () -> Unit) -> Unit,
 ) {
@@ -161,6 +165,13 @@ internal fun SearchHostShell(
     val expansionProgress = remember { Animatable(0f) }
     var expansionVisible by remember { mutableStateOf(false) }
     val expansionSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
+
+    LaunchedEffect(textFieldState, onQueryChange) {
+        if (onQueryChange == null) return@LaunchedEffect
+        snapshotFlow { textFieldState.text.toString() }
+            .distinctUntilChanged()
+            .collect { onQueryChange(it) }
+    }
 
     fun collapseSearch() {
         scope.launch { searchBarState.animateToCollapsed() }
@@ -294,11 +305,11 @@ internal fun SearchHostShell(
             inputField = inputField,
             onDismiss = { exit() },
         ) {
-            idleContent { pick(it) }
+            if (searching && expandedContent != null) expandedContent() else idleContent { pick(it) }
         }
     } else {
         ExpandedFullScreenSearchBar(state = searchBarState, inputField = inputField) {
-            idleContent { pick(it) }
+            if (searching && expandedContent != null) expandedContent() else idleContent { pick(it) }
         }
     }
 }
@@ -541,7 +552,7 @@ fun SearchBody(
 
 /** 最近搜索：点一下直接搜。 */
 @Composable
-private fun RecentSearches(
+internal fun RecentSearches(
     keywords: List<String>,
     onPick: (String) -> Unit,
     onClear: () -> Unit,

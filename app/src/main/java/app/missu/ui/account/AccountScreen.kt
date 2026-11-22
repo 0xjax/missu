@@ -19,10 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ExitToApp
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
-import androidx.compose.material.icons.automirrored.outlined.List
 import androidx.compose.material.icons.outlined.AccountCircle
-import androidx.compose.material.icons.outlined.DateRange
-import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Settings
 
 import androidx.compose.material3.Icon
@@ -45,23 +42,20 @@ import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.GroupDivider
 import app.missu.ui.components.GroupSurface
 import app.missu.ui.components.LoadingHint
+import app.missu.ui.components.PageTopBar
 
 /**
  * 「我的」页：账号资料 + 二三级入口。
  *
- * NOTE: 结构改成 M3E 的分组列表——资料卡（extraLarge 圆角的大容器）在上，下面一张
- * `surfaceContainer` 的分组容器装四个入口，退出登录单独一张容器并挂 error 色：
- * 破坏性动作不能和普通入口混在同一条视觉层里。
+ * NOTE: 这里只保留账号与设置；收藏、片单和历史入口放在各自的内容导航页。
  */
 @Composable
 fun AccountScreen(
     state: AuthUiState,
     onLogin: () -> Unit,
     onLogout: () -> Unit,
-    onSaved: () -> Unit,
     onSettings: () -> Unit,
-    onHistory: () -> Unit,
-    onPlaylists: () -> Unit,
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     scrollToTopSignal: Int = 0,
 ) {
@@ -70,12 +64,14 @@ fun AccountScreen(
         if (scrollToTopSignal > 0) scrollState.animateScrollTo(0)
     }
     Column(modifier.fillMaxSize()) {
+        onBack?.let {
+            PageTopBar(title = stringResource(R.string.account_title), onBack = it)
+        }
         when (state) {
             AuthUiState.Checking -> LoadingHint()
 
-            AuthUiState.LoggedOut -> Column(Modifier.fillMaxSize()) {
-                // NOTE: 历史与设置不依赖账号，未登录也要保留；空态只占中间那块，
-                // 入口与登录后那张分组容器同一套样式——同一个入口不该因为有没有登录而换样子。
+            AuthUiState.LoggedOut -> Column(Modifier.weight(1f)) {
+                // NOTE: 设置不依赖账号；空态只占中间那块，入口位置不随登录状态变化。
                 EmptyHint(
                     icon = Icons.Outlined.AccountCircle,
                     title = stringResource(R.string.account_logged_out_title),
@@ -85,8 +81,6 @@ fun AccountScreen(
                     modifier = Modifier.weight(1f),
                 )
                 GroupSurface(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    MenuRow(Icons.Outlined.DateRange, stringResource(R.string.account_history), onHistory)
-                    GroupDivider(start = 56.dp)
                     MenuRow(Icons.Outlined.Settings, stringResource(R.string.account_settings), onSettings)
                 }
                 Spacer(Modifier.height(16.dp))
@@ -94,19 +88,13 @@ fun AccountScreen(
 
             is AuthUiState.LoggedIn -> Column(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .weight(1f)
                     .verticalScroll(scrollState),
             ) {
                 ProfileCard(user = state.user)
                 Spacer(Modifier.height(16.dp))
 
                 GroupSurface(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    MenuRow(Icons.Outlined.FavoriteBorder, stringResource(R.string.account_saved), onSaved)
-                    GroupDivider(start = 56.dp)
-                    MenuRow(Icons.AutoMirrored.Outlined.List, stringResource(R.string.account_playlists), onPlaylists)
-                    GroupDivider(start = 56.dp)
-                    MenuRow(Icons.Outlined.DateRange, stringResource(R.string.account_history), onHistory)
-                    GroupDivider(start = 56.dp)
                     MenuRow(Icons.Outlined.Settings, stringResource(R.string.account_settings), onSettings)
                 }
 

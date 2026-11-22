@@ -122,7 +122,7 @@ fun ComicListBody(
 }
 
 @Composable
-private fun ComicGridCard(comic: ComicSummary, onClick: () -> Unit) {
+internal fun ComicGridCard(comic: ComicSummary, onClick: () -> Unit) {
     Column(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
         ComicCover(
             image = comic.cover,

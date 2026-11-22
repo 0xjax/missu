@@ -55,7 +55,7 @@ import app.missu.ui.theme.resolveColorScheme
 import app.missu.ui.theme.staticColorScheme
 
 /**
- * 设置页：外观、视频列表、播放与内容语言。
+ * 设置页：外观、视频列表与内容语言。
  *
  * NOTE: 选中表达一律用 M3E 的列表项 + 单选控件：整行 `selectable(role = RadioButton)`，控件本身
  * 不再接收点击（onClick = null），否则读屏会看到两个可点节点。
@@ -69,14 +69,12 @@ fun SettingsScreen(
     followThemeIcon: Boolean,
     pureBlack: Boolean,
     singleColumnVideos: Boolean,
-    autoplay: Boolean,
     onAppLanguageChange: (AppLanguage) -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
     onColorSourceChange: (ColorSource) -> Unit,
     onFollowThemeIconChange: (Boolean) -> Unit,
     onPureBlackChange: (Boolean) -> Unit,
     onSingleColumnVideosChange: (Boolean) -> Unit,
-    onAutoplayChange: (Boolean) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -199,33 +197,6 @@ fun SettingsScreen(
                     ) {
                         Text(text = label, style = MaterialTheme.typography.bodyLarge)
                     }
-                }
-            }
-
-            SectionLabel(stringResource(R.string.settings_playback))
-
-            // NOTE: 播放相关只有这一项。默认开——本 App 的核心是「点开就看」，关掉是给
-            // 「不想在公共场合突然出声」的人一个开关，不是默认体验。
-            GroupSurface(modifier = Modifier.padding(horizontal = 16.dp)) {
-                ListItem(
-                    modifier = Modifier.toggleable(
-                        value = autoplay,
-                        role = Role.Switch,
-                        onValueChange = onAutoplayChange,
-                    ),
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    supportingContent = {
-                        Text(
-                            text = stringResource(R.string.settings_autoplay_note),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    },
-                    trailingContent = {
-                        Switch(checked = autoplay, onCheckedChange = null)
-                    },
-                ) {
-                    Text(text = stringResource(R.string.settings_autoplay), style = MaterialTheme.typography.bodyLarge)
                 }
             }
 

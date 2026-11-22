@@ -22,19 +22,25 @@ import app.missu.data.api.MissavApi
 import app.missu.data.api.VideoListOptions
 import app.missu.data.comic.ComicRepository
 import app.missu.data.comic.ComicSource
+import app.missu.data.literature.LiteratureFilter
 import app.missu.data.literature.LiteratureRepository
 import app.missu.data.store.AppLanguage
 import app.missu.data.store.ColorSource
+import app.missu.data.store.ComicFavoriteStore
+import app.missu.data.store.ComicHistoryEntry
+import app.missu.data.store.ComicHistoryStore
 import app.missu.data.store.ComicPreferencesStore
 import app.missu.data.store.HistoryStore
 import app.missu.data.store.ListHistoryEntry
 import app.missu.data.store.ListHistoryStore
 import app.missu.data.store.ListQueryStore
 import app.missu.data.store.ListSortStore
+import app.missu.data.store.LiteratureHistoryStore
 import app.missu.data.store.LiteratureStore
 import app.missu.data.store.SearchHistoryStore
 import app.missu.data.store.SettingsStore
 import app.missu.data.store.ThemeMode
+import app.missu.ui.account.AccountScreen
 import app.missu.ui.account.AuthViewModel
 import app.missu.ui.account.LoginScreen
 import app.missu.ui.common.text
@@ -43,12 +49,14 @@ import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.PageSurface
 import app.missu.ui.components.ProvideHeroVisibility
 import app.missu.ui.comics.ComicDetailScreen
+import app.missu.ui.comics.ComicDetailUiState
+import app.missu.ui.comics.ComicLibraryScreen
 import app.missu.ui.comics.ComicDetailViewModel
 import app.missu.ui.comics.ComicReaderScreen
 import app.missu.ui.comics.ComicReaderViewModel
 import app.missu.ui.detail.DetailScreen
 import app.missu.ui.detail.DetailViewModel
-import app.missu.ui.history.HistoryScreen
+import app.missu.ui.history.VideoLibraryScreen
 import app.missu.ui.history.HistoryViewModel
 import app.missu.ui.home.GuideScreen
 import app.missu.ui.home.guideById
@@ -61,19 +69,19 @@ import app.missu.ui.playlists.PlaylistDetailScreen
 import app.missu.ui.playlists.PlaylistDetailViewModel
 import app.missu.ui.playlists.PlaylistEditScreen
 import app.missu.ui.playlists.PlaylistEditViewModel
-import app.missu.ui.playlists.PlaylistsScreen
 import app.missu.ui.playlists.PlaylistsViewModel
-import app.missu.ui.saved.SavedScreen
+import app.missu.ui.playlists.PlaylistsUiState
+import app.missu.ui.saved.SavedUiState
 import app.missu.ui.saved.SavedViewModel
 import app.missu.ui.search.SearchBody
 import app.missu.ui.search.SearchHost
 import app.missu.ui.search.SearchViewModel
 import app.missu.ui.settings.SettingsScreen
-import app.missu.ui.study.EnglishArticleScreen
-import app.missu.ui.study.LiteratureDetailUiState
-import app.missu.ui.study.LiteratureDetailViewModel
-import app.missu.ui.study.LiteratureScreen
-import app.missu.ui.study.englishArticleById
+import app.missu.ui.literature.LiteratureDetailUiState
+import app.missu.ui.literature.LiteratureDetailViewModel
+import app.missu.ui.literature.LiteratureScreen
+import app.missu.ui.literature.LiteratureViewModel
+import app.missu.ui.literature.LiteratureLibraryScreen
 
 internal data class AppSettingsState(
     val appLanguage: AppLanguage,
@@ -106,6 +114,9 @@ internal fun NavGraphBuilder.secondaryDestinations(
     historyStore: HistoryStore,
     listHistoryStore: ListHistoryStore,
     searchHistory: SearchHistoryStore,
+    comicHistoryStore: ComicHistoryStore,
+    comicFavoriteStore: ComicFavoriteStore,
+    literatureHistoryStore: LiteratureHistoryStore,
     listSortStore: ListSortStore,
     listQueryStore: ListQueryStore,
     literatureStore: LiteratureStore,
@@ -115,6 +126,19 @@ internal fun NavGraphBuilder.secondaryDestinations(
     onOpenList: (String, String) -> Unit,
     onOpenListQuery: (VideoListQuery, String) -> Unit,
 ) {
+    composable("account") {
+        val state by auth.state.collectAsStateWithLifecycle()
+        PageSurface {
+            AccountScreen(
+                state = state,
+                onLogin = { navController.navigate("login") },
+                onSettings = { navController.navigate("settings") },
+                onLogout = auth::logout,
+                onBack = onGoBack,
+            )
+        }
+    }
+
     composable("login") {
         val loginState by auth.loginState.collectAsStateWithLifecycle()
         PageSurface {
@@ -142,21 +166,40 @@ internal fun NavGraphBuilder.secondaryDestinations(
             when (val current = state) {
                 LiteratureDetailUiState.Loading -> LoadingHint()
                 is LiteratureDetailUiState.Error -> ErrorHint(current.message.text(), viewModel::load)
-                is LiteratureDetailUiState.Content -> LiteratureScreen(
-                    work = current.work,
-                    favorite = current.work.id in favorites,
-                    onToggleFavorite = { literatureStore.toggleFavorite(current.work.id) },
-                    onBack = onGoBack,
-                )
+                is LiteratureDetailUiState.Content -> {
+                    LaunchedEffect(current.work.id) { literatureHistoryStore.record(current.work) }
+                    LiteratureScreen(
+                        work = current.work,
+                        favorite = current.work.id in favorites,
+                        onToggleFavorite = { literatureStore.toggleFavorite(current.work.id) },
+                        onBack = onGoBack,
+                    )
+                }
             }
         }
     }
 
-    composable("english/{id}") { entry ->
-        englishArticleById(entry.arguments?.getString("id").orEmpty())?.let { article ->
-            PageSurface {
-                EnglishArticleScreen(article = article, onBack = onGoBack)
-            }
+    composable("literature-library") {
+        val favoritesViewModel: LiteratureViewModel = viewModel(
+            factory = missuViewModelFactory {
+                LiteratureViewModel(literatureRepository, literatureStore, LiteratureFilter.FAVORITES)
+            },
+        )
+        val entries by literatureHistoryStore.entries.collectAsStateWithLifecycle()
+        val favoritesState by favoritesViewModel.state.collectAsStateWithLifecycle()
+        val favorites by literatureStore.favorites.collectAsStateWithLifecycle()
+        PageSurface {
+            LiteratureLibraryScreen(
+                entries = entries,
+                favoritesState = favoritesState,
+                favorites = favorites,
+                onToggleFavorite = literatureStore::toggleFavorite,
+                onLoadMoreFavorites = favoritesViewModel::loadMore,
+                onRetryFavorites = favoritesViewModel::refresh,
+                onOpen = { navController.navigate("literature/$it") },
+                onClearHistory = literatureHistoryStore::clear,
+                onBack = onGoBack,
+            )
         }
     }
 
@@ -165,6 +208,30 @@ internal fun NavGraphBuilder.secondaryDestinations(
             PageSurface {
                 GuideScreen(guide = guide, onBack = onGoBack)
             }
+        }
+    }
+
+    composable("comic-library") {
+        val entries by comicHistoryStore.entries.collectAsStateWithLifecycle()
+        val favorites by comicFavoriteStore.entries.collectAsStateWithLifecycle()
+        PageSurface {
+            ComicLibraryScreen(
+                entries = entries,
+                favorites = favorites,
+                onOpen = { entry ->
+                    navController.navigate(
+                        "comic/reader?s=${Uri.encode(entry.source.id)}&m=${Uri.encode(entry.mangaId)}" +
+                            "&c=${Uri.encode(entry.chapterId)}&t=${Uri.encode(entry.chapterTitle)}&p=${entry.page}",
+                    )
+                },
+                onOpenFavorite = { entry ->
+                    navController.navigate(
+                        "comic/detail?s=${Uri.encode(entry.source.id)}&id=${Uri.encode(entry.mangaId)}",
+                    )
+                },
+                onClear = comicHistoryStore::clear,
+                onBack = onGoBack,
+            )
         }
     }
 
@@ -185,19 +252,38 @@ internal fun NavGraphBuilder.secondaryDestinations(
         )
         val state by viewModel.state.collectAsStateWithLifecycle()
         val chapterDescending by viewModel.chapterDescending.collectAsStateWithLifecycle()
+        val comicFavorites by comicFavoriteStore.entries.collectAsStateWithLifecycle()
         LaunchedEffect(source, id) { viewModel.loadIfNeeded() }
         PageSurface {
             ComicDetailScreen(
                 sourceName = source.displayName,
                 state = state,
                 chapterDescending = chapterDescending,
+                favorite = comicFavorites.any { it.source == source && it.mangaId == id },
+                onToggleFavorite = {
+                    (state as? ComicDetailUiState.Content)?.detail?.let { comicFavoriteStore.toggle(source, it) }
+                },
                 onToggleChapterOrder = viewModel::toggleChapterOrder,
                 onRetry = viewModel::load,
                 onBack = onGoBack,
                 onOpenChapter = { chapter ->
+                    (state as? ComicDetailUiState.Content)?.detail?.let { detail ->
+                        comicHistoryStore.record(
+                            ComicHistoryEntry(
+                                source = source,
+                                mangaId = id,
+                                title = detail.title,
+                                cover = detail.cover,
+                                chapterId = chapter.id,
+                                chapterTitle = chapter.title,
+                                page = 0,
+                                updatedAt = System.currentTimeMillis(),
+                            ),
+                        )
+                    }
                     navController.navigate(
                         "comic/reader?s=${Uri.encode(source.id)}&m=${Uri.encode(id)}" +
-                            "&c=${Uri.encode(chapter.id)}&t=${Uri.encode(chapter.title)}",
+                            "&c=${Uri.encode(chapter.id)}&t=${Uri.encode(chapter.title)}&p=0",
                     )
                 },
             )
@@ -205,18 +291,20 @@ internal fun NavGraphBuilder.secondaryDestinations(
     }
 
     composable(
-        route = "comic/reader?s={s}&m={m}&c={c}&t={t}",
+        route = "comic/reader?s={s}&m={m}&c={c}&t={t}&p={p}",
         arguments = listOf(
             navArgument("s") { defaultValue = ComicSource.COPY.id },
             navArgument("m") { defaultValue = "" },
             navArgument("c") { defaultValue = "" },
             navArgument("t") { defaultValue = "" },
+            navArgument("p") { type = NavType.IntType; defaultValue = 0 },
         ),
     ) { entry ->
         val source = ComicSource.fromId(entry.arguments?.getString("s").orEmpty())
         val mangaId = Uri.decode(entry.arguments?.getString("m").orEmpty())
         val chapterId = Uri.decode(entry.arguments?.getString("c").orEmpty())
         val title = Uri.decode(entry.arguments?.getString("t").orEmpty())
+        val initialPage = entry.arguments?.getInt("p") ?: 0
         val viewModel: ComicReaderViewModel = viewModel(
             key = "comic-reader-${source.id}-$chapterId",
             factory = missuViewModelFactory { ComicReaderViewModel(comicRepository, source, mangaId, chapterId) },
@@ -229,12 +317,15 @@ internal fun NavGraphBuilder.secondaryDestinations(
                 state = state,
                 onRetry = viewModel::load,
                 onBack = onGoBack,
+                initialPage = initialPage,
+                onPageChange = { page ->
+                    comicHistoryStore.updatePosition(source, mangaId, chapterId, page)
+                },
             )
         }
     }
 
     composable("settings") {
-        var autoplay by remember { mutableStateOf(settings.autoplay()) }
         val currentSettings = settingsState
         PageSurface {
             SettingsScreen(
@@ -244,17 +335,12 @@ internal fun NavGraphBuilder.secondaryDestinations(
                 followThemeIcon = currentSettings.followThemeIcon,
                 pureBlack = currentSettings.pureBlack,
                 singleColumnVideos = currentSettings.singleColumnVideos,
-                autoplay = autoplay,
                 onAppLanguageChange = settingsActions.onAppLanguageChange,
                 onThemeModeChange = settingsActions.onThemeModeChange,
                 onColorSourceChange = settingsActions.onColorSourceChange,
                 onFollowThemeIconChange = settingsActions.onFollowThemeIconChange,
                 onPureBlackChange = settingsActions.onPureBlackChange,
                 onSingleColumnVideosChange = settingsActions.onSingleColumnVideosChange,
-                onAutoplayChange = { enabled ->
-                    settings.setAutoplay(enabled)
-                    autoplay = enabled
-                },
                 onBack = onGoBack,
             )
         }
@@ -317,51 +403,54 @@ internal fun NavGraphBuilder.secondaryDestinations(
         }
     }
 
-    composable("history") {
-        val viewModel: HistoryViewModel = viewModel(
+    composable("video-library") {
+        val historyViewModel: HistoryViewModel = viewModel(
             factory = missuViewModelFactory { HistoryViewModel(historyStore, listHistoryStore) },
         )
-        val entries by viewModel.entries.collectAsStateWithLifecycle()
-        val listEntries by viewModel.listEntries.collectAsStateWithLifecycle()
-        LaunchedEffect(Unit) { viewModel.load() }
+        val savedViewModel: SavedViewModel = viewModel(
+            factory = missuViewModelFactory { SavedViewModel(api) },
+        )
+        val playlistsViewModel: PlaylistsViewModel = viewModel(
+            factory = missuViewModelFactory { PlaylistsViewModel(api) },
+        )
+        val entries by historyViewModel.entries.collectAsStateWithLifecycle()
+        val listEntries by historyViewModel.listEntries.collectAsStateWithLifecycle()
+        val savedState by savedViewModel.state.collectAsStateWithLifecycle()
+        val playlistsState by playlistsViewModel.state.collectAsStateWithLifecycle()
+        val createMessage by playlistsViewModel.createMessage.collectAsStateWithLifecycle()
+        val creating by playlistsViewModel.creating.collectAsStateWithLifecycle()
+        LaunchedEffect(Unit) { historyViewModel.load() }
 
-        ProvideHeroVisibility(this, namespace = "history") {
+        ProvideHeroVisibility(this, namespace = "video-library") {
             PageSurface {
-                HistoryScreen(
+                VideoLibraryScreen(
                     entries = entries,
                     listEntries = listEntries,
+                    savedState = savedState,
+                    playlistsState = playlistsState,
+                    createMessage = createMessage,
+                    creating = creating,
                     onOpen = { id, thumbnail -> onOpenDetail(id, thumbnail, "") },
                     onOpenList = { onOpenListQuery(it.query, it.title) },
-                    onToggleListPin = viewModel::toggleListPin,
-                    onClearVideos = viewModel::clearVideos,
-                    onClearLists = viewModel::clearLists,
+                    onToggleListPin = historyViewModel::toggleListPin,
+                    onClearVideos = historyViewModel::clearVideos,
+                    onClearLists = historyViewModel::clearLists,
+                    onSavedRetry = savedViewModel::load,
+                    onSavedLoadMore = savedViewModel::loadMore,
+                    onPlaylistsRetry = playlistsViewModel::load,
+                    onOpenPlaylist = { playlist ->
+                        navController.navigate("playlist/${playlist.id}?n=${Uri.encode(playlist.name)}")
+                    },
+                    onCreatePlaylist = playlistsViewModel::create,
+                    onTabChange = { tab ->
+                        when (tab) {
+                            2 -> if (savedState is SavedUiState.Loading) savedViewModel.load()
+                            3 -> if (playlistsState is PlaylistsUiState.Loading) playlistsViewModel.load()
+                        }
+                    },
                     onBack = onGoBack,
                 )
             }
-        }
-    }
-
-    composable("playlists") {
-        val viewModel: PlaylistsViewModel = viewModel(
-            factory = missuViewModelFactory { PlaylistsViewModel(api) },
-        )
-        val state by viewModel.state.collectAsStateWithLifecycle()
-        val createMessage by viewModel.createMessage.collectAsStateWithLifecycle()
-        val creating by viewModel.creating.collectAsStateWithLifecycle()
-        LaunchedEffect(Unit) { viewModel.load() }
-
-        PageSurface {
-            PlaylistsScreen(
-                state = state,
-                onRetry = viewModel::load,
-                onOpen = { playlist ->
-                    navController.navigate("playlist/${playlist.id}?n=${Uri.encode(playlist.name)}")
-                },
-                onBack = onGoBack,
-                createMessage = createMessage,
-                creating = creating,
-                onCreate = viewModel::create,
-            )
         }
     }
 
@@ -409,7 +498,7 @@ internal fun NavGraphBuilder.secondaryDestinations(
         val busy by viewModel.busy.collectAsStateWithLifecycle()
         LaunchedEffect(id) { viewModel.load() }
 
-        fun backToList() { navController.popBackStack("playlists", inclusive = false) }
+        fun backToList() { navController.popBackStack("video-library", inclusive = false) }
 
         PageSurface {
             PlaylistEditScreen(
@@ -423,24 +512,6 @@ internal fun NavGraphBuilder.secondaryDestinations(
                 onRetry = viewModel::load,
                 onBack = onGoBack,
             )
-        }
-    }
-
-    composable("saved") {
-        val viewModel: SavedViewModel = viewModel(factory = missuViewModelFactory { SavedViewModel(api) })
-        val state by viewModel.state.collectAsStateWithLifecycle()
-        LaunchedEffect(Unit) { viewModel.load() }
-
-        ProvideHeroVisibility(this, namespace = "saved") {
-            PageSurface {
-                SavedScreen(
-                    state = state,
-                    onRetry = viewModel::load,
-                    onLoadMore = viewModel::loadMore,
-                    onOpen = { id, thumbnail -> onOpenDetail(id, thumbnail, "") },
-                    onBack = onGoBack,
-                )
-            }
         }
     }
 

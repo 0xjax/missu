@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.AutoStories
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
@@ -29,11 +30,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.missu.R
+import app.missu.ui.components.TooltipIconButton
 
 @Composable
 fun HomeScreen(
     onOpenGuide: (String) -> Unit,
     onOpenVideos: () -> Unit,
+    onOpenAccount: () -> Unit,
     modifier: Modifier = Modifier,
     scrollToTopSignal: Int = 0,
 ) {
@@ -47,6 +50,23 @@ fun HomeScreen(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        item(key = "account") {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.app_name),
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.weight(1f),
+                )
+                TooltipIconButton(
+                    icon = Icons.Outlined.Person,
+                    contentDescription = stringResource(R.string.account_title),
+                    onClick = onOpenAccount,
+                )
+            }
+        }
         item(key = "intro") { HomeIntro() }
         item(key = "guides-title") {
             Text(

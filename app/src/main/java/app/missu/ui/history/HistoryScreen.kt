@@ -61,68 +61,10 @@ import app.missu.ui.list.sortLabel
 import coil3.compose.AsyncImage
 
 @Composable
-fun HistoryScreen(
+internal fun VideoHistory(
     entries: List<HistoryEntry>,
-    listEntries: List<ListHistoryEntry>,
     onOpen: (id: String, thumbnail: String?) -> Unit,
-    onOpenList: (ListHistoryEntry) -> Unit,
-    onToggleListPin: (ListHistoryEntry) -> Unit,
-    onClearVideos: () -> Unit,
-    onClearLists: () -> Unit,
-    onBack: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
-    val videoGridState = rememberLazyGridState()
-    val listState = rememberLazyListState()
-
-    Column(modifier.fillMaxSize()) {
-        PageTopBar(
-            title = stringResource(R.string.history_title),
-            onBack = onBack,
-            actions = {
-                val empty = if (selectedTab == 0) entries.isEmpty() else listEntries.isEmpty()
-                if (!empty) {
-                    TextButton(onClick = if (selectedTab == 0) onClearVideos else onClearLists) {
-                        Text(stringResource(R.string.common_clear))
-                    }
-                }
-            },
-        )
-        PrimaryTabRow(selectedTabIndex = selectedTab) {
-            Tab(
-                selected = selectedTab == 0,
-                onClick = { selectedTab = 0 },
-                text = { Text(stringResource(R.string.history_videos_tab)) },
-            )
-            Tab(
-                selected = selectedTab == 1,
-                onClick = { selectedTab = 1 },
-                text = { Text(stringResource(R.string.history_lists_tab)) },
-            )
-        }
-
-        when (selectedTab) {
-            0 -> VideoHistory(
-                entries = entries,
-                state = videoGridState,
-                onOpen = onOpen,
-            )
-            else -> ListHistory(
-                entries = listEntries,
-                state = listState,
-                onOpen = onOpenList,
-                onTogglePin = onToggleListPin,
-            )
-        }
-    }
-}
-
-@Composable
-private fun VideoHistory(
-    entries: List<HistoryEntry>,
-    state: LazyGridState,
-    onOpen: (id: String, thumbnail: String?) -> Unit,
+    state: LazyGridState = rememberLazyGridState(),
 ) {
     if (entries.isEmpty()) {
         EmptyHint(
@@ -147,11 +89,11 @@ private fun VideoHistory(
 }
 
 @Composable
-private fun ListHistory(
+internal fun ListHistory(
     entries: List<ListHistoryEntry>,
-    state: LazyListState,
     onOpen: (ListHistoryEntry) -> Unit,
     onTogglePin: (ListHistoryEntry) -> Unit,
+    state: LazyListState = rememberLazyListState(),
 ) {
     if (entries.isEmpty()) {
         EmptyHint(

@@ -1,4 +1,4 @@
-package app.missu.ui.study
+package app.missu.ui.literature
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -16,6 +16,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 sealed interface LiteratureUiState {
@@ -31,12 +32,13 @@ sealed interface LiteratureUiState {
 class LiteratureViewModel(
     private val repository: LiteratureRepository,
     private val store: LiteratureStore,
+    initialFilter: LiteratureFilter = LiteratureFilter.ALL,
 ) : ViewModel() {
     private val _state = MutableStateFlow<LiteratureUiState>(LiteratureUiState.Loading)
     val state: StateFlow<LiteratureUiState> = _state.asStateFlow()
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query.asStateFlow()
-    private val _filter = MutableStateFlow(LiteratureFilter.ALL)
+    private val _filter = MutableStateFlow(initialFilter)
     val filter: StateFlow<LiteratureFilter> = _filter.asStateFlow()
     private var requestJob: Job? = null
     private var moreJob: Job? = null
@@ -44,7 +46,7 @@ class LiteratureViewModel(
     init {
         refresh()
         viewModelScope.launch {
-            store.favorites.collect {
+            store.favorites.drop(1).collect {
                 if (_filter.value == LiteratureFilter.FAVORITES) refresh()
             }
         }

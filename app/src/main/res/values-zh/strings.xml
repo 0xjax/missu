@@ -11,7 +11,7 @@
 
     <!-- 底部页签 -->
     <string name="nav_home">首页</string>
-    <string name="nav_study">书房</string>
+    <string name="nav_literature">诗文</string>
     <string name="nav_videos">影片</string>
     <string name="nav_comics">漫画</string>
     <string name="nav_account">我的</string>
@@ -35,6 +35,19 @@
     <string name="comic_page_number">第 %1$d 页</string>
     <string name="comic_order_ascending">正序</string>
     <string name="comic_order_descending">倒序</string>
+    <string name="comic_history_title">漫画记录</string>
+    <string name="comic_history_empty_title">还没有阅读记录</string>
+    <string name="comic_history_empty_subtitle">打开章节后，这里会记下读到的位置</string>
+    <string name="comic_history_page">第 %1$d 页</string>
+    <string name="comic_reading_history_tab">阅读历史</string>
+    <string name="comic_favorites_tab">收藏</string>
+    <string name="comic_favorite_add">收藏漫画</string>
+    <string name="comic_favorite_remove">取消收藏</string>
+    <string name="comic_favorites_empty_title">还没有收藏</string>
+    <string name="comic_favorites_empty_subtitle">在漫画详情页收藏后，会出现在这里</string>
+    <string name="comic_search_current_source">当前源站</string>
+    <string name="comic_search_all_sources">全部源站</string>
+    <string name="comic_search_view_all">查看全部</string>
 
     <!-- 我的 -->
     <string name="account_title">我的</string>
@@ -72,6 +85,7 @@
     <string name="history_lists_empty_subtitle">打开过的视频列表会出现在这里</string>
     <string name="history_pin_list">置顶列表</string>
     <string name="history_unpin_list">取消置顶</string>
+    <string name="video_library_title">影片库</string>
 
     <!-- 列表 -->
     <string name="list_empty_title">这里还没有内容</string>
@@ -94,7 +108,7 @@
     <string name="home_intro_title">今天，想靠近什么？</string>
     <string name="home_intro_body">不必抗拒欲望，也不必把全部时间交给它。从一篇短文开始，让理解、连接与兴趣也成为选择。</string>
     <string name="home_guides_title">此刻，值得读一点</string>
-    <string name="home_videos_title">影片库</string>
+    <string name="home_videos_title">浏览影片</string>
     <string name="home_videos_body">想看影片时，由你主动打开；首页不做成人内容推送。</string>
     <string name="guide_read_time">约 3 分钟</string>
     <string name="guide_desire_category">理解自己</string>
@@ -129,7 +143,6 @@
     </string-array>
 
     <!-- 书房 -->
-    <string name="study_literature_tab">诗文</string>
     <string name="literature_kind_poem">诗</string>
     <string name="literature_kind_ci">词</string>
     <string name="literature_kind_qu">曲</string>
@@ -143,24 +156,16 @@
     <string name="literature_empty_subtitle">换个关键词或筛选条件试试</string>
     <string name="literature_favorite_add">收藏作品</string>
     <string name="literature_favorite_remove">取消收藏</string>
+    <string name="literature_library_title">诗文记录</string>
+    <string name="literature_history_tab">阅读历史</string>
+    <string name="literature_favorites_tab">收藏</string>
+    <string name="literature_history_empty_title">还没有阅读记录</string>
+    <string name="literature_history_empty_subtitle">打开过的作品会出现在这里</string>
     <string name="poetry_notes">字词注释</string>
     <string name="literature_content_pending">本篇的注释、意译与赏析尚未完善，目前仅提供原文。</string>
-    <string name="study_english_tab">英语</string>
     <string name="poetry_intro">慢慢读一首，不求背诵，不设打卡，也不给感受打分。</string>
     <string name="poetry_translation">白话意译</string>
     <string name="poetry_appreciation">赏析</string>
-    <string name="english_intro">读真实的英汉短文，点带色词语查看释义与例句；不设连续天数，也不评定成绩。</string>
-    <string name="english_bilingual_reading">双语阅读 · 点词学习</string>
-    <string name="english_tap_hint">点一下带色词语，查看释义与例句。</string>
-    <string name="english_example">例句与搭配</string>
-    <string name="vocab_urge">名词：冲动；强烈欲望。指想立刻做某件事的内心推动。</string>
-    <string name="vocab_conscious">形容词：有意识的；经过清楚觉察与主动选择的。</string>
-    <string name="vocab_inertia">名词：惯性；惰性。指不作新选择而继续维持原来的行为。</string>
-    <string name="vocab_recognise">动词：辨认；意识到。指识别并理解一种感受。</string>
-    <string name="vocab_consumption">名词：消耗；消费。文中指没有主动参与的被动内容消费。</string>
-    <string name="vocab_concrete">形容词：具体的；明确的，而不是空泛的。</string>
-    <string name="vocab_prestigious">形容词：有名望的；因地位或声誉而受推崇的。</string>
-    <string name="vocab_nourish">动词：滋养；培育。提供成长所需的养分或支持。</string>
 
     <!-- 搜索 -->
     <string name="search_open">打开搜索</string>
@@ -282,9 +287,7 @@
     <string name="settings_video_list_double">双列</string>
 
     <!-- 播放 -->
-    <string name="settings_playback">播放</string>
     <string name="settings_autoplay">自动播放</string>
-    <string name="settings_autoplay_note">关掉后打开视频停在首帧，点播放键才开始</string>
     <string name="settings_language_system">跟随系统</string>
     <string name="settings_language_note">同时决定界面语言与从站点取回的内容语言。「跟随系统」时，界面会回退到英文（该语言尚未翻译），内容仍按系统语言取。</string>
 

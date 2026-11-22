@@ -130,7 +130,7 @@ fun ExoVideoPlayer(
     var fillScreen by remember { mutableStateOf(settings.fillScreen()) }
     val initialSpeed = remember { settings.playbackSpeed() }
     var speed by remember { mutableFloatStateOf(initialSpeed) }
-    // NOTE: 播放器设置面板（当前只有倍速一项）。不叫 speedMenu 了：倍速已经收进设置项里。
+    // NOTE: 播放器设置面板由播放器持有，控件自动隐藏时也不会跟着销毁。
     var settingsOpen by remember { mutableStateOf(false) }
     // NOTE: 控件只在第一帧出画之后才允许出现。加载中就把进度条和播放键摆出来，
     // 等于在"还没有东西可控"的时候先给一堆控件——那正是详情页打开时最脏的一帧。
@@ -192,7 +192,7 @@ fun ExoVideoPlayer(
 
     // NOTE: 自动播放关掉时仍然 `prepare()`——首帧会画出来、控件也会出现，只是停在暂停态，
     // 用户点一下播放键就接着走。不要在这里跳过 prepare：那样连首帧都没有，只剩一张封面。
-    val autoplay = remember { settings.autoplay() }
+    var autoplay by remember { mutableStateOf(settings.autoplay()) }
     LaunchedEffect(url) {
         errorMessage = null
         player.setMediaItem(MediaItem.fromUri(url))
@@ -375,8 +375,14 @@ fun ExoVideoPlayer(
             PlayerSettingsSheet(
                 speed = speed,
                 fill = fillScreen,
+                autoplay = autoplay,
                 onDismiss = { settingsOpen = false },
                 onSpeedChange = ::applySpeed,
+                onAutoplayChange = { value ->
+                    autoplay = value
+                    settings.setAutoplay(value)
+                    player.playWhenReady = value
+                },
                 onFillChange = { value ->
                     // 立刻落盘，但不关面板：用户还要在这里对比两种画面。
                     fillScreen = value

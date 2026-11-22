@@ -7,9 +7,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
@@ -26,6 +29,7 @@ import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.PageStateTransition
 import app.missu.ui.components.PageTopBar
 import coil3.compose.rememberAsyncImagePainter
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Composable
 fun ComicReaderScreen(
@@ -33,6 +37,8 @@ fun ComicReaderScreen(
     state: ComicReaderUiState,
     onRetry: () -> Unit,
     onBack: () -> Unit,
+    initialPage: Int = 0,
+    onPageChange: (Int) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxSize()) {
@@ -45,9 +51,17 @@ fun ComicReaderScreen(
                     title = stringResource(R.string.comic_reader_empty),
                 )
                 is ComicReaderUiState.Error -> ErrorHint(current.message.text(), onRetry)
-                is ComicReaderUiState.Content -> LazyColumn(Modifier.fillMaxSize()) {
-                    itemsIndexed(current.pages, key = { _, page -> page.url }) { index, page ->
-                        ComicReaderImage(page = page, index = index)
+                is ComicReaderUiState.Content -> {
+                    val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialPage)
+                    LaunchedEffect(listState) {
+                        snapshotFlow { listState.firstVisibleItemIndex }
+                            .distinctUntilChanged()
+                            .collect { onPageChange(it) }
+                    }
+                    LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                        itemsIndexed(current.pages, key = { _, page -> page.url }) { index, page ->
+                            ComicReaderImage(page = page, index = index)
+                        }
                     }
                 }
             }
