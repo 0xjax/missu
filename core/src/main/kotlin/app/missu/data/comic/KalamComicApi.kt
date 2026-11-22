@@ -40,7 +40,7 @@ class KalamComicApi(
             )
         }
         val chapters = chapterGroups.values.maxByOrNull { it.size }?.values
-            ?.sortedByDescending { chapter -> CHAPTER_PATH.matchEntire(chapter.id)?.groupValues?.get(3)?.toIntOrNull() }
+            ?.sortedBy { chapter -> CHAPTER_PATH.matchEntire(chapter.id)?.groupValues?.get(3)?.toIntOrNull() }
             .orEmpty()
         return ComicDetail(
             id = id,

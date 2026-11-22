@@ -71,8 +71,8 @@ class ComicSourceContractTest {
         val detail = api.getDetail("67213")
 
         assertEquals("海贼王", detail.title)
-        assertEquals(listOf("2卷", "1卷"), detail.chapters.map { it.title })
-        assertEquals("/chapter/67213-2-2.html", detail.chapters.first().id)
+        assertEquals(listOf("1卷", "2卷"), detail.chapters.map { it.title })
+        assertEquals("/chapter/67213-2-1.html", detail.chapters.first().id)
     }
 
     private fun client(body: String): ComicHttpClient {

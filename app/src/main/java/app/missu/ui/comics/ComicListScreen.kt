@@ -47,20 +47,24 @@ fun ComicCover(
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop,
 ) {
-    val url = remember(image) {
-        image?.let {
-            if (it.scrambleId == null) it.url else it.url.toHttpUrl().newBuilder()
-                .addQueryParameter("_missu_scramble", it.scrambleId.toString())
-                .build()
-                .toString()
-        }
-    }
+    val url = remember(image) { comicImageUrl(image) }
     AsyncImage(
         model = url,
         contentDescription = contentDescription,
         contentScale = contentScale,
         modifier = modifier.background(MaterialTheme.colorScheme.surfaceContainer),
     )
+}
+
+internal fun comicImageUrl(image: ComicImage?): String? = image?.let {
+    if (it.scrambleId == null) {
+        it.url
+    } else {
+        it.url.toHttpUrl().newBuilder()
+            .addQueryParameter("_missu_scramble", it.scrambleId.toString())
+            .build()
+            .toString()
+    }
 }
 
 @Composable
