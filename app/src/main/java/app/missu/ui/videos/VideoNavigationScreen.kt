@@ -34,8 +34,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.List
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -58,7 +56,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -78,6 +75,7 @@ import app.missu.ui.components.LoadingHint
 import app.missu.ui.common.LoadMoreState
 import app.missu.ui.common.text
 import app.missu.ui.list.VideoControlButton
+import app.missu.ui.list.VideoOptionMenu
 import app.missu.ui.list.VideoListContent
 import app.missu.ui.list.VideoListControls
 import app.missu.ui.list.VideoListUiState
@@ -252,42 +250,18 @@ fun VideoNavigationScreen(
 
                 VideoSection.ACTRESSES -> {
                     val ranking = sort == ActressFilterOptions.SORT_RANKING
-                    var sortMenuOpen by remember { mutableStateOf(false) }
                     VideoNavigationControlsRow(searchAction = searchAction) {
                         VideoSectionControl(
                             selected = tab,
                             onSelect = { tabIndex = it.ordinal },
                         )
-                        Box {
-                            VideoControlButton(
-                                text = sortLabel(sort),
-                                expanded = sortMenuOpen,
-                                onClick = { sortMenuOpen = true },
-                            )
-                            DropdownMenu(
-                                expanded = sortMenuOpen,
-                                onDismissRequest = { sortMenuOpen = false },
-                            ) {
-                                ActressFilterOptions.sorts.forEach { option ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                text = sortLabel(option.value),
-                                                color = if (option.value == sort) {
-                                                    MaterialTheme.colorScheme.primary
-                                                } else {
-                                                    Color.Unspecified
-                                                },
-                                            )
-                                        },
-                                        onClick = {
-                                            if (option.value != sort) onSortChange(option.value)
-                                            sortMenuOpen = false
-                                        },
-                                    )
-                                }
-                            }
-                        }
+                        VideoOptionMenu(
+                            text = sortLabel(sort),
+                            options = ActressFilterOptions.sorts.map { it.value },
+                            selected = sort,
+                            onSelect = { if (it != sort) onSortChange(it) },
+                            optionLabel = { sortLabel(it) },
+                        )
                         if (filters.isNotEmpty()) {
                             TextButton(onClick = onResetFilters, enabled = !ranking) {
                                 Text(stringResource(R.string.video_clear))
@@ -354,34 +328,13 @@ private fun VideoSectionControl(
     selected: VideoSection,
     onSelect: (VideoSection) -> Unit,
 ) {
-    var menuOpen by remember { mutableStateOf(false) }
-    Box {
-        VideoControlButton(
-            text = stringResource(selected.labelRes),
-            expanded = menuOpen,
-            onClick = { menuOpen = true },
-        )
-        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-            VideoSection.entries.forEach { option ->
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            text = stringResource(option.labelRes),
-                            color = if (option == selected) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                Color.Unspecified
-                            },
-                        )
-                    },
-                    onClick = {
-                        if (option != selected) onSelect(option)
-                        menuOpen = false
-                    },
-                )
-            }
-        }
-    }
+    VideoOptionMenu(
+        text = stringResource(selected.labelRes),
+        options = VideoSection.entries,
+        selected = selected,
+        onSelect = { if (it != selected) onSelect(it) },
+        optionLabel = { stringResource(it.labelRes) },
+    )
 }
 
 /**

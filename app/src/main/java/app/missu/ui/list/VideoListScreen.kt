@@ -5,7 +5,6 @@ package app.missu.ui.list
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -26,8 +25,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.List
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -35,12 +32,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.stringResource
@@ -185,8 +179,6 @@ internal fun VideoListControls(
     controlsLeading: (@Composable RowScope.() -> Unit)?,
     controlsTrailing: (@Composable () -> Unit)?,
 ) {
-    var sortMenuOpen by remember { mutableStateOf(false) }
-    var filterMenuOpen by remember { mutableStateOf(false) }
     // 站点点明了它自己当前的排序（页面头部「排序: X」），所以「默认」不再是一档：直接显示那一项。
     val current = sort ?: detectedSort
 
@@ -202,57 +194,22 @@ internal fun VideoListControls(
         ) {
             controlsLeading?.invoke(this)
 
-            Box {
-            VideoControlButton(
+            VideoOptionMenu(
                 text = sortLabel(current),
-                expanded = sortMenuOpen,
-                onClick = { sortMenuOpen = true },
+                options = sorts,
+                selected = current,
+                // 选中已是当前项时不重发请求：站点默认序与显式 `?sort=` 未必同序，
+                // 白白换一次数据只会让用户觉得"点了反而乱了"。
+                onSelect = { if (it != current) onSortChange(it) },
+                optionLabel = { sortLabel(it) },
             )
-            DropdownMenu(expanded = sortMenuOpen, onDismissRequest = { sortMenuOpen = false }) {
-                sorts.forEach { option ->
-                    DropdownMenuItem(
-                        text = { Text(sortLabel(option), color = optionColor(selected = option == current)) },
-                        onClick = {
-                            // 选中已是当前项时不重发请求：站点默认序与显式 `?sort=` 未必同序，
-                            // 白白换一次数据只会让用户觉得"点了反而乱了"。
-                            if (option != current) onSortChange(option)
-                            sortMenuOpen = false
-                        },
-                    )
-                }
-            }
-        }
-
-        Box {
-            VideoControlButton(
+            VideoOptionMenu(
                 text = filter?.let { filterLabel(it) } ?: stringResource(R.string.list_filter_all),
-                expanded = filterMenuOpen,
-                onClick = { filterMenuOpen = true },
+                options = listOf(null) + filters,
+                selected = filter,
+                onSelect = { if (it != filter) onFilterChange(it) },
+                optionLabel = { it?.let { value -> filterLabel(value) } ?: stringResource(R.string.list_filter_all) },
             )
-            DropdownMenu(expanded = filterMenuOpen, onDismissRequest = { filterMenuOpen = false }) {
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            stringResource(R.string.list_filter_all),
-                            color = optionColor(selected = filter == null),
-                        )
-                    },
-                    onClick = {
-                        if (filter != null) onFilterChange(null)
-                        filterMenuOpen = false
-                    },
-                )
-                    filters.forEach { option ->
-                        DropdownMenuItem(
-                            text = { Text(filterLabel(option), color = optionColor(selected = option == filter)) },
-                            onClick = {
-                                if (option != filter) onFilterChange(option)
-                                filterMenuOpen = false
-                            },
-                        )
-                    }
-                }
-            }
         }
         if (controlsTrailing != null) {
             Spacer(Modifier.width(12.dp))
@@ -373,10 +330,6 @@ internal fun VideoControlButton(
         Text(text, maxLines = 1)
     }
 }
-
-@Composable
-private fun optionColor(selected: Boolean): Color =
-    if (selected) MaterialTheme.colorScheme.primary else Color.Unspecified
 
 /**
  * 排序的文案。`null` = 站点默认序。
