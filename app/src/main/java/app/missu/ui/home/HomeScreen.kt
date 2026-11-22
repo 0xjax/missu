@@ -27,7 +27,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.missu.R
-import app.missu.ui.search.LocalSearchBarInset
 
 @Composable
 fun HomeScreen(
@@ -35,10 +34,9 @@ fun HomeScreen(
     onOpenVideos: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val barInset = LocalSearchBarInset.current
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = barInset + 8.dp, bottom = 32.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item(key = "intro") { HomeIntro() }

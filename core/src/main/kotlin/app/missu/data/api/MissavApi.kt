@@ -354,12 +354,17 @@ class MissavApi(
     }
 
     /**
-     * 搜索：路径 `/search/{keyword}`，分页用 `?page=N`（从 1 开始，第 1 页不带参数）。
+     * 搜索：路径 `/search/{keyword}`，与完整列表共用排序、过滤和分页参数。
      * NOTE: 关键词按 legacy 用 `encodeURIComponent` 语义（空格编码成 %20 而不是 +）。
      */
-    suspend fun searchVideos(keyword: String, page: Int = 1): VideoList {
+    suspend fun searchVideos(
+        keyword: String,
+        page: Int = 1,
+        sort: VideoListOptions.Sort? = null,
+        filter: VideoListOptions.Filter? = null,
+    ): VideoList {
         val encoded = java.net.URLEncoder.encode(keyword, "UTF-8").replace("+", "%20")
-        val path = if (page > 1) "/search/$encoded?page=$page" else "/search/$encoded"
+        val path = videoListPath("/search/$encoded", page = page, sort = sort, filter = filter)
         return parsePage(path) { HomeParser.parseVideoList(it, page) }
     }
 

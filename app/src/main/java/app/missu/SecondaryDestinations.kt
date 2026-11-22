@@ -377,6 +377,9 @@ internal fun NavGraphBuilder.secondaryDestinations(
             factory = missuViewModelFactory { SearchViewModel(api, searchHistory) },
         )
         val state by viewModel.state.collectAsStateWithLifecycle()
+        val sort by viewModel.sort.collectAsStateWithLifecycle()
+        val filter by viewModel.filter.collectAsStateWithLifecycle()
+        val detectedSort by viewModel.detectedSort.collectAsStateWithLifecycle()
         val recent by viewModel.recent.collectAsStateWithLifecycle()
         LaunchedEffect(keyword) { viewModel.search(keyword) }
 
@@ -396,6 +399,11 @@ internal fun NavGraphBuilder.secondaryDestinations(
                     SearchBody(
                         state = state,
                         keyword = keyword,
+                        sort = sort,
+                        filter = filter,
+                        detectedSort = detectedSort,
+                        onSortChange = viewModel::setSort,
+                        onFilterChange = viewModel::setFilter,
                         onRetry = viewModel::search,
                         onLoadMore = viewModel::loadMore,
                         onOpen = { id, thumbnail -> onOpenDetail(id, thumbnail, "") },

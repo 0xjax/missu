@@ -1,23 +1,27 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
 
-package app.missu.ui.discover
+package app.missu.ui.videos
 
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -25,11 +29,13 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.List
-import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -38,11 +44,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.toShape
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -55,13 +58,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.missu.R
@@ -78,8 +77,15 @@ import app.missu.ui.components.LoadMoreOnScroll
 import app.missu.ui.components.LoadingHint
 import app.missu.ui.common.LoadMoreState
 import app.missu.ui.common.text
+import app.missu.ui.list.VideoControlButton
 import app.missu.ui.list.VideoListContent
+import app.missu.ui.list.VideoListControls
 import app.missu.ui.list.VideoListUiState
+import app.missu.ui.list.VideoToolbarContainer
+import app.missu.ui.search.LocalSearchBarInset
+import app.missu.ui.search.SearchBarTopGap
+import app.missu.ui.search.SearchTopVeil
+import app.missu.ui.search.SearchTriggerHeight
 import coil3.compose.AsyncImage
 
 /**
@@ -90,8 +96,9 @@ import coil3.compose.AsyncImage
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DiscoverScreen(
+fun VideoNavigationScreen(
     states: Map<String, DirectoryUiState>,
+    searchAction: @Composable () -> Unit,
     sort: String,
     filters: Map<String, String>,
     refreshingKinds: Set<String>,
@@ -118,102 +125,23 @@ fun DiscoverScreen(
 ) {
     var tabIndex by rememberSaveable { mutableIntStateOf(0) }
     var filterSheetOpen by rememberSaveable { mutableStateOf(false) }
-    val tabs = DiscoverTab.entries
+    val tabs = VideoSection.entries
     val tab = tabs[tabIndex]
 
-    Column(modifier.fillMaxSize()) {
+    Box(modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
 
-        // NOTE: 用 M3E 的 PrimaryTabRow（基线 TabRow 已废弃）；五个页签等宽排布。
-        PrimaryTabRow(selectedTabIndex = tabIndex) {
-            tabs.forEachIndexed { index, item ->
-                Tab(
-                    selected = index == tabIndex,
-                    onClick = { tabIndex = index },
-                    text = { Text(stringResource(item.labelRes)) },
-                )
-            }
-        }
-
-        // 切到某个页签时才去拉它，省请求：目录各自一次；频道是第一次进来时拉一次首页导航。
+        // 切到某个栏目时才去拉它，省请求：目录各自一次；频道是第一次进来时拉一次首页导航。
         LaunchedEffect(tab.kind) {
             when {
-                tab == DiscoverTab.CHANNELS -> if (channels is ChannelsUiState.Loading) onChannelsLoad()
+                tab == VideoSection.CHANNELS -> if (channels is ChannelsUiState.Loading) onChannelsLoad()
                 tab.isDirectory -> if (states[tab.kind] == null) onLoad(tab.kind)
             }
         }
 
-        // 排序与筛选只有女优目录有（站点对类型目录不提供 sort / 筛选参数）。
-        if (tab == DiscoverTab.ACTRESSES) {
-            val ranking = sort == ActressFilterOptions.SORT_RANKING
-            val filterVisibility by animateFloatAsState(
-                targetValue = if (ranking) 0f else 1f,
-                animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
-                label = "actressFilterVisibility",
-            )
-            val filterScale by animateFloatAsState(
-                targetValue = if (ranking) 0.96f else 1f,
-                animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
-                label = "actressFilterScale",
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                // NOTE: 排序是「单选且必选」，按 M3E 用连通 ToggleButton 组（SegmentedButton 已退役），
-                // 首尾用 connected*ButtonShapes 咬合，语义标成 RadioButton。
-                Row(
-                    modifier = Modifier.weight(1f),
-                    horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
-                ) {
-                    ActressFilterOptions.sorts.forEachIndexed { index, option ->
-                        ToggleButton(
-                            checked = sort == option.value,
-                            onCheckedChange = { onSortChange(option.value) },
-                            shapes = when {
-                                index == 0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-                                index == ActressFilterOptions.sorts.lastIndex ->
-                                    ButtonGroupDefaults.connectedTrailingButtonShapes()
-                                else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
-                            },
-                            contentPadding = PaddingValues(horizontal = 4.dp),
-                            modifier = Modifier.weight(1f).semantics { role = Role.RadioButton },
-                        ) {
-                            Text(sortLabel(option.value), maxLines = 1, softWrap = false)
-                        }
-                    }
-                }
-
-                // NOTE: 排行不吃这些筛选；操作淡出但槽位必须继续测量，否则排序组会突然扩宽、三颗按钮一起跳。
-                Row(
-                    modifier = Modifier
-                        .graphicsLayer {
-                            alpha = filterVisibility
-                            scaleX = filterScale
-                            scaleY = filterScale
-                        }
-                        .then(if (ranking) Modifier.clearAndSetSemantics { } else Modifier),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (filters.isNotEmpty()) {
-                        TextButton(onClick = onResetFilters, enabled = !ranking) {
-                            Text(stringResource(R.string.discover_clear))
-                        }
-                    }
-                    FilterChip(
-                        selected = filters.isNotEmpty(),
-                        onClick = { filterSheetOpen = true },
-                        enabled = !ranking,
-                        label = { Text(if (filters.isEmpty()) stringResource(R.string.discover_filter) else stringResource(R.string.discover_filter_count, filters.size)) },
-                    )
-                }
-            }
-        }
-
-        if (tab == DiscoverTab.HOT) {
+        if (tab == VideoSection.HOT) {
             // NOTE: 热门就是 `/today-hot` 这面列表本身——今日 / 本周 / 本月只是它的三个排序取值，
-            // 所以这里不另造一套「周期」结构，直接用列表页那一行口径（排序菜单 + 过滤 chip）。
+            // 所以这里不另造一套「周期」结构，直接用列表页那一行口径（栏目 + 排序 + 过滤菜单）。
             VideoListContent(
                 state = hotState,
                 sort = hotSort,
@@ -227,8 +155,9 @@ fun DiscoverScreen(
                 onLoadMore = onHotLoadMore,
                 onOpen = onOpenVideo,
                 modifier = Modifier.fillMaxSize(),
+                showControls = false,
             )
-        } else if (tab == DiscoverTab.CHANNELS) {
+        } else if (tab == VideoSection.CHANNELS) {
             ChannelsContent(state = channels, onRetry = onChannelsRetry, onOpen = onOpen)
         } else when (val state = states[tab.kind]) {
             null, DirectoryUiState.Loading -> LoadingHint()
@@ -248,12 +177,12 @@ fun DiscoverScreen(
                 modifier = Modifier.fillMaxSize(),
             ) {
                 // NOTE: 女优带头像走双列卡片，类型/厂商没有头像图，走三列文字块——两者都是一屏多放 60% 的密度。
-                val actresses = tab == DiscoverTab.ACTRESSES
+                val actresses = tab == VideoSection.ACTRESSES
                 // NOTE: 站点的 `/genres` 索引里没有 VR（实测翻到第 2 页也没有），但 `/genres/VR`
                 // 是正常类型页。按「它是类型」补一格，而不是给它另开一个维度。
-                val gridItems = if (tab == DiscoverTab.GENRES) {
-                    listOf(DiscoverPins.vrGenre) +
-                        state.items.filterNot { it.path == DiscoverPins.vrGenre.path }
+                val gridItems = if (tab == VideoSection.GENRES) {
+                    listOf(VideoPins.vrGenre) +
+                        state.items.filterNot { it.path == VideoPins.vrGenre.path }
                 } else {
                     state.items
                 }
@@ -267,7 +196,12 @@ fun DiscoverScreen(
                     state = gridState,
                     modifier = Modifier.fillMaxSize(),
                     columns = GridCells.Fixed(if (actresses) 2 else 3),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = LocalSearchBarInset.current + 8.dp,
+                        bottom = 8.dp,
+                    ),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(if (actresses) 4.dp else 8.dp),
                 ) {
@@ -291,6 +225,96 @@ fun DiscoverScreen(
         }
     }
 
+        val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+        SearchTopVeil(
+            statusTop = statusTop,
+            veil = MaterialTheme.colorScheme.background.copy(alpha = 0.7f),
+            triggerHeight = SearchTriggerHeight,
+        )
+        Box(Modifier.align(Alignment.TopCenter).padding(top = statusTop)) {
+            when (tab) {
+                VideoSection.HOT -> VideoListControls(
+                    sort = hotSort,
+                    filter = hotFilter,
+                    detectedSort = hotDetectedSort,
+                    sorts = VideoListOptions.Sort.entries,
+                    filters = VideoListOptions.Filter.entries,
+                    onSortChange = onHotSortChange,
+                    onFilterChange = onHotFilterChange,
+                    controlsLeading = {
+                        VideoSectionControl(
+                            selected = tab,
+                            onSelect = { tabIndex = it.ordinal },
+                        )
+                    },
+                    controlsTrailing = searchAction,
+                )
+
+                VideoSection.ACTRESSES -> {
+                    val ranking = sort == ActressFilterOptions.SORT_RANKING
+                    var sortMenuOpen by remember { mutableStateOf(false) }
+                    VideoNavigationControlsRow(searchAction = searchAction) {
+                        VideoSectionControl(
+                            selected = tab,
+                            onSelect = { tabIndex = it.ordinal },
+                        )
+                        Box {
+                            VideoControlButton(
+                                text = sortLabel(sort),
+                                expanded = sortMenuOpen,
+                                onClick = { sortMenuOpen = true },
+                            )
+                            DropdownMenu(
+                                expanded = sortMenuOpen,
+                                onDismissRequest = { sortMenuOpen = false },
+                            ) {
+                                ActressFilterOptions.sorts.forEach { option ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = sortLabel(option.value),
+                                                color = if (option.value == sort) {
+                                                    MaterialTheme.colorScheme.primary
+                                                } else {
+                                                    Color.Unspecified
+                                                },
+                                            )
+                                        },
+                                        onClick = {
+                                            if (option.value != sort) onSortChange(option.value)
+                                            sortMenuOpen = false
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                        if (filters.isNotEmpty()) {
+                            TextButton(onClick = onResetFilters, enabled = !ranking) {
+                                Text(stringResource(R.string.video_clear))
+                            }
+                        }
+                        VideoControlButton(
+                            text = if (filters.isEmpty()) {
+                                stringResource(R.string.video_filter)
+                            } else {
+                                stringResource(R.string.video_filter_count, filters.size)
+                            },
+                            expanded = filterSheetOpen,
+                            onClick = { filterSheetOpen = true },
+                            enabled = !ranking,
+                        )
+                    }
+                }
+
+                else -> VideoNavigationControlsRow(searchAction = searchAction) {
+                    VideoSectionControl(
+                        selected = tab,
+                        onSelect = { tabIndex = it.ordinal },
+                    )
+                }
+            }
+        }
+
     if (filterSheetOpen) {
         MissuBottomSheet(onDismissRequest = { filterSheetOpen = false }) {
             FilterSheet(
@@ -301,9 +325,67 @@ fun DiscoverScreen(
         }
     }
 }
+}
+
+@Composable
+private fun VideoNavigationControlsRow(
+    searchAction: @Composable () -> Unit,
+    content: @Composable RowScope.() -> Unit,
+) {
+    VideoToolbarContainer {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(
+                modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                content = content,
+            )
+            Spacer(Modifier.width(12.dp))
+            searchAction()
+        }
+    }
+}
+
+@Composable
+private fun VideoSectionControl(
+    selected: VideoSection,
+    onSelect: (VideoSection) -> Unit,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+    Box {
+        VideoControlButton(
+            text = stringResource(selected.labelRes),
+            expanded = menuOpen,
+            onClick = { menuOpen = true },
+        )
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            VideoSection.entries.forEach { option ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = stringResource(option.labelRes),
+                            color = if (option == selected) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                Color.Unspecified
+                            },
+                        )
+                    },
+                    onClick = {
+                        if (option != selected) onSelect(option)
+                        menuOpen = false
+                    },
+                )
+            }
+        }
+    }
+}
 
 /**
- * 「频道」页签：站点导航里的策展列表（素人 / 无码影片 / 亚洲 AV …）。
+ * 「频道」栏目：站点导航里的策展列表（素人 / 无码影片 / 亚洲 AV …）。
  *
  * NOTE: 分组是**排版**，不是层级——所有行平铺在同一页、没有可折叠的第二级。所以站点把
  * 「韩国直播」塞进「亚洲 AV」组这件事，不会在我们这里多冒出一层结构；界面上直播单独成组
@@ -326,11 +408,16 @@ private fun ChannelsContent(
         is ChannelsUiState.Error -> ErrorHint(state.message.text(), onRetry)
 
         is ChannelsUiState.Content -> {
-            val liveTitle = stringResource(R.string.discover_channels_live)
+            val liveTitle = stringResource(R.string.video_channels_live)
             val groups = remember(state.groups, liveTitle) { splitLiveGroup(state.groups, liveTitle) }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = LocalSearchBarInset.current + 8.dp,
+                    bottom = 8.dp,
+                ),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 groups.forEach { group ->
@@ -373,7 +460,7 @@ private fun splitLiveGroup(groups: List<NavGroup>, liveTitle: String): List<NavG
     return if (live.isEmpty()) kept else kept + NavGroup(title = liveTitle, items = live)
 }
 
-/** 频道页签里的一行。NOTE: `Surface(onClick)` 自带容器色、圆角、涟漪与整行可点的无障碍语义。 */
+/** 频道栏目里的一行。NOTE: `Surface(onClick)` 自带容器色、圆角、涟漪与整行可点的无障碍语义。 */
 @Composable
 private fun ChannelRow(name: String, onClick: () -> Unit) {
     Surface(
@@ -409,7 +496,7 @@ private fun FilterSheet(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(stringResource(R.string.discover_filter_title), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.video_filter_title), style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.weight(1f))
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_done)) }
         }

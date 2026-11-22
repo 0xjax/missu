@@ -24,7 +24,7 @@ class SearchViewModelTest {
     fun `new search wins after the previous request is cancelled`() = runTest {
         val oldResponse = CompletableDeferred<VideoList>()
         val newResponse = CompletableDeferred<VideoList>()
-        val viewModel = SearchViewModel(FakeSearchHistory()) { keyword, _ ->
+        val viewModel = SearchViewModel(FakeSearchHistory()) { keyword, _, _, _ ->
             if (keyword == "old") oldResponse.await() else newResponse.await()
         }
 
@@ -41,7 +41,7 @@ class SearchViewModelTest {
     @Test
     fun `pagination failure keeps content and retry removes duplicates`() = runTest {
         var secondPageAttempts = 0
-        val viewModel = SearchViewModel(FakeSearchHistory()) { _, page ->
+        val viewModel = SearchViewModel(FakeSearchHistory()) { _, page, _, _ ->
             if (page == 1) return@SearchViewModel VideoList(listOf(video("one")), nextPage = 2)
             secondPageAttempts += 1
             if (secondPageAttempts == 1) throw IOException("offline")
@@ -69,7 +69,7 @@ class SearchViewModelTest {
     @Test
     fun `blank search clears results without changing history`() = runTest {
         val history = FakeSearchHistory()
-        val viewModel = SearchViewModel(history) { _, _ -> page("one") }
+        val viewModel = SearchViewModel(history) { _, _, _, _ -> page("one") }
         viewModel.search("one")
         advanceUntilIdle()
 

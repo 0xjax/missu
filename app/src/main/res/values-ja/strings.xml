@@ -12,7 +12,7 @@
     <!-- ボトムタブ -->
     <string name="nav_home">ホーム</string>
     <string name="nav_study">書斎</string>
-    <string name="nav_discover">動画</string>
+    <string name="nav_videos">動画</string>
     <string name="nav_account">マイページ</string>
 
     <!-- マイページ -->
@@ -142,6 +142,8 @@
     <string name="vocab_nourish">動詞：育む、滋養を与える。成長に必要なものを与え、支えること。</string>
 
     <!-- 検索 -->
+    <string name="search_open">検索を開く</string>
+    <string name="search_edit">検索を編集</string>
     <string name="search_placeholder">品番・女優・キーワードで検索</string>
     <string name="search_exit">検索を終了</string>
     <string name="search_empty_title">結果が見つかりません</string>
@@ -151,10 +153,10 @@
     <string name="search_results_count">「%1$s」の検索結果 %2$d 件</string>
 
     <!-- 発見 -->
-    <string name="discover_clear">クリア</string>
-    <string name="discover_filter">絞り込み</string>
-    <string name="discover_filter_count">絞り込み (%1$d)</string>
-    <string name="discover_filter_title">女優を絞り込む</string>
+    <string name="video_clear">クリア</string>
+    <string name="video_filter">絞り込み</string>
+    <string name="video_filter_count">絞り込み (%1$d)</string>
+    <string name="video_filter_title">女優を絞り込む</string>
 
     <!-- 詳細 -->
     <string name="detail_no_playback">再生 URL を取得できませんでした</string>
@@ -266,13 +268,13 @@
     <string name="settings_language_note">アプリの表示言語と、サイトから取得するコンテンツの言語をまとめて切り替えます。未対応の言語では表示が英語になり、コンテンツは端末の言語のままになります。</string>
 
     <!-- 発見ページのディレクトリ分類 -->
-    <string name="discover_section_actresses">女優</string>
-    <string name="discover_section_genres">ジャンル</string>
-    <string name="discover_section_makers">メーカー</string>
-    <string name="discover_section_hot">人気</string>
+    <string name="video_section_actresses">女優</string>
+    <string name="video_section_genres">ジャンル</string>
+    <string name="video_section_makers">メーカー</string>
+    <string name="video_section_hot">人気</string>
 
-    <string name="discover_section_channels">チャンネル</string>
-    <string name="discover_channels_live">ライブ</string>
+    <string name="video_section_channels">チャンネル</string>
+    <string name="video_channels_live">ライブ</string>
 
     <!-- 女優の並び替えと絞り込み（値は :core、文言はここ） -->
     <string name="sort_videos">作品数</string>

@@ -18,7 +18,7 @@
     <!-- 底部页签 -->
     <string name="nav_home">Home</string>
     <string name="nav_study">Reading</string>
-    <string name="nav_discover">Videos</string>
+    <string name="nav_videos">Videos</string>
     <string name="nav_account">Me</string>
 
     <!-- 我的 -->
@@ -156,6 +156,8 @@
     <string name="vocab_nourish_example" translatable="false">nourish a larger world</string>
 
     <!-- 搜索 -->
+    <string name="search_open">Open search</string>
+    <string name="search_edit">Edit search</string>
     <string name="search_placeholder">Search code, actress or keyword</string>
     <string name="search_exit">Exit search</string>
     <string name="search_empty_title">No results</string>
@@ -165,10 +167,10 @@
     <string name="search_results_count">Results for “%1$s”: %2$d</string>
 
     <!-- 影片 -->
-    <string name="discover_clear">Clear</string>
-    <string name="discover_filter">Filters</string>
-    <string name="discover_filter_count">Filters (%1$d)</string>
-    <string name="discover_filter_title">Filter actresses</string>
+    <string name="video_clear">Clear</string>
+    <string name="video_filter">Filters</string>
+    <string name="video_filter_count">Filters (%1$d)</string>
+    <string name="video_filter_title">Filter actresses</string>
 
     <!-- 详情 -->
     <string name="detail_no_playback">Playback URL is not available</string>
@@ -282,12 +284,12 @@
 
 
     <!-- 影片页的目录分类 -->
-    <string name="discover_section_actresses">Actresses</string>
-    <string name="discover_section_genres">Genres</string>
-    <string name="discover_section_makers">Makers</string>
-    <string name="discover_section_hot">Hot</string>
-    <string name="discover_section_channels">Channels</string>
-    <string name="discover_channels_live">Live</string>
+    <string name="video_section_actresses">Actresses</string>
+    <string name="video_section_genres">Genres</string>
+    <string name="video_section_makers">Makers</string>
+    <string name="video_section_hot">Hot</string>
+    <string name="video_section_channels">Channels</string>
+    <string name="video_channels_live">Live</string>
 
     <!-- 女优排序与筛选（选项值在 :core，文案在这里） -->
     <string name="sort_videos">Videos</string>

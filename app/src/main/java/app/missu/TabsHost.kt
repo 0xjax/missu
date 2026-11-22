@@ -46,9 +46,9 @@ import app.missu.ui.account.AuthViewModel
 import app.missu.ui.components.PageSurface
 import app.missu.ui.components.ProvideHeroVisibility
 import app.missu.ui.components.underScrim
-import app.missu.ui.discover.DiscoverScreen
-import app.missu.ui.discover.DiscoverViewModel
-import app.missu.ui.discover.HOT_PATH
+import app.missu.ui.videos.VideoNavigationScreen
+import app.missu.ui.videos.VideoNavigationViewModel
+import app.missu.ui.videos.HOT_PATH
 import app.missu.ui.home.HomeScreen
 import app.missu.data.model.VideoListQuery
 import app.missu.ui.list.AutoLoadVideoList
@@ -72,7 +72,7 @@ internal data class TopLevel(
 internal val topLevels = listOf(
     TopLevel("home", R.string.nav_home, Icons.Outlined.Home),
     TopLevel("study", R.string.nav_study, Icons.Outlined.AutoStories),
-    TopLevel("discover", R.string.nav_discover, Icons.Outlined.VideoLibrary),
+    TopLevel("videos", R.string.nav_videos, Icons.Outlined.VideoLibrary),
     TopLevel("account", R.string.nav_account, Icons.Outlined.Person),
 )
 
@@ -94,7 +94,7 @@ internal fun TabsHost(
     onOpenDetail: (String, String?, String) -> Unit,
     onOpenList: (String, String) -> Unit,
 ) {
-    val discoverViewModel: DiscoverViewModel = viewModel(factory = missuViewModelFactory { DiscoverViewModel(api) })
+    val videoNavigationViewModel: VideoNavigationViewModel = viewModel(factory = missuViewModelFactory { VideoNavigationViewModel(api) })
     val searchViewModel: SearchViewModel = viewModel(
         factory = missuViewModelFactory { SearchViewModel(api, searchHistory) },
     )
@@ -139,34 +139,12 @@ internal fun TabsHost(
         ) { current ->
             when (current) {
                 "home" -> {
-                    val searchState by searchViewModel.state.collectAsStateWithLifecycle()
-                    val recent by searchViewModel.recent.collectAsStateWithLifecycle()
                     ProvideHeroVisibility(navScope, namespace = "home") {
-                        SearchHost(
-                            state = searchState,
-                            recent = recent,
-                            onSearch = searchViewModel::search,
-                            onLoadMore = searchViewModel::loadMore,
-                            onOpen = { id, thumbnail -> onOpenDetail(id, thumbnail, "") },
-                            onClearHistory = searchViewModel::clearHistory,
-                            onClear = searchViewModel::clear,
-                        ) {
-                            if (searchState is SearchUiState.Idle) {
-                                PageSurface(card = false, contentInset = false) {
-                                    HomeScreen(
-                                        onOpenGuide = { navController.navigate("guide/$it") },
-                                        onOpenVideos = { onTabChange("discover") },
-                                    )
-                                }
-                            } else {
-                                SearchBody(
-                                    state = searchState,
-                                    keyword = (searchState as? SearchUiState.Content)?.keyword.orEmpty(),
-                                    onRetry = searchViewModel::search,
-                                    onLoadMore = searchViewModel::loadMore,
-                                    onOpen = { id, thumbnail -> onOpenDetail(id, thumbnail, "") },
-                                )
-                            }
+                        PageSurface(card = false) {
+                            HomeScreen(
+                                onOpenGuide = { navController.navigate("guide/$it") },
+                                onOpenVideos = { onTabChange("videos") },
+                            )
                         }
                     }
                 }
@@ -198,13 +176,13 @@ internal fun TabsHost(
                     }
                 }
 
-                "discover" -> {
-                    ProvideHeroVisibility(navScope, namespace = "discover") {
-                        val states by discoverViewModel.states.collectAsStateWithLifecycle()
-                        val sort by discoverViewModel.sort.collectAsStateWithLifecycle()
-                        val filters by discoverViewModel.filters.collectAsStateWithLifecycle()
-                        val refreshingKinds by discoverViewModel.refreshing.collectAsStateWithLifecycle()
-                        val channels by discoverViewModel.channels.collectAsStateWithLifecycle()
+                "videos" -> {
+                    ProvideHeroVisibility(navScope, namespace = "videos") {
+                        val states by videoNavigationViewModel.states.collectAsStateWithLifecycle()
+                        val sort by videoNavigationViewModel.sort.collectAsStateWithLifecycle()
+                        val filters by videoNavigationViewModel.filters.collectAsStateWithLifecycle()
+                        val refreshingKinds by videoNavigationViewModel.refreshing.collectAsStateWithLifecycle()
+                        val channels by videoNavigationViewModel.channels.collectAsStateWithLifecycle()
                         var hotSort by rememberSaveable { mutableStateOf(listQueryStore.get(HOT_PATH).sort) }
                         var hotFilter by rememberSaveable { mutableStateOf(listQueryStore.get(HOT_PATH).filter) }
                         val hotQuery = remember(hotSort, hotFilter) {
@@ -218,38 +196,71 @@ internal fun TabsHost(
                         val hotDetectedSort by hotViewModel.detectedSort.collectAsStateWithLifecycle()
                         AutoLoadVideoList(hotViewModel, hotViewModel.state, hotViewModel::load)
 
-                        PageSurface(card = false) {
-                            DiscoverScreen(
-                                states = states,
-                                sort = sort,
-                                filters = filters,
-                                refreshingKinds = refreshingKinds,
-                                hotSort = hotSort,
-                                hotFilter = hotFilter,
-                                hotDetectedSort = hotDetectedSort,
-                                hotState = hotState,
-                                channels = channels,
-                                onLoad = discoverViewModel::load,
-                                onLoadMore = discoverViewModel::loadMore,
-                                onRefresh = discoverViewModel::refresh,
-                                onChannelsLoad = { discoverViewModel.loadChannels() },
-                                onChannelsRetry = { discoverViewModel.loadChannels(force = true) },
-                                onHotSortChange = {
-                                    listQueryStore.put(hotQuery.copy(sort = it))
-                                    hotSort = it
-                                },
-                                onHotFilterChange = {
-                                    listQueryStore.put(hotQuery.copy(filter = it))
-                                    hotFilter = it
-                                },
-                                onHotLoadMore = hotViewModel::loadMore,
-                                onHotRetry = hotViewModel::load,
-                                onOpen = onOpenList,
-                                onOpenVideo = { id, thumbnail -> onOpenDetail(id, thumbnail, "") },
-                                onSortChange = discoverViewModel::setSort,
-                                onFilterChange = discoverViewModel::setFilter,
-                                onResetFilters = discoverViewModel::resetFilters,
-                            )
+                        val searchState by searchViewModel.state.collectAsStateWithLifecycle()
+                        val searchSort by searchViewModel.sort.collectAsStateWithLifecycle()
+                        val searchFilter by searchViewModel.filter.collectAsStateWithLifecycle()
+                        val searchDetectedSort by searchViewModel.detectedSort.collectAsStateWithLifecycle()
+                        val recent by searchViewModel.recent.collectAsStateWithLifecycle()
+                        PageSurface(card = false, contentInset = false) {
+                            SearchHost(
+                                state = searchState,
+                                recent = recent,
+                                onSearch = searchViewModel::search,
+                                onLoadMore = searchViewModel::loadMore,
+                                onOpen = { id, thumbnail -> onOpenDetail(id, thumbnail, "") },
+                                onClearHistory = searchViewModel::clearHistory,
+                                onClear = searchViewModel::clear,
+                                inlineTrigger = true,
+                            ) { searchAction ->
+                                if (searchState is SearchUiState.Idle) {
+                                    VideoNavigationScreen(
+                                        states = states,
+                                        searchAction = searchAction,
+                                        sort = sort,
+                                        filters = filters,
+                                        refreshingKinds = refreshingKinds,
+                                        hotSort = hotSort,
+                                        hotFilter = hotFilter,
+                                        hotDetectedSort = hotDetectedSort,
+                                        hotState = hotState,
+                                        channels = channels,
+                                        onLoad = videoNavigationViewModel::load,
+                                        onLoadMore = videoNavigationViewModel::loadMore,
+                                        onRefresh = videoNavigationViewModel::refresh,
+                                        onChannelsLoad = { videoNavigationViewModel.loadChannels() },
+                                        onChannelsRetry = { videoNavigationViewModel.loadChannels(force = true) },
+                                        onHotSortChange = {
+                                            listQueryStore.put(hotQuery.copy(sort = it))
+                                            hotSort = it
+                                        },
+                                        onHotFilterChange = {
+                                            listQueryStore.put(hotQuery.copy(filter = it))
+                                            hotFilter = it
+                                        },
+                                        onHotLoadMore = hotViewModel::loadMore,
+                                        onHotRetry = hotViewModel::load,
+                                        onOpen = onOpenList,
+                                        onOpenVideo = { id, thumbnail -> onOpenDetail(id, thumbnail, "") },
+                                        onSortChange = videoNavigationViewModel::setSort,
+                                        onFilterChange = videoNavigationViewModel::setFilter,
+                                        onResetFilters = videoNavigationViewModel::resetFilters,
+                                    )
+                                } else {
+                                    SearchBody(
+                                        state = searchState,
+                                        keyword = (searchState as? SearchUiState.Content)?.keyword.orEmpty(),
+                                        sort = searchSort,
+                                        filter = searchFilter,
+                                        detectedSort = searchDetectedSort,
+                                        onSortChange = searchViewModel::setSort,
+                                        onFilterChange = searchViewModel::setFilter,
+                                        onRetry = searchViewModel::search,
+                                        onLoadMore = searchViewModel::loadMore,
+                                        onOpen = { id, thumbnail -> onOpenDetail(id, thumbnail, "") },
+                                        searchAction = searchAction,
+                                    )
+                                }
+                            }
                         }
                     }
                 }

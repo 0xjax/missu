@@ -12,7 +12,7 @@ import java.time.Year
  * WARNING: 站点页面上没有这些筛选的普通链接（是脚本拼 query），所以不能靠抓页面推断；
  * 要改选项必须对照 legacy 或站点表单，不要自己编值。
  * NOTE: 这里只有**值**，没有界面文案——`:core` 没有资源系统，文案在 app 侧按 key 组合
- * （见 `DiscoverScreen` 的 `optionLabel`）。加语言不用动这个文件。
+ * （见 `VideoNavigationScreen` 的 `optionLabel`）。加语言不用动这个文件。
  */
 object ActressFilterOptions {
 
@@ -22,7 +22,7 @@ object ActressFilterOptions {
 
     /**
      * 女优月榜。**不是** `?sort=` 的取值：站点把它做成独立页面 `/actresses/ranking`，
-     * 所以这里只当「第三档口径」用，真正的请求由 `DiscoverViewModel` 分流
+     * 所以这里只当「第三档口径」用，真正的请求由 `VideoNavigationViewModel` 分流
      * （见 `MissavApi.getActressRanking`）。
      */
     const val SORT_RANKING = "ranking"

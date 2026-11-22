@@ -12,7 +12,7 @@
     <!-- 底部页签 -->
     <string name="nav_home">首页</string>
     <string name="nav_study">书房</string>
-    <string name="nav_discover">影片</string>
+    <string name="nav_videos">影片</string>
     <string name="nav_account">我的</string>
 
     <!-- 我的 -->
@@ -142,6 +142,8 @@
     <string name="vocab_nourish">动词：滋养；培育。提供成长所需的养分或支持。</string>
 
     <!-- 搜索 -->
+    <string name="search_open">打开搜索</string>
+    <string name="search_edit">修改搜索</string>
     <string name="search_placeholder">搜索番号、女优、关键词</string>
     <string name="search_exit">退出搜索</string>
     <string name="search_empty_title">没有找到结果</string>
@@ -151,10 +153,10 @@
     <string name="search_results_count">「%1$s」共 %2$d 条</string>
 
     <!-- 影片 -->
-    <string name="discover_clear">清除</string>
-    <string name="discover_filter">筛选</string>
-    <string name="discover_filter_count">筛选 (%1$d)</string>
-    <string name="discover_filter_title">筛选女优</string>
+    <string name="video_clear">清除</string>
+    <string name="video_filter">筛选</string>
+    <string name="video_filter_count">筛选 (%1$d)</string>
+    <string name="video_filter_title">筛选女优</string>
 
     <!-- 详情 -->
     <string name="detail_no_playback">暂时无法提取播放地址</string>
@@ -266,12 +268,12 @@
     <string name="settings_language_note">同时决定界面语言与从站点取回的内容语言。「跟随系统」时，界面会回退到英文（该语言尚未翻译），内容仍按系统语言取。</string>
 
     <!-- 影片页的目录分类 -->
-    <string name="discover_section_actresses">女优</string>
-    <string name="discover_section_genres">类型</string>
-    <string name="discover_section_makers">厂商</string>
-    <string name="discover_section_hot">热门</string>
-    <string name="discover_section_channels">频道</string>
-    <string name="discover_channels_live">直播</string>
+    <string name="video_section_actresses">女优</string>
+    <string name="video_section_genres">类型</string>
+    <string name="video_section_makers">厂商</string>
+    <string name="video_section_hot">热门</string>
+    <string name="video_section_channels">频道</string>
+    <string name="video_channels_live">直播</string>
 
     <!-- 女优排序与筛选（选项值在 :core，文案在这里） -->
     <string name="sort_videos">影片</string>

@@ -10,9 +10,9 @@
 - ✅ 工具链已收口：SDK/JDK 全局唯一，NDK/CMake/重复 SDK 已删（回收约 5.6 GB）
 - ✅ 数据层首块：`data/api` + `data/parse`，`getHome` 已用**真实抓取的首页**验证（4 个板块 / 56 条视频）
 - ✅ **真机端到端**：vivo V2507A 上点按钮 → `getHome` 直接拿到 HTML 并解析出同样 4 板块 / 56 条（未触发人机验证）
-- ✅ **首页 UI**：默认展示非露骨的探索首页，三篇内置原创指南覆盖理解欲望、亲密关系与主动观看，支持四种界面语言与离线完整阅读；不请求站点首页、不展示成人封面。影片库入口切到影片页，顶部搜索与底部影片继续承接主动观影
+- ✅ **首页 UI**：默认展示非露骨的探索首页，三篇内置原创指南覆盖理解欲望、亲密关系与主动观看，支持四种界面语言与离线完整阅读；不请求站点首页、不展示成人封面。影片库入口切到影片页，影片页顶部搜索继续承接主动观影
 - ✅ **详情 + 播放**：点卡片进详情（标题/时长/8 行信息/简介），ExoPlayer 播 HLS；已验证真机出画面
-- ✅ **搜索**：关键词搜索 + 分页（「加载更多」实测 12 → 24 条），结果网格与首页共用 `VideoGridCard`；详情页番号可点击，复用 `SearchHost` 打开对应二级搜索页，返回详情
+- ✅ **搜索**：关键词搜索 + 排序 / 过滤 + 分页（「加载更多」实测 12 → 24 条），结果网格与完整列表共用 `VideoGridCard` 与口径行；详情页番号可点击，复用 `SearchHost` 打开对应二级搜索页，返回详情
 - ✅ **收藏**：详情页收藏/取消收藏，状态来自 `/api/items/{id}/view`；**实测**删掉会话后点收藏会先自动重登再重试（`/api/items/{id}/save` 401 → `withAuthRetry`）
 - ✅ **收藏列表**：`/saved` 分页网格；**实测**游客态会被误报成「空收藏」，现用 `reloginWithRemembered()` 确认会话后重取
 - ✅ **播放器控件**：**整套自绘**（不再用 media3 `PlayerDefaults`）——设置 / 播放暂停 / 时间胶囊 / YouTube 式进度条 / 全屏，全部黑底白图标圆底；点画面切换显隐，播放中 3 秒自动隐藏；双击左右两侧 ∓10 秒；上滑进全屏、下滑退出（跟手）；设置是两级抽屉（倍速 + 画面：适应/填充）
@@ -22,7 +22,7 @@
 - ✅ **列表页**：`MissavApi.getVideos(path, page)` 通用列表 + 分页；详情页信息行里带路径的值（女优/类型/厂商…）可点，跳到对应列表（实测点「RARA」进入其作品页）；用户排序 / 过滤按列表类别持久化，女优、类型、厂商各自整类共享
 - ✅ **视频单列/双列**：设置页全局切换，首页、热门、搜索、收藏、历史与片单共用 `LocalVideoListColumns`；只重组布局，不重取数据，偏好持久化
 - ✅ **价值导向首页**：不禁止或羞辱成人内容选择，用本地短篇指南提供另一种默认入口；不加入观看评分、强制暂停或提醒，指南正文为应用资源，离线可读且无需新增内容接口
-- ✅ **底部导航 + 书房 + 影片**：`首页 / 书房 / 影片 / 我的` 四个一级页签；书房内分「诗词 / 英语」，均为本地内容；影片页保留目录、热门与频道，手动搜索入口只在首页顶部，详情番号可直达对应搜索页
+- ✅ **底部导航 + 书房 + 影片**：`首页 / 书房 / 影片 / 我的` 四个一级页签；书房内分「诗词 / 英语」，均为本地内容；影片页保留目录、热门与频道，栏目收进下拉选项，手动搜索入口只在影片页顶部，详情番号可直达对应搜索页
 - ✅ **诗文与英语学习**：诗文已迁入 Room 3 + 预打包 SQLite，规模与构成见 `content/literature/manifest.json`；FTS5 中文一元 / 二元索引支持篇名、作者与原文搜索，列表按 50 篇分页并按上游知名度排序；体裁筛选、持久化收藏、已有精读内容保留，其余明确标注待完善。两篇英语双语阅读复用指南的中英正文，重点词可点击查看释义与例句。文库在应用首帧后通过 IO 协程后台预热，避免首次进入书房才复制预打包数据库。所有内容离线可用，无打卡、评分或连续天数
 - ✅ **女优筛选与排序**：身高 12 档 / 罩杯 A–Q / 年龄 6 档 / 出道年份（N 年以前），排序 `影片 / 出道`（实测 161–165cm 与按出道年排序都生效）
 - ✅ **搜索历史**：成功搜索后记入本地（上限 20，重复置顶），空输入时展示为可点胶囊，可清空
@@ -31,10 +31,10 @@
 - ✅ **我的片单操作**：`FloatingActionButtonMenu` 收纳「新建片单 / 刷新列表」，替代原来的顶栏「新建」按钮（M3E 里主操作用 FAB）
 - ✅ **详情页动作条**：播放器正下方固定 `SplitButtonLayout`（收藏 / 片单）+ 可展开的 ±1/±10 分钟进度调节；动作与标题不随信息卡滚动
 - ✅ **片单整理入口**：右下角 `ToggleFloatingActionButton`（编辑图标 ⇄ ×）；进整理模式后「取消选择 / 完成」走 `AppBarRow` 溢出容器（放不下自动收进菜单）
-- ✅ **搜索栏**：M3E slot + `SearchBarState`，**就地展开**——首页顶部直接是这条真 `SearchBar`，点一下在当前页展开成全屏 `ExpandedFullScreenSearchBar`（放最近搜索），提交后同一屏收成带返回箭头的折叠态显示结果。首页手动搜索不再另开路由：之前首页那只 44dp/10dp 圆角的假框跳到一个 56dp 胶囊的搜索页，是"割裂感"的来源；详情番号搜索复用同一 `SearchHost` 作为二级路由，以保留返回详情的导航语义
+- ✅ **搜索栏**：`SearchBarState` + `ExpandedFullScreenSearchBar`，**就地展开**——影片导航页使用 80×40dp `FilledTonalButton` 搜索托盘，固定在工具行右侧；左侧选项同高、同圆角、同底色，展开时切换主题容器色；点击后由显式 `Animatable` 时间线驱动整个工具框从其真实位置扩展到全屏，提交与返回复用同一进度；使用 `defaultSpatialSpec` 弹簧并限制进度为 0…1，首帧继承工具框的圆角、底色与轮廓；内容固定在最终坐标，点击时冻结工具框边界，Dialog 不变暗背景且关闭窗口自身动画，展开态始终提供返回按钮；提交后同屏显示结果，结果页支持排序与过滤；原位置的返回按钮先恢复原关键词输入，再次返回清空文字并退出搜索；输入框右侧按钮只清空文字、不退出。整条工具行悬浮于滚动内容之上，顶部保留状态栏半透明底色与渐隐；按钮不使用阴影，整条工具行由带 `surfaceContainerHigh` 整体底色与 1dp 轮廓的胶囊 `Surface` 收束，与搜索框及全屏搜索页同色。详情番号搜索复用 `SearchHost` 的全宽 `SearchBar` 形态作为二级路由，以保留返回详情的导航语义
 - ✅ **新建片单**：站点只有 Blade 表单（`/playlists/create`），先 GET 读 `_token` 与字段名再 urlencoded POST；实测建出 `test` 后列表自动刷新
 - ✅ **编辑 / 删除片单**：详情页页头「编辑」→ 改名/描述/公开 + 删除（二次确认）；实测改名 `test→test2`、删除后列表只剩 `精选`
-- ✅ **M3E 主题与组件**：`MaterialExpressiveTheme` + `MotionScheme.expressive()`；二级页统一 `PageTopBar`（up 图标 + Tooltip）；底栏换 `ShortNavigationBar`；转圈换 `LoadingIndicator`；首页指南使用可点击 `Card`，影片页支持下拉刷新（`PullToRefreshBox`）；女优排序换连通 `ToggleButton` 组（`SegmentedButton` 在 M3E 已退役）
+- ✅ **M3E 主题与组件**：`MaterialExpressiveTheme` + `MotionScheme.expressive()`；二级页统一 `PageTopBar`（up 图标 + Tooltip）；底栏换 `ShortNavigationBar`；转圈换 `LoadingIndicator`；首页指南使用可点击 `Card`，影片页支持下拉刷新（`PullToRefreshBox`）；女优排序使用 `FilledTonalButton` 下拉，并与栏目、筛选合并为一行
 - ✅ **桌面图标**：五套 adaptive icon（纯色底 + 白色 `M` 品牌字母，共用一个矢量前景）+ 五个 `activity-alias`；设置里「图标跟随主题色」默认关，开启后**离开应用才生效**。实测 vivo 桌面/启动动画/概览都跟着换，应用信息页保持品牌粉（机制边界，见「桌面图标」）
 
 
@@ -327,7 +327,7 @@ app/           Android 应用（UI + 平台适配）
     SecondaryDestinations.kt  详情 / 列表 / 设置 / 片单等二级路由
     NavMotion.kt           前进、返回与预测式返回转场
     ViewModelFactories.kt  Lifecycle initializer 工厂
-    ui/home · ui/detail（DetailHero / PlaylistSheet / DetailInfo 已拆分）· ui/player · ui/search · ui/discover · ui/saved · ui/playlists ·
+    ui/home · ui/detail（DetailHero / PlaylistSheet / DetailInfo 已拆分）· ui/player · ui/search · ui/videos · ui/saved · ui/playlists ·
     ui/history · ui/settings · ui/account · ui/list · ui/components · ui/theme · ui/challenge
     data/api/              AppDependencies（共享 OkHttp / MissavApi / Coil 数据源）·
                            AndroidCookieJar（CookieManager 适配）· AndroidApi（把 ChallengeState 注入取数层）

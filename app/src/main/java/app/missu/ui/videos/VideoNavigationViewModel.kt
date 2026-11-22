@@ -1,4 +1,4 @@
-package app.missu.ui.discover
+package app.missu.ui.videos
 
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
@@ -20,27 +20,27 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * 影片页的页签。`kind` 只对**目录**有意义（它同时是路径段与解析时用来筛链接的关键词）；
+ * 影片页的栏目。`kind` 只对**目录**有意义（它同时是路径段与解析时用来筛链接的关键词）；
  * 「热门」与「频道」不取数，数据分别来自视频列表与站点导航。
  *
- * NOTE: 顺序就是页签顺序：**热门在第一位**。三个目录都要求用户先有一个名字（女优 / 题材 / 厂牌）
- * 才来点，只有热门不要求任何意图——它是这个页面唯一能当入口的页签。频道放最后：它是一张
+ * NOTE: 顺序就是栏目顺序：**热门在第一位**。三个目录都要求用户先有一个名字（女优 / 题材 / 厂牌）
+ * 才来点，只有热门不要求任何意图——它是这个页面唯一能当入口的栏目。频道放最后：它是一张
  * 「站点还有哪些策展列表」的索引，不是日常路径。
  */
-enum class DiscoverTab(val kind: String, @param:StringRes val labelRes: Int) {
-    HOT("hot", R.string.discover_section_hot),
-    ACTRESSES("actresses", R.string.discover_section_actresses),
-    GENRES("genres", R.string.discover_section_genres),
-    MAKERS("makers", R.string.discover_section_makers),
-    CHANNELS("channels", R.string.discover_section_channels),
+enum class VideoSection(val kind: String, @param:StringRes val labelRes: Int) {
+    HOT("hot", R.string.video_section_hot),
+    ACTRESSES("actresses", R.string.video_section_actresses),
+    GENRES("genres", R.string.video_section_genres),
+    MAKERS("makers", R.string.video_section_makers),
+    CHANNELS("channels", R.string.video_section_channels),
     ;
 
-    /** 需要向后端取目录的页签。热门与频道各有自己的数据源。 */
+    /** 需要向后端取目录的栏目。热门与频道各有自己的数据源。 */
     val isDirectory: Boolean get() = this == ACTRESSES || this == GENRES || this == MAKERS
 }
 
 /**
- * 「热门」页签的列表路径。
+ * 「热门」栏目的列表路径。
  *
  * NOTE: 站点把「今日 / 本周 / 本月热门」做成三个 vanity path，但那三页就是**同一面列表**换了
  * `?sort=`：实测 `/today-hot?sort=weekly_views` 与 `/weekly-hot`、`?sort=monthly_views` 与
@@ -56,25 +56,25 @@ internal const val HOT_PATH = "/today-hot"
  * 是正常列表页（有 VR 片、有排序）。所以按「它是类型」补一格，而不是给它开一个新维度。
  * 「VR」是国际通用缩写，四种语言都不翻译。
  */
-object DiscoverPins {
+object VideoPins {
     val vrGenre = DirectoryItem(id = "/genres/VR", path = "/genres/VR", name = "VR")
 }
 
 /**
- * 「频道」页签的编排规则。
+ * 「频道」栏目的编排规则。
  *
  * WARNING: 这些是**我们的信息架构**，不是站点的。站点的导航是编辑菜单（可折叠分组），
  * 把它 1:1 复刻会得到「亚洲 AV 里混着直播、且比观看日本 AV 多一层」的怪结构。这里的规则是：
- * 分组只当排版标题、不嵌套；站点菜单里已经由页签覆盖的东西不再出现。
+ * 分组只当排版标题、不嵌套；站点菜单里已经由栏目覆盖的东西不再出现。
  */
 internal object ChannelRules {
 
-    /** 已经作为页签/入口暴露的路径：从频道里剔掉，否则同一个目的地在两处出现。 */
+    /** 已经作为栏目/入口暴露的路径：从频道里剔掉，否则同一个目的地在两处出现。 */
     val exposedPaths = setOf(
         "/new", "/release", "/uncensored-leak",
         "/actresses", "/actresses/ranking",
-        "/genres", DiscoverPins.vrGenre.path, "/makers",
-        // 三个热门 path 都指向同一面列表（我们用一个页签 + 排序覆盖），所以全剔掉。
+        "/genres", VideoPins.vrGenre.path, "/makers",
+        // 三个热门 path 都指向同一面列表（我们用一个栏目 + 排序覆盖），所以全剔掉。
         "/today-hot", "/weekly-hot", "/monthly-hot",
     )
 
@@ -105,7 +105,7 @@ sealed interface DirectoryUiState {
 }
 
 /** 三个目录各自独立加载，用一个 Map 存状态，避免写三份几乎一样的代码。 */
-class DiscoverViewModel(private val api: MissavApi) : ViewModel() {
+class VideoNavigationViewModel(private val api: MissavApi) : ViewModel() {
 
     private val _states = MutableStateFlow<Map<String, DirectoryUiState>>(emptyMap())
     val states: StateFlow<Map<String, DirectoryUiState>> = _states.asStateFlow()
@@ -118,7 +118,7 @@ class DiscoverViewModel(private val api: MissavApi) : ViewModel() {
     private val _filters = MutableStateFlow<Map<String, String>>(emptyMap())
     val filters: StateFlow<Map<String, String>> = _filters.asStateFlow()
 
-    /** 正在下拉刷新的目录（同一时间只有一个页签可见）。 */
+    /** 正在下拉刷新的目录（同一时间只有一个栏目可见）。 */
     private val _refreshing = MutableStateFlow<Set<String>>(emptySet())
     val refreshing: StateFlow<Set<String>> = _refreshing.asStateFlow()
 
@@ -135,7 +135,7 @@ class DiscoverViewModel(private val api: MissavApi) : ViewModel() {
      * 所以这里要分流。排行页不吃套筛选，所以那一档不带 filters。
      */
     private suspend fun fetch(kind: String, page: Int): DirectoryList =
-        if (kind == DiscoverTab.ACTRESSES.kind) {
+        if (kind == VideoSection.ACTRESSES.kind) {
             if (_sort.value == ActressFilterOptions.SORT_RANKING) {
                 api.getActressRanking(page)
             } else {
@@ -169,10 +169,10 @@ class DiscoverViewModel(private val api: MissavApi) : ViewModel() {
     }
 
     /**
-     * 拉「频道」页签。只在第一次进这个页签时拉一次首页 HTML，之后靠内存里的结果。
+     * 拉「频道」栏目。只在第一次进这个栏目时拉一次首页 HTML，之后靠内存里的结果。
      *
      * NOTE: 站点没有导航接口，导航就在首页 HTML 里；与首页板块共用同一个 URL，但不共用请求
-     * （两个页签的生命周期不同，缓存一份 HTML 只会让两边都要失效逻辑）。
+     * （两个栏目的生命周期不同，缓存一份 HTML 只会让两边都要失效逻辑）。
      */
     fun loadChannels(force: Boolean = false) {
         if (channelsRequested && !force) return
@@ -287,8 +287,8 @@ class DiscoverViewModel(private val api: MissavApi) : ViewModel() {
 
     private fun reloadActresses() {
         // 条件变了必须从第一页重来，丢掉已累积的列表。
-        _states.value = _states.value - DiscoverTab.ACTRESSES.kind
-        load(DiscoverTab.ACTRESSES.kind)
+        _states.value = _states.value - VideoSection.ACTRESSES.kind
+        load(VideoSection.ACTRESSES.kind)
     }
 
     private fun update(kind: String, state: DirectoryUiState) {

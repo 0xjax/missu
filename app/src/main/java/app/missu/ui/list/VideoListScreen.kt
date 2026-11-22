@@ -2,30 +2,35 @@
 
 package app.missu.ui.list
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.List
-import androidx.compose.material.icons.outlined.ArrowDropDown
-import androidx.compose.material3.AssistChip
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -36,6 +41,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.missu.R
@@ -52,6 +59,9 @@ import app.missu.ui.components.LocalVideoListColumns
 import app.missu.ui.components.PageStateTransition
 import app.missu.ui.components.PageTopBar
 import app.missu.ui.components.VideoGridCard
+import app.missu.ui.search.LocalSearchAnchorCapture
+import app.missu.ui.search.LocalSearchBarInset
+import app.missu.ui.search.SearchTriggerHeight
 
 @Composable
 internal fun AutoLoadVideoList(
@@ -111,7 +121,7 @@ fun VideoListScreen(
 /**
  * 完整面的内容：一行口径 + 列表本体，**不带顶栏**。
  *
- * NOTE: 列表页把它放在 `PageTopBar` 下面；影片页的「热门」页签直接把它当页签内容（页签本身就是
+ * NOTE: 列表页把它放在 `PageTopBar` 下面；影片页的「热门」栏目直接把它当栏目内容（栏目本身就是
  * 一面列表，没有自己的顶栏）。共用一处定义，口径行的档位、文案与「换口径不换结构」才能永远一致。
  */
 @Composable
@@ -128,17 +138,24 @@ fun VideoListContent(
     onLoadMore: () -> Unit,
     onOpen: (id: String, thumbnail: String?) -> Unit,
     modifier: Modifier = Modifier,
+    controlsLeading: (@Composable RowScope.() -> Unit)? = null,
+    controlsTrailing: (@Composable () -> Unit)? = null,
+    showControls: Boolean = true,
 ) {
     Column(modifier) {
-        ListControls(
-            sort = sort,
-            filter = filter,
-            detectedSort = detectedSort,
-            sorts = sorts,
-            filters = filters,
-            onSortChange = onSortChange,
-            onFilterChange = onFilterChange,
-        )
+        if (showControls) {
+            VideoListControls(
+                sort = sort,
+                filter = filter,
+                detectedSort = detectedSort,
+                sorts = sorts,
+                filters = filters,
+                onSortChange = onSortChange,
+                onFilterChange = onFilterChange,
+                controlsLeading = controlsLeading,
+                controlsTrailing = controlsTrailing,
+            )
+        }
 
         VideoListBody(
             state = state,
@@ -151,15 +168,13 @@ fun VideoListContent(
 }
 
 /**
- * 口径行：左边是排序（当前值 + 下拉菜单），右边是可横向滚动的过滤。
+ * 口径行：栏目（仅热门页）、排序与过滤都使用「当前值 + 下拉菜单」。
  *
- * NOTE: 排序档位有 7 档 + 「默认」，平铺会把页头撑死，所以用菜单；≤3 档的平铺形态见影片页
- * 「女优」页签的三档排序组（同一个 ToggleButton 家族）。触发器只显示当前值，不加「排序」前缀。
- * NOTE: 过滤是**互斥单选**（站点的多值过滤实测不可靠，见 [VideoListOptions]），所以用
- * `FilterChip` 的选中态表达，而不是多选勾选。
+ * NOTE: 排序与过滤都收进菜单，触发器只显示当前值，不加「排序 / 过滤」前缀。
+ * NOTE: 过滤是互斥单选，菜单同样包含「全部」；当前项只靠文字颜色表达，不改变触发器宽度。
  */
 @Composable
-private fun ListControls(
+internal fun VideoListControls(
     sort: VideoListOptions.Sort?,
     filter: VideoListOptions.Filter?,
     detectedSort: VideoListOptions.Sort?,
@@ -167,28 +182,36 @@ private fun ListControls(
     filters: List<VideoListOptions.Filter>,
     onSortChange: (VideoListOptions.Sort?) -> Unit,
     onFilterChange: (VideoListOptions.Filter?) -> Unit,
+    controlsLeading: (@Composable RowScope.() -> Unit)?,
+    controlsTrailing: (@Composable () -> Unit)?,
 ) {
     var sortMenuOpen by remember { mutableStateOf(false) }
+    var filterMenuOpen by remember { mutableStateOf(false) }
     // 站点点明了它自己当前的排序（页面头部「排序: X」），所以「默认」不再是一档：直接显示那一项。
     val current = sort ?: detectedSort
 
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box {
-            AssistChip(
+    VideoToolbarContainer {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+        Row(
+            modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            controlsLeading?.invoke(this)
+
+            Box {
+            VideoControlButton(
+                text = sortLabel(current),
+                expanded = sortMenuOpen,
                 onClick = { sortMenuOpen = true },
-                label = { Text(sortLabel(current), maxLines = 1) },
-                trailingIcon = {
-                    Icon(imageVector = Icons.Outlined.ArrowDropDown, contentDescription = null)
-                },
             )
             DropdownMenu(expanded = sortMenuOpen, onDismissRequest = { sortMenuOpen = false }) {
                 sorts.forEach { option ->
                     DropdownMenuItem(
-                        text = { Text(sortLabel(option), color = sortColor(selected = option == current)) },
+                        text = { Text(sortLabel(option), color = optionColor(selected = option == current)) },
                         onClick = {
                             // 选中已是当前项时不重发请求：站点默认序与显式 `?sort=` 未必同序，
                             // 白白换一次数据只会让用户觉得"点了反而乱了"。
@@ -200,32 +223,49 @@ private fun ListControls(
             }
         }
 
-        Row(
-            modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            FilterChip(
-                selected = filter == null,
-                onClick = { onFilterChange(null) },
-                label = { Text(stringResource(R.string.list_filter_all), maxLines = 1) },
+        Box {
+            VideoControlButton(
+                text = filter?.let { filterLabel(it) } ?: stringResource(R.string.list_filter_all),
+                expanded = filterMenuOpen,
+                onClick = { filterMenuOpen = true },
             )
-            filters.forEach { option ->
-                FilterChip(
-                    selected = option == filter,
-                    onClick = { onFilterChange(option) },
-                    label = { Text(filterLabel(option), maxLines = 1) },
+            DropdownMenu(expanded = filterMenuOpen, onDismissRequest = { filterMenuOpen = false }) {
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            stringResource(R.string.list_filter_all),
+                            color = optionColor(selected = filter == null),
+                        )
+                    },
+                    onClick = {
+                        if (filter != null) onFilterChange(null)
+                        filterMenuOpen = false
+                    },
                 )
+                    filters.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(filterLabel(option), color = optionColor(selected = option == filter)) },
+                            onClick = {
+                                if (option != filter) onFilterChange(option)
+                                filterMenuOpen = false
+                            },
+                        )
+                    }
+                }
             }
         }
-
+        if (controlsTrailing != null) {
+            Spacer(Modifier.width(12.dp))
+            controlsTrailing()
+        }
+        }
     }
 }
 
 /**
  * 列表内容本体：三态 + 网格 + 分页，**不带顶栏**。
  *
- * NOTE: 抽出来是因为「影片页 · 热门」要把同一面内容嵌进页签里，而列表页要在它上面加一条
+ * NOTE: 抽出来是因为「影片页 · 热门」要把同一面内容嵌进栏目里，而列表页要在它上面加一条
  * 顶栏。两边必须共用，否则分页去重、空态文案这些细节会各写一份、慢慢走偏。
  */
 @Composable
@@ -258,7 +298,12 @@ fun VideoListBody(
                     state = gridState,
                     modifier = Modifier.fillMaxSize(),
                     columns = GridCells.Fixed(LocalVideoListColumns.current),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 32.dp),
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = LocalSearchBarInset.current + 12.dp,
+                        bottom = 32.dp,
+                    ),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
@@ -283,7 +328,54 @@ fun VideoListBody(
 }
 
 @Composable
-private fun sortColor(selected: Boolean): Color =
+internal fun VideoToolbarContainer(content: @Composable () -> Unit) {
+    val captureBounds = LocalSearchAnchorCapture.current
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .onGloballyPositioned { captureBounds(it.boundsInWindow()) },
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    ) {
+        content()
+    }
+}
+
+@Composable
+internal fun VideoControlButton(
+    text: String,
+    expanded: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    FilledTonalButton(
+        onClick = onClick,
+        modifier = modifier.height(SearchTriggerHeight),
+        enabled = enabled,
+        shape = CircleShape,
+        colors = ButtonDefaults.filledTonalButtonColors(
+            containerColor = if (expanded) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerHigh
+            },
+            contentColor = if (expanded) {
+                MaterialTheme.colorScheme.onPrimaryContainer
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            },
+        ),
+        contentPadding = PaddingValues(horizontal = 16.dp),
+    ) {
+        Text(text, maxLines = 1)
+    }
+}
+
+@Composable
+private fun optionColor(selected: Boolean): Color =
     if (selected) MaterialTheme.colorScheme.primary else Color.Unspecified
 
 /**
