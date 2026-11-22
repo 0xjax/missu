@@ -26,7 +26,8 @@
 ## 开发流程
 
 - 业务模块：`:core` 为纯 JVM 取数/解析/模型，禁止 `android.*` / `androidx.*`；`:app` 为 UI 与平台适配，单向依赖 `:core`。`:baselineprofile` 仅生成启动 Profile，不进交付 APK。
-- 修改后只执行 `build.ps1 run`，装机后交用户验收；未经明确要求，禁止运行测试、`check` 或自动化实测。仅在提交前执行一次 `build.ps1 check`，连续修正与纯文档修改不跑。`install/run` 默认用 Android 17.2 x86_64 模拟器，设 `ANDROID_SERIAL` 才指定真机。
+- 修改后只执行 `build.ps1 run`，装机后交用户验收；未经明确要求，禁止运行测试、`check` 或自动化实测。`install/run` 默认用 Android 17.2 x86_64 模拟器，设 `ANDROID_SERIAL` 才指定真机。
+- `check` 与提交解耦：仅在用户要求完整验证或发布前执行一次；普通 UI 调整、局部修复和连续修正不执行。
 - 未经用户明确要求，构建装机后**禁止点击、截屏、dump UI 或抓日志**。用户指定的 `journeys/*.xml` 验证按 `android-cli` 技能逐步执行，不改写成坐标脚本。
 - 观感缺陷先量化并定位到窗口底色 / 转场 / 状态机 / 组合生命周期；同层连续两次调参仍复现 → 换层排查。
 - 真机纯操作长链路交给用户；需要读屏判断的操作才由 agent 明确驱动。调试细节见 `docs/android-debugging.md`。
@@ -75,5 +76,4 @@
 - 禁止读取 `.env*`、SSH 私钥等秘密文件；禁止在日志、注释、提交、工具输出或命令参数中暴露秘密。需要环境变量值时直接向用户索取。
 - 内容搜索用 Grep，文件定位用 Glob，读写编辑用 Read / Edit / Write；长文件分批处理。
 - `legacy/expo/` 不参与验证。结构变化后同步 `AGENTS.md` / `DESIGN.md` / `docs/android-native.md`。
-- 验收以 `build.ps1 check` 成功为基线；默认真机流程见「开发流程」。
 - 升级 SDK / JDK 前按 `docs/android-native.md` 检查 Android CLI 与 Smart App Control 兼容性，并回写结论。
