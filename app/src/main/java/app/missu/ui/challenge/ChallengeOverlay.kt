@@ -66,6 +66,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 import org.json.JSONTokener
 import java.util.concurrent.atomic.AtomicBoolean
@@ -84,6 +85,8 @@ private const val FIRST_CHECK_MS = 300L
 
 /** 检查间隔。挑战通常 1–3 秒内自动放行，500ms 的粒度让「通过 → 关掉」几乎无感。 */
 private const val POLL_MS = 500L
+private const val PROBE_TIMEOUT_MS = 2_000L
+private const val HTML_READ_TIMEOUT_MS = 10_000L
 
 /** 隐藏探针最多等待约 60 秒；已显示的真实交互挑战由用户完成或取消，不按此时长判负。 */
 private const val MAX_ATTEMPTS = 120
@@ -445,16 +448,26 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
      * WARNING: 用 JSON 而不是拼分隔符——站点标题里本来就有 `|`（`MissAV | 免费高清AV在线看`），
      * 按分隔符切会把 readyState 切错（实测被这条卡住：判定永远不成立，浮层干等到超时）。
      */
-    suspend fun probePage(view: WebView): JSONObject? = suspendCancellableCoroutine { cont ->
-        view.evaluateJavascript(PROBE_JS) { raw ->
-            val text = runCatching { JSONTokener(raw).nextValue() as? String }.getOrNull().orEmpty()
-            cont.resume(runCatching { JSONObject(text) }.getOrNull())
+    suspend fun probePage(view: WebView): JSONObject? = withTimeoutOrNull(PROBE_TIMEOUT_MS) {
+        suspendCancellableCoroutine { cont ->
+            view.evaluateJavascript(PROBE_JS) { raw ->
+                val text = runCatching { JSONTokener(raw).nextValue() as? String }.getOrNull().orEmpty()
+                cont.resume(runCatching { JSONObject(text) }.getOrNull())
+            }
         }
     }
 
     fun readHtml(view: WebView, onHtml: (String?) -> Unit) {
         view.evaluateJavascript("(function(){return document.documentElement.outerHTML})()") { raw ->
             onHtml(runCatching { JSONTokener(raw).nextValue() as? String }.getOrNull())
+        }
+    }
+
+    suspend fun readHtmlAsync(view: WebView): String? = withTimeoutOrNull(HTML_READ_TIMEOUT_MS) {
+        suspendCancellableCoroutine { cont ->
+            view.evaluateJavascript("(function(){return document.documentElement.outerHTML})()") { raw ->
+                cont.resume(runCatching { JSONTokener(raw).nextValue() as? String }.getOrNull())
+            }
         }
     }
 
@@ -519,9 +532,8 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
                 // 共享存储），界面看到的就是一句「站点要求人机验证，请重试」，浮层不会再来第二遍。
                 !challengePage && ready == "complete" && onTarget && contentLength > 0 -> {
                     // NOTE: 空串当没有——`html=""` 会让解析直接失败，而重取一次反而可能成。
-                    readHtml(view) { html ->
-                        finish(passed = true, html = html?.takeIf { it.isNotBlank() })
-                    }
+                    val html = readHtmlAsync(view)
+                    finish(passed = true, html = html?.takeIf { it.isNotBlank() })
                     return@LaunchedEffect
                 }
                 // 页面被导去了别处（例如登录态失效 302 回首页），又没有 clearance：没东西可等。
