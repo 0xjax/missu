@@ -38,15 +38,19 @@ class MyComicApi(
         val chapters: List<ComicChapter> = document.select("div[data-flux-card] + div div[x-data]")
             .flatMap { parseChapters(it) }
             .asReversed()
+        val metadataGroups = detail?.selectFirst("div[data-flux-badge] + div")?.children().orEmpty()
         return ComicDetail(
             id = id,
             title = detail?.selectFirst("div[data-flux-heading]")?.text().orEmpty(),
             cover = detail?.selectFirst("img.object-cover")?.imageUrl()?.let { ComicImage(it, source.baseUrl) },
-            authors = detail?.selectFirst("div[data-flux-badge] + div")
-                ?.select("a")?.map { it.text() }?.filter { it.isNotBlank() }?.distinct().orEmpty(),
+            authors = metadataGroups.firstOrNull()?.select("a")
+                ?.map { it.text() }?.filter { it.isNotBlank() }?.distinct().orEmpty(),
             description = detail?.selectFirst("div[data-flux-badge] + div + div div[x-show=show]")?.text()
                 ?: document.selectFirst("meta[name=description]")?.attr("content"),
             status = detail?.selectFirst("div[data-flux-badge]")?.text(),
+            tags = metadataGroups.drop(1).flatMap { group ->
+                group.select("a").map { it.text() }
+            }.filter { it.isNotBlank() }.distinct(),
             chapters = chapters,
         )
     }

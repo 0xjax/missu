@@ -73,6 +73,15 @@ class ComicSourceContractTest {
     }
 
     @Test
+    fun myComicSeparatesAuthorsFromTags() = runBlocking {
+        val api = MyComicApi(client(MYCOMIC_DETAIL))
+        val detail = api.getDetail("123")
+
+        assertEquals(listOf("作者甲", "作者乙"), detail.authors)
+        assertEquals(listOf("热血", "冒险"), detail.tags)
+    }
+
+    @Test
     fun jmicReadsRealAlbumCards() = runBlocking {
         val api = JmicComicApi(client(JMIC_LIST))
         val page = api.getComics(ComicFeed.POPULAR, 1)
@@ -193,7 +202,14 @@ class ComicSourceContractTest {
         """.trimIndent()
 
         val MYCOMIC_DETAIL = """
-            <div data-flux-card><div data-flux-heading>一拳超人</div></div>
+            <div data-flux-card><div data-flux-heading>一拳超人</div>
+              <div data-flux-badge>连载中</div>
+              <div>
+                <div><a>作者甲</a><a>作者乙</a></div>
+                <div><a>热血</a></div>
+                <div><a>冒险</a></div>
+              </div>
+            </div>
             <div><div x-data="{chapters: [
               {&quot;id&quot;: 3, &quot;title&quot;: &quot;第3话&quot;},
               {&quot;id&quot;: 2, &quot;title&quot;: &quot;第2话&quot;},
