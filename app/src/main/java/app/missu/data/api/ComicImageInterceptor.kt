@@ -102,7 +102,9 @@ class ComicImageInterceptor : Interceptor {
 
     private fun imageReferer(host: String): String? = when {
         host == "image.kalaimg.top" -> "https://image.kalaimg.top/"
-        host.contains("jmapiproxy") || host.contains("jmapinode") -> "https://18comic.vip/"
+        host == "mycomic.com" || host.endsWith(".mycomic.com") ||
+            host == "biccam.com" || host.endsWith(".biccam.com") -> "https://mycomic.com/cn"
+        host.contains("jmapiproxy") || host.contains("jmapinode") -> "https://18comic.ink/"
         else -> null
     }
 

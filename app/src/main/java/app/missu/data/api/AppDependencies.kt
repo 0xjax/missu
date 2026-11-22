@@ -9,6 +9,7 @@ import okhttp3.OkHttpClient
 
 class AppDependencies(context: Context, challenge: ChallengeHandler) {
     val httpClient = OkHttpClient.Builder()
+        .cookieJar(AndroidCookieJar())
         .addInterceptor(ComicImageInterceptor())
         .build()
     val api: MissavApi = createMissavApi(context, challenge, httpClient)
