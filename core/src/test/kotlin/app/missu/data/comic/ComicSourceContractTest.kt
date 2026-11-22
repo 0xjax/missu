@@ -117,6 +117,19 @@ class ComicSourceContractTest {
     }
 
     @Test
+    fun kalamReadsSelectedCategory() = runBlocking {
+        var requestedUrl = ""
+        val api = KalamComicApi(client { url ->
+            requestedUrl = url
+            KALAM_LIST
+        })
+
+        api.getComics(ComicFeed.POPULAR, 1, KalamCategory.KOREAN.value)
+
+        assertEquals("https://www.kalamhw.com/list/Kc/page/1.html", requestedUrl)
+    }
+
+    @Test
     fun kalamUnwrapsRealRawHtmlAndReadsChapters() = runBlocking {
         val wrapped = "<script>var rawHtml = ${JsonPrimitive(KALAM_DETAIL)}; " +
             "var cleanHtml = rawHtml; doc.write(cleanHtml);</script>"

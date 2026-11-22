@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import app.missu.R
 import app.missu.data.comic.ComicFeed
 import app.missu.data.comic.ComicSource
+import app.missu.data.comic.KalamCategory
 import app.missu.ui.components.EmptyHint
 import app.missu.ui.list.VideoOptionMenu
 import app.missu.ui.list.VideoToolbarContainer
@@ -39,11 +40,13 @@ import app.missu.ui.search.SearchTriggerHeight
 fun ComicNavigationScreen(
     source: ComicSource,
     feed: ComicFeed,
+    category: KalamCategory,
     state: ComicListUiState,
     searchState: ComicListUiState,
     keyword: String,
     onSourceChange: (ComicSource) -> Unit,
     onFeedChange: (ComicFeed) -> Unit,
+    onCategoryChange: (KalamCategory) -> Unit,
     onLoad: () -> Unit,
     onLoadMore: () -> Unit,
     onRetry: () -> Unit,
@@ -54,7 +57,7 @@ fun ComicNavigationScreen(
     modifier: Modifier = Modifier,
     scrollToTopSignal: Int = 0,
 ) {
-    LaunchedEffect(source, feed) { onLoad() }
+    LaunchedEffect(source, feed, category) { onLoad() }
     SearchHostShell(
         searching = keyword.isNotBlank(),
         onSearch = onSearch,
@@ -76,9 +79,11 @@ fun ComicNavigationScreen(
                 scrollToTopSignal = scrollToTopSignal,
                 source = source,
                 feed = feed,
+                category = category,
                 state = state,
                 onSourceChange = onSourceChange,
                 onFeedChange = onFeedChange,
+                onCategoryChange = onCategoryChange,
                 onRetry = onRetry,
                 onLoadMore = onLoadMore,
                 onOpen = onOpen,
@@ -105,9 +110,11 @@ private fun ComicBrowseContent(
     scrollToTopSignal: Int,
     source: ComicSource,
     feed: ComicFeed,
+    category: KalamCategory,
     state: ComicListUiState,
     onSourceChange: (ComicSource) -> Unit,
     onFeedChange: (ComicFeed) -> Unit,
+    onCategoryChange: (KalamCategory) -> Unit,
     onRetry: () -> Unit,
     onLoadMore: () -> Unit,
     onOpen: (ComicSource, String) -> Unit,
@@ -126,8 +133,10 @@ private fun ComicBrowseContent(
         ComicToolbar(
             source = source,
             feed = feed,
+            category = category,
             onSourceChange = onSourceChange,
             onFeedChange = onFeedChange,
+            onCategoryChange = onCategoryChange,
             searchAction = searchAction,
         )
     }
@@ -158,8 +167,10 @@ private fun ComicSearchResults(
         ComicToolbar(
             source = source,
             feed = null,
+            category = KalamCategory.ALL,
             onSourceChange = onSourceChange,
             onFeedChange = {},
+            onCategoryChange = {},
             searchAction = searchAction,
         )
     }
@@ -179,8 +190,10 @@ private fun BoxScope.ComicTopVeil() {
 private fun ComicToolbar(
     source: ComicSource,
     feed: ComicFeed?,
+    category: KalamCategory,
     onSourceChange: (ComicSource) -> Unit,
     onFeedChange: (ComicFeed) -> Unit,
+    onCategoryChange: (KalamCategory) -> Unit,
     searchAction: @Composable () -> Unit,
 ) {
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
@@ -190,7 +203,7 @@ private fun ComicToolbar(
                 Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                ComicOptions(source, feed, onSourceChange, onFeedChange)
+                ComicOptions(source, feed, category, onSourceChange, onFeedChange, onCategoryChange)
                 Spacer(Modifier.width(12.dp))
                 searchAction()
             }
@@ -202,8 +215,10 @@ private fun ComicToolbar(
 private fun RowScope.ComicOptions(
     source: ComicSource,
     feed: ComicFeed?,
+    category: KalamCategory,
     onSourceChange: (ComicSource) -> Unit,
     onFeedChange: (ComicFeed) -> Unit,
+    onCategoryChange: (KalamCategory) -> Unit,
 ) {
     Row(
         Modifier.weight(1f).horizontalScroll(rememberScrollState()),
@@ -226,6 +241,24 @@ private fun RowScope.ComicOptions(
                     stringResource(if (it == ComicFeed.POPULAR) R.string.comic_popular else R.string.comic_latest)
                 },
             )
+        } else if (feed != null && source == ComicSource.KALAM) {
+            VideoOptionMenu(
+                text = stringResource(category.labelRes),
+                options = KalamCategory.entries,
+                selected = category,
+                onSelect = onCategoryChange,
+                optionLabel = { stringResource(it.labelRes) },
+            )
         }
     }
 }
+
+private val KalamCategory.labelRes: Int
+    get() = when (this) {
+        KalamCategory.ALL -> R.string.comic_category_all
+        KalamCategory.KOREAN -> R.string.comic_category_korean
+        KalamCategory.JAPANESE -> R.string.comic_category_japanese
+        KalamCategory.CHINESE -> R.string.comic_category_chinese
+        KalamCategory.WESTERN -> R.string.comic_category_western
+        KalamCategory.OTHER -> R.string.comic_category_other
+    }

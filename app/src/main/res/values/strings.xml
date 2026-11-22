@@ -25,6 +25,12 @@
     <!-- 漫画 -->
     <string name="comic_popular">Popular</string>
     <string name="comic_latest">Latest</string>
+    <string name="comic_category_all">All</string>
+    <string name="comic_category_korean">Korean</string>
+    <string name="comic_category_japanese">Japanese</string>
+    <string name="comic_category_chinese">Chinese</string>
+    <string name="comic_category_western">Western</string>
+    <string name="comic_category_other">Other</string>
     <string name="comic_empty">No comics found</string>
     <string name="comic_search_placeholder">Search comics</string>
     <string name="comic_search_hint">Type a title or keyword</string>

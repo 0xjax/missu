@@ -290,6 +290,7 @@ internal fun TabsHost(
                 "comics" -> {
                     val source by comicNavigationViewModel.source.collectAsStateWithLifecycle()
                     val feed by comicNavigationViewModel.feed.collectAsStateWithLifecycle()
+                    val category by comicNavigationViewModel.category.collectAsStateWithLifecycle()
                     val comicState by comicNavigationViewModel.listState.collectAsStateWithLifecycle()
                     val comicSearchState by comicNavigationViewModel.searchState.collectAsStateWithLifecycle()
                     val comicKeyword by comicNavigationViewModel.keyword.collectAsStateWithLifecycle()
@@ -298,11 +299,13 @@ internal fun TabsHost(
                             scrollToTopSignal = tabReselectVersion,
                             source = source,
                             feed = feed,
+                            category = category,
                             state = comicState,
                             searchState = comicSearchState,
                             keyword = comicKeyword,
                             onSourceChange = comicNavigationViewModel::setSource,
                             onFeedChange = comicNavigationViewModel::setFeed,
+                            onCategoryChange = comicNavigationViewModel::setCategory,
                             onLoad = comicNavigationViewModel::load,
                             onLoadMore = { comicNavigationViewModel.loadMore() },
                             onRetry = comicNavigationViewModel::refresh,

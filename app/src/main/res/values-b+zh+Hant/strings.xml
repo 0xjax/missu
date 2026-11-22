@@ -23,6 +23,12 @@
     <!-- 漫畫 -->
     <string name="comic_popular">熱門</string>
     <string name="comic_latest">最新</string>
+    <string name="comic_category_all">全部</string>
+    <string name="comic_category_korean">韓漫</string>
+    <string name="comic_category_japanese">日漫</string>
+    <string name="comic_category_chinese">中漫</string>
+    <string name="comic_category_western">歐美</string>
+    <string name="comic_category_other">其他</string>
     <string name="comic_empty">找不到漫畫</string>
     <string name="comic_search_placeholder">搜尋漫畫</string>
     <string name="comic_search_hint">輸入漫畫名稱或關鍵字</string>

@@ -10,7 +10,7 @@ class RoumanComicApi(
 ) : ComicSourceApi {
     override val source = ComicSource.ROUMAN
 
-    override suspend fun getComics(feed: ComicFeed, page: Int): ComicListPage {
+    override suspend fun getComics(feed: ComicFeed, page: Int, category: String?): ComicListPage {
         if (feed == ComicFeed.LATEST) {
             val document = document("/home")
             val items = document.selectFirst("div.site-home")?.children().orEmpty()

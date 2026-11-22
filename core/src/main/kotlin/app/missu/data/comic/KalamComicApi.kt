@@ -11,11 +11,13 @@ class KalamComicApi(
 ) : ComicSourceApi {
     override val source = ComicSource.KALAM
 
-    override suspend fun getComics(feed: ComicFeed, page: Int): ComicListPage {
-        val path = "/list/All/page/$page.html"
-        val referer = if (page == 1) source.baseUrl else absolute("/list/All/page/${page - 1}.html")
+    override suspend fun getComics(feed: ComicFeed, page: Int, category: String?): ComicListPage {
+        val categoryPath = KalamCategory.entries.firstOrNull { it.value == category }?.value
+            ?: KalamCategory.ALL.value
+        val path = "/list/$categoryPath/page/$page.html"
+        val referer = if (page == 1) source.baseUrl else absolute("/list/$categoryPath/page/${page - 1}.html")
         val document = document(path, referer)
-        val nextPath = "/list/All/page/${page + 1}.html"
+        val nextPath = "/list/$categoryPath/page/${page + 1}.html"
         val hasNext = document.select(".stui-page__item a[href], .stui-page__all a[href]")
             .any { it.attr("href") == nextPath }
         return ComicListPage(parseList(document), if (hasNext) page + 1 else null)

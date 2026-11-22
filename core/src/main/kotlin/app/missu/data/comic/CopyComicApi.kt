@@ -9,7 +9,7 @@ class CopyComicApi(
 ) : ComicSourceApi {
     override val source = ComicSource.COPY
 
-    override suspend fun getComics(feed: ComicFeed, page: Int): ComicListPage {
+    override suspend fun getComics(feed: ComicFeed, page: Int, category: String?): ComicListPage {
         val ordering = if (feed == ComicFeed.POPULAR) "-popular" else "-datetime_updated"
         val url = apiUrl("/api/v3/comics", page) {
             addQueryParameter("ordering", ordering)

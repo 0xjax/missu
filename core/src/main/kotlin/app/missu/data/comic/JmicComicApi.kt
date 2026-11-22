@@ -11,7 +11,7 @@ class JmicComicApi(
 ) : ComicSourceApi {
     override val source = ComicSource.JMIC
 
-    override suspend fun getComics(feed: ComicFeed, page: Int): ComicListPage {
+    override suspend fun getComics(feed: ComicFeed, page: Int, category: String?): ComicListPage {
         val order = if (feed == ComicFeed.POPULAR) "mv" else "mr"
         return parseList(document("/albums", mapOf("o" to order, "page" to page.toString())), page)
     }

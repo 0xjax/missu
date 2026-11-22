@@ -23,6 +23,15 @@ enum class ComicFeed(val value: String) {
     LATEST("latest"),
 }
 
+enum class KalamCategory(val value: String) {
+    ALL("All"),
+    KOREAN("Kc"),
+    JAPANESE("Jc"),
+    CHINESE("Cc"),
+    WESTERN("Ec"),
+    OTHER("Oc"),
+}
+
 data class ComicImage(
     val url: String,
     val referer: String? = null,
@@ -60,7 +69,7 @@ data class ComicDetail(
 interface ComicSourceApi {
     val source: ComicSource
 
-    suspend fun getComics(feed: ComicFeed, page: Int): ComicListPage
+    suspend fun getComics(feed: ComicFeed, page: Int, category: String? = null): ComicListPage
 
     suspend fun search(query: String, page: Int): ComicListPage
 

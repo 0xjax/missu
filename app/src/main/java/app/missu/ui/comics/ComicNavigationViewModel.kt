@@ -7,6 +7,7 @@ import app.missu.data.comic.ComicListPage
 import app.missu.data.comic.ComicRepository
 import app.missu.data.comic.ComicSource
 import app.missu.data.comic.ComicSummary
+import app.missu.data.comic.KalamCategory
 import app.missu.data.store.ComicSourceStore
 import app.missu.ui.common.LoadMoreState
 import app.missu.ui.common.UiMessage
@@ -39,6 +40,9 @@ class ComicNavigationViewModel(
     private val _feed = MutableStateFlow(ComicFeed.POPULAR)
     val feed: StateFlow<ComicFeed> = _feed.asStateFlow()
 
+    private val _category = MutableStateFlow(KalamCategory.ALL)
+    val category: StateFlow<KalamCategory> = _category.asStateFlow()
+
     private val _listState = MutableStateFlow<ComicListUiState>(ComicListUiState.Loading)
     val listState: StateFlow<ComicListUiState> = _listState.asStateFlow()
 
@@ -68,6 +72,7 @@ class ComicNavigationViewModel(
         store.setSource(value)
         _source.value = value
         _feed.value = ComicFeed.POPULAR
+        _category.value = KalamCategory.ALL
         _listState.value = ComicListUiState.Loading
         _searchState.value = ComicListUiState.Empty
         _keyword.value = ""
@@ -77,6 +82,13 @@ class ComicNavigationViewModel(
     fun setFeed(value: ComicFeed) {
         if (_feed.value == value || !_source.value.supportsLatest) return
         _feed.value = value
+        _listState.value = ComicListUiState.Loading
+        load()
+    }
+
+    fun setCategory(value: KalamCategory) {
+        if (_category.value == value || _source.value != ComicSource.KALAM) return
+        _category.value = value
         _listState.value = ComicListUiState.Loading
         load()
     }
@@ -113,9 +125,10 @@ class ComicNavigationViewModel(
         if (append && previous != null) _listState.value = previous.copy(more = LoadMoreState.Loading)
         val source = _source.value
         val feed = _feed.value
+        val category = _category.value.takeIf { source == ComicSource.KALAM }?.value
         listJob = viewModelScope.launch {
             runCatching {
-                repository[source].getComics(feed, page)
+                repository[source].getComics(feed, page, category)
             }.onSuccess { result ->
                 _listState.value = result.toState(previous, append)
             }.onFailure { error ->

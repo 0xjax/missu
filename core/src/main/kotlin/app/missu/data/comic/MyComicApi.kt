@@ -11,7 +11,7 @@ class MyComicApi(
 ) : ComicSourceApi {
     override val source = ComicSource.MYCOMIC
 
-    override suspend fun getComics(feed: ComicFeed, page: Int): ComicListPage {
+    override suspend fun getComics(feed: ComicFeed, page: Int, category: String?): ComicListPage {
         val sort = if (feed == ComicFeed.POPULAR) "-views" else "-update"
         val url = source.baseUrl.toHttpUrl().newBuilder()
             .addPathSegment("comics")
