@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.positionOnScreen
@@ -47,16 +48,22 @@ internal fun <T> VideoOptionMenu(
             .onGloballyPositioned { anchorTopLeft = it.positionOnScreen() }
             .pointerInput(Unit) {
                 awaitEachGesture {
-                    val down = awaitFirstDown(requireUnconsumed = false)
+                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    val wasOpen = menuOpen
+                    var dragged = false
                     menuOpen = true
                     while (true) {
-                        val event = awaitPointerEvent()
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
                         val change = event.changes.firstOrNull { it.id == down.id } ?: continue
+                        if ((change.position - down.position).getDistance() > viewConfiguration.touchSlop) {
+                            dragged = true
+                        }
                         val optionIndex = itemBounds.entries.firstOrNull { (_, bounds) ->
                             bounds.contains(anchorTopLeft + change.position)
                         }?.key ?: -1
                         if (change.changedToUpIgnoreConsumed()) {
-                            menuOpen = false
+                            change.consume()
+                            menuOpen = if (optionIndex >= 0 || dragged) false else !wasOpen
                             highlightedIndex = -1
                             currentOptions.getOrNull(optionIndex)?.let(currentOnSelect)
                             break
@@ -74,7 +81,7 @@ internal fun <T> VideoOptionMenu(
         VideoControlButton(
             text = text,
             expanded = menuOpen,
-            onClick = { menuOpen = true },
+            onClick = { menuOpen = !menuOpen },
         )
         DropdownMenu(
             expanded = menuOpen,
