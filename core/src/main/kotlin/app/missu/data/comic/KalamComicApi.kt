@@ -11,8 +11,15 @@ class KalamComicApi(
 ) : ComicSourceApi {
     override val source = ComicSource.KALAM
 
-    override suspend fun getComics(feed: ComicFeed, page: Int): ComicListPage =
-        ComicListPage(parseList(document("/")))
+    override suspend fun getComics(feed: ComicFeed, page: Int): ComicListPage {
+        val path = "/list/All/page/$page.html"
+        val referer = if (page == 1) source.baseUrl else absolute("/list/All/page/${page - 1}.html")
+        val document = document(path, referer)
+        val nextPath = "/list/All/page/${page + 1}.html"
+        val hasNext = document.select(".stui-page__item a[href], .stui-page__all a[href]")
+            .any { it.attr("href") == nextPath }
+        return ComicListPage(parseList(document), if (hasNext) page + 1 else null)
+    }
 
     override suspend fun search(query: String, page: Int): ComicListPage {
         val builder = source.baseUrl.toHttpUrl().newBuilder().addPathSegment("search")
@@ -83,7 +90,7 @@ class KalamComicApi(
 
     private fun parseList(document: Document): List<ComicSummary> {
         val found = linkedMapOf<String, ComicSummary>()
-        document.select("a.stui-vodlist__thumb[href]").forEach { card ->
+        document.select("ul.stui-vodlist a.stui-vodlist__thumb[href]").forEach { card ->
             val id = COMIC_PATH.matchEntire(card.attr("href"))?.groupValues?.get(1) ?: return@forEach
             val title = card.attr("title").trim()
             if (title.isEmpty() || id in found) return@forEach
@@ -92,9 +99,9 @@ class KalamComicApi(
         return found.values.toList()
     }
 
-    private suspend fun document(path: String): Document {
+    private suspend fun document(path: String, referer: String = source.baseUrl): Document {
         val url = absolute(path)
-        return Jsoup.parse(unwrap(client.get(url, referer = source.baseUrl)), url)
+        return Jsoup.parse(unwrap(client.get(url, referer = referer)), url)
     }
 
     private fun unwrap(body: String): String =

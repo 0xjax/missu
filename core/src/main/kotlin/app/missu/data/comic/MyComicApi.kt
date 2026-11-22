@@ -37,6 +37,7 @@ class MyComicApi(
         val detail = document.selectFirst("div[data-flux-card]")
         val chapters: List<ComicChapter> = document.select("div[data-flux-card] + div div[x-data]")
             .flatMap { parseChapters(it) }
+            .asReversed()
         return ComicDetail(
             id = id,
             title = detail?.selectFirst("div[data-flux-heading]")?.text().orEmpty(),

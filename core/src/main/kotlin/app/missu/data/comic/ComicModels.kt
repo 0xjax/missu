@@ -8,7 +8,7 @@ enum class ComicSource(
 ) {
     COPY("copy", "拷贝漫画", "https://www.mangacopy.com"),
     ROUMAN("rouman", "肉漫屋", "https://rouman5.com"),
-    JMIC("jmic", "18Comic", "https://18comic.vip"),
+    JMIC("jmic", "18Comic", "https://18comic.ink"),
     KALAM("kalam", "卡拉漫画", "https://www.kalamhw.com", supportsLatest = false),
     MYCOMIC("mycomic", "MyComic", "https://mycomic.com/cn"),
     ;

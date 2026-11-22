@@ -11,6 +11,7 @@ import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.IOException
 
 class ComicSourceContractTest {
     @Test
@@ -44,6 +45,15 @@ class ComicSourceContractTest {
     }
 
     @Test
+    fun roumanKeepsSiteAscendingChapters() = runBlocking {
+        val api = RoumanComicApi(client(ROUMAN_DETAIL))
+        val detail = api.getDetail("cmvvbj1kw01mib407zapem6t2")
+
+        assertEquals(listOf("第1話", "第2話", "第3話"), detail.chapters.map { it.title })
+        assertEquals("/books/cmvvbj1kw01mib407zapem6t2/0", detail.chapters.first().id)
+    }
+
+    @Test
     fun myComicReadsRealCards() = runBlocking {
         val api = MyComicApi(client(MYCOMIC_LIST))
         val page = api.search("一拳", 1)
@@ -54,13 +64,56 @@ class ComicSourceContractTest {
     }
 
     @Test
+    fun myComicReadsChaptersInAscendingOrder() = runBlocking {
+        val api = MyComicApi(client(MYCOMIC_DETAIL))
+        val detail = api.getDetail("123")
+
+        assertEquals(listOf("第1话", "第2话", "第3话"), detail.chapters.map { it.title })
+        assertEquals("1", detail.chapters.first().id)
+    }
+
+    @Test
     fun jmicReadsRealAlbumCards() = runBlocking {
         val api = JmicComicApi(client(JMIC_LIST))
         val page = api.getComics(ComicFeed.POPULAR, 1)
 
         assertEquals("123456", page.items.single().id)
+        assertEquals("示例漫画", page.items.single().title)
         assertEquals("JM123456", page.items.single().subtitle)
+        assertTrue(page.items.single().cover?.url?.startsWith("https://cdn-msp3.18comic.ink/") == true)
         assertEquals(2, page.nextPage)
+    }
+
+    @Test
+    fun jmicIgnoresUserAddedDetailMetadata() = runBlocking {
+        val api = JmicComicApi(client(JMIC_DETAIL))
+        val detail = api.getDetail("123456")
+
+        assertEquals(listOf("美娜讚", "钢铁王"), detail.authors)
+        assertEquals(listOf("韓漫", "連載中"), detail.tags)
+        assertEquals("真实简介", detail.description)
+    }
+
+    @Test
+    fun jmicFallsBackToAnotherOfficialMirrorAfterNetworkFailure() = runBlocking {
+        val api = JmicComicApi(client { url ->
+            if (url.contains("18comic.ink")) throw IOException("offline") else JMIC_LIST
+        })
+        val page = api.getComics(ComicFeed.POPULAR, 1)
+
+        assertEquals("123456", page.items.single().id)
+        assertEquals(2, page.nextPage)
+    }
+
+    @Test
+    fun kalamReadsDedicatedListAndNextPage() = runBlocking {
+        val api = KalamComicApi(client(KALAM_LIST))
+        val page = api.getComics(ComicFeed.POPULAR, 1)
+
+        assertEquals("122410", page.items.single().id)
+        assertEquals("漆黑魔法师", page.items.single().title)
+        assertEquals(2, page.nextPage)
+        assertTrue(page.items.single().cover?.url?.startsWith("https://image.kalaimg.top/image/cover/") == true)
     }
 
     @Test
@@ -75,8 +128,11 @@ class ComicSourceContractTest {
         assertEquals("/chapter/67213-2-1.html", detail.chapters.first().id)
     }
 
-    private fun client(body: String): ComicHttpClient {
+    private fun client(body: String): ComicHttpClient = client { body }
+
+    private fun client(responder: (String) -> String): ComicHttpClient {
         val http = OkHttpClient.Builder().addInterceptor { chain ->
+            val body = responder(chain.request().url.toString())
             Response.Builder()
                 .request(chain.request())
                 .protocol(Protocol.HTTP_1_1)
@@ -108,17 +164,65 @@ class ComicSourceContractTest {
               "https://v2.kelv47.xyz/m/b/wm:2/sr:1/b.jpg"]</script>
         """.trimIndent()
 
+        val ROUMAN_DETAIL = """
+            <div class="site-book-info"><h1>姨見鍾情</h1></div>
+            <div class="site-chapters">
+              <a href="/books/cmvvbj1kw01mib407zapem6t2/0" class="site-chapter-link"><span title="第1話">第1話</span></a>
+              <a href="/books/cmvvbj1kw01mib407zapem6t2/1" class="site-chapter-link"><span title="第2話">第2話</span></a>
+              <a href="/books/cmvvbj1kw01mib407zapem6t2/2" class="site-chapter-link"><span title="第3話">第3話</span></a>
+            </div>
+        """.trimIndent()
+
         val MYCOMIC_LIST = """
             <div class="grid"><div class="group"><a href="/cn/comics/123">
               <img data-src="https://mycomic.com/cover.jpg" alt="一拳超人">
             </a></div></div><nav role="navigation"><a rel="next" href="/cn/comics?page=2">下一页</a></nav>
         """.trimIndent()
 
+        val MYCOMIC_DETAIL = """
+            <div data-flux-card><div data-flux-heading>一拳超人</div></div>
+            <div><div x-data="{chapters: [
+              {&quot;id&quot;: 3, &quot;title&quot;: &quot;第3话&quot;},
+              {&quot;id&quot;: 2, &quot;title&quot;: &quot;第2话&quot;},
+              {&quot;id&quot;: 1, &quot;title&quot;: &quot;第1话&quot;}
+            ]}"></div></div>
+        """.trimIndent()
+
         val JMIC_LIST = """
-            <div class="well well-sm"><a href="/album/123456/" title="示例漫画">
-              <div class="title-truncate">示例漫画</div></a>
-              <span class="text-white">100</span>
-            </div>
+            <html><head><link rel="next" href="https://18comic.ink/albums?o=mv&amp;page=2"></head><body>
+              <div class="list-col"><div class="thumb-overlay-albums">
+                <a href="/album/123456/示例漫画">
+                  <img src="https://cdn-msp3.18comic.ink/media/albums/123456_3x4.jpg?u=1795188452"
+                    title="示例漫画" alt="示例漫画" class="lazy_img img-responsive img-rounded">
+                </a>
+              </div>
+              <span class="video-title title-truncate m-t-5">示例漫画</span></div>
+            </body></html>
+        """.trimIndent()
+
+        val JMIC_DETAIL = """
+            <h1 id="book-name">秘密教学</h1>
+            <h2>敘述：真实简介</h2>
+            <span itemprop="author" data-type="author">
+              <a name="vote_" class="phone-author-tag">美娜讚</a>
+              <a name="vote_" class="phone-author-tag">钢铁王</a>
+              <a name="vote_267050" class="phone-author-tag">用户追加的作者评论</a>
+            </span>
+            <span itemprop="genre" data-type="tags">
+              <a name="vote_" class="phone-tags-tag">韓漫</a>
+              <a name="vote_" class="phone-tags-tag">連載中</a>
+              <a name="vote_229910" class="phone-tags-tag">用户追加的分类评论</a>
+            </span>
+        """.trimIndent()
+
+        val KALAM_LIST = """
+            <ul class="stui-vodlist clearfix"><li><div class="stui-vodlist__box">
+              <a class="stui-vodlist__thumb lazyload" href="/comic/122410.html" title="漆黑魔法师"
+                data-original="https://image.kalaimg.top/image/cover/63fb4d30.jpg">
+                <span class="pic-text">连载中,第21话</span>
+              </a>
+            </div></li></ul>
+            <ul class="stui-page__item"><li><a href="/list/All/page/2.html">下一页</a></li></ul>
         """.trimIndent()
 
         val KALAM_DETAIL = """

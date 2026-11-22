@@ -45,7 +45,7 @@ class RoumanComicApi(
                 id = path,
                 title = link.selectFirst("span")?.attr("title")?.ifBlank { link.text() }.orEmpty(),
             )
-        }.reversed()
+        }
         val tags = buildList {
             data["地區"]?.takeIf { it.isNotBlank() }?.let(::add)
             info?.selectFirst("p.site-eyebrow")?.text()
