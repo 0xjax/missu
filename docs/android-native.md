@@ -186,6 +186,8 @@ android sdk install emulator platforms/android-37.2 system-images/android-37.2/g
 
 `build.ps1` 用 `scripts/emulator/medium-phone.config.ini` 创建并启动 AVD。WARNING: x86_64 主机的 QEMU2 不支持 ARM64 系统镜像；不要用 `android emulator create` 的默认镜像选择，模板会固定上述 Android 17.2 x86_64 镜像。
 
+模板固定 `hw.gpu.mode=host`，明确使用主机 GPU。2026-11-22 实测 `auto` 下界面明显卡顿，改 `host` 后恢复流畅；`hw.cpu.ncore=4` 与 `hw.ramSize=4096` 保持不变，不靠增加核心或内存掩盖图形瓶颈。WHPX 虚拟化也已用 `emulator -accel-check` 确认可用。
+
 本机 `%USERPROFILE%\.androidrc` 固定 `--no-metrics` 与 `--sdk=D:\Android\Sdk`，日常命令无需重复这两个参数。
 
 WARNING: **不要把 CLI 或其 `ANDROID_USER_HOME` 放在 `D:\missu` 下**。工作区是 Low IL，会导致 CLI 无法写系统临时目录和正常 IL 的 SDK；两者都使用上述官方默认位置。
