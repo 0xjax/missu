@@ -24,6 +24,7 @@ import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -105,7 +106,7 @@ internal fun TabsHost(
 ) {
     val videoNavigationViewModel: VideoNavigationViewModel = viewModel(factory = missuViewModelFactory { VideoNavigationViewModel(api) })
     val searchViewModel: SearchViewModel = viewModel(
-        factory = missuViewModelFactory { SearchViewModel(api, searchHistory) },
+        factory = missuViewModelFactory { SearchViewModel(api, searchHistory, listQueryStore) },
     )
     val context = LocalContext.current
     val comicSourceStore = remember { ComicSourceStore(context.applicationContext) }
@@ -113,6 +114,7 @@ internal fun TabsHost(
         factory = missuViewModelFactory { ComicNavigationViewModel(comicRepository, comicSourceStore) },
     )
     val authState by auth.state.collectAsStateWithLifecycle()
+    var tabReselectVersion by remember { mutableIntStateOf(0) }
 
     val startTab = topLevels.first().route
     BackHandler(enabled = tabRoute != startTab) { onTabChange(startTab) }
@@ -129,7 +131,9 @@ internal fun TabsHost(
                 topLevels.forEach { item ->
                     ShortNavigationBarItem(
                         selected = tabRoute == item.route,
-                        onClick = { if (tabRoute != item.route) onTabChange(item.route) },
+                        onClick = {
+                            if (tabRoute == item.route) tabReselectVersion++ else onTabChange(item.route)
+                        },
                         icon = { Icon(item.icon, contentDescription = stringResource(item.labelRes)) },
                         label = { Text(stringResource(item.labelRes)) },
                     )
@@ -156,6 +160,7 @@ internal fun TabsHost(
                     ProvideHeroVisibility(navScope, namespace = "home") {
                         PageSurface(card = false) {
                             HomeScreen(
+                                scrollToTopSignal = tabReselectVersion,
                                 onOpenGuide = { navController.navigate("guide/$it") },
                                 onOpenVideos = { onTabChange("videos") },
                             )
@@ -175,6 +180,7 @@ internal fun TabsHost(
                     val favorites by literatureStore.favorites.collectAsStateWithLifecycle()
                     PageSurface(card = false) {
                         StudyScreen(
+                            scrollToTopSignal = tabReselectVersion,
                             literatureState = literatureState,
                             query = query,
                             filter = filter,
@@ -228,6 +234,7 @@ internal fun TabsHost(
                             ) { searchAction ->
                                 if (searchState is SearchUiState.Idle) {
                                     VideoNavigationScreen(
+                                        scrollToTopSignal = tabReselectVersion,
                                         states = states,
                                         searchAction = searchAction,
                                         sort = sort,
@@ -261,6 +268,7 @@ internal fun TabsHost(
                                     )
                                 } else {
                                     SearchBody(
+                                        scrollToTopSignal = tabReselectVersion,
                                         state = searchState,
                                         keyword = (searchState as? SearchUiState.Content)?.keyword.orEmpty(),
                                         sort = searchSort,
@@ -287,6 +295,7 @@ internal fun TabsHost(
                     val comicKeyword by comicNavigationViewModel.keyword.collectAsStateWithLifecycle()
                     PageSurface(card = false, contentInset = false) {
                         ComicNavigationScreen(
+                            scrollToTopSignal = tabReselectVersion,
                             source = source,
                             feed = feed,
                             state = comicState,
@@ -308,6 +317,7 @@ internal fun TabsHost(
                 "account" -> {
                     PageSurface(card = false) {
                         AccountScreen(
+                            scrollToTopSignal = tabReselectVersion,
                             state = authState,
                             onLogin = { navController.navigate("login") },
                             onSaved = { navController.navigate("saved") },

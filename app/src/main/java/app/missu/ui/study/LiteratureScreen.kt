@@ -76,6 +76,7 @@ fun LiteratureList(
     onRetry: () -> Unit,
     onOpen: (String) -> Unit,
     modifier: Modifier = Modifier,
+    scrollToTopSignal: Int = 0,
 ) {
     PageStateTransition(state = state, modifier = modifier.fillMaxSize()) { current ->
         when (current) {
@@ -91,6 +92,7 @@ fun LiteratureList(
                 onToggleFavorite = onToggleFavorite,
                 onLoadMore = onLoadMore,
                 onOpen = onOpen,
+                scrollToTopSignal = scrollToTopSignal,
             )
         }
     }
@@ -107,9 +109,13 @@ private fun LiteratureContent(
     onToggleFavorite: (String) -> Unit,
     onLoadMore: () -> Unit,
     onOpen: (String) -> Unit,
+    scrollToTopSignal: Int = 0,
 ) {
     val focusManager = LocalFocusManager.current
     val listState = rememberLazyListState()
+    LaunchedEffect(scrollToTopSignal) {
+        if (scrollToTopSignal > 0) listState.animateScrollToItem(0)
+    }
     LaunchedEffect(listState.isScrollInProgress) {
         if (listState.isScrollInProgress) focusManager.clearFocus()
     }

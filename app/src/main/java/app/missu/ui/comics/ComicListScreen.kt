@@ -19,6 +19,7 @@ import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -75,6 +76,7 @@ fun ComicListBody(
     onOpen: (ComicSummary) -> Unit,
     modifier: Modifier = Modifier,
     contentTopInset: Dp = 0.dp,
+    scrollToTopSignal: Int = 0,
 ) {
     PageStateTransition(state = state, modifier = modifier) { current ->
         when (current) {
@@ -86,6 +88,9 @@ fun ComicListBody(
             is ComicListUiState.Error -> ErrorHint(current.message.text(), onRetry)
             is ComicListUiState.Content -> {
                 val gridState = rememberLazyGridState()
+                LaunchedEffect(scrollToTopSignal) {
+                    if (scrollToTopSignal > 0) gridState.animateScrollToItem(0)
+                }
                 LoadMoreOnScroll(
                     state = gridState,
                     enabled = current.more == app.missu.ui.common.LoadMoreState.Idle,

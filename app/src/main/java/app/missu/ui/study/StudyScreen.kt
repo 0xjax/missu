@@ -31,6 +31,7 @@ fun StudyScreen(
     onOpenLiterature: (String) -> Unit,
     onOpenEnglish: (String) -> Unit,
     modifier: Modifier = Modifier,
+    scrollToTopSignal: Int = 0,
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     Column(modifier.fillMaxSize()) {
@@ -48,6 +49,7 @@ fun StudyScreen(
         }
         when (selectedTab) {
             0 -> LiteratureList(
+                scrollToTopSignal = scrollToTopSignal,
                 state = literatureState,
                 query = query,
                 filter = filter,
@@ -59,7 +61,7 @@ fun StudyScreen(
                 onRetry = onRetry,
                 onOpen = onOpenLiterature,
             )
-            else -> EnglishList(onOpen = onOpenEnglish)
+            else -> EnglishList(onOpen = onOpenEnglish, scrollToTopSignal = scrollToTopSignal)
         }
     }
 }

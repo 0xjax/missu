@@ -52,6 +52,7 @@ fun ComicNavigationScreen(
     onSearchLoadMore: () -> Unit,
     onOpen: (ComicSource, String) -> Unit,
     modifier: Modifier = Modifier,
+    scrollToTopSignal: Int = 0,
 ) {
     LaunchedEffect(source, feed) { onLoad() }
     SearchHostShell(
@@ -72,6 +73,7 @@ fun ComicNavigationScreen(
     ) { searchAction ->
         if (keyword.isBlank()) {
             ComicBrowseContent(
+                scrollToTopSignal = scrollToTopSignal,
                 source = source,
                 feed = feed,
                 state = state,
@@ -84,6 +86,7 @@ fun ComicNavigationScreen(
             )
         } else {
             ComicSearchResults(
+                scrollToTopSignal = scrollToTopSignal,
                 source = source,
                 state = searchState,
                 keyword = keyword,
@@ -99,6 +102,7 @@ fun ComicNavigationScreen(
 
 @Composable
 private fun ComicBrowseContent(
+    scrollToTopSignal: Int,
     source: ComicSource,
     feed: ComicFeed,
     state: ComicListUiState,
@@ -116,6 +120,7 @@ private fun ComicBrowseContent(
             onLoadMore = onLoadMore,
             onOpen = { onOpen(source, it.id) },
             contentTopInset = LocalSearchBarInset.current,
+            scrollToTopSignal = scrollToTopSignal,
         )
         ComicTopVeil()
         ComicToolbar(
@@ -130,6 +135,7 @@ private fun ComicBrowseContent(
 
 @Composable
 private fun ComicSearchResults(
+    scrollToTopSignal: Int,
     source: ComicSource,
     state: ComicListUiState,
     keyword: String,
@@ -146,6 +152,7 @@ private fun ComicSearchResults(
             onLoadMore = onLoadMore,
             onOpen = { onOpen(source, it.id) },
             contentTopInset = LocalSearchBarInset.current,
+            scrollToTopSignal = scrollToTopSignal,
         )
         ComicTopVeil()
         ComicToolbar(

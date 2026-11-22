@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -120,6 +121,7 @@ fun VideoNavigationScreen(
     onFilterChange: (key: String, value: String?) -> Unit,
     onResetFilters: () -> Unit,
     modifier: Modifier = Modifier,
+    scrollToTopSignal: Int = 0,
 ) {
     var tabIndex by rememberSaveable { mutableIntStateOf(0) }
     var filterSheetOpen by rememberSaveable { mutableStateOf(false) }
@@ -154,9 +156,15 @@ fun VideoNavigationScreen(
                 onOpen = onOpenVideo,
                 modifier = Modifier.fillMaxSize(),
                 showControls = false,
+                scrollToTopSignal = scrollToTopSignal,
             )
         } else if (tab == VideoSection.CHANNELS) {
-            ChannelsContent(state = channels, onRetry = onChannelsRetry, onOpen = onOpen)
+            ChannelsContent(
+                state = channels,
+                onRetry = onChannelsRetry,
+                onOpen = onOpen,
+                scrollToTopSignal = scrollToTopSignal,
+            )
         } else when (val state = states[tab.kind]) {
             null, DirectoryUiState.Loading -> LoadingHint()
 
@@ -185,6 +193,9 @@ fun VideoNavigationScreen(
                     state.items
                 }
                 val gridState = rememberLazyGridState()
+                LaunchedEffect(scrollToTopSignal) {
+                    if (scrollToTopSignal > 0) gridState.animateScrollToItem(0)
+                }
                 LoadMoreOnScroll(
                     state = gridState,
                     enabled = state.more == LoadMoreState.Idle,
@@ -349,6 +360,7 @@ private fun ChannelsContent(
     state: ChannelsUiState,
     onRetry: () -> Unit,
     onOpen: (path: String, title: String) -> Unit,
+    scrollToTopSignal: Int,
 ) {
     when (state) {
         ChannelsUiState.Loading -> LoadingHint()
@@ -363,7 +375,12 @@ private fun ChannelsContent(
         is ChannelsUiState.Content -> {
             val liveTitle = stringResource(R.string.video_channels_live)
             val groups = remember(state.groups, liveTitle) { splitLiveGroup(state.groups, liveTitle) }
+            val listState = rememberLazyListState()
+            LaunchedEffect(scrollToTopSignal) {
+                if (scrollToTopSignal > 0) listState.animateScrollToItem(0)
+            }
             LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
                     start = 16.dp,

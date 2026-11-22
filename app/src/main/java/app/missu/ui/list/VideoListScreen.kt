@@ -135,6 +135,7 @@ fun VideoListContent(
     controlsLeading: (@Composable RowScope.() -> Unit)? = null,
     controlsTrailing: (@Composable () -> Unit)? = null,
     showControls: Boolean = true,
+    scrollToTopSignal: Int = 0,
 ) {
     Column(modifier) {
         if (showControls) {
@@ -153,6 +154,7 @@ fun VideoListContent(
 
         VideoListBody(
             state = state,
+            scrollToTopSignal = scrollToTopSignal,
             onRetry = onRetry,
             onLoadMore = onLoadMore,
             onOpen = onOpen,
@@ -232,6 +234,7 @@ fun VideoListBody(
     onLoadMore: () -> Unit,
     onOpen: (id: String, thumbnail: String?) -> Unit,
     modifier: Modifier = Modifier,
+    scrollToTopSignal: Int = 0,
 ) {
     PageStateTransition(state = state, modifier = modifier) { current ->
         when (current) {
@@ -246,6 +249,9 @@ fun VideoListBody(
 
             is VideoListUiState.Content -> {
                 val gridState = rememberLazyGridState()
+                LaunchedEffect(scrollToTopSignal) {
+                    if (scrollToTopSignal > 0) gridState.animateScrollToItem(0)
+                }
                 LoadMoreOnScroll(
                     state = gridState,
                     enabled = current.more == LoadMoreState.Idle,

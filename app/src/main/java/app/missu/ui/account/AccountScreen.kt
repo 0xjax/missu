@@ -32,6 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -62,7 +63,12 @@ fun AccountScreen(
     onHistory: () -> Unit,
     onPlaylists: () -> Unit,
     modifier: Modifier = Modifier,
+    scrollToTopSignal: Int = 0,
 ) {
+    val scrollState = rememberScrollState()
+    LaunchedEffect(scrollToTopSignal) {
+        if (scrollToTopSignal > 0) scrollState.animateScrollTo(0)
+    }
     Column(modifier.fillMaxSize()) {
         when (state) {
             AuthUiState.Checking -> LoadingHint()
@@ -89,7 +95,7 @@ fun AccountScreen(
             is AuthUiState.LoggedIn -> Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(scrollState),
             ) {
                 ProfileCard(user = state.user)
                 Spacer(Modifier.height(16.dp))

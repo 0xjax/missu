@@ -474,6 +474,7 @@ fun SearchBody(
     onOpen: (id: String, thumbnail: String?) -> Unit,
     modifier: Modifier = Modifier,
     searchAction: (@Composable () -> Unit)? = null,
+    scrollToTopSignal: Int = 0,
 ) {
     val resultsContent: @Composable (Modifier) -> Unit = { bodyModifier ->
         PageStateTransition(state = state, modifier = bodyModifier) { current ->
@@ -495,6 +496,7 @@ fun SearchBody(
 
                 is SearchUiState.Content -> Results(
                     state = current,
+                    scrollToTopSignal = scrollToTopSignal,
                     onLoadMore = onLoadMore,
                     onOpen = onOpen,
                     contentTopInset = if (searchAction == null) 0.dp else LocalSearchBarInset.current,
@@ -588,11 +590,15 @@ private fun Hint(text: String) {
 @Composable
 private fun Results(
     state: SearchUiState.Content,
+    scrollToTopSignal: Int,
     onLoadMore: () -> Unit,
     onOpen: (id: String, thumbnail: String?) -> Unit,
     contentTopInset: Dp,
 ) {
     val gridState = rememberLazyGridState()
+    LaunchedEffect(scrollToTopSignal) {
+        if (scrollToTopSignal > 0) gridState.animateScrollToItem(0)
+    }
     LoadMoreOnScroll(
         state = gridState,
         enabled = state.more == LoadMoreState.Idle,

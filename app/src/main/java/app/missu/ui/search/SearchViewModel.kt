@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import app.missu.data.api.MissavApi
 import app.missu.data.api.VideoListOptions
 import app.missu.data.model.VideoList
+import app.missu.data.model.VideoListQuery
 import app.missu.data.model.VideoSummary
+import app.missu.data.store.ListQueryStore
 import app.missu.data.store.SearchHistory
 import app.missu.data.store.SearchHistoryStore
 import app.missu.ui.common.LoadMoreState
@@ -33,6 +35,7 @@ sealed interface SearchUiState {
 
 class SearchViewModel internal constructor(
     private val history: SearchHistory,
+    private val queryStore: ListQueryStore? = null,
     private val searchPage: suspend (
         keyword: String,
         page: Int,
@@ -40,16 +43,17 @@ class SearchViewModel internal constructor(
         filter: VideoListOptions.Filter?,
     ) -> VideoList,
 ) : ViewModel() {
-    constructor(api: MissavApi, history: SearchHistoryStore) : this(
+    constructor(api: MissavApi, history: SearchHistoryStore, queryStore: ListQueryStore) : this(
         history = history,
+        queryStore = queryStore,
         searchPage = { keyword, page, sort, filter -> api.searchVideos(keyword, page, sort, filter) },
     )
     private val _state = MutableStateFlow<SearchUiState>(SearchUiState.Idle)
     val state: StateFlow<SearchUiState> = _state.asStateFlow()
 
-    private val _sort = MutableStateFlow<VideoListOptions.Sort?>(null)
+    private val _sort = MutableStateFlow(queryStore?.get(SEARCH_QUERY_PATH)?.sort)
     val sort: StateFlow<VideoListOptions.Sort?> = _sort.asStateFlow()
-    private val _filter = MutableStateFlow<VideoListOptions.Filter?>(null)
+    private val _filter = MutableStateFlow(queryStore?.get(SEARCH_QUERY_PATH)?.filter)
     val filter: StateFlow<VideoListOptions.Filter?> = _filter.asStateFlow()
     private val _detectedSort = MutableStateFlow<VideoListOptions.Sort?>(null)
     val detectedSort: StateFlow<VideoListOptions.Sort?> = _detectedSort.asStateFlow()
@@ -90,13 +94,19 @@ class SearchViewModel internal constructor(
     fun setSort(value: VideoListOptions.Sort?) {
         if (_sort.value == value) return
         _sort.value = value
+        saveQuery()
         reload()
     }
 
     fun setFilter(value: VideoListOptions.Filter?) {
         if (_filter.value == value) return
         _filter.value = value
+        saveQuery()
         reload()
+    }
+
+    private fun saveQuery() {
+        queryStore?.put(VideoListQuery(SEARCH_QUERY_PATH, sort = _sort.value, filter = _filter.value))
     }
 
     private fun reload() {
@@ -148,5 +158,9 @@ class SearchViewModel internal constructor(
                 current.copy(more = LoadMoreState.Failed)
             }
         }
+    }
+
+    private companion object {
+        const val SEARCH_QUERY_PATH = "/search"
     }
 }

@@ -448,7 +448,7 @@ internal fun NavGraphBuilder.secondaryDestinations(
         val keyword = Uri.decode(entry.arguments?.getString("keyword").orEmpty())
         val viewModel: SearchViewModel = viewModel(
             key = "search-$keyword",
-            factory = missuViewModelFactory { SearchViewModel(api, searchHistory) },
+            factory = missuViewModelFactory { SearchViewModel(api, searchHistory, listQueryStore) },
         )
         val state by viewModel.state.collectAsStateWithLifecycle()
         val sort by viewModel.sort.collectAsStateWithLifecycle()
