@@ -55,6 +55,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import app.missu.R
 import app.missu.data.api.ChallengeHandler
+import app.missu.data.api.ChallengeKind
+import app.missu.data.api.ChallengeRequest
 import app.missu.data.api.ChallengeResult
 import app.missu.data.api.SourceConfig
 import app.missu.ui.theme.LocalDarkTheme
@@ -124,15 +126,15 @@ class ChallengeState : ChallengeHandler {
     var current by mutableStateOf<Request?>(null)
         private set
 
-    /** [path] 是触发挑战的站点相对路径；浮层加载它，浏览器要是直接拿到了页面就能把 HTML 带回。 */
     class Request(
         val path: String,
         val deferred: CompletableDeferred<ChallengeResult>,
+        val kind: ChallengeKind = ChallengeKind.CLOUDFLARE,
         /** 非空 = 预览：直接加载这个 URL（本地 fixture 或抓下来的真挑战页），不判通过、不碰网络。 */
         val previewUrl: String? = null,
     )
 
-    override suspend fun verify(path: String): ChallengeResult {
+    override suspend fun verify(challenge: ChallengeRequest): ChallengeResult {
         val running = current
         if (running != null) {
             // NOTE: 预览占着浮层时不让真实验证抢槽位——否则预览会被应用的请求顶掉。
@@ -143,7 +145,7 @@ class ChallengeState : ChallengeHandler {
             // 页面），调用方拿到 passed 后自己重取——此时 clearance 已经在共享 Cookie 里了。
             return running.deferred.await().copy(html = null)
         }
-        val request = Request(path, CompletableDeferred())
+        val request = Request(challenge.url, CompletableDeferred(), challenge.kind)
         current = request
         return try {
             request.deferred.await()
@@ -346,6 +348,7 @@ private fun applyPageTheme(view: WebView, dark: Boolean, onRules: (Int) -> Unit 
 private const val PROBE_JS =
     "JSON.stringify({t:document.title,r:document.readyState," +
         "c:(typeof window._cf_chl_opt!=='undefined')," +
+        "v:(document.title==='安全验证'&&!!document.getElementById('vb'))," +
         "n:(document.body?document.body.innerText.trim().length:0)," +
         "d:matchMedia('(prefers-color-scheme: dark)').matches," +
         "bg:getComputedStyle(document.body).backgroundColor,fg:getComputedStyle(document.body).color})"
@@ -371,7 +374,7 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
         }
     }
     // 预览时加载的是本地 fixture（或抓下来的真挑战页），其余情况都是站点的真实路径。
-    val targetUrl = request.previewUrl ?: SourceConfig.localizedUrl(request.path)
+    val targetUrl = request.previewUrl ?: request.path
     val surfaceLow = MaterialTheme.colorScheme.surfaceContainerLow
     // 页面自己不带背景（实测 html/body 的 background 都是 rgba(0,0,0,0)），底色由这层给；
     // 明暗再通过 `color-scheme` 交回浏览器的默认值（见 applyColorScheme）。
@@ -456,7 +459,8 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
             val clearance = CookieManager.getInstance()
                 .getCookie(view.url ?: targetUrl)
                 ?.contains("cf_clearance") == true
-            val challengePage = page?.isChallengePage() == true
+            val challengePage = page?.isChallengePage() == true ||
+                (request.kind == ChallengeKind.ACCESS_BUTTON && page?.optBoolean("v") == true)
             val onTarget = samePath(view.url.orEmpty(), targetUrl)
             val contentLength = page?.optInt("n") ?: 0
             val blankPage = page != null && ready == "complete" && contentLength == 0

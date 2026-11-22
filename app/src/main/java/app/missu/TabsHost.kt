@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material3.Icon
@@ -29,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -36,7 +38,9 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import app.missu.data.api.MissavApi
 import app.missu.data.api.VideoListOptions
+import app.missu.data.comic.ComicRepository
 import app.missu.data.literature.LiteratureRepository
+import app.missu.data.store.ComicSourceStore
 import app.missu.data.store.ListQueryStore
 import app.missu.data.store.ListSortStore
 import app.missu.data.store.LiteratureStore
@@ -46,6 +50,8 @@ import app.missu.ui.account.AuthViewModel
 import app.missu.ui.components.PageSurface
 import app.missu.ui.components.ProvideHeroVisibility
 import app.missu.ui.components.underScrim
+import app.missu.ui.comics.ComicNavigationScreen
+import app.missu.ui.comics.ComicNavigationViewModel
 import app.missu.ui.videos.VideoNavigationScreen
 import app.missu.ui.videos.VideoNavigationViewModel
 import app.missu.ui.videos.HOT_PATH
@@ -73,6 +79,7 @@ internal val topLevels = listOf(
     TopLevel("home", R.string.nav_home, Icons.Outlined.Home),
     TopLevel("study", R.string.nav_study, Icons.Outlined.AutoStories),
     TopLevel("videos", R.string.nav_videos, Icons.Outlined.VideoLibrary),
+    TopLevel("comics", R.string.nav_comics, Icons.Outlined.MenuBook),
     TopLevel("account", R.string.nav_account, Icons.Outlined.Person),
 )
 
@@ -85,6 +92,7 @@ internal fun TabsHost(
     tabRoute: String,
     onTabChange: (String) -> Unit,
     api: MissavApi,
+    comicRepository: ComicRepository,
     literatureRepository: LiteratureRepository,
     searchHistory: SearchHistoryStore,
     listSortStore: ListSortStore,
@@ -93,10 +101,16 @@ internal fun TabsHost(
     auth: AuthViewModel,
     onOpenDetail: (String, String?, String) -> Unit,
     onOpenList: (String, String) -> Unit,
+    onOpenComic: (app.missu.data.comic.ComicSource, String) -> Unit,
 ) {
     val videoNavigationViewModel: VideoNavigationViewModel = viewModel(factory = missuViewModelFactory { VideoNavigationViewModel(api) })
     val searchViewModel: SearchViewModel = viewModel(
         factory = missuViewModelFactory { SearchViewModel(api, searchHistory) },
+    )
+    val context = LocalContext.current
+    val comicSourceStore = remember { ComicSourceStore(context.applicationContext) }
+    val comicNavigationViewModel: ComicNavigationViewModel = viewModel(
+        factory = missuViewModelFactory { ComicNavigationViewModel(comicRepository, comicSourceStore) },
     )
     val authState by auth.state.collectAsStateWithLifecycle()
 
@@ -262,6 +276,32 @@ internal fun TabsHost(
                                 }
                             }
                         }
+                    }
+                }
+
+                "comics" -> {
+                    val source by comicNavigationViewModel.source.collectAsStateWithLifecycle()
+                    val feed by comicNavigationViewModel.feed.collectAsStateWithLifecycle()
+                    val comicState by comicNavigationViewModel.listState.collectAsStateWithLifecycle()
+                    val comicSearchState by comicNavigationViewModel.searchState.collectAsStateWithLifecycle()
+                    val comicKeyword by comicNavigationViewModel.keyword.collectAsStateWithLifecycle()
+                    PageSurface(card = false, contentInset = false) {
+                        ComicNavigationScreen(
+                            source = source,
+                            feed = feed,
+                            state = comicState,
+                            searchState = comicSearchState,
+                            keyword = comicKeyword,
+                            onSourceChange = comicNavigationViewModel::setSource,
+                            onFeedChange = comicNavigationViewModel::setFeed,
+                            onLoad = comicNavigationViewModel::load,
+                            onLoadMore = { comicNavigationViewModel.loadMore() },
+                            onRetry = comicNavigationViewModel::refresh,
+                            onSearch = comicNavigationViewModel::search,
+                            onClearSearch = comicNavigationViewModel::clearSearch,
+                            onSearchLoadMore = { comicNavigationViewModel.loadMore(search = true) },
+                            onOpen = onOpenComic,
+                        )
                     }
                 }
 

@@ -118,11 +118,44 @@ fun SearchHost(
     inlineTrigger: Boolean = false,
     content: @Composable ColumnScope.(searchAction: @Composable () -> Unit) -> Unit,
 ) {
+    SearchHostShell(
+        searching = state !is SearchUiState.Idle,
+        onSearch = onSearch,
+        onClear = onClear,
+        modifier = modifier,
+        initialKeyword = initialKeyword,
+        placeholder = stringResource(R.string.search_placeholder),
+        onExit = onExit,
+        inlineTrigger = inlineTrigger,
+        idleContent = { pick ->
+            RecentSearches(
+                keywords = recent,
+                onPick = pick,
+                onClear = onClearHistory,
+            )
+        },
+        content = content,
+    )
+}
+
+/** 影片与漫画共用的搜索按钮、输入态、工具框形变和返回规则。 */
+@Composable
+internal fun SearchHostShell(
+    searching: Boolean,
+    onSearch: (String) -> Unit,
+    onClear: () -> Unit,
+    modifier: Modifier = Modifier,
+    initialKeyword: String = "",
+    placeholder: String,
+    onExit: (() -> Unit)? = null,
+    inlineTrigger: Boolean = false,
+    idleContent: @Composable (onPick: (String) -> Unit) -> Unit,
+    content: @Composable ColumnScope.(searchAction: @Composable () -> Unit) -> Unit,
+) {
     val searchBarState = rememberSearchBarState()
     val textFieldState = rememberTextFieldState(initialText = initialKeyword)
     val focusRequester = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
-    val searching = state !is SearchUiState.Idle
     var triggerBounds by remember { mutableStateOf<Rect?>(null) }
     var expansionAnchor by remember { mutableStateOf<Rect?>(null) }
     val expansionProgress = remember { Animatable(0f) }
@@ -179,9 +212,6 @@ fun SearchHost(
         }
     }
 
-    // NOTE: 搜索态是**同一个目的地里的第二层**（栏就地展开、结果是同一屏的内容替换），返回栈上
-    // 没有它的条目。行内结果页先回到保留关键词的输入态，再返回一次才退出搜索。
-    // NOTE: 展开但还没提交查询也算一层——栏开着就说明用户进入了搜索模式，返回应当先收起。
     BackHandler(
         enabled = searchBarState.targetValue == SearchBarValue.Expanded || (onExit == null && searching),
     ) {
@@ -194,9 +224,8 @@ fun SearchHost(
             searchBarState = searchBarState,
             onSearch = { submit(textFieldState.text.toString().trim()) },
             modifier = if (inlineTrigger) Modifier.fillMaxWidth().focusRequester(focusRequester) else Modifier,
-            placeholder = { Text(stringResource(R.string.search_placeholder)) },
+            placeholder = { Text(placeholder) },
             leadingIcon = {
-                // 行内按钮只负责展开，进入全屏后必须由输入框提供明确的返回入口。
                 if (inlineTrigger || searching) {
                     IconButton(onClick = { back() }) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.search_exit))
@@ -265,19 +294,11 @@ fun SearchHost(
             inputField = inputField,
             onDismiss = { exit() },
         ) {
-            RecentSearches(
-                keywords = recent,
-                onPick = { pick(it) },
-                onClear = onClearHistory,
-            )
+            idleContent { pick(it) }
         }
     } else {
         ExpandedFullScreenSearchBar(state = searchBarState, inputField = inputField) {
-            RecentSearches(
-                keywords = recent,
-                onPick = { pick(it) },
-                onClear = onClearHistory,
-            )
+            idleContent { pick(it) }
         }
     }
 }

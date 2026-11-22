@@ -17,7 +17,20 @@
     <string name="nav_home">首頁</string>
     <string name="nav_study">書房</string>
     <string name="nav_videos">影片</string>
+    <string name="nav_comics">漫畫</string>
     <string name="nav_account">我的</string>
+
+    <!-- 漫畫 -->
+    <string name="comic_popular">熱門</string>
+    <string name="comic_latest">最新</string>
+    <string name="comic_empty">找不到漫畫</string>
+    <string name="comic_search_placeholder">搜尋漫畫</string>
+    <string name="comic_search_hint">輸入漫畫名稱或關鍵字</string>
+    <string name="comic_start_reading">開始閱讀</string>
+    <string name="comic_chapters">共 %1$d 話</string>
+    <string name="comic_no_chapters">暫無可用章節</string>
+    <string name="comic_reader_empty">本章沒有可閱讀的圖片</string>
+    <string name="comic_page_number">第 %1$d 頁</string>
 
     <!-- 我的 -->
     <string name="account_title">我的</string>

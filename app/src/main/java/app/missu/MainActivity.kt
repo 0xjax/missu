@@ -52,6 +52,7 @@ import androidx.navigation.compose.rememberNavController
 import app.missu.data.api.AppDependencies
 import app.missu.data.api.LocalAppDependencies
 import app.missu.data.api.SourceConfig
+import app.missu.data.comic.ComicSource
 import app.missu.data.model.VideoListQuery
 import app.missu.data.store.AppLanguage
 import app.missu.data.store.ColorSource
@@ -272,6 +273,10 @@ private fun MissuApp(
         openListQuery(listQueryStore.get(path), title)
     }
 
+    fun openComic(source: ComicSource, id: String) {
+        navController.navigate("comic/detail?s=${Uri.encode(source.id)}&id=${Uri.encode(id)}")
+    }
+
     fun goBack() {
         buttonPopId = navController.currentBackStackEntry?.id
         navController.popBackStack()
@@ -352,6 +357,7 @@ private fun MissuApp(
                     tabRoute = tabRoute,
                     onTabChange = { tabRoute = it },
                     api = api,
+                    comicRepository = dependencies.comicRepository,
                     literatureRepository = literatureRepository,
                     searchHistory = searchHistory,
                     listSortStore = listSortStore,
@@ -360,6 +366,7 @@ private fun MissuApp(
                     auth = auth,
                     onOpenDetail = ::openDetail,
                     onOpenList = ::openList,
+                    onOpenComic = ::openComic,
                 )
             }
             secondaryDestinations(
@@ -367,6 +374,7 @@ private fun MissuApp(
                 backStackEntry = backStackEntry,
                 tabRoute = tabRouteState,
                 api = api,
+                comicRepository = dependencies.comicRepository,
                 literatureRepository = literatureRepository,
                 settings = settings,
                 settingsState = settingsState,

@@ -22,7 +22,7 @@
 - ✅ **列表页**：`MissavApi.getVideos(path, page)` 通用列表 + 分页；详情页信息行里带路径的值（女优/类型/厂商…）可点，跳到对应列表（实测点「RARA」进入其作品页）；用户排序 / 过滤按列表类别持久化，女优、类型、厂商各自整类共享
 - ✅ **视频单列/双列**：设置页全局切换，首页、热门、搜索、收藏、历史与片单共用 `LocalVideoListColumns`；只重组布局，不重取数据，偏好持久化
 - ✅ **价值导向首页**：不禁止或羞辱成人内容选择，用本地短篇指南提供另一种默认入口；不加入观看评分、强制暂停或提醒，指南正文为应用资源，离线可读且无需新增内容接口
-- ✅ **底部导航 + 书房 + 影片**：`首页 / 书房 / 影片 / 我的` 四个一级页签；书房内分「诗词 / 英语」，均为本地内容；影片页保留目录、热门与频道，栏目收进下拉选项，手动搜索入口只在影片页顶部，详情番号可直达对应搜索页
+- ✅ **底部导航 + 书房 + 影片 + 漫画**：`首页 / 书房 / 影片 / 漫画 / 我的` 五个一级页签；书房内分「诗词 / 英语」，均为本地内容；影片页保留目录、热门与频道，栏目收进下拉选项，手动搜索入口只在影片页顶部，详情番号可直达对应搜索页；漫画页以统一模型接入五个源站，支持热门 / 最新、搜索、章节详情与竖向阅读；搜索通过 `SearchHostShell` 与影片页共用按钮、工具框形变动画和返回规则
 - ✅ **诗文与英语学习**：诗文已迁入 Room 3 + 预打包 SQLite，规模与构成见 `content/literature/manifest.json`；FTS5 中文一元 / 二元索引支持篇名、作者与原文搜索，列表按 50 篇分页并按上游知名度排序；体裁筛选、持久化收藏、已有精读内容保留，其余明确标注待完善。两篇英语双语阅读复用指南的中英正文，重点词可点击查看释义与例句。文库在应用首帧后通过 IO 协程后台预热，避免首次进入书房才复制预打包数据库。所有内容离线可用，无打卡、评分或连续天数
 - ✅ **女优筛选与排序**：身高 12 档 / 罩杯 A–Q / 年龄 6 档 / 出道年份（N 年以前），排序 `影片 / 出道`（实测 161–165cm 与按出道年排序都生效）
 - ✅ **搜索历史**：成功搜索后记入本地（上限 20，重复置顶），空输入时展示为可点胶囊，可清空
@@ -530,6 +530,13 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
   于是「一加筛选，排序名就退回默认」——正则与解析必须同时接受 `&amp;`。同一次实测也确认：`/today-hot`（热门那面列表）
   的 7 档排序、3 档过滤在站点上全都可用，所以它就该按普通列表页处理。
 - **空结果页仍带 `.thumbnail.group` 外壳**：搜不到东西时页面残留一个没有 `<img>` 的卡片壳、外加一个指向域名/`#` 的锚点。按 `.thumbnail.group` 直接取卡片会解析出一张「标题是 missav.ai、没有封面」的幽灵卡片，UI 上就是一块空缩略图。规则：**id 必须含字母或数字，且必须有 `<img>`**，否则丢弃——这样空结果才会走到空态。
+- **漫画共用模型不等于统一传输协议**：`ComicSourceApi` 统一热门 / 最新、搜索、详情与章节图片，但每个站点只消费自己真实的契约。项目级 `reverse-api-engineer` 技能由 `skills-lock.json` 固定上游提交；本次只安装技能文档，没有安装或运行它的 CLI、浏览器与模型生成代码。
+- **拷贝漫画优先 JSON**：真实可用主机是 `https://api.2024manga.com`，列表 `/api/v3/comics`（`ordering=-popular|-datetime_updated`）、搜索 `/api/v3/search/comic`、详情 `/api/v3/comic2/{path}`、章节组 `/api/v3/comic/{path}/group/{group}/chapters`、图片 `/api/v3/comic/{path}/chapter/{uuid}`，统一带 `platform=3`。2026-11-22 实测热门返回 `total=123985`，详情与阅读均有真实内容。`api.mangacopy.com` 同名列表虽然 HTTP 200，却返回 `total=0`，不能以状态码判断可用；`chapter2` 在该主机实测 404，阅读使用 `chapter`。详情默认读 `default` 章节组，超过 100 话按 offset 连续取完。
+- **Rouman5 使用直出 HTML**：`/books?page=0`（页码从 0 开始）、`/home` 的「最近更新」、`/search?term=…&page=…`；卡片是 `a.site-comic`，详情是 `.site-book-info`，章节是 `a.site-chapter-link`。阅读页 TanStack 水合数据中的 `imagePaths:$R[n]=[…]` 是真实图片数组。`sr:1` 图片需按文件名 Base64 解码后的 MD5 尾字节计算块数并反向拼块；这些规则与当前 Keiyoushi Roumanwu 源一致，并已于 2026-11-22 用真实页面复核。
+- **MyComic 使用直出 HTML**：简体前缀 `/cn`，列表 `/comics?sort=-views|-update&page=N`，搜索加 `q`；卡片为 `div.grid > div.group`，详情为 `div[data-flux-card]`，章节位于 `x-data` 的 `chapters:` JSON 数组，阅读页图片为 `img[x-ref]`。结构与当前 Keiyoushi MyComic 源一致；本机直接 HTTP 请求会遇 Cloudflare，应用内由共享验证层处理。
+- **18Comic 使用网页 HTML，不引入移动端加密协议**：列表 `/albums?o=mv|mr&page=N`，搜索 `/search/photos?search_query=…&o=mr&t=a&page=N`，详情 `/album/{id}`，阅读 `/photo/{id}`；阅读脚本直出 `page_arr`、图床域名与 `scramble_id`。部分图片按 `scramble_id`、作品 id 与文件名 MD5 切分，在 Android 图片拦截器中还原。本站本机请求返回真实 CF managed challenge；网页结构与图片算法对照当前 JMComic-Crawler-Python / PicaComic 实现，需经应用内验证后使用。
+- **卡拉漫画使用 MacCMS 风格 HTML**：搜索 `/search/wd/{关键词}.html`，翻页 `/search/page/N/wd/{关键词}.html`；详情 `/comic/{id}.html`，章节 `/chapter/{id}-{线路}-{序号}.html`，只保留章节最多的线路。部分页面把正文编码在 `rawHtml` JSON 字符串里，必须解析字符串而不是执行 JS；章节里的 `player_aaaa.url` 指向 `image.kalaimg.top` 阅读器，自动跳转令牌要追加 `cf_verify` 后重取。2026-11-22 已用真实首页、详情、章节和阅读器配置复核。
+- **漫画验证复用同一浮层**：`ChallengeRequest` 携带完整 URL 与 `CLOUDFLARE / ACCESS_BUTTON` 类型，OkHttp 与 WebView 继续共享系统 `CookieManager`。18Comic / MyComic 走 CF；Kalamhw 的 `<title>安全验证</title>` + `#vb` 页面必须等用户点击站点按钮并离开验证页，不能把它当正常 HTML 交回，也不能把页面里的 `omo_token` 写死进应用。
 - **Cloudflare 挑战会真的落在手机上**（2026-11-14 真机实测，2026-11-15 又触发过几次）：那时是**独立 `ChallengeActivity`** 版本——
   冷启动加载首页被 403 挑战，验证页里 Cloudflare 的 JS 挑战 1–3 秒自动通过，`cf_clearance` 落进共享 `CookieManager`，
   重试原请求后首页正常加载，全程无需用户操作。PC 的 JVM 请求同样会被挑战（`cf-mitigated: challenge`），

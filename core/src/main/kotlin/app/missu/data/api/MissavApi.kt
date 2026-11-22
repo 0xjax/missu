@@ -414,7 +414,7 @@ class MissavApi(
             client.fetchHtml(path)
         } catch (error: ChallengeException) {
             val handler = challenge ?: throw error
-            val result = handler.verify(path)
+            val result = handler.verify(ChallengeRequest(SourceConfig.localizedUrl(path)))
             if (!result.passed) throw error
             val html = result.html
             if (html != null) {
@@ -445,7 +445,7 @@ class MissavApi(
             block()
         } catch (error: ChallengeException) {
             val handler = challenge ?: throw error
-            val result = handler.verify("/")
+            val result = handler.verify(ChallengeRequest(SourceConfig.localizedUrl("/")))
             if (!result.passed) throw error
             try {
                 block()

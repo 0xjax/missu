@@ -19,6 +19,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import app.missu.data.api.MissavApi
 import app.missu.data.api.VideoListOptions
+import app.missu.data.comic.ComicRepository
+import app.missu.data.comic.ComicSource
 import app.missu.data.literature.LiteratureRepository
 import app.missu.data.store.AppLanguage
 import app.missu.data.store.ColorSource
@@ -38,6 +40,10 @@ import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.PageSurface
 import app.missu.ui.components.ProvideHeroVisibility
+import app.missu.ui.comics.ComicDetailScreen
+import app.missu.ui.comics.ComicDetailViewModel
+import app.missu.ui.comics.ComicReaderScreen
+import app.missu.ui.comics.ComicReaderViewModel
 import app.missu.ui.detail.DetailScreen
 import app.missu.ui.detail.DetailViewModel
 import app.missu.ui.history.HistoryScreen
@@ -90,6 +96,7 @@ internal fun NavGraphBuilder.secondaryDestinations(
     backStackEntry: State<NavBackStackEntry?>,
     tabRoute: State<String>,
     api: MissavApi,
+    comicRepository: ComicRepository,
     literatureRepository: LiteratureRepository,
     settings: SettingsStore,
     settingsState: AppSettingsState,
@@ -156,6 +163,66 @@ internal fun NavGraphBuilder.secondaryDestinations(
             PageSurface {
                 GuideScreen(guide = guide, onBack = onGoBack)
             }
+        }
+    }
+
+    composable(
+        route = "comic/detail?s={s}&id={id}",
+        arguments = listOf(
+            navArgument("s") { defaultValue = ComicSource.COPY.id },
+            navArgument("id") { defaultValue = "" },
+        ),
+    ) { entry ->
+        val source = ComicSource.fromId(entry.arguments?.getString("s").orEmpty())
+        val id = Uri.decode(entry.arguments?.getString("id").orEmpty())
+        val viewModel: ComicDetailViewModel = viewModel(
+            key = "comic-detail-${source.id}-$id",
+            factory = missuViewModelFactory { ComicDetailViewModel(comicRepository, source, id) },
+        )
+        val state by viewModel.state.collectAsStateWithLifecycle()
+        LaunchedEffect(source, id) { viewModel.loadIfNeeded() }
+        PageSurface {
+            ComicDetailScreen(
+                sourceName = source.displayName,
+                state = state,
+                onRetry = viewModel::load,
+                onBack = onGoBack,
+                onOpenChapter = { chapter ->
+                    navController.navigate(
+                        "comic/reader?s=${Uri.encode(source.id)}&m=${Uri.encode(id)}" +
+                            "&c=${Uri.encode(chapter.id)}&t=${Uri.encode(chapter.title)}",
+                    )
+                },
+            )
+        }
+    }
+
+    composable(
+        route = "comic/reader?s={s}&m={m}&c={c}&t={t}",
+        arguments = listOf(
+            navArgument("s") { defaultValue = ComicSource.COPY.id },
+            navArgument("m") { defaultValue = "" },
+            navArgument("c") { defaultValue = "" },
+            navArgument("t") { defaultValue = "" },
+        ),
+    ) { entry ->
+        val source = ComicSource.fromId(entry.arguments?.getString("s").orEmpty())
+        val mangaId = Uri.decode(entry.arguments?.getString("m").orEmpty())
+        val chapterId = Uri.decode(entry.arguments?.getString("c").orEmpty())
+        val title = Uri.decode(entry.arguments?.getString("t").orEmpty())
+        val viewModel: ComicReaderViewModel = viewModel(
+            key = "comic-reader-${source.id}-$chapterId",
+            factory = missuViewModelFactory { ComicReaderViewModel(comicRepository, source, mangaId, chapterId) },
+        )
+        val state by viewModel.state.collectAsStateWithLifecycle()
+        LaunchedEffect(source, chapterId) { viewModel.loadIfNeeded() }
+        PageSurface {
+            ComicReaderScreen(
+                title = title,
+                state = state,
+                onRetry = viewModel::load,
+                onBack = onGoBack,
+            )
         }
     }
 

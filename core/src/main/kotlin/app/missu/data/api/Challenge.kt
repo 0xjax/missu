@@ -1,15 +1,20 @@
 package app.missu.data.api
 
-/** WebView 过 Cloudflare 之后拿到的结果。 */
+/** WebView 过站点验证之后拿到的结果。 */
 data class ChallengeResult(val passed: Boolean, val html: String? = null)
 
-/**
- * 需要人机验证时的回调；由调用方决定怎么弹（App 里是 [app.missu.ui.challenge.ChallengeState] 的浮层）。
- *
- * [verify] 的 `path` 是**触发挑战的那个请求的站点相对路径**：浮层把它加载进去，
- * 于是浏览器要是根本没被挑战、直接拿到了这一页，就能把 HTML 交还给调用方
- * （见 `MissavApi.fetchPage`）——这比「等一个永远不会出现的 cf_clearance」正确得多。
- */
+enum class ChallengeKind {
+    CLOUDFLARE,
+    ACCESS_BUTTON,
+}
+
+/** [url] 是触发验证的完整地址；浏览器若直接拿到页面，可以把 HTML 一并交回。 */
+data class ChallengeRequest(
+    val url: String,
+    val kind: ChallengeKind = ChallengeKind.CLOUDFLARE,
+)
+
+/** 需要站点验证时的回调；App 在组合根部用 WebView 浮层处理。 */
 interface ChallengeHandler {
-    suspend fun verify(path: String): ChallengeResult
+    suspend fun verify(request: ChallengeRequest): ChallengeResult
 }
