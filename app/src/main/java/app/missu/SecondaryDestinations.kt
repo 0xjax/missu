@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -24,6 +25,7 @@ import app.missu.data.comic.ComicSource
 import app.missu.data.literature.LiteratureRepository
 import app.missu.data.store.AppLanguage
 import app.missu.data.store.ColorSource
+import app.missu.data.store.ComicPreferencesStore
 import app.missu.data.store.HistoryStore
 import app.missu.data.store.ListHistoryEntry
 import app.missu.data.store.ListHistoryStore
@@ -175,16 +177,21 @@ internal fun NavGraphBuilder.secondaryDestinations(
     ) { entry ->
         val source = ComicSource.fromId(entry.arguments?.getString("s").orEmpty())
         val id = Uri.decode(entry.arguments?.getString("id").orEmpty())
+        val comicContext = LocalContext.current
+        val comicPreferences = remember { ComicPreferencesStore(comicContext.applicationContext) }
         val viewModel: ComicDetailViewModel = viewModel(
             key = "comic-detail-${source.id}-$id",
-            factory = missuViewModelFactory { ComicDetailViewModel(comicRepository, source, id) },
+            factory = missuViewModelFactory { ComicDetailViewModel(comicRepository, source, id, comicPreferences) },
         )
         val state by viewModel.state.collectAsStateWithLifecycle()
+        val chapterDescending by viewModel.chapterDescending.collectAsStateWithLifecycle()
         LaunchedEffect(source, id) { viewModel.loadIfNeeded() }
         PageSurface {
             ComicDetailScreen(
                 sourceName = source.displayName,
                 state = state,
+                chapterDescending = chapterDescending,
+                onToggleChapterOrder = viewModel::toggleChapterOrder,
                 onRetry = viewModel::load,
                 onBack = onGoBack,
                 onOpenChapter = { chapter ->

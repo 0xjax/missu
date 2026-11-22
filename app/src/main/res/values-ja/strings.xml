@@ -27,6 +27,8 @@
     <string name="comic_no_chapters">利用可能な話がありません</string>
     <string name="comic_reader_empty">この話にはページがありません</string>
     <string name="comic_page_number">%1$d ページ</string>
+    <string name="comic_order_ascending">昇順</string>
+    <string name="comic_order_descending">降順</string>
 
     <!-- マイページ -->
     <string name="account_title">マイページ</string>

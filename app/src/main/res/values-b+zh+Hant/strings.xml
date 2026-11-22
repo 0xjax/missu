@@ -31,6 +31,8 @@
     <string name="comic_no_chapters">暫無可用章節</string>
     <string name="comic_reader_empty">本章沒有可閱讀的圖片</string>
     <string name="comic_page_number">第 %1$d 頁</string>
+    <string name="comic_order_ascending">正序</string>
+    <string name="comic_order_descending">倒序</string>
 
     <!-- 我的 -->
     <string name="account_title">我的</string>

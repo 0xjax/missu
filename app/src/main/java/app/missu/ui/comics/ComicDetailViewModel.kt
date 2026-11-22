@@ -6,6 +6,7 @@ import app.missu.data.comic.ComicDetail
 import app.missu.data.comic.ComicImage
 import app.missu.data.comic.ComicRepository
 import app.missu.data.comic.ComicSource
+import app.missu.data.store.ComicPreferencesStore
 import app.missu.ui.common.UiMessage
 import app.missu.ui.common.toUiMessage
 import kotlinx.coroutines.CancellationException
@@ -24,9 +25,19 @@ class ComicDetailViewModel(
     private val repository: ComicRepository,
     private val source: ComicSource,
     private val id: String,
+    private val preferences: ComicPreferencesStore,
 ) : ViewModel() {
     private val _state = MutableStateFlow<ComicDetailUiState>(ComicDetailUiState.Loading)
     val state: StateFlow<ComicDetailUiState> = _state.asStateFlow()
+
+    private val _chapterDescending = MutableStateFlow(preferences.chapterDescending())
+    val chapterDescending: StateFlow<Boolean> = _chapterDescending.asStateFlow()
+
+    fun toggleChapterOrder() {
+        val value = !_chapterDescending.value
+        preferences.setChapterDescending(value)
+        _chapterDescending.value = value
+    }
 
     fun loadIfNeeded() {
         if (_state.value !is ComicDetailUiState.Loading) return

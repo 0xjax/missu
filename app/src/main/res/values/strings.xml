@@ -33,6 +33,8 @@
     <string name="comic_no_chapters">No chapters available</string>
     <string name="comic_reader_empty">No pages in this chapter</string>
     <string name="comic_page_number">Page %1$d</string>
+    <string name="comic_order_ascending">Ascending</string>
+    <string name="comic_order_descending">Descending</string>
 
     <!-- 我的 -->
     <string name="account_title">Me</string>

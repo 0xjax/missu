@@ -14,14 +14,18 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.MenuBook
+import androidx.compose.material.icons.outlined.SwapVert
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.missu.R
 import app.missu.data.comic.ComicChapter
@@ -37,6 +41,8 @@ import app.missu.ui.components.PageTopBar
 fun ComicDetailScreen(
     sourceName: String,
     state: ComicDetailUiState,
+    chapterDescending: Boolean,
+    onToggleChapterOrder: () -> Unit,
     onRetry: () -> Unit,
     onBack: () -> Unit,
     onOpenChapter: (ComicChapter) -> Unit,
@@ -48,14 +54,25 @@ fun ComicDetailScreen(
             when (current) {
                 ComicDetailUiState.Loading -> LoadingHint()
                 is ComicDetailUiState.Error -> ErrorHint(current.message.text(), onRetry)
-                is ComicDetailUiState.Content -> ComicDetailContent(current.detail, onOpenChapter)
+                is ComicDetailUiState.Content -> ComicDetailContent(
+                    detail = current.detail,
+                    chapterDescending = chapterDescending,
+                    onToggleChapterOrder = onToggleChapterOrder,
+                    onOpenChapter = onOpenChapter,
+                )
             }
         }
     }
 }
 
 @Composable
-private fun ComicDetailContent(detail: ComicDetail, onOpenChapter: (ComicChapter) -> Unit) {
+private fun ComicDetailContent(
+    detail: ComicDetail,
+    chapterDescending: Boolean,
+    onToggleChapterOrder: () -> Unit,
+    onOpenChapter: (ComicChapter) -> Unit,
+) {
+    val chapters = if (chapterDescending) detail.chapters.asReversed() else detail.chapters
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
@@ -69,12 +86,19 @@ private fun ComicDetailContent(detail: ComicDetail, onOpenChapter: (ComicChapter
                     modifier = Modifier.width(112.dp).height(168.dp).clip(MaterialTheme.shapes.medium),
                 )
                 Column(Modifier.weight(1f).padding(start = 16.dp)) {
-                    Text(detail.title, style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        detail.title,
+                        style = MaterialTheme.typography.titleLarge,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                     if (detail.authors.isNotEmpty()) {
                         Text(
                             detail.authors.joinToString(" / "),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(top = 8.dp),
                         )
                     }
@@ -95,6 +119,8 @@ private fun ComicDetailContent(detail: ComicDetail, onOpenChapter: (ComicChapter
                     detail.tags.joinToString(" · "),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
@@ -122,13 +148,31 @@ private fun ComicDetailContent(detail: ComicDetail, onOpenChapter: (ComicChapter
                 }
             }
             item(key = "chapter-title") {
-                Text(
-                    stringResource(R.string.comic_chapters, detail.chapters.size),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(top = 8.dp),
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        stringResource(R.string.comic_chapters, detail.chapters.size),
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    FilledTonalButton(onClick = onToggleChapterOrder) {
+                        Icon(
+                            Icons.Outlined.SwapVert,
+                            contentDescription = null,
+                            modifier = Modifier.width(18.dp),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            stringResource(
+                                if (chapterDescending) R.string.comic_order_descending else R.string.comic_order_ascending,
+                            ),
+                        )
+                    }
+                }
             }
-            items(detail.chapters, key = { it.id }) { chapter ->
+            items(chapters, key = { it.id }) { chapter ->
                 Surface(
                     onClick = { onOpenChapter(chapter) },
                     shape = MaterialTheme.shapes.medium,
