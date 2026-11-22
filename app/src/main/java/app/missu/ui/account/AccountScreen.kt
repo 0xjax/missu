@@ -20,7 +20,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ExitToApp
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.AccountCircle
-import androidx.compose.material.icons.outlined.Settings
 
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -39,30 +38,22 @@ import androidx.compose.ui.unit.dp
 import app.missu.R
 import app.missu.data.model.AccountUser
 import app.missu.ui.components.EmptyHint
-import app.missu.ui.components.GroupDivider
 import app.missu.ui.components.GroupSurface
 import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.PageTopBar
 
 /**
- * 「我的」页：账号资料 + 二三级入口。
- *
- * NOTE: 这里只保留账号与设置；收藏、片单和历史入口放在各自的内容导航页。
+ * 影片账号页：登录、资料与退出登录；全局设置由首页直接进入。
  */
 @Composable
 fun AccountScreen(
     state: AuthUiState,
     onLogin: () -> Unit,
     onLogout: () -> Unit,
-    onSettings: () -> Unit,
     onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
-    scrollToTopSignal: Int = 0,
 ) {
     val scrollState = rememberScrollState()
-    LaunchedEffect(scrollToTopSignal) {
-        if (scrollToTopSignal > 0) scrollState.animateScrollTo(0)
-    }
     Column(modifier.fillMaxSize()) {
         onBack?.let {
             PageTopBar(title = stringResource(R.string.account_title), onBack = it)
@@ -71,7 +62,6 @@ fun AccountScreen(
             AuthUiState.Checking -> LoadingHint()
 
             AuthUiState.LoggedOut -> Column(Modifier.weight(1f)) {
-                // NOTE: 设置不依赖账号；空态只占中间那块，入口位置不随登录状态变化。
                 EmptyHint(
                     icon = Icons.Outlined.AccountCircle,
                     title = stringResource(R.string.account_logged_out_title),
@@ -80,10 +70,6 @@ fun AccountScreen(
                     onAction = onLogin,
                     modifier = Modifier.weight(1f),
                 )
-                GroupSurface(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    MenuRow(Icons.Outlined.Settings, stringResource(R.string.account_settings), onSettings)
-                }
-                Spacer(Modifier.height(16.dp))
             }
 
             is AuthUiState.LoggedIn -> Column(
@@ -93,12 +79,6 @@ fun AccountScreen(
             ) {
                 ProfileCard(user = state.user)
                 Spacer(Modifier.height(16.dp))
-
-                GroupSurface(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    MenuRow(Icons.Outlined.Settings, stringResource(R.string.account_settings), onSettings)
-                }
-
-                Spacer(Modifier.height(12.dp))
 
                 GroupSurface(modifier = Modifier.padding(horizontal = 16.dp)) {
                     MenuRow(

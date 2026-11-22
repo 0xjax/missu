@@ -48,7 +48,7 @@ fun ComicLibraryScreen(
             title = stringResource(R.string.comic_history_title),
             onBack = onBack,
             actions = {
-                if (selectedTab == 0 && entries.isNotEmpty()) {
+                if (selectedTab == 1 && entries.isNotEmpty()) {
                     TextButton(onClick = onClear) { Text(stringResource(R.string.common_clear)) }
                 }
             },
@@ -57,26 +57,45 @@ fun ComicLibraryScreen(
             Tab(
                 selected = selectedTab == 0,
                 onClick = { selectedTab = 0 },
-                text = { Text(stringResource(R.string.comic_reading_history_tab)) },
+                text = { Text(stringResource(R.string.comic_favorites_tab)) },
             )
             Tab(
                 selected = selectedTab == 1,
                 onClick = { selectedTab = 1 },
-                text = { Text(stringResource(R.string.comic_favorites_tab)) },
+                text = { Text(stringResource(R.string.comic_reading_history_tab)) },
             )
         }
         when {
-            selectedTab == 0 && entries.isEmpty() -> EmptyHint(
-                icon = Icons.Outlined.MenuBook,
-                title = stringResource(R.string.comic_history_empty_title),
-                subtitle = stringResource(R.string.comic_history_empty_subtitle),
-            )
-            selectedTab == 1 && favorites.isEmpty() -> EmptyHint(
+            selectedTab == 0 && favorites.isEmpty() -> EmptyHint(
                 icon = Icons.Outlined.FavoriteBorder,
                 title = stringResource(R.string.comic_favorites_empty_title),
                 subtitle = stringResource(R.string.comic_favorites_empty_subtitle),
             )
+            selectedTab == 1 && entries.isEmpty() -> EmptyHint(
+                icon = Icons.Outlined.MenuBook,
+                title = stringResource(R.string.comic_history_empty_title),
+                subtitle = stringResource(R.string.comic_history_empty_subtitle),
+            )
             selectedTab == 0 -> LazyVerticalGrid(
+                columns = GridCells.Fixed(3),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 32.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                items(favorites, key = { "${it.source.id}:${it.mangaId}" }) { entry ->
+                    ComicGridCard(
+                        comic = ComicSummary(
+                            id = entry.mangaId,
+                            title = entry.title,
+                            cover = entry.cover,
+                            subtitle = entry.source.displayName,
+                        ),
+                        onClick = { onOpenFavorite(entry) },
+                    )
+                }
+            }
+            else -> LazyVerticalGrid(
                 columns = GridCells.Fixed(3),
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 32.dp),
@@ -96,25 +115,6 @@ fun ComicLibraryScreen(
                             ).joinToString(" · "),
                         ),
                         onClick = { onOpen(entry) },
-                    )
-                }
-            }
-            else -> LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 32.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                items(favorites, key = { "${it.source.id}:${it.mangaId}" }) { entry ->
-                    ComicGridCard(
-                        comic = ComicSummary(
-                            id = entry.mangaId,
-                            title = entry.title,
-                            cover = entry.cover,
-                            subtitle = entry.source.displayName,
-                        ),
-                        onClick = { onOpenFavorite(entry) },
                     )
                 }
             }

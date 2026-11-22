@@ -54,7 +54,7 @@
     <string name="comic_search_view_all">查看全部</string>
 
     <!-- 我的 -->
-    <string name="account_title">我的</string>
+    <string name="account_title">影片帳號</string>
     <string name="account_logged_out_title">未登入</string>
     <string name="account_logged_out_subtitle">登入後可以收藏影片、管理片單，並同步觀看紀錄</string>
     <string name="account_go_login">去登入</string>

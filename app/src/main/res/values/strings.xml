@@ -56,7 +56,7 @@
     <string name="comic_search_view_all">View all</string>
 
     <!-- 我的 -->
-    <string name="account_title">Me</string>
+    <string name="account_title">Video account</string>
     <string name="account_logged_out_title">Not signed in</string>
     <string name="account_logged_out_subtitle">Sign in to save videos, manage playlists and keep your watch history in sync</string>
     <string name="account_go_login">Sign in</string>

@@ -444,8 +444,8 @@ private fun InlineSearchButton(
 /** 行内搜索按钮与同一行选项共用的高度。 */
 internal val SearchTriggerHeight = 40.dp
 
-/** 加宽后的搜索托盘，保持图标居中并给两侧留出完整节奏。 */
-private val SearchTriggerWidth = 80.dp
+/** 搜索托盘宽度为 40dp 高度的 1.5 倍。 */
+private val SearchTriggerWidth = 60.dp
 
 /** 胶囊上方的 8dp（material3 展开态给输入框的落点）。 */
 internal val SearchBarTopGap = 8.dp

@@ -161,7 +161,7 @@ internal fun TabsHost(
                                 scrollToTopSignal = tabReselectVersion,
                                 onOpenGuide = { navController.navigate("guide/$it") },
                                 onOpenVideos = { onTabChange("videos") },
-                                onOpenAccount = { navController.navigate("account") },
+                                onOpenSettings = { navController.navigate("settings") },
                             )
                         }
                     }
@@ -177,7 +177,7 @@ internal fun TabsHost(
                     val query by literatureViewModel.query.collectAsStateWithLifecycle()
                     val filter by literatureViewModel.filter.collectAsStateWithLifecycle()
                     val favorites by literatureStore.favorites.collectAsStateWithLifecycle()
-                    PageSurface(card = false) {
+                    PageSurface(card = false, contentInset = false) {
                         LiteratureNavigationScreen(
                             scrollToTopSignal = tabReselectVersion,
                             literatureState = literatureState,

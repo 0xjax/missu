@@ -13,6 +13,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -411,13 +412,10 @@ private fun DetailBody(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            // NOTE: 顶部让出固定区的高度 + **8dp**，不是 16dp：固定区自己已经带了 8dp 下边距，
-            // 标题的行身框底下也还有一截 descent——按 16 排下来，第一张卡上面的视觉间距会比
-            // 卡片之间（16dp）宽一档（2026-11-16 反馈）。8 + 8 + descent，看着才等距。
             contentPadding = PaddingValues(
                 start = 16.dp,
                 end = 16.dp,
-                top = headerHeight + 8.dp,
+                top = headerHeight + 16.dp,
                 bottom = 24.dp,
             ),
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -468,7 +466,7 @@ private fun DetailBody(
             color = MaterialTheme.colorScheme.surfaceContainer,
             shadowElevation = headerShadow,
         ) {
-            Column(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+            Column(Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
             // NOTE: 动作条贴在**视频正下方**（视频和它都是固定不滚的），不是常驻底栏。
             // 理由：这两个动作属于「这个视频」，玩家和它们是同一个决策块；而视频本身不滚，
             // 贴着它同样一屏可见，还省掉了底部那条栏：信息卡可以一直滚到屏幕底，也不存在
@@ -595,7 +593,7 @@ private fun DetailBody(
                 androidx.compose.animation.AnimatedVisibility(
                     visible = seekControlsOpen,
                     modifier = Modifier.matchParentSize(),
-                    // scale 不裁剪 Surface：托盘、内容和阴影始终同一层做弹簧变换。
+                    // scale 不裁剪 Surface：托盘、内容和轮廓始终同一层做弹簧变换。
                     enter = fadeIn(seekEffectsSpec) +
                         scaleIn(
                             animationSpec = seekScaleSpec,
@@ -640,7 +638,7 @@ private fun SeekControlPanel(
             .padding(horizontal = 16.dp),
         shape = MaterialTheme.shapes.largeIncreased,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shadowElevation = 2.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Row(
             modifier = Modifier.fillMaxSize().padding(16.dp),

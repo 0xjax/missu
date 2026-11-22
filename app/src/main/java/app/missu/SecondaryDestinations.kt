@@ -126,13 +126,12 @@ internal fun NavGraphBuilder.secondaryDestinations(
     onOpenList: (String, String) -> Unit,
     onOpenListQuery: (VideoListQuery, String) -> Unit,
 ) {
-    composable("account") {
+    composable("video-account") {
         val state by auth.state.collectAsStateWithLifecycle()
         PageSurface {
             AccountScreen(
                 state = state,
                 onLogin = { navController.navigate("login") },
-                onSettings = { navController.navigate("settings") },
                 onLogout = auth::logout,
                 onBack = onGoBack,
             )
@@ -444,10 +443,11 @@ internal fun NavGraphBuilder.secondaryDestinations(
                     onCreatePlaylist = playlistsViewModel::create,
                     onTabChange = { tab ->
                         when (tab) {
-                            2 -> if (savedState is SavedUiState.Loading) savedViewModel.load()
+                            0 -> if (savedState is SavedUiState.Loading) savedViewModel.load()
                             3 -> if (playlistsState is PlaylistsUiState.Loading) playlistsViewModel.load()
                         }
                     },
+                    onOpenAccount = { navController.navigate("video-account") },
                     onBack = onGoBack,
                 )
             }

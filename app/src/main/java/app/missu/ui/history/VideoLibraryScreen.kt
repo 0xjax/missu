@@ -4,6 +4,8 @@ package app.missu.ui.history
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -22,6 +24,7 @@ import app.missu.data.store.HistoryEntry
 import app.missu.data.store.ListHistoryEntry
 import app.missu.ui.common.UiMessage
 import app.missu.ui.components.PageTopBar
+import app.missu.ui.components.TooltipIconButton
 import app.missu.ui.playlists.PlaylistsContent
 import app.missu.ui.playlists.PlaylistsUiState
 import app.missu.ui.saved.SavedContent
@@ -46,6 +49,7 @@ fun VideoLibraryScreen(
     onOpenPlaylist: (PlaylistSummary) -> Unit,
     onCreatePlaylist: (name: String, isPublic: Boolean, onSuccess: () -> Unit) -> Unit,
     onTabChange: (Int) -> Unit,
+    onOpenAccount: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -58,32 +62,37 @@ fun VideoLibraryScreen(
             onBack = onBack,
             actions = {
                 val canClear = when (selectedTab) {
-                    0 -> entries.isNotEmpty()
-                    1 -> listEntries.isNotEmpty()
+                    1 -> entries.isNotEmpty()
+                    2 -> listEntries.isNotEmpty()
                     else -> false
                 }
                 if (canClear) {
-                    TextButton(onClick = if (selectedTab == 0) onClearVideos else onClearLists) {
+                    TextButton(onClick = if (selectedTab == 1) onClearVideos else onClearLists) {
                         Text(stringResource(R.string.common_clear))
                     }
                 }
+                TooltipIconButton(
+                    icon = Icons.Outlined.Person,
+                    contentDescription = stringResource(R.string.account_title),
+                    onClick = onOpenAccount,
+                )
             },
         )
         PrimaryTabRow(selectedTabIndex = selectedTab) {
             Tab(
                 selected = selectedTab == 0,
                 onClick = { selectedTab = 0 },
-                text = { Text(stringResource(R.string.history_videos_tab)) },
+                text = { Text(stringResource(R.string.saved_title)) },
             )
             Tab(
                 selected = selectedTab == 1,
                 onClick = { selectedTab = 1 },
-                text = { Text(stringResource(R.string.history_lists_tab)) },
+                text = { Text(stringResource(R.string.history_videos_tab)) },
             )
             Tab(
                 selected = selectedTab == 2,
                 onClick = { selectedTab = 2 },
-                text = { Text(stringResource(R.string.saved_title)) },
+                text = { Text(stringResource(R.string.history_lists_tab)) },
             )
             Tab(
                 selected = selectedTab == 3,
@@ -93,17 +102,17 @@ fun VideoLibraryScreen(
         }
 
         when (selectedTab) {
-            0 -> VideoHistory(entries = entries, onOpen = onOpen)
-            1 -> ListHistory(
-                entries = listEntries,
-                onOpen = onOpenList,
-                onTogglePin = onToggleListPin,
-            )
-            2 -> SavedContent(
+            0 -> SavedContent(
                 state = savedState,
                 onRetry = onSavedRetry,
                 onLoadMore = onSavedLoadMore,
                 onOpen = onOpen,
+            )
+            1 -> VideoHistory(entries = entries, onOpen = onOpen)
+            2 -> ListHistory(
+                entries = listEntries,
+                onOpen = onOpenList,
+                onTogglePin = onToggleListPin,
             )
             else -> PlaylistsContent(
                 state = playlistsState,

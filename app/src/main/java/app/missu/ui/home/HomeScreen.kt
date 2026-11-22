@@ -15,8 +15,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.AutoStories
-import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PlayCircle
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -36,7 +36,7 @@ import app.missu.ui.components.TooltipIconButton
 fun HomeScreen(
     onOpenGuide: (String) -> Unit,
     onOpenVideos: () -> Unit,
-    onOpenAccount: () -> Unit,
+    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
     scrollToTopSignal: Int = 0,
 ) {
@@ -50,7 +50,7 @@ fun HomeScreen(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item(key = "account") {
+        item(key = "settings") {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -61,9 +61,9 @@ fun HomeScreen(
                     modifier = Modifier.weight(1f),
                 )
                 TooltipIconButton(
-                    icon = Icons.Outlined.Person,
-                    contentDescription = stringResource(R.string.account_title),
-                    onClick = onOpenAccount,
+                    icon = Icons.Outlined.Settings,
+                    contentDescription = stringResource(R.string.account_settings),
+                    onClick = onOpenSettings,
                 )
             }
         }

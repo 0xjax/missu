@@ -48,7 +48,7 @@ fun LiteratureLibraryScreen(
             title = stringResource(R.string.literature_library_title),
             onBack = onBack,
             actions = {
-                if (selectedTab == 0 && entries.isNotEmpty()) {
+                if (selectedTab == 1 && entries.isNotEmpty()) {
                     TextButton(onClick = onClearHistory) { Text(stringResource(R.string.common_clear)) }
                 }
             },
@@ -57,15 +57,15 @@ fun LiteratureLibraryScreen(
             Tab(
                 selected = selectedTab == 0,
                 onClick = { selectedTab = 0 },
-                text = { Text(stringResource(R.string.literature_history_tab)) },
+                text = { Text(stringResource(R.string.literature_favorites_tab)) },
             )
             Tab(
                 selected = selectedTab == 1,
                 onClick = { selectedTab = 1 },
-                text = { Text(stringResource(R.string.literature_favorites_tab)) },
+                text = { Text(stringResource(R.string.literature_history_tab)) },
             )
         }
-        if (selectedTab == 1) {
+        if (selectedTab == 0) {
             LiteratureList(
                 state = favoritesState,
                 favorites = favorites,
