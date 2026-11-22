@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -369,15 +368,13 @@ private fun InlineSearchExpansion(
             ) {
                 Column(
                     Modifier
-                        .requiredSize(
-                            with(density) { fullWidth.toDp() },
-                            with(density) { fullHeight.toDp() },
-                        )
-                        .offset { IntOffset(-left.roundToInt(), -top.roundToInt()) }
+                        .fillMaxSize()
                         .graphicsLayer { alpha = progress },
                 ) {
-                    Spacer(Modifier.height(statusTop + SearchBarTopGap))
-                    Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    // 与原生 FullScreenSearchBarLayout 一致：顶部间距随进度增长，
+                    // 输入框在收起终点与工具框顶部重合，展开终点才落到状态栏下方。
+                    Spacer(Modifier.height((statusTop + SearchBarTopGap) * progress))
+                    Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp * progress)) {
                         inputField()
                     }
                     Box(Modifier.weight(1f).padding(top = 8.dp)) {
