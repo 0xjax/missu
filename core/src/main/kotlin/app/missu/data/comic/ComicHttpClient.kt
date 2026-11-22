@@ -32,7 +32,8 @@ class ComicHttpClient(
         referer: String? = null,
         accept: String = "text/html,application/xhtml+xml,application/json",
     ): String = withContext(Dispatchers.IO) {
-        repeat(CHALLENGE_ROUNDS) { round ->
+        var verified = false
+        repeat(REQUEST_ATTEMPTS) {
             val request = Request.Builder()
                 .url(url)
                 .header("User-Agent", userAgent)
@@ -43,11 +44,12 @@ class ComicHttpClient(
             client.newCall(request).execute().use { response ->
                 val body = response.body.string()
                 if (response.isChallenge(body)) {
+                    if (verified) throw ChallengeException()
                     val handler = challenge ?: throw ChallengeException()
                     val result = handler.verify(ChallengeRequest(url, challengeKind))
                     if (!result.passed) throw ChallengeException()
                     result.html?.takeIf { it.isNotBlank() }?.let { return@withContext it }
-                    if (round == CHALLENGE_ROUNDS - 1) throw ChallengeException()
+                    verified = true
                 } else {
                     if (!response.isSuccessful) throw HttpStatusException(response.code)
                     return@withContext body
@@ -64,7 +66,7 @@ class ComicHttpClient(
             (challengeKind == ChallengeKind.ACCESS_BUTTON && ACCESS_TITLE.containsMatchIn(body))
 
     private companion object {
-        const val CHALLENGE_ROUNDS = 2
+        const val REQUEST_ATTEMPTS = 2
         val CHALLENGE_TITLE = Regex("<title>\\s*Just a moment\\.\\.\\.\\s*</title>", RegexOption.IGNORE_CASE)
         val ACCESS_TITLE = Regex("<title>\\s*安全验证\\s*</title>")
     }

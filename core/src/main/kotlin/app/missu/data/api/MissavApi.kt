@@ -31,7 +31,7 @@ import kotlinx.serialization.json.put
  * 站点接口。函数命名与 legacy 的 `src/api/missav.ts` 保持一致，便于逐个对照迁移。
  *
  * 人机验证：站点用 Cloudflare 挡非浏览器客户端（实测 403 + `cf-mitigated: challenge`）。
- * 命中时交给 [challenge] 让用户过一遍，`cf_clearance` 写进共享 Cookie 后重试一次。
+ * 命中时交给 [challenge] 让用户过一遍，`cf_clearance` 写进共享 Cookie 后重试一次；重试仍被挡则报错，不自动循环验证。
  *
  * NOTE: 网络在 IO 调度器执行；Jsoup 与打包脚本解包是 CPU 工作，统一由 [parsePage] 放到 Default。
  */
@@ -397,7 +397,7 @@ class MissavApi(
         const val CREATE_PLAYLIST_PATH = "/playlists/create"
 
         /** 一次请求最多走几轮「抬浮层 → 重试」：2 = 首次 + 一次重来，再多只是让用户白等。 */
-        const val CHALLENGE_ROUNDS = 2
+        const val CHALLENGE_ROUNDS = 1
     }
 
     /**

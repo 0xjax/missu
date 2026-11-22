@@ -85,7 +85,7 @@ private const val FIRST_CHECK_MS = 300L
 /** 检查间隔。挑战通常 1–3 秒内自动放行，500ms 的粒度让「通过 → 关掉」几乎无感。 */
 private const val POLL_MS = 500L
 
-/** 上限 120 次 ≈ 60 秒：交互式挑战的「计算」可能十几秒，30 秒太短（实测 10 秒仍未放行）。 */
+/** 隐藏探针最多等待约 60 秒；已显示的真实交互挑战由用户完成或取消，不按此时长判负。 */
 private const val MAX_ATTEMPTS = 120
 
 /**
@@ -122,7 +122,6 @@ private const val OPENING_SHOT_MS = 400L
  */
 @Stable
 class ChallengeState : ChallengeHandler {
-    /** 正在进行的验证；`null` = 没有浮层。 */
     var current by mutableStateOf<Request?>(null)
         private set
 
@@ -130,45 +129,75 @@ class ChallengeState : ChallengeHandler {
         val path: String,
         val deferred: CompletableDeferred<ChallengeResult>,
         val kind: ChallengeKind = ChallengeKind.CLOUDFLARE,
-        /** 非空 = 预览：直接加载这个 URL（本地 fixture 或抓下来的真挑战页），不判通过、不碰网络。 */
         val previewUrl: String? = null,
+        val coordinationKey: String = "",
     )
 
+    private val lock = Any()
+    private val running = mutableMapOf<String, Request>()
+    private val queue = ArrayDeque<Request>()
+    private val passedAt = mutableMapOf<String, Long>()
+
     override suspend fun verify(challenge: ChallengeRequest): ChallengeResult {
-        val running = current
-        if (running != null) {
-            // NOTE: 预览占着浮层时不让真实验证抢槽位——否则预览会被应用的请求顶掉。
-            if (running.previewUrl != null) return ChallengeResult(passed = false, html = null)
-            // NOTE: 同一时刻只服务一个验证，但后到的**跟着等**这一次，不再把前一次判成取消。
-            // 以前是 `current.deferred.cancel()`：被取消那次请求的界面会冒出一句「Job was cancelled」，
-            // 而且用户明明过完了验证它照样失败。这里把 passed 传下去、HTML 不带（那是别人那条路径的
-            // 页面），调用方拿到 passed 后自己重取——此时 clearance 已经在共享 Cookie 里了。
-            return running.deferred.await().copy(html = null)
+        if (current?.previewUrl != null) return ChallengeResult(passed = false, html = null)
+        val key = challenge.coordinationKey()
+        synchronized(lock) {
+            val completed = passedAt[key]
+            if (completed != null && SystemClock.elapsedRealtime() - completed < PASS_LEASE_MS) {
+                return ChallengeResult(passed = true, html = null)
+            }
         }
-        val request = Request(challenge.url, CompletableDeferred(), challenge.kind)
-        current = request
-        return try {
-            request.deferred.await()
-        } finally {
-            if (current === request) current = null
+
+        var owner = false
+        val request = synchronized(lock) {
+            running[key] ?: Request(
+                path = challenge.url,
+                deferred = CompletableDeferred(),
+                kind = challenge.kind,
+                coordinationKey = key,
+            ).also {
+                owner = true
+                running[key] = it
+                queue.addLast(it)
+                promoteNextLocked()
+            }
         }
+        val result = request.deferred.await()
+        return if (owner) result else result.copy(html = null)
     }
 
-    /**
-     * 把浮层抬起来展示 [url]，**不触发任何真实请求**（只用于预览配色与三种状态）。
-     *
-     * 调用方必须是 debuggable 构建（见 `MainActivity` 里的 `challenge_preview` 入口）；
-     * 关掉浮层的唯一方式是「取消」或返回键。
-     */
     fun preview(url: String) {
         current?.deferred?.cancel()
         current = Request(path = "", CompletableDeferred(), previewUrl = url)
     }
 
-    /** 由浮层在判定通过或用户取消时调用。重复调用是空操作（[CompletableDeferred] 只认第一次）。 */
     fun finish(request: Request, passed: Boolean, html: String? = null) {
+        synchronized(lock) {
+            if (request.coordinationKey.isNotEmpty()) {
+                running.remove(request.coordinationKey, request)
+                if (passed) {
+                    passedAt[request.coordinationKey] = SystemClock.elapsedRealtime()
+                } else {
+                    passedAt.remove(request.coordinationKey)
+                }
+            }
+            if (current === request) current = null
+            promoteNextLocked()
+        }
         request.deferred.complete(ChallengeResult(passed, html))
-        if (current === request) current = null
+    }
+
+    private fun promoteNextLocked() {
+        if (current == null && queue.isNotEmpty()) current = queue.removeFirst()
+    }
+
+    private fun ChallengeRequest.coordinationKey(): String {
+        val uri = url.toUri()
+        return "${uri.scheme}://${uri.host}:${uri.port}:${kind.name}"
+    }
+
+    private companion object {
+        const val PASS_LEASE_MS = 15_000L
     }
 }
 
@@ -445,6 +474,7 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
 
     LaunchedEffect(request, waitingText) {
         delay(FIRST_CHECK_MS)
+        var sawInteractiveChallenge = false
         while (!finished) {
             attempts += 1
             val view = webView.get()
@@ -454,13 +484,9 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
             }
             val page = probePage(view)
             val ready = page?.optString("r").orEmpty()
-            // NOTE: 只看 cookie 会误判——cookie 可能由别的出口 IP 签发、或刚被站点作废，
-            // 此时页面还停在挑战页，照读 HTML 会把挑战页当结果。所以还要看页面身份（见 isChallengePage）。
-            val clearance = CookieManager.getInstance()
-                .getCookie(view.url ?: targetUrl)
-                ?.contains("cf_clearance") == true
             val challengePage = page?.isChallengePage() == true ||
                 (request.kind == ChallengeKind.ACCESS_BUTTON && page?.optBoolean("v") == true)
+            if (challengePage) sawInteractiveChallenge = true
             val onTarget = samePath(view.url.orEmpty(), targetUrl)
             val contentLength = page?.optInt("n") ?: 0
             val blankPage = page != null && ready == "complete" && contentLength == 0
@@ -498,8 +524,6 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
                     }
                     return@LaunchedEffect
                 }
-                // 页面还停在中间态：clearance 到手就够了，交给 OkHttp 重试，之后所有请求都通。
-                clearance && !challengePage -> finish(passed = true, html = null)
                 // 页面被导去了别处（例如登录态失效 302 回首页），又没有 clearance：没东西可等。
                 !challengePage && ready == "complete" && !onTarget && attempts >= GIVE_UP_ATTEMPTS ->
                     finish(passed = false, html = null)
@@ -507,7 +531,7 @@ private fun ChallengeContent(request: ChallengeState.Request, onFinish: (Boolean
                 // 空白或无法识别的页面不算通过，继续显示等待，直到 clearance、有效正文或最终失败。
                 !challengePage && !blankPage && page != null && attempts >= GIVE_UP_ATTEMPTS ->
                     finish(passed = true, html = null)
-                attempts >= MAX_ATTEMPTS -> finish(passed = false, html = null)
+                attempts >= MAX_ATTEMPTS && !sawInteractiveChallenge -> finish(passed = false, html = null)
                 else -> {
                     status = waitingText
                     delay(POLL_MS)
