@@ -320,6 +320,11 @@
     <string name="filter_cup_value">%1$s カップ</string>
     <string name="filter_debut_value">%1$d 年以前</string>
 
+    <string name="toolbar_options">リストを調整</string>
+    <string name="list_sort_title">並び替え</string>
+    <string name="comic_feed_title">フィード</string>
+    <string name="comic_category_title">カテゴリー</string>
+
     <!-- エラーと通知（UiMessage が描画） -->
     <string name="error_network">ネットワーク接続が切れました。再試行してください</string>
     <string name="error_http">通信に失敗しました（HTTP %1$d）</string>

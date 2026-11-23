@@ -327,6 +327,11 @@
     <string name="filter_cup_value">%1$s cup</string>
     <string name="filter_debut_value">%1$d or earlier</string>
 
+    <string name="toolbar_options">Adjust list</string>
+    <string name="list_sort_title">Sort</string>
+    <string name="comic_feed_title">Feed</string>
+    <string name="comic_category_title">Category</string>
+
     <!-- 错误与提示（由 UiMessage 渲染） -->
     <string name="error_network">Network connection lost — try again</string>
     <string name="error_http">Request failed (HTTP %1$d)</string>

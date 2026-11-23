@@ -324,6 +324,11 @@
     <string name="filter_cup_value">%1$s 罩杯</string>
     <string name="filter_debut_value">%1$d 以前</string>
 
+    <string name="toolbar_options">調整清單</string>
+    <string name="list_sort_title">排序</string>
+    <string name="comic_feed_title">內容</string>
+    <string name="comic_category_title">分類</string>
+
     <!-- 錯誤與提示（由 UiMessage 渲染） -->
     <string name="error_network">網路連線中斷，請重試</string>
     <string name="error_http">請求失敗（HTTP %1$d）</string>

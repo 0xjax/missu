@@ -169,12 +169,7 @@ fun VideoListContent(
     }
 }
 
-/**
- * 口径行：栏目（仅热门页）、排序与过滤都使用「当前值 + 下拉菜单」。
- *
- * NOTE: 排序与过滤都收进菜单，触发器只显示当前值，不加「排序 / 过滤」前缀。
- * NOTE: 过滤是互斥单选，菜单同样包含「全部」；当前项只靠文字颜色表达，不改变触发器宽度。
- */
+/** 口径行：保留栏目，排序与过滤收进 Tune 的分组单选抽屉。 */
 @Composable
 internal fun VideoListControls(
     sort: VideoListOptions.Sort?,
@@ -202,22 +197,31 @@ internal fun VideoListControls(
         ) {
             controlsLeading?.invoke(this)
 
-            VideoOptionMenu(
-                text = sortLabel(current),
-                options = sorts,
-                selected = current,
-                // 选中已是当前项时不重发请求：站点默认序与显式 `?sort=` 未必同序，
-                // 白白换一次数据只会让用户觉得"点了反而乱了"。
-                onSelect = { if (it != current) onSortChange(it) },
-                optionLabel = { sortLabel(it) },
-            )
-            VideoOptionMenu(
-                text = filter?.let { filterLabel(it) } ?: stringResource(R.string.list_filter_all),
-                options = listOf(null) + filters,
-                selected = filter,
-                onSelect = { if (it != filter) onFilterChange(it) },
-                optionLabel = { it?.let { value -> filterLabel(value) } ?: stringResource(R.string.list_filter_all) },
-            )
+            ToolbarOptionsButton { dismiss ->
+                ToolbarOptionsSheet {
+                    ToolbarRadioGroup(
+                        title = stringResource(R.string.list_sort_title),
+                        options = listOf(null) + sorts,
+                        selected = current,
+                        onSelect = { value ->
+                            if (value != current) onSortChange(value)
+                            dismiss()
+                        },
+                        optionLabel = { sortLabel(it) },
+                        defaultLabel = stringResource(R.string.list_sort_default),
+                    )
+                    ToolbarRadioGroup(
+                        title = stringResource(R.string.video_filter),
+                        options = listOf(null) + filters,
+                        selected = filter,
+                        onSelect = { value ->
+                            if (value != filter) onFilterChange(value)
+                            dismiss()
+                        },
+                        optionLabel = { filterLabel(it) },
+                    )
+                }
+            }
         }
         if (controlsTrailing != null) {
             Spacer(Modifier.width(12.dp))

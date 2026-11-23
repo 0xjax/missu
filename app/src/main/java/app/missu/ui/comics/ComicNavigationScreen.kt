@@ -42,6 +42,9 @@ import app.missu.data.comic.ComicSource
 import app.missu.data.comic.KalamCategory
 import app.missu.ui.common.text
 import app.missu.ui.components.LocalFloatingNavigationBarInset
+import app.missu.ui.list.ToolbarOptionsButton
+import app.missu.ui.list.ToolbarOptionsSheet
+import app.missu.ui.list.ToolbarRadioGroup
 import app.missu.ui.list.VideoOptionMenu
 import app.missu.ui.list.VideoToolbarContainer
 import app.missu.ui.search.LocalSearchBarInset
@@ -387,24 +390,37 @@ private fun RowScope.ComicOptions(
             onSelect = onSourceChange,
             optionLabel = { it.displayName },
         )
-        if (feed != null && source.supportsLatest) {
-            VideoOptionMenu(
-                text = stringResource(if (feed == ComicFeed.POPULAR) R.string.comic_popular else R.string.comic_latest),
-                options = ComicFeed.entries,
-                selected = feed,
-                onSelect = onFeedChange,
-                optionLabel = {
-                    stringResource(if (it == ComicFeed.POPULAR) R.string.comic_popular else R.string.comic_latest)
-                },
-            )
-        } else if (feed != null && source == ComicSource.KALAM) {
-            VideoOptionMenu(
-                text = stringResource(category.labelRes),
-                options = KalamCategory.entries,
-                selected = category,
-                onSelect = onCategoryChange,
-                optionLabel = { stringResource(it.labelRes) },
-            )
+        if (feed != null && (source.supportsLatest || source == ComicSource.KALAM)) {
+            ToolbarOptionsButton { dismiss ->
+                ToolbarOptionsSheet {
+                    if (source.supportsLatest) {
+                        ToolbarRadioGroup(
+                            title = stringResource(R.string.comic_feed_title),
+                            options = ComicFeed.entries,
+                            selected = feed,
+                            onSelect = { value ->
+                                value?.let(onFeedChange)
+                                dismiss()
+                            },
+                            optionLabel = {
+                                stringResource(if (it == ComicFeed.POPULAR) R.string.comic_popular else R.string.comic_latest)
+                            },
+                        )
+                    }
+                    if (source == ComicSource.KALAM) {
+                        ToolbarRadioGroup(
+                            title = stringResource(R.string.comic_category_title),
+                            options = KalamCategory.entries,
+                            selected = category,
+                            onSelect = { value ->
+                                value?.let(onCategoryChange)
+                                dismiss()
+                            },
+                            optionLabel = { stringResource(it.labelRes) },
+                        )
+                    }
+                }
+            }
         }
     }
 }

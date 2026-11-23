@@ -41,7 +41,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.toShape
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -50,7 +49,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -67,7 +65,6 @@ import app.missu.data.api.VideoListOptions
 import app.missu.data.model.DirectoryItem
 import app.missu.data.model.NavGroup
 import app.missu.data.model.NavItem
-import app.missu.ui.components.MissuBottomSheet
 import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadMoreFooter
@@ -76,7 +73,8 @@ import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.LocalFloatingNavigationBarInset
 import app.missu.ui.common.LoadMoreState
 import app.missu.ui.common.text
-import app.missu.ui.list.VideoControlButton
+import app.missu.ui.list.ToolbarOptionsButton
+import app.missu.ui.list.ToolbarRadioGroup
 import app.missu.ui.list.VideoOptionMenu
 import app.missu.ui.list.VideoListContent
 import app.missu.ui.list.VideoListControls
@@ -127,7 +125,6 @@ fun VideoNavigationScreen(
     scrollToTopSignal: Int = 0,
 ) {
     var tabIndex by rememberSaveable { mutableIntStateOf(0) }
-    var filterSheetOpen by rememberSaveable { mutableStateOf(false) }
     val tabs = VideoSection.entries
     val tab = tabs[tabIndex]
 
@@ -271,28 +268,17 @@ fun VideoNavigationScreen(
                             selected = tab,
                             onSelect = { tabIndex = it.ordinal },
                         )
-                        VideoOptionMenu(
-                            text = sortLabel(sort),
-                            options = ActressFilterOptions.sorts.map { it.value },
-                            selected = sort,
-                            onSelect = { if (it != sort) onSortChange(it) },
-                            optionLabel = { sortLabel(it) },
-                        )
-                        if (filters.isNotEmpty()) {
-                            TextButton(onClick = onResetFilters, enabled = !ranking) {
-                                Text(stringResource(R.string.video_clear))
-                            }
+                        ToolbarOptionsButton { dismiss ->
+                            FilterSheet(
+                                sort = sort,
+                                ranking = ranking,
+                                onSortChange = onSortChange,
+                                filters = filters,
+                                onFilterChange = onFilterChange,
+                                onResetFilters = onResetFilters,
+                                onDismiss = dismiss,
+                            )
                         }
-                        VideoControlButton(
-                            text = if (filters.isEmpty()) {
-                                stringResource(R.string.video_filter)
-                            } else {
-                                stringResource(R.string.video_filter_count, filters.size)
-                            },
-                            expanded = filterSheetOpen,
-                            onClick = { filterSheetOpen = true },
-                            enabled = !ranking,
-                        )
                     }
                 }
 
@@ -305,15 +291,6 @@ fun VideoNavigationScreen(
             }
         }
 
-    if (filterSheetOpen) {
-        MissuBottomSheet(onDismissRequest = { filterSheetOpen = false }) {
-            FilterSheet(
-                filters = filters,
-                onFilterChange = onFilterChange,
-                onDismiss = { filterSheetOpen = false },
-            )
-        }
-    }
 }
 }
 
@@ -474,8 +451,12 @@ private fun ChannelRow(name: String, onClick: () -> Unit) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FilterSheet(
+    sort: String,
+    ranking: Boolean,
+    onSortChange: (String) -> Unit,
     filters: Map<String, String>,
     onFilterChange: (key: String, value: String?) -> Unit,
+    onResetFilters: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
@@ -485,10 +466,27 @@ private fun FilterSheet(
         ) {
             Text(stringResource(R.string.video_filter_title), style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.weight(1f))
+            if (filters.isNotEmpty()) {
+                TextButton(onClick = onResetFilters, enabled = !ranking) {
+                    Text(stringResource(R.string.video_clear))
+                }
+            }
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_done)) }
         }
 
         LazyColumn(modifier = Modifier.fillMaxWidth().height(520.dp)) {
+            item(key = "sort") {
+                ToolbarRadioGroup(
+                    title = stringResource(R.string.list_sort_title),
+                    options = ActressFilterOptions.sorts.map { it.value },
+                    selected = sort,
+                    onSelect = { value ->
+                        value?.let { if (it != sort) onSortChange(it) }
+                        onDismiss()
+                    },
+                    optionLabel = { sortLabel(it) },
+                )
+            }
             ActressFilterOptions.sections.forEach { section ->
                 item(key = "title-${section.key}") {
                     Text(
@@ -506,6 +504,7 @@ private fun FilterSheet(
                         section.options.forEach { option ->
                             FilterChip(
                                 selected = filters[section.key] == option.value,
+                                enabled = !ranking,
                                 // 再点一次同一项 = 取消这一组筛选。
                                 onClick = {
                                     val next = if (filters[section.key] == option.value) null else option.value

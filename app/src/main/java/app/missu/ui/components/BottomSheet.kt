@@ -46,12 +46,20 @@ fun MissuBottomSheet(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
     sheetMaxWidth: Dp = BottomSheetDefaults.SheetMaxWidth,
+    skipPartiallyExpanded: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         modifier = modifier,
-        sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden),
+        sheetState = rememberBottomSheetState(
+            initialValue = SheetValue.Hidden,
+            enabledValues = if (skipPartiallyExpanded) {
+                setOf(SheetValue.Hidden, SheetValue.Expanded)
+            } else {
+                setOf(SheetValue.Hidden, SheetValue.PartiallyExpanded, SheetValue.Expanded)
+            },
+        ),
         sheetMaxWidth = sheetMaxWidth,
         containerColor = Color.Transparent,
         dragHandle = null,
