@@ -23,6 +23,7 @@ import app.missu.data.api.VideoListOptions
 import app.missu.data.comic.ComicRepository
 import app.missu.data.comic.ComicSource
 import app.missu.data.literature.LiteratureFilter
+import app.missu.data.literature.LiteraturePackManager
 import app.missu.data.literature.LiteratureRepository
 import app.missu.data.store.AppLanguage
 import app.missu.data.store.ColorSource
@@ -76,6 +77,7 @@ import app.missu.ui.saved.SavedViewModel
 import app.missu.ui.search.SearchBody
 import app.missu.ui.search.SearchHost
 import app.missu.ui.search.SearchViewModel
+import app.missu.ui.settings.LiteraturePackViewModel
 import app.missu.ui.settings.SettingsScreen
 import app.missu.ui.literature.LiteratureDetailUiState
 import app.missu.ui.literature.LiteratureDetailViewModel
@@ -108,6 +110,7 @@ internal fun NavGraphBuilder.secondaryDestinations(
     api: MissavApi,
     comicRepository: ComicRepository,
     literatureRepository: LiteratureRepository,
+    literaturePackManager: LiteraturePackManager,
     settings: SettingsStore,
     settingsState: AppSettingsState,
     settingsActions: AppSettingsActions,
@@ -326,6 +329,10 @@ internal fun NavGraphBuilder.secondaryDestinations(
 
     composable("settings") {
         val currentSettings = settingsState
+        val packViewModel: LiteraturePackViewModel = viewModel(
+            factory = missuViewModelFactory { LiteraturePackViewModel(literaturePackManager) },
+        )
+        val packState by packViewModel.state.collectAsStateWithLifecycle()
         PageSurface {
             SettingsScreen(
                 appLanguage = currentSettings.appLanguage,
@@ -334,12 +341,16 @@ internal fun NavGraphBuilder.secondaryDestinations(
                 followThemeIcon = currentSettings.followThemeIcon,
                 pureBlack = currentSettings.pureBlack,
                 singleColumnVideos = currentSettings.singleColumnVideos,
+                literaturePackState = packState,
                 onAppLanguageChange = settingsActions.onAppLanguageChange,
                 onThemeModeChange = settingsActions.onThemeModeChange,
                 onColorSourceChange = settingsActions.onColorSourceChange,
                 onFollowThemeIconChange = settingsActions.onFollowThemeIconChange,
                 onPureBlackChange = settingsActions.onPureBlackChange,
                 onSingleColumnVideosChange = settingsActions.onSingleColumnVideosChange,
+                onLiteraturePackDownload = packViewModel::download,
+                onLiteraturePackCancel = packViewModel::cancelDownload,
+                onLiteraturePackRemove = packViewModel::useCore,
                 onBack = onGoBack,
             )
         }

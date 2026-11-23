@@ -124,7 +124,7 @@ private fun MissuRoot() {
     val dependencies = remember { AppDependencies(context.applicationContext, challengeState) }
     LaunchedEffect(dependencies) {
         try {
-            dependencies.literatureRepository.warmUp()
+            dependencies.literaturePackManager.warmUp()
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
@@ -385,6 +385,7 @@ private fun MissuApp(
                 api = api,
                 comicRepository = dependencies.comicRepository,
                 literatureRepository = literatureRepository,
+                literaturePackManager = dependencies.literaturePackManager,
                 settings = settings,
                 settingsState = settingsState,
                 settingsActions = settingsActions,

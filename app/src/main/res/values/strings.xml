@@ -292,6 +292,15 @@
     <string name="settings_video_list">Video list</string>
     <string name="settings_video_list_single">Single column</string>
     <string name="settings_video_list_double">Two columns</string>
+    <string name="settings_literature_pack">Literature library</string>
+    <string name="settings_literature_pack_core">Core library: %1$d works. Full library: %2$d works, about %3$d MiB.</string>
+    <string name="settings_literature_pack_full">Full library enabled · %1$d works. Favorites and history are kept when switching.</string>
+    <string name="settings_literature_pack_download">Download full library</string>
+    <string name="settings_literature_pack_retry">Retry download</string>
+    <string name="settings_literature_pack_cancel_download">Cancel download</string>
+    <string name="settings_literature_pack_remove">Delete full library</string>
+    <string name="settings_literature_pack_downloading">Downloading full library · %1$d%%</string>
+    <string name="settings_literature_pack_error">Download failed: %2$s. The current library (%1$d works) is still available.</string>
 
     <!-- 播放 -->
     <string name="settings_autoplay">Autoplay</string>

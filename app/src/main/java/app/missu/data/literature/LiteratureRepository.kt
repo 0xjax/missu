@@ -1,17 +1,37 @@
 package app.missu.data.literature
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.util.Locale
 
-class LiteratureRepository(private val database: LiteratureDatabase) {
-    suspend fun warmUp() {
+class LiteratureRepository(initialDatabase: LiteratureDatabase) {
+    private val mutex = Mutex()
+    private var database = initialDatabase
+    private val _generation = MutableStateFlow(0)
+    val generation: StateFlow<Int> = _generation.asStateFlow()
+
+    suspend fun warmUp() = mutex.withLock {
         database.dao().warmUp()
+        Unit
     }
 
-    suspend fun findById(id: String): LiteraryWork? = database.dao().findById(id)?.toModel()
+    suspend fun replaceDatabase(newDatabase: LiteratureDatabase) = mutex.withLock {
+        val oldDatabase = database
+        database = newDatabase
+        oldDatabase.close()
+        _generation.value++
+    }
+
+    suspend fun findById(id: String): LiteraryWork? = mutex.withLock {
+        database.dao().findById(id)?.toModel()
+    }
 
     suspend fun getPage(
         filter: LiteratureFilter,
@@ -31,14 +51,16 @@ class LiteratureRepository(private val database: LiteratureDatabase) {
             LiteratureFilter.BOOK -> LiteraryKind.BOOK.name
             else -> null
         }
-        val rows = database.dao().queryWorkSummaries(
-            kind = kind,
-            favoriteOnly = filter == LiteratureFilter.FAVORITES,
-            favorites = favorites.sorted(),
-            search = searchExpression(query),
-            limit = limit + 1,
-            offset = offset,
-        )
+        val rows = mutex.withLock {
+            database.dao().queryWorkSummaries(
+                kind = kind,
+                favoriteOnly = filter == LiteratureFilter.FAVORITES,
+                favorites = favorites.sorted(),
+                search = searchExpression(query),
+                limit = limit + 1,
+                offset = offset,
+            )
+        }
         return LiteraturePage(
             works = rows.take(limit).map { it.toModel() },
             nextOffset = if (rows.size > limit) offset + limit else null,

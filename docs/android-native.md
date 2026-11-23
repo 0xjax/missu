@@ -23,7 +23,7 @@
 - ✅ **视频单列/双列**：设置页全局切换，首页、热门、搜索、收藏、历史与片单共用 `LocalVideoListColumns`；只重组布局，不重取数据，偏好持久化
 - ✅ **价值导向首页**：不禁止或羞辱成人内容选择，用本地短篇指南提供另一种默认入口；不加入观看评分、强制暂停或提醒，指南正文为应用资源，离线可读且无需新增内容接口
 - ✅ **底部导航 + 诗文 + 影片 + 漫画**：`首页 / 诗文 / 影片 / 漫画` 四个一级页签；再次点击当前页签会把当前滚动内容平滑带回顶部。首页首行的齿轮直接进入全局设置；影片库顶栏的账号图标进入影片登录与资料页，未登录页不再承载设置入口。三个内容导航页都在搜索按钮左侧提供 40dp 内容库入口：影片库分「收藏 / 视频 / 列表 / 片单」，漫画记录与诗文记录都分「收藏 / 阅读历史」；漫画与诗文代码命名统一使用 `comic-library` / `literature` / `literature-library`。影片详情番号仍可直达对应搜索页
-- ✅ **诗文阅读**：英语内容已弃用。诗文使用 Room + 预打包 SQLite，规模与构成见 `content/literature/manifest.json`；FTS5 中文一元 / 二元索引支持篇名、作者与原文即时搜索，列表按 50 篇分页；体裁筛选与收藏分属不同维度，搜索复用统一工具框形变。阅读历史记录最近打开的作品，收藏由本地稳定作品 ID 持久化。文库在应用首帧后通过 IO 协程后台预热，所有内容离线可用，无打卡、评分或连续天数
+- ✅ **诗文阅读**：英语内容已弃用。诗文使用 Room + 独立 SQLite，规模与构成见 `content/literature/manifest.json`；FTS5 中文一元 / 二元索引支持篇名、作者与原文即时搜索，列表按 50 篇分页；体裁筛选与收藏分属不同维度，搜索复用统一工具框形变。阅读历史记录最近打开的作品，收藏由本地稳定作品 ID 持久化。Debug / Release 默认内置 10011 篇核心库并离线预热；设置里可主动下载完整库，gzip 与解压数据库双重校验后整库切换，失败保留当前库，可删除完整库回退核心，收藏与历史不受影响。无打卡、评分或连续天数
 - ✅ **女优筛选与排序**：身高 12 档 / 罩杯 A–Q / 年龄 6 档 / 出道年份（N 年以前），排序 `影片 / 出道`（实测 161–165cm 与按出道年排序都生效）
 - ✅ **搜索历史**：影片与漫画分别保存成功搜索的关键词（各上限 20，重复置顶），空输入时展示为可点胶囊，可清空；漫画关键词跨源共用，不与阅读历史混合
 - ✅ **我的片单**：`/playlists` 列表（名字 · 可见性 · 更新时间）+ 片单详情网格；真实页面 fixture 测试锁住解析规则
@@ -35,7 +35,7 @@
 - ✅ **新建片单**：站点只有 Blade 表单（`/playlists/create`），先 GET 读 `_token` 与字段名再 urlencoded POST；实测建出 `test` 后列表自动刷新
 - ✅ **编辑 / 删除片单**：详情页页头「编辑」→ 改名/描述/公开 + 删除（二次确认）；实测改名 `test→test2`、删除后列表只剩 `精选`
 - ✅ **M3E 主题与组件**：`MaterialExpressiveTheme` + `MotionScheme.expressive()`；二级页统一 `PageTopBar`（up 图标 + Tooltip）；底栏换 `ShortNavigationBar`；转圈换 `LoadingIndicator`；首页指南使用可点击 `Card`，影片页支持下拉刷新（`PullToRefreshBox`）；女优排序使用 `FilledTonalButton` 下拉，并与栏目、筛选合并为一行
-- ✅ **桌面图标**：五套 adaptive icon（纯色底 + 白色 `M` 品牌字母，共用一个矢量前景）+ 五个 `activity-alias`；设置里「图标跟随主题色」默认关，开启后**离开应用才生效**。实测 vivo 桌面/启动动画/概览都跟着换，应用信息页保持品牌粉（机制边界，见「桌面图标」）
+- ✅ **桌面图标**：五套 adaptive icon（纯色底 + 居中双拱小写 `m`，共用一个矢量前景）+ 五个 `activity-alias`；设置里「图标跟随主题色」默认关，开启后**离开应用才生效**。实测 vivo 桌面/启动动画/概览都跟着换，应用信息页保持品牌粉（机制边界，见「桌面图标」）
 
 
 ## 版本矩阵（实测钉死）
@@ -114,7 +114,7 @@ cd D:\missu
 .\scripts\build.ps1 hub        # Device Hub 实时镜像与控制
 .\scripts\build.ps1 describe   # 输出 CLI 识别到的变体与产物路径
 bun run literature:import # 固定上游版本，导入诗文、典籍并计算收录范围、校验整书章数
-bun run literature:build  # 校验内容，重建 assets/literature.db 与中文 FTS5 索引
+bun run literature:build  # 生成核心 assets/literature-core.db、完整 Release 内容包与双侧哈希清单
 ```
 
 - 文库由 chinese-poetry、古诗文网与固定版本典籍存档按职责取并集：前者提供原文、排名、选本及结构化典籍，古诗文网补充原文及开放精读内容，殆知阁官方维护的 `daizhige-org/daizhigev20` Markdown 版与四大名著、史记分篇仓库提供整书。整书按篇卷回拆分并校验预期章数；《墨子》以子藏本为主、道藏本补入《尚贤下》《鲁问》。固定版本、构成与许可记录于 `manifest.json`；维基文库已弃用，不使用明确禁止抓取的 ctext。繁转简使用 OpenCC 1.4.2，相关许可文件随 APK 保留在 `assets/`。
@@ -353,7 +353,7 @@ Android 的清 Cookie 操作等待 `CookieManager.removeAllCookies` 的完成回
 设置里的「图标跟随主题色」（默认关）会让桌面图标跟当前色板换色。机制是 **五个 `activity-alias` + 五个 adaptive icon**，任意时刻只启用一个 alias。
 
 - **入口在 alias 上，不在 `MainActivity` 上**：桌面枚举的是「带 MAIN/LAUNCHER 的组件」，`<application android:icon>` 只决定读 `ApplicationInfo` 的界面（应用信息、权限弹窗、分享面板）。所以启动画面会跟着 alias 一起变（`ComponentInfo.getIconResource()` 取的就是启动组件的图标），而应用信息永远是品牌粉——这是机制边界，不是 bug。
-- **五套图标共用一个前景**：`drawable/ic_launcher_foreground.xml` 是 108dp 自适应图标画布上的白色圆角线条 `M`，不再复用 legacy 的播放三角。笔画位于中央安全区，矢量资源直接适配不同桌面密度。
+- **五套图标共用一个前景**：`drawable/ic_launcher_foreground.xml` 是 108dp 自适应图标画布上的连写双拱小写 `m`。外轮廓关于 `x = 54` 完全镜像，包围盒为 `35…73 × 35…73`，几何中心与画布中心 `(54, 54)` 重合；圆角轮廓和负空间直接形成识别度，只有一层纯白填充，不使用阴影、折面、高光或纹理。
   **CRITICAL：别把「画布百分比」当「显示百分比」。** 可见视口只有 108dp 画布的中心约 60%（再加桌面蒙版裁一圈），前景不能按普通图片的边距设计。
   背景色在 `values/colors.xml`，与 `Palettes.kt` 的深色 `primary` 手工同步。
 - **不提供 monochrome 层**：图标的身分就是背景色，主题化图标会把它抹成单色；Android 16 QPR 2 起系统会强制给没有 monochrome 的应用自动上色，那是系统的选择。
@@ -486,6 +486,8 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
 ```
 
 之后 `adb start-server` 直接用系统 `%TEMP%`，`TMP/TEMP` 不需要任何覆盖。**注意**：`%TEMP%\adb.log` 被清理掉（磁盘清理、Storage Sense）后 adb 会再次报同样的错，重跑上面两行即可。
+
+**无线安装大文件卡住，`Sent` 不等于手机已收到**（2026-11-23 定案）：vivo V2507A 在原 Wi-Fi 下传输负载一出现就严重丢包，大 APK 实测只有 51–140 KiB/s，CLI 的 `Sent 67.94 MB` 只是电脑端写入本地 ADB 通道，随后仍会 `Unexpected end of channel` / `device offline`。重启只能暂时改善空闲 Ping，不能根治；换流式/非流式安装也无效。最终电脑改连手机热点（手机继续连上游 Wi-Fi），ADB 直连热点网关、不经过原路由器，安装期间 0% 丢包，同一 APK 约 18 秒成功。完整量化步骤与协议 trace 见 `docs/android-debugging.md`「无线安装大文件卡住」。不要把时间浪费在反复重配对或单纯增加安装超时上。
 
 **构建环境**
 

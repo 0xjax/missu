@@ -50,6 +50,9 @@ class LiteratureViewModel(
                 if (_filter.value == LiteratureFilter.FAVORITES) refresh()
             }
         }
+        viewModelScope.launch {
+            repository.generation.drop(1).collect { refresh() }
+        }
     }
 
     fun setQuery(value: String) {
@@ -130,6 +133,12 @@ class LiteratureDetailViewModel(
 ) : ViewModel() {
     private val _state = MutableStateFlow<LiteratureDetailUiState>(LiteratureDetailUiState.Loading)
     val state: StateFlow<LiteratureDetailUiState> = _state.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            repository.generation.drop(1).collect { load() }
+        }
+    }
 
     fun loadIfNeeded() {
         if (_state.value is LiteratureDetailUiState.Content) return

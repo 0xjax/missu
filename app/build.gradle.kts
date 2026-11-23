@@ -36,11 +36,17 @@ android {
         targetSdk = 36
         versionCode = 9
         versionName = "3.0.0-beta.1"
+        buildConfigField(
+            "String",
+            "LITERATURE_PACK_BASE_URL",
+            "\"https://github.com/0xjax/missu/releases/download/v$versionName\"",
+        )
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     buildTypes {

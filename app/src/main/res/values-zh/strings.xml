@@ -285,6 +285,15 @@
     <string name="settings_video_list">视频列表</string>
     <string name="settings_video_list_single">单列</string>
     <string name="settings_video_list_double">双列</string>
+    <string name="settings_literature_pack">诗文文库</string>
+    <string name="settings_literature_pack_core">当前核心文库 %1$d 篇；完整文库 %2$d 篇，下载约 %3$d MiB。</string>
+    <string name="settings_literature_pack_full">完整文库已启用 · %1$d 篇。切换文库不影响收藏与阅读记录。</string>
+    <string name="settings_literature_pack_download">下载完整文库</string>
+    <string name="settings_literature_pack_retry">重试下载</string>
+    <string name="settings_literature_pack_cancel_download">取消下载</string>
+    <string name="settings_literature_pack_remove">删除完整文库</string>
+    <string name="settings_literature_pack_downloading">正在下载完整文库 · %1$d%%</string>
+    <string name="settings_literature_pack_error">下载失败：%2$s。当前文库（%1$d 篇）仍可使用。</string>
 
     <!-- 播放 -->
     <string name="settings_autoplay">自动播放</string>

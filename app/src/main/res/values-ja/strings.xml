@@ -285,6 +285,15 @@
     <string name="settings_video_list">動画リスト</string>
     <string name="settings_video_list_single">1列</string>
     <string name="settings_video_list_double">2列</string>
+    <string name="settings_literature_pack">詩文ライブラリ</string>
+    <string name="settings_literature_pack_core">コアライブラリ：%1$d 作品。完全版：%2$d 作品、約 %3$d MiB。</string>
+    <string name="settings_literature_pack_full">完全版を使用中 · %1$d 作品。切り替えてもお気に入りと閲覧履歴は保持されます。</string>
+    <string name="settings_literature_pack_download">完全版をダウンロード</string>
+    <string name="settings_literature_pack_retry">ダウンロードを再試行</string>
+    <string name="settings_literature_pack_cancel_download">ダウンロードをキャンセル</string>
+    <string name="settings_literature_pack_remove">完全版を削除</string>
+    <string name="settings_literature_pack_downloading">完全版をダウンロード中 · %1$d%%</string>
+    <string name="settings_literature_pack_error">ダウンロードに失敗しました：%2$s。現在のライブラリ（%1$d 作品）は引き続き利用できます。</string>
 
     <!-- 再生 -->
     <string name="settings_autoplay">自動再生</string>

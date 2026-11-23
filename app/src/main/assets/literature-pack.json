@@ -1,0 +1,17 @@
+{
+  "databaseVersion": 6,
+  "core": {
+    "workCount": 10011,
+    "bytes": 73203712,
+    "sha256": "b0dbd82a310a0f338957a5255c66c6be93054c9d295f5142c0c211c01c440424"
+  },
+  "full": {
+    "fileName": "literature-full.db.gz",
+    "databaseVersion": 6,
+    "workCount": 167212,
+    "bytes": 262717039,
+    "sha256": "9a7a5bf27e948e9b2ab8c947fee444a197e64de331ac7791cd1fb1ed018e5827",
+    "databaseBytes": 483860480,
+    "databaseSha256": "94dee07dff0113bf5859f4171ee25dbaf24e5825ccd8b814438e74acae536d7e"
+  }
+}

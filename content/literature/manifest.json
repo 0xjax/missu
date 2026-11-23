@@ -1304,7 +1304,7 @@
       "PROSE": 1681,
       "BOOK": 36
     },
-    "databaseSha256": "16ffa05ef49c873f70557cc5f5f768b4a4a2e72c44ea58b18423b12c68fd6b50"
+    "databaseSha256": "94dee07dff0113bf5859f4171ee25dbaf24e5825ccd8b814438e74acae536d7e"
   },
   "expansion": {
     "previousCount": 90292,
@@ -1326,5 +1326,23 @@
       "path": "content/literature/supplemental.json",
       "count": 5
     }
-  ]
+  ],
+  "packs": {
+    "coreRankedLimit": 10000,
+    "coreRule": "全部本地精读与补充内容，加上 prominence 最高的 10000 条导入作品；核心与完整库均可独立使用，ID 与 schema 一致",
+    "core": {
+      "workCount": 10011,
+      "bytes": 73203712,
+      "sha256": "b0dbd82a310a0f338957a5255c66c6be93054c9d295f5142c0c211c01c440424"
+    },
+    "full": {
+      "fileName": "literature-full.db.gz",
+      "databaseVersion": 6,
+      "workCount": 167212,
+      "bytes": 262717039,
+      "sha256": "9a7a5bf27e948e9b2ab8c947fee444a197e64de331ac7791cd1fb1ed018e5827",
+      "databaseBytes": 483860480,
+      "databaseSha256": "94dee07dff0113bf5859f4171ee25dbaf24e5825ccd8b814438e74acae536d7e"
+    }
+  }
 }

@@ -23,7 +23,7 @@ baselineprofile/      独立启动 Profile 生成器（仅测试，不进入交�
 journeys/              Android CLI Journey 关键路径用例
 gradle/libs.versions.toml      依赖与插件版本唯一来源
 content/literature/   诗文可读内容源（原文、注释、意译、赏析与多语言元数据）
-scripts/build-literature.ts  校验内容源并生成带 FTS5 索引的预打包 literature.db
+scripts/build-literature.ts  从同一语料生成带 FTS5 索引的核心库与可选完整文库包
 scripts/build.ps1     Android CLI 统一入口：构建 / 装机 / 运行 / 检查 / 预览 / 分析 / 调试
 scripts/emulator/     medium_phone AVD 的确定性架构与硬件规格模板
 settings.gradle.kts   Gradle 根配置（:app + :core + :baselineprofile）

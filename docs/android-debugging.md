@@ -117,6 +117,12 @@ adb mdns services
 .\adb -s adb-<设备ID>-<随机后缀>._adb-tls-connect._tcp shell echo alive
 ```
 
+## 无线安装大文件卡住：先看链路
+
+`Standard Install: Sent ...` 只表示电脑端写入本地 ADB 通道，**不代表手机已收到，更不是安装进度**。若随后出现 `Unexpected end of channel` / `device offline`，先跑 `adb -s <serial> shell echo alive`，再用 `adb push` 的临时文件大小变化和传输期间的 Ping 判断真实吞吐；`devices` 显示 `device`、小文件成功或空闲 Ping 正常都不足以证明大文件链路健康。
+
+2026-11-23 的一次个案是手机到原路由器在负载下严重丢包，实测仅 51–140 KiB/s。电脑改连手机热点后绕开原路由器，安装期间 0% 丢包，同一 67.94 MiB APK 约 18 秒成功。手机可继续连接上游 Wi-Fi，热点是电脑到手机的独立子网；地址仍现查 `adb mdns services`，不复用旧端口。厂商若不允许热点接口运行 ADB，改用电脑有线连接或 USB。不要靠反复重启、重新配对或增加安装超时掩盖链路问题。
+
 ## 安全软件会拦子进程和写入
 
 JVM 写目录被拒但 PowerShell 可写时，用同一文件分别测试；只有 JVM 失败即程序级拦截。构建固定使用 `D:\Android\jdk-21`，换 JDK 后先验证 `java.exe` 可执行且可写。

@@ -14,6 +14,7 @@ import androidx.room3.Room
 import androidx.room3.RoomDatabase
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import kotlinx.coroutines.Dispatchers
+import java.io.File
 
 @Entity(
     tableName = "works",
@@ -87,12 +88,23 @@ abstract class LiteratureDatabase : RoomDatabase() {
     abstract fun dao(): LiteratureDao
 
     companion object {
-        fun create(context: Context): LiteratureDatabase =
-            Room.databaseBuilder<LiteratureDatabase>(context.applicationContext, "literature.db")
-                .createFromAsset("literature.db")
+        fun createCore(context: Context): LiteratureDatabase =
+            builder(context, "literature-core.db")
+                .createFromAsset("literature-core.db")
+                .build()
+
+        fun createFull(context: Context, file: File, roomName: String): LiteratureDatabase =
+            builder(context, roomName)
+                .createFromFile(file)
+                .build()
+
+        fun openExisting(context: Context, roomName: String): LiteratureDatabase =
+            builder(context, roomName).build()
+
+        private fun builder(context: Context, name: String) =
+            Room.databaseBuilder<LiteratureDatabase>(context.applicationContext, name)
                 .setDriver(BundledSQLiteDriver())
                 .setQueryCoroutineContext(Dispatchers.IO)
                 .fallbackToDestructiveMigration()
-                .build()
     }
 }

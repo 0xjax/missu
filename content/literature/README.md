@@ -26,6 +26,10 @@ N = max(10,000, Rmax)
 
 `manifest.json` 自动记录每次构建的来源版本、原始数量、选本匹配、范围与选本交集、详情页补充清单、最终去重数量及数据库哈希。清单与数据库均由脚本生成，禁止手改。
 
+## 核心与完整内容包
+
+同一份最终作品集合生成两个可独立使用的 SQLite，不在运行时跨库拼接：核心库包含全部本地精读与补充内容，加上 `prominence` 最高的 10000 条导入作品，写入 `app/src/main/assets/literature-core.db`；完整库包含核心在内的全部作品，输出 `.local/releases/literature-full.db` 后 gzip 为 `literature-full.db.gz`，同时生成 `literature-manifest.json`。两组清单均记录作品数、字节数与 SHA-256；完整包还记录解压后数据库的大小与哈希。应用内置核心库，完整包上传到与应用版本同名的 GitHub Release，由用户主动下载。收藏与阅读历史使用稳定作品 ID，切换内容包不修改这些用户数据。
+
 ## 更新
 
 ```powershell

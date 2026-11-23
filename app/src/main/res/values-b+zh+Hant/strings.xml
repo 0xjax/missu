@@ -289,6 +289,15 @@
     <string name="settings_video_list">影片列表</string>
     <string name="settings_video_list_single">單欄</string>
     <string name="settings_video_list_double">雙欄</string>
+    <string name="settings_literature_pack">詩文文庫</string>
+    <string name="settings_literature_pack_core">目前核心文庫 %1$d 篇；完整文庫 %2$d 篇，下載約 %3$d MiB。</string>
+    <string name="settings_literature_pack_full">完整文庫已啟用 · %1$d 篇。切換文庫不影響收藏與閱讀記錄。</string>
+    <string name="settings_literature_pack_download">下載完整文庫</string>
+    <string name="settings_literature_pack_retry">重試下載</string>
+    <string name="settings_literature_pack_cancel_download">取消下載</string>
+    <string name="settings_literature_pack_remove">刪除完整文庫</string>
+    <string name="settings_literature_pack_downloading">正在下載完整文庫 · %1$d%%</string>
+    <string name="settings_literature_pack_error">下載失敗：%2$s。目前文庫（%1$d 篇）仍可使用。</string>
 
     <!-- 播放 -->
     <string name="settings_autoplay">自動播放</string>
