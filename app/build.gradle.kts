@@ -96,6 +96,9 @@ dependencies {
     implementation(libs.compose.runtime.tracing)
     implementation(libs.compose.ui)
     implementation(libs.compose.ui.tooling.preview)
+    // 搜索工具框与底部导航的液态玻璃只负责绘制材质，控件与交互仍由本工程实现。
+    implementation(libs.haze.core)
+    implementation(libs.haze.glass)
     implementation(libs.activity.compose)
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.lifecycle.runtime.compose)

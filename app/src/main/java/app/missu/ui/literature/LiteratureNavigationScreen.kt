@@ -30,6 +30,7 @@ import app.missu.ui.search.LocalSearchBarInset
 import app.missu.ui.search.SearchHostShell
 import app.missu.ui.search.SearchTopVeil
 import app.missu.ui.search.SearchTriggerHeight
+import app.missu.ui.search.searchGlassSource
 
 @Composable
 fun LiteratureNavigationScreen(
@@ -81,6 +82,7 @@ fun LiteratureNavigationScreen(
                 onLoadMore = onLoadMore,
                 onRetry = onRetry,
                 onOpen = onOpenLiterature,
+                modifier = Modifier.searchGlassSource(),
                 scrollToTopSignal = scrollToTopSignal,
                 showIntro = query.isBlank(),
                 contentTopInset = LocalSearchBarInset.current,

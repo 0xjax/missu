@@ -15,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import android.os.Build
 import android.view.RoundedCorner
 import androidx.compose.ui.Modifier
@@ -25,6 +26,8 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+
+internal val LocalFloatingNavigationBarInset = staticCompositionLocalOf { 0.dp }
 
 /** 机器报不出屏幕圆角时的兜底（MD3 的 extraLarge）。 */
 private val FallbackCorner = 24.dp

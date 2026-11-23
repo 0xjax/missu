@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.missu.R
+import app.missu.ui.components.LocalFloatingNavigationBarInset
 import app.missu.ui.components.TooltipIconButton
 
 @Composable
@@ -47,7 +48,12 @@ fun HomeScreen(
     LazyColumn(
         state = listState,
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 32.dp),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            top = 16.dp,
+            bottom = LocalFloatingNavigationBarInset.current + 32.dp,
+        ),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item(key = "settings") {

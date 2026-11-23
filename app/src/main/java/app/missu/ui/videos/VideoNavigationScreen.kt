@@ -73,6 +73,7 @@ import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadMoreFooter
 import app.missu.ui.components.LoadMoreOnScroll
 import app.missu.ui.components.LoadingHint
+import app.missu.ui.components.LocalFloatingNavigationBarInset
 import app.missu.ui.common.LoadMoreState
 import app.missu.ui.common.text
 import app.missu.ui.list.VideoControlButton
@@ -83,6 +84,7 @@ import app.missu.ui.list.VideoListUiState
 import app.missu.ui.list.VideoToolbarContainer
 import app.missu.ui.search.LocalSearchBarInset
 import app.missu.ui.search.SearchBarTopGap
+import app.missu.ui.search.searchGlassSource
 import app.missu.ui.search.SearchTopVeil
 import app.missu.ui.search.SearchTriggerHeight
 import coil3.compose.AsyncImage
@@ -130,7 +132,7 @@ fun VideoNavigationScreen(
     val tab = tabs[tabIndex]
 
     Box(modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().searchGlassSource()) {
 
         // 切到某个栏目时才去拉它，省请求：目录各自一次；频道是第一次进来时拉一次首页导航。
         LaunchedEffect(tab.kind) {
@@ -210,7 +212,7 @@ fun VideoNavigationScreen(
                         start = 16.dp,
                         end = 16.dp,
                         top = LocalSearchBarInset.current + 8.dp,
-                        bottom = 8.dp,
+                        bottom = LocalFloatingNavigationBarInset.current + 8.dp,
                     ),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(if (actresses) 4.dp else 8.dp),
@@ -401,7 +403,7 @@ private fun ChannelsContent(
                     start = 16.dp,
                     end = 16.dp,
                     top = LocalSearchBarInset.current + 8.dp,
-                    bottom = 8.dp,
+                    bottom = LocalFloatingNavigationBarInset.current + 8.dp,
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {

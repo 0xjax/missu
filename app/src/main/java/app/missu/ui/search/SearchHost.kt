@@ -64,6 +64,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.geometry.Rect
@@ -90,10 +91,14 @@ import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadMoreFooter
 import app.missu.ui.components.LoadMoreOnScroll
 import app.missu.ui.components.LoadingHint
+import app.missu.ui.components.LocalFloatingNavigationBarInset
 import app.missu.ui.components.LocalVideoListColumns
 import app.missu.ui.components.PageStateTransition
 import app.missu.ui.components.VideoGridCard
 import app.missu.ui.list.VideoListControls
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
@@ -157,6 +162,7 @@ internal fun SearchHostShell(
     content: @Composable ColumnScope.(searchAction: @Composable () -> Unit) -> Unit,
 ) {
     val searchBarState = rememberSearchBarState()
+    val glassState = rememberHazeState()
     val textFieldState = rememberTextFieldState(initialText = initialKeyword)
     val focusRequester = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
@@ -269,6 +275,7 @@ internal fun SearchHostShell(
         CompositionLocalProvider(
             LocalSearchBarInset provides contentInset,
             LocalSearchAnchorCapture provides { bounds -> triggerBounds = bounds },
+            LocalSearchGlassState provides (if (inlineTrigger) glassState else null),
         ) {
             Column(Modifier.fillMaxSize()) { content(searchAction) }
         }
@@ -425,10 +432,14 @@ private fun InlineSearchButton(
 ) {
     FilledTonalButton(
         onClick = onClick,
-        modifier = Modifier.size(SearchTriggerWidth, SearchTriggerHeight),
+        modifier = Modifier.size(SearchTriggerHeight),
         shape = CircleShape,
         colors = ButtonDefaults.filledTonalButtonColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            containerColor = if (LocalSearchGlassState.current == null) {
+                MaterialTheme.colorScheme.surfaceContainerHigh
+            } else {
+                Color.Transparent
+            },
             contentColor = MaterialTheme.colorScheme.onSurface,
         ),
         contentPadding = PaddingValues(0.dp),
@@ -441,11 +452,8 @@ private fun InlineSearchButton(
     }
 }
 
-/** 行内搜索按钮与同一行选项共用的高度。 */
+/** 行内搜索按钮与同一行选项共用的尺寸。 */
 internal val SearchTriggerHeight = 40.dp
-
-/** 搜索托盘宽度为 40dp 高度的 1.5 倍。 */
-private val SearchTriggerWidth = 60.dp
 
 /** 胶囊上方的 8dp（material3 展开态给输入框的落点）。 */
 internal val SearchBarTopGap = 8.dp
@@ -469,6 +477,12 @@ val LocalSearchBarInset = staticCompositionLocalOf { 0.dp }
 
 /** 当前悬浮工具框把实际窗口边界交给搜索展开容器；非搜索页面不处理。 */
 internal val LocalSearchAnchorCapture = staticCompositionLocalOf<(Rect) -> Unit> { {} }
+
+internal val LocalSearchGlassState = staticCompositionLocalOf<HazeState?> { null }
+
+internal fun Modifier.searchGlassSource(): Modifier = composed {
+    LocalSearchGlassState.current?.let { hazeSource(it) } ?: this
+}
 
 /** 搜索结果区（Idle 不在这里渲染——那是原页面内容的地盘）。 */
 @Composable
@@ -536,7 +550,7 @@ fun SearchBody(
         }
     } else {
         Box(modifier.fillMaxSize()) {
-            resultsContent(Modifier.fillMaxSize())
+            resultsContent(Modifier.fillMaxSize().searchGlassSource())
             val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
             SearchTopVeil(
                 statusTop = statusTop,
@@ -623,7 +637,7 @@ private fun Results(
             start = 16.dp,
             end = 16.dp,
             top = contentTopInset + 12.dp,
-            bottom = 32.dp,
+            bottom = LocalFloatingNavigationBarInset.current + 32.dp,
         ),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),

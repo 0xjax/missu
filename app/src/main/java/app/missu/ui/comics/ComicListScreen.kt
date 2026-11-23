@@ -37,6 +37,7 @@ import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadMoreFooter
 import app.missu.ui.components.LoadMoreOnScroll
 import app.missu.ui.components.LoadingHint
+import app.missu.ui.components.LocalFloatingNavigationBarInset
 import app.missu.ui.components.PageStateTransition
 import coil3.compose.AsyncImage
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -104,7 +105,7 @@ fun ComicListBody(
                         start = 16.dp,
                         end = 16.dp,
                         top = contentTopInset + 12.dp,
-                        bottom = 24.dp,
+                        bottom = LocalFloatingNavigationBarInset.current + 24.dp,
                     ),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),

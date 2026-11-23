@@ -4,6 +4,7 @@ kotlin = "2.4.21"
 activity = "1.13.0"
 benchmark = "1.4.1"
 coil = "3.6.3"
+haze = "2.1.0"
 composeTestVersion = "1.12.1"
 coroutines = "1.11.0"
 junit = "4.13.2"
@@ -35,6 +36,8 @@ compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4" }
 compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest" }
 compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+haze-core = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
+haze-glass = { module = "dev.chrisbanes.haze:haze-glass", version.ref = "haze" }
 coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }

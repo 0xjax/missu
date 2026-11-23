@@ -11,7 +11,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import app.missu.ui.search.LocalSearchGlassState
 
 @Composable
 fun ContentLibraryButton(
@@ -24,7 +26,11 @@ fun ContentLibraryButton(
         modifier = modifier.size(40.dp),
         shape = CircleShape,
         colors = ButtonDefaults.filledTonalButtonColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            containerColor = if (LocalSearchGlassState.current == null) {
+                MaterialTheme.colorScheme.surfaceContainerHigh
+            } else {
+                Color.Transparent
+            },
             contentColor = MaterialTheme.colorScheme.onSurface,
         ),
         contentPadding = PaddingValues(0.dp),

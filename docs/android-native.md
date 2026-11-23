@@ -22,7 +22,7 @@
 - ✅ **列表页**：`MissavApi.getVideos(path, page)` 通用列表 + 分页；详情页信息行里带路径的值（女优/类型/厂商…）可点，跳到对应列表（实测点「RARA」进入其作品页）；用户排序 / 过滤按列表类别持久化，女优、类型、厂商各自整类共享
 - ✅ **视频单列/双列**：设置页全局切换，首页、热门、搜索、收藏、历史与片单共用 `LocalVideoListColumns`；只重组布局，不重取数据，偏好持久化
 - ✅ **价值导向首页**：不禁止或羞辱成人内容选择，用本地短篇指南提供另一种默认入口；不加入观看评分、强制暂停或提醒，指南正文为应用资源，离线可读且无需新增内容接口
-- ✅ **底部导航 + 诗文 + 影片 + 漫画**：`首页 / 诗文 / 影片 / 漫画` 四个一级页签；再次点击当前页签会把当前滚动内容平滑带回顶部。首页首行的齿轮直接进入全局设置；影片库顶栏的账号图标进入影片登录与资料页，未登录页不再承载设置入口。三个内容导航页都在搜索按钮左侧提供 40dp 内容库入口：影片库分「收藏 / 视频 / 列表 / 片单」，漫画记录与诗文记录都分「收藏 / 阅读历史」；漫画与诗文代码命名统一使用 `comic-library` / `literature` / `literature-library`。影片详情番号仍可直达对应搜索页
+- ✅ **底部导航 + 诗文 + 影片 + 漫画**：`首页 / 诗文 / 影片 / 漫画` 四个一级页签；底栏为 64dp 圆角悬浮液态玻璃，左右 16dp、底部 12dp 并避让手势区，采样真实页签内容，各滚动列表保留对应底部留白；选中指示器覆盖图标与文字，使用 52dp 高液态玻璃胶囊，独立采样页面内容并融入 14% `primary` 色调，220ms 内从 52% 放大并淡入，离开时缩小淡出，不叠加其他选中色块或整项点击变亮；再次点击当前页签会把当前滚动内容平滑带回顶部。首页首行的齿轮直接进入全局设置；影片库顶栏的账号图标进入影片登录与资料页，未登录页不再承载设置入口。三个内容导航页都在搜索按钮左侧提供 40dp 内容库入口：影片库分「收藏 / 视频 / 列表 / 片单」，漫画记录与诗文记录都分「收藏 / 阅读历史」；漫画与诗文代码命名统一使用 `comic-library` / `literature` / `literature-library`。影片详情番号仍可直达对应搜索页
 - ✅ **诗文阅读**：英语内容已弃用。诗文使用 Room + 独立 SQLite，规模与构成见 `content/literature/manifest.json`；FTS5 中文一元 / 二元索引支持篇名、作者与原文即时搜索，列表按 50 篇分页；体裁筛选与收藏分属不同维度，搜索复用统一工具框形变。阅读历史记录最近打开的作品，收藏由本地稳定作品 ID 持久化。Debug / Release 默认内置 10011 篇核心库并离线预热；设置里可主动下载完整库，gzip 与解压数据库双重校验后整库切换，失败保留当前库，可删除完整库回退核心，收藏与历史不受影响。无打卡、评分或连续天数
 - ✅ **女优筛选与排序**：身高 12 档 / 罩杯 A–Q / 年龄 6 档 / 出道年份（N 年以前），排序 `影片 / 出道`（实测 161–165cm 与按出道年排序都生效）
 - ✅ **搜索历史**：影片与漫画分别保存成功搜索的关键词（各上限 20，重复置顶），空输入时展示为可点胶囊，可清空；漫画关键词跨源共用，不与阅读历史混合
@@ -31,10 +31,10 @@
 - ✅ **我的片单操作**：`FloatingActionButtonMenu` 收纳「新建片单 / 刷新列表」，替代原来的顶栏「新建」按钮（M3E 里主操作用 FAB）
 - ✅ **详情页动作条**：播放器正下方固定 `SplitButtonLayout`（收藏 / 片单）+ 可展开的 ±1/±10 分钟进度调节；动作与标题不随信息卡滚动
 - ✅ **片单整理入口**：右下角 `ToggleFloatingActionButton`（编辑图标 ⇄ ×）；进整理模式后「取消选择 / 完成」走 `AppBarRow` 溢出容器（放不下自动收进菜单）
-- ✅ **搜索栏**：`SearchBarState` + `ExpandedFullScreenSearchBar`，**就地展开**——影片导航页使用 40×40dp 内容库按钮与 60×40dp `FilledTonalButton` 搜索托盘，固定在工具行右侧；左侧选项同高、同圆角、同底色，展开时切换主题容器色；点击后由显式 `Animatable` 时间线驱动整个工具框从其真实位置扩展到全屏，提交与返回复用同一进度；使用 `defaultSpatialSpec` 弹簧并限制进度为 0…1，首帧继承工具框的圆角、底色与轮廓；输入框按原生公式在工具框顶部与最终顶部间距之间插值，点击时冻结工具框边界，Dialog 不变暗背景且关闭窗口自身动画，展开态始终提供返回按钮；提交后同屏显示结果，结果页支持排序与过滤，所有视频搜索通过 `ListQueryStore` 的 `/search` 组共享同一套用户口径，不按关键词拆分；原位置的返回按钮先恢复原关键词输入，再次返回清空文字并退出搜索；输入框右侧按钮只清空文字、不退出。整条工具行悬浮于滚动内容之上，顶部保留状态栏半透明底色与渐隐；按钮不使用阴影，整条工具行由带 `surfaceContainerHigh` 整体底色与 1dp 轮廓的胶囊 `Surface` 收束，与搜索框及全屏搜索页同色。详情番号搜索复用 `SearchHost` 的全宽 `SearchBar` 形态作为二级路由，以保留返回详情的导航语义
+- ✅ **搜索栏**：`SearchBarState` + `ExpandedFullScreenSearchBar`，**就地展开**——影片导航页使用 40×40dp 内容库按钮与 40×40dp `FilledTonalButton` 搜索按钮，固定在工具行右侧；左侧选项同高、同圆角，默认透明并透出工具框材质，展开时切换主题容器色；点击后由显式 `Animatable` 时间线驱动整个工具框从其真实位置扩展到全屏，提交与返回复用同一进度；使用 `defaultSpatialSpec` 弹簧并限制进度为 0…1，首帧继承工具框的圆角，展开容器沿用 `surfaceContainerHigh` 底色与轮廓；输入框按原生公式在工具框顶部与最终顶部间距之间插值，点击时冻结工具框边界，Dialog 不变暗背景且关闭窗口自身动画，展开态始终提供返回按钮；提交后同屏显示结果，结果页支持排序与过滤，所有视频搜索通过 `ListQueryStore` 的 `/search` 组共享同一套用户口径，不按关键词拆分；原位置的返回按钮先恢复原关键词输入，再次返回清空文字并退出搜索；输入框右侧按钮只清空文字、不退出。整条工具行悬浮于滚动内容之上，顶部保留状态栏半透明底色与渐隐；按钮不使用阴影，整条工具行由 Haze 2.1 `GlassStyle.regular` 液态玻璃收束，采样实际滚动内容并呈现深度模糊、边缘折射与高光；无采样环境的列表页保留原来的胶囊 `Surface`。详情番号搜索复用 `SearchHost` 的全宽 `SearchBar` 形态作为二级路由，以保留返回详情的导航语义
 - ✅ **新建片单**：站点只有 Blade 表单（`/playlists/create`），先 GET 读 `_token` 与字段名再 urlencoded POST；实测建出 `test` 后列表自动刷新
 - ✅ **编辑 / 删除片单**：详情页页头「编辑」→ 改名/描述/公开 + 删除（二次确认）；实测改名 `test→test2`、删除后列表只剩 `精选`
-- ✅ **M3E 主题与组件**：`MaterialExpressiveTheme` + `MotionScheme.expressive()`；二级页统一 `PageTopBar`（up 图标 + Tooltip）；底栏换 `ShortNavigationBar`；转圈换 `LoadingIndicator`；首页指南使用可点击 `Card`，影片页支持下拉刷新（`PullToRefreshBox`）；女优排序使用 `FilledTonalButton` 下拉，并与栏目、筛选合并为一行
+- ✅ **M3E 主题与组件**：`MaterialExpressiveTheme` + `MotionScheme.expressive()`；二级页统一 `PageTopBar`（up 图标 + Tooltip）；底栏导航项自绘并使用 `Role.Tab`；转圈换 `LoadingIndicator`；首页指南使用可点击 `Card`，影片页支持下拉刷新（`PullToRefreshBox`）；女优排序使用 `FilledTonalButton` 下拉，并与栏目、筛选合并为一行
 - ✅ **桌面图标**：五套 adaptive icon（纯色底 + 居中双拱小写 `m`，共用一个矢量前景）+ 五个 `activity-alias`；设置里「图标跟随主题色」默认关，开启后**离开应用才生效**。实测 vivo 桌面/启动动画/概览都跟着换，应用信息页保持品牌粉（机制边界，见「桌面图标」）
 
 
@@ -81,6 +81,7 @@
 | material3 / ui / ui-tooling-preview / debug ui-tooling | 由 BOM 决定 | UI；M3E 组件（ShortNavigationBar / LoadingIndicator / ToggleButton 组）也在这里 |
 | runtime-tracing | 由 BOM 决定 | Android CLI Profiler 的 Compose composition/recomposition trace |
 | material-icons-extended | 由 BOM 决定 | 全界面统一 Outlined 图标；仅已收藏等明确状态用 Filled，release 由 R8 移除未使用字形 |
+| Haze core + haze-glass | 2.1.0 | 搜索工具框与底部导航的后方内容采样、液态玻璃材质；明暗响应显式跟随 `LocalDarkTheme`，覆盖应用强制明暗与系统设置不一致的情况；不提供 UI 控件，不支持的环境自动降级 |
 | activity-compose | 1.13.0 | `setContent` / `enableEdgeToEdge` |
 | lifecycle-viewmodel-compose / lifecycle-runtime-compose | 2.11.0 | `viewModel()` / 生命周期感知的 `collectAsStateWithLifecycle()` |
 | navigation-compose | 2.10.2 | `NavHost` 单 Activity 路由 |
@@ -722,7 +723,7 @@ icacls "$env:TEMP\adb.log" /setintegritylevel L
 
 **UI 与交互**
 
-- **底部栏高度**：`ShortNavigationBar` 自己处理窗口 inset，外面不要再加一次 `insets.bottom`，否则底栏高度翻倍（Expo 版踩过）。
+- **底部栏高度**：悬浮底栏用玻璃 `Box` + 等分 `Row` + 自绘导航项，系统 `navigationBars` 底部 inset 只在外层加一次；不要再叠一份组件级 inset，否则底栏高度翻倍（Expo 版踩过）。
 - **系统栏内边距只在壳层处理一次**（`Scaffold` + `WindowInsets.safeDrawing`）；页面里各自加 `statusBarsPadding`
   会变成"每加一个页面都要记得加"，而且极易漏。需要贴边的页面单独 opt-out。
 - **列表页的空/错状态要区分**：网络上失败不能显示成"内容为空"，否则用户以为数据丢了。

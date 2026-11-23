@@ -4,34 +4,59 @@ package app.missu
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentScope
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.ShortNavigationBar
-import androidx.compose.material3.ShortNavigationBarItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
@@ -46,8 +71,10 @@ import app.missu.data.store.ListSortStore
 import app.missu.data.store.LiteratureStore
 import app.missu.data.store.SearchHistoryStore
 import app.missu.ui.components.ContentLibraryButton
+import app.missu.ui.components.LocalFloatingNavigationBarInset
 import app.missu.ui.components.PageSurface
 import app.missu.ui.components.ProvideHeroVisibility
+import app.missu.ui.components.rememberLiquidGlassStyle
 import app.missu.ui.components.underScrim
 import app.missu.ui.comics.ComicNavigationScreen
 import app.missu.ui.comics.ComicNavigationViewModel
@@ -65,6 +92,11 @@ import app.missu.ui.search.SearchUiState
 import app.missu.ui.search.SearchViewModel
 import app.missu.ui.literature.LiteratureViewModel
 import app.missu.ui.literature.LiteratureNavigationScreen
+import dev.chrisbanes.haze.HazeInput
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.glass.hazeGlass
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 
 internal const val TABS_ROUTE = "tabs"
 
@@ -117,43 +149,33 @@ internal fun TabsHost(
     val startTab = topLevels.first().route
     BackHandler(enabled = tabRoute != startTab) { onTabChange(startTab) }
 
-    Scaffold(
-        modifier = Modifier.underScrim(
-            scope = navScope,
-            covered = backStackEntry?.id != entry.id,
-            fadingIn = backStackEntry?.destination?.route?.startsWith("detail/") == true,
-        ),
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        bottomBar = {
-            ShortNavigationBar {
-                topLevels.forEach { item ->
-                    ShortNavigationBarItem(
-                        selected = tabRoute == item.route,
-                        onClick = {
-                            if (tabRoute == item.route) tabReselectVersion++ else onTabChange(item.route)
-                        },
-                        icon = { Icon(item.icon, contentDescription = stringResource(item.labelRes)) },
-                        label = { Text(stringResource(item.labelRes)) },
-                    )
-                }
-            }
-        },
-    ) { tabPadding ->
-        AnimatedContent(
-            targetState = tabRoute,
-            modifier = Modifier.padding(tabPadding),
-            transitionSpec = {
-                val forward = topLevels.indexOfFirst { it.route == targetState } >
-                    topLevels.indexOfFirst { it.route == initialState }
-                slideInHorizontally(animationSpec = tween(durationMillis = 300)) {
-                    if (forward) it else -it
-                } togetherWith slideOutHorizontally(animationSpec = tween(durationMillis = 300)) {
-                    if (forward) -it else it
-                }
-            },
-            label = "tab",
-        ) { current ->
-            when (current) {
+    val glassState = rememberHazeState()
+    val navigationShape = RoundedCornerShape(32.dp)
+    val navigationStyle = rememberLiquidGlassStyle(navigationShape)
+    val navigationInset = 76.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    CompositionLocalProvider(LocalFloatingNavigationBarInset provides navigationInset) {
+        Box(
+            Modifier.fillMaxSize().underScrim(
+                scope = navScope,
+                covered = backStackEntry?.id != entry.id,
+                fadingIn = backStackEntry?.destination?.route?.startsWith("detail/") == true,
+            ),
+        ) {
+            AnimatedContent(
+                targetState = tabRoute,
+                modifier = Modifier.fillMaxSize().hazeSource(glassState),
+                transitionSpec = {
+                    val forward = topLevels.indexOfFirst { it.route == targetState } >
+                        topLevels.indexOfFirst { it.route == initialState }
+                    slideInHorizontally(animationSpec = tween(durationMillis = 300)) {
+                        if (forward) it else -it
+                    } togetherWith slideOutHorizontally(animationSpec = tween(durationMillis = 300)) {
+                        if (forward) -it else it
+                    }
+                },
+                label = "tab",
+            ) { current ->
+                when (current) {
                 "home" -> {
                     ProvideHeroVisibility(navScope, namespace = "home") {
                         PageSurface(card = false) {
@@ -343,6 +365,113 @@ internal fun TabsHost(
                     }
                 }
             }
+            }
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom))
+                    .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
+                    .hazeGlass(
+                        input = HazeInput.Sources(glassState),
+                        style = navigationStyle,
+                    )
+                    .clip(navigationShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().height(64.dp).selectableGroup(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    topLevels.forEach { item ->
+                        LiquidNavigationItem(
+                            item = item,
+                            glassState = glassState,
+                            selected = tabRoute == item.route,
+                            onClick = {
+                                if (tabRoute == item.route) tabReselectVersion++ else onTabChange(item.route)
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun LiquidNavigationItem(
+    item: TopLevel,
+    glassState: HazeState,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val selectionProgress by animateFloatAsState(
+        targetValue = if (selected) 1f else 0f,
+        animationSpec = tween(durationMillis = 220),
+        label = "navigation-selection",
+    )
+    val selectionStyle = rememberLiquidGlassStyle(
+        shape = CircleShape,
+        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+    )
+    val contentColor by animateColorAsState(
+        targetValue = if (selected) {
+            MaterialTheme.colorScheme.onSurface
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
+        animationSpec = tween(durationMillis = 150),
+        label = "navigation-content",
+    )
+    val interactionSource = remember { MutableInteractionSource() }
+    Box(modifier, contentAlignment = Alignment.Center) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = 4.dp, vertical = 6.dp)
+                .graphicsLayer {
+                    val scale = 0.52f + 0.48f * selectionProgress
+                    scaleX = scale
+                    scaleY = scale
+                    alpha = selectionProgress
+                }
+                .hazeGlass(
+                    input = HazeInput.Sources(glassState),
+                    style = selectionStyle,
+                )
+                .clip(CircleShape),
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(CircleShape)
+                .selectable(
+                    selected = selected,
+                    onClick = onClick,
+                    role = Role.Tab,
+                    interactionSource = interactionSource,
+                    indication = null,
+                ),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Icon(
+                imageVector = item.icon,
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(24.dp),
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = stringResource(item.labelRes),
+                color = contentColor,
+                style = MaterialTheme.typography.labelMedium,
+            )
         }
     }
 }

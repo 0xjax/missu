@@ -57,6 +57,7 @@ import app.missu.ui.components.ErrorHint
 import app.missu.ui.components.LoadMoreFooter
 import app.missu.ui.components.LoadMoreOnScroll
 import app.missu.ui.components.LoadingHint
+import app.missu.ui.components.LocalFloatingNavigationBarInset
 import app.missu.ui.components.MissuBottomSheet
 import app.missu.ui.components.PageStateTransition
 import app.missu.ui.components.PageTopBar
@@ -127,7 +128,7 @@ private fun LiteratureContent(
             start = 16.dp,
             end = 16.dp,
             top = contentTopInset + 16.dp,
-            bottom = 16.dp,
+            bottom = LocalFloatingNavigationBarInset.current + 16.dp,
         ),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {

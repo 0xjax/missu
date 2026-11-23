@@ -5,6 +5,7 @@ package app.missu.ui.list
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -32,9 +33,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.stringResource
@@ -50,12 +51,17 @@ import app.missu.ui.components.LoadMoreFooter
 import app.missu.ui.components.LoadMoreOnScroll
 import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.LocalVideoListColumns
+import app.missu.ui.components.LocalFloatingNavigationBarInset
 import app.missu.ui.components.PageStateTransition
 import app.missu.ui.components.PageTopBar
+import app.missu.ui.components.rememberLiquidGlassStyle
 import app.missu.ui.components.VideoGridCard
 import app.missu.ui.search.LocalSearchAnchorCapture
 import app.missu.ui.search.LocalSearchBarInset
+import app.missu.ui.search.LocalSearchGlassState
 import app.missu.ui.search.SearchTriggerHeight
+import dev.chrisbanes.haze.HazeInput
+import dev.chrisbanes.haze.glass.hazeGlass
 
 @Composable
 internal fun AutoLoadVideoList(
@@ -265,7 +271,7 @@ fun VideoListBody(
                         start = 16.dp,
                         end = 16.dp,
                         top = LocalSearchBarInset.current + 12.dp,
-                        bottom = 32.dp,
+                        bottom = LocalFloatingNavigationBarInset.current + 32.dp,
                     ),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -293,14 +299,29 @@ fun VideoListBody(
 @Composable
 internal fun VideoToolbarContainer(content: @Composable () -> Unit) {
     val captureBounds = LocalSearchAnchorCapture.current
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .onGloballyPositioned { captureBounds(it.boundsInWindow()) },
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    val glassState = LocalSearchGlassState.current
+    val modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 16.dp)
+        .onGloballyPositioned { captureBounds(it.boundsInWindow()) }
+    if (glassState == null) {
+        Surface(
+            modifier = modifier,
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        ) {
+            content()
+        }
+        return
+    }
+
+    val style = rememberLiquidGlassStyle(CircleShape)
+    Box(
+        modifier.hazeGlass(
+            input = HazeInput.Sources(glassState),
+            style = style,
+        ),
     ) {
         content()
     }
@@ -320,10 +341,10 @@ internal fun VideoControlButton(
         enabled = enabled,
         shape = CircleShape,
         colors = ButtonDefaults.filledTonalButtonColors(
-            containerColor = if (expanded) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surfaceContainerHigh
+            containerColor = when {
+                expanded -> MaterialTheme.colorScheme.primaryContainer
+                LocalSearchGlassState.current != null -> Color.Transparent
+                else -> MaterialTheme.colorScheme.surfaceContainerHigh
             },
             contentColor = if (expanded) {
                 MaterialTheme.colorScheme.onPrimaryContainer

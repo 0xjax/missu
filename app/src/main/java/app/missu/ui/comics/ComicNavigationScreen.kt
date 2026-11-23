@@ -41,6 +41,7 @@ import app.missu.data.comic.ComicFeed
 import app.missu.data.comic.ComicSource
 import app.missu.data.comic.KalamCategory
 import app.missu.ui.common.text
+import app.missu.ui.components.LocalFloatingNavigationBarInset
 import app.missu.ui.list.VideoOptionMenu
 import app.missu.ui.list.VideoToolbarContainer
 import app.missu.ui.search.LocalSearchBarInset
@@ -48,6 +49,7 @@ import app.missu.ui.search.RecentSearches
 import app.missu.ui.search.SearchHostShell
 import app.missu.ui.search.SearchTopVeil
 import app.missu.ui.search.SearchTriggerHeight
+import app.missu.ui.search.searchGlassSource
 
 @Composable
 fun ComicNavigationScreen(
@@ -154,6 +156,7 @@ private fun ComicBrowseContent(
             onRetry = onRetry,
             onLoadMore = onLoadMore,
             onOpen = { onOpen(source, it.id) },
+            modifier = Modifier.searchGlassSource(),
             contentTopInset = LocalSearchBarInset.current,
             scrollToTopSignal = scrollToTopSignal,
         )
@@ -203,6 +206,7 @@ private fun ComicSearchResults(
                 onRetry = { onRetry(keyword) },
                 onLoadMore = onLoadMore,
                 onOpen = { onOpen(source, it.id) },
+                modifier = Modifier.searchGlassSource(),
                 contentTopInset = LocalSearchBarInset.current,
                 scrollToTopSignal = scrollToTopSignal,
             )
@@ -257,13 +261,13 @@ private fun ComicAggregateResults(
     }
     LazyVerticalGrid(
         state = gridState,
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().searchGlassSource(),
         columns = GridCells.Fixed(3),
         contentPadding = PaddingValues(
             start = 16.dp,
             end = 16.dp,
             top = LocalSearchBarInset.current + 12.dp,
-            bottom = 24.dp,
+            bottom = LocalFloatingNavigationBarInset.current + 24.dp,
         ),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
