@@ -5,6 +5,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import app.missu.data.comic.createComicRepository
 import app.missu.data.literature.LiteraturePackManager
 import app.missu.data.literature.LiteratureRepository
+import app.missu.data.store.UsageStatsStore
 import okhttp3.OkHttpClient
 
 class AppDependencies(context: Context, challenge: ChallengeHandler) {
@@ -16,6 +17,7 @@ class AppDependencies(context: Context, challenge: ChallengeHandler) {
     val comicRepository = createComicRepository(httpClient, AndroidCookieJar(), challenge)
     val literatureRepository = LiteratureRepository(LiteraturePackManager.openInitialDatabase(context))
     val literaturePackManager = LiteraturePackManager(context, httpClient, literatureRepository)
+    val usageStats = UsageStatsStore(context.applicationContext)
 }
 
 val LocalAppDependencies = staticCompositionLocalOf<AppDependencies> {

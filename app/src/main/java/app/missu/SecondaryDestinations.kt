@@ -41,6 +41,7 @@ import app.missu.data.store.LiteratureStore
 import app.missu.data.store.SearchHistoryStore
 import app.missu.data.store.SettingsStore
 import app.missu.data.store.ThemeMode
+import app.missu.data.store.UsageStatsStore
 import app.missu.ui.account.AccountScreen
 import app.missu.ui.account.AuthViewModel
 import app.missu.ui.account.LoginScreen
@@ -79,6 +80,7 @@ import app.missu.ui.search.SearchHost
 import app.missu.ui.search.SearchViewModel
 import app.missu.ui.settings.LiteraturePackViewModel
 import app.missu.ui.settings.SettingsScreen
+import app.missu.ui.usage.UsageStatsScreen
 import app.missu.ui.literature.LiteratureDetailUiState
 import app.missu.ui.literature.LiteratureDetailViewModel
 import app.missu.ui.literature.LiteratureScreen
@@ -123,6 +125,7 @@ internal fun NavGraphBuilder.secondaryDestinations(
     listSortStore: ListSortStore,
     listQueryStore: ListQueryStore,
     literatureStore: LiteratureStore,
+    usageStats: UsageStatsStore,
     auth: AuthViewModel,
     onGoBack: () -> Unit,
     onOpenDetail: (String, String?, String) -> Unit,
@@ -323,6 +326,17 @@ internal fun NavGraphBuilder.secondaryDestinations(
                 onPageChange = { page ->
                     comicHistoryStore.updatePosition(source, mangaId, chapterId, page)
                 },
+            )
+        }
+    }
+
+    composable("usage") {
+        val days by usageStats.days.collectAsStateWithLifecycle()
+        PageSurface {
+            UsageStatsScreen(
+                days = days,
+                onClear = usageStats::clear,
+                onBack = onGoBack,
             )
         }
     }

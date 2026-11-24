@@ -3,19 +3,21 @@ package app.missu.ui.home
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.AutoStories
-import androidx.compose.material.icons.outlined.PlayCircle
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
@@ -31,6 +33,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.missu.R
+import app.missu.data.store.UsageDay
+import app.missu.data.store.usageAverage
+import app.missu.data.store.usageTotal
 import app.missu.ui.components.LocalFloatingNavigationBarInset
 import app.missu.ui.components.TooltipIconButton
 import app.missu.ui.components.LiquidToolbar
@@ -38,13 +43,16 @@ import app.missu.ui.search.LocalSearchGlassState
 import app.missu.ui.search.SearchBarTopGap
 import app.missu.ui.search.SearchTopVeil
 import app.missu.ui.search.SearchTriggerHeight
+import app.missu.ui.usage.formatUsageDuration
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
+import java.time.LocalDate
 
 @Composable
 fun HomeScreen(
+    usageDays: List<UsageDay>,
     onOpenGuide: (String) -> Unit,
-    onOpenVideos: () -> Unit,
+    onOpenUsage: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
     scrollToTopSignal: Int = 0,
@@ -68,6 +76,21 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item(key = "intro") { HomeIntro() }
+                item(key = "usage") {
+                    val today = LocalDate.now()
+                    HomeEntryCard(
+                        icon = Icons.Outlined.Schedule,
+                        title = stringResource(
+                            R.string.usage_home_title,
+                            formatUsageDuration(usageTotal(usageDays, today, 1)),
+                        ),
+                        body = stringResource(
+                            R.string.usage_home_body,
+                            formatUsageDuration(usageAverage(usageDays, today, 7)),
+                        ),
+                        onClick = onOpenUsage,
+                    )
+                }
                 item(key = "guides-title") {
                     Text(
                         text = stringResource(R.string.home_guides_title),
@@ -76,16 +99,19 @@ fun HomeScreen(
                         modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp),
                     )
                 }
-                items(guideCatalog, key = { it.id }) { guide ->
-                    GuideCard(guide = guide, onClick = { onOpenGuide(guide.id) })
-                }
-                item(key = "videos") {
-                    HomeEntryCard(
-                        icon = Icons.Outlined.PlayCircle,
-                        title = stringResource(R.string.home_videos_title),
-                        body = stringResource(R.string.home_videos_body),
-                        onClick = onOpenVideos,
-                    )
+                item(key = "guides") {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        guideCatalog.forEach { guide ->
+                            GuideCard(
+                                guide = guide,
+                                onClick = { onOpenGuide(guide.id) },
+                                modifier = Modifier.weight(1f).fillMaxHeight(),
+                            )
+                        }
+                    }
                 }
             }
             SearchTopVeil(
@@ -159,43 +185,17 @@ private fun HomeIntro() {
 }
 
 @Composable
-private fun GuideCard(guide: Guide, onClick: () -> Unit) {
-    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
+private fun GuideCard(guide: Guide, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Card(onClick = onClick, modifier = modifier) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             GuideIcon(icon = guide.icon)
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Text(
-                    text = stringResource(guide.categoryRes),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Text(
-                    text = stringResource(guide.titleRes),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    text = stringResource(guide.summaryRes),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text = stringResource(R.string.guide_read_time),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Icon(
-                imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            Text(
+                text = stringResource(guide.categoryRes),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
     }
@@ -208,7 +208,7 @@ private fun HomeEntryCard(
     body: String,
     onClick: () -> Unit,
 ) {
-    Card(onClick = onClick, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.padding(16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),

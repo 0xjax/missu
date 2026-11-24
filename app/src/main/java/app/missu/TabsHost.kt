@@ -84,6 +84,7 @@ import app.missu.data.store.ListQueryStore
 import app.missu.data.store.ListSortStore
 import app.missu.data.store.LiteratureStore
 import app.missu.data.store.SearchHistoryStore
+import app.missu.data.store.UsageStatsStore
 import app.missu.ui.components.ContentLibraryButton
 import app.missu.ui.components.LocalFloatingNavigationBarInset
 import app.missu.ui.components.LocalTabAnimatedVisibilityScope
@@ -147,6 +148,7 @@ internal fun TabsHost(
     listSortStore: ListSortStore,
     listQueryStore: ListQueryStore,
     literatureStore: LiteratureStore,
+    usageStats: UsageStatsStore,
     onOpenDetail: (String, String?, String) -> Unit,
     onOpenList: (String, String) -> Unit,
     onOpenComic: (app.missu.data.comic.ComicSource, String) -> Unit,
@@ -198,10 +200,12 @@ internal fun TabsHost(
                 "home" -> {
                     ProvideHeroVisibility(navScope, namespace = "home") {
                         PageSurface(card = false) {
+                            val usageDays by usageStats.days.collectAsStateWithLifecycle()
                             HomeScreen(
+                                usageDays = usageDays,
                                 scrollToTopSignal = tabReselectVersion,
                                 onOpenGuide = { navController.navigate("guide/$it") },
-                                onOpenVideos = { onTabChange("videos") },
+                                onOpenUsage = { navController.navigate("usage") },
                                 onOpenSettings = { navController.navigate("settings") },
                             )
                         }

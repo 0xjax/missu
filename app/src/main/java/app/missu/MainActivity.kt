@@ -69,6 +69,7 @@ import app.missu.data.store.ProfileStore
 import app.missu.data.store.SearchHistoryStore
 import app.missu.data.store.SettingsStore
 import app.missu.data.store.ThemeMode
+import app.missu.data.store.UsageCategory
 import app.missu.data.store.contentLanguage
 import app.missu.data.store.uiLocale
 import app.missu.ui.account.AuthViewModel
@@ -88,6 +89,7 @@ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.compose.setSingletonImageLoaderFactory
 import coil3.request.crossfade
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -169,14 +171,31 @@ private fun MissuRoot() {
     }
 
     val appContext = context.applicationContext
-    DisposableEffect(appContext) {
+    DisposableEffect(appContext, dependencies.usageStats) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) {
-                LauncherIcons.apply(appContext, settings.desiredIconSource())
+            when (event) {
+                Lifecycle.Event.ON_START -> dependencies.usageStats.startSession()
+                Lifecycle.Event.ON_STOP -> {
+                    dependencies.usageStats.endSession()
+                    LauncherIcons.apply(appContext, settings.desiredIconSource())
+                }
+                else -> Unit
             }
         }
         ProcessLifecycleOwner.get().lifecycle.addObserver(observer)
-        onDispose { ProcessLifecycleOwner.get().lifecycle.removeObserver(observer) }
+        if (ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+            dependencies.usageStats.startSession()
+        }
+        onDispose {
+            dependencies.usageStats.endSession()
+            ProcessLifecycleOwner.get().lifecycle.removeObserver(observer)
+        }
+    }
+    LaunchedEffect(dependencies.usageStats) {
+        while (true) {
+            delay(60_000L)
+            dependencies.usageStats.checkpoint()
+        }
     }
 
     MissuTheme(darkTheme = darkTheme, colorSource = colorSource, pureBlack = pureBlack) {
@@ -306,6 +325,10 @@ private fun MissuApp(
     val listSortStore = remember { ListSortStore(context.applicationContext) }
     val literatureStore = remember { LiteratureStore(context.applicationContext) }
     val backStackEntry = navController.currentBackStackEntryAsState()
+    val currentRoute = backStackEntry.value?.destination?.route
+    LaunchedEffect(currentRoute, tabRoute, dependencies.usageStats) {
+        dependencies.usageStats.setCategory(usageCategory(currentRoute, tabRoute))
+    }
     val tabRouteState = remember { derivedStateOf { tabRoute } }
     val settingsState = AppSettingsState(
         appLanguage = appLanguage,
@@ -373,6 +396,7 @@ private fun MissuApp(
                     listSortStore = listSortStore,
                     listQueryStore = listQueryStore,
                     literatureStore = literatureStore,
+                    usageStats = dependencies.usageStats,
                     onOpenDetail = ::openDetail,
                     onOpenList = ::openList,
                     onOpenComic = ::openComic,
@@ -398,6 +422,7 @@ private fun MissuApp(
                 listSortStore = listSortStore,
                 listQueryStore = listQueryStore,
                 literatureStore = literatureStore,
+                usageStats = dependencies.usageStats,
                 auth = auth,
                 onGoBack = ::goBack,
                 onOpenDetail = ::openDetail,
@@ -406,4 +431,19 @@ private fun MissuApp(
             )
         }
     }
+}
+
+private fun usageCategory(route: String?, tabRoute: String): UsageCategory = when {
+    route.isNullOrEmpty() || route == TABS_ROUTE -> when (tabRoute) {
+        "literature" -> UsageCategory.LITERATURE
+        "videos" -> UsageCategory.VIDEOS
+        "comics" -> UsageCategory.COMICS
+        else -> UsageCategory.OTHER
+    }
+    route.startsWith("literature") -> UsageCategory.LITERATURE
+    route.startsWith("comic") -> UsageCategory.COMICS
+    route.startsWith("video") || route == "login" || route.startsWith("list") ||
+        route.startsWith("playlist/") || route.startsWith("search/") ||
+        route.startsWith("detail/") -> UsageCategory.VIDEOS
+    else -> UsageCategory.OTHER
 }
