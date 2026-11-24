@@ -119,7 +119,7 @@ internal fun <T : Any> ToolbarRadioGroup(
             val checked = option == selected
             val containerColor by animateColorAsState(
                 targetValue = if (checked) {
-                    MaterialTheme.colorScheme.primaryContainer
+                    MaterialTheme.colorScheme.secondaryContainer
                 } else {
                     MaterialTheme.colorScheme.surfaceContainerHigh
                 },
@@ -128,7 +128,7 @@ internal fun <T : Any> ToolbarRadioGroup(
             )
             val contentColor by animateColorAsState(
                 targetValue = if (checked) {
-                    MaterialTheme.colorScheme.onPrimaryContainer
+                    MaterialTheme.colorScheme.onSecondaryContainer
                 } else {
                     MaterialTheme.colorScheme.onSurfaceVariant
                 },
