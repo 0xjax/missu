@@ -84,8 +84,58 @@ if ($Task -in $deviceTasks -and -not $env:ANDROID_SERIAL) {
 $deviceArgs = @()
 if ($env:ANDROID_SERIAL) { $deviceArgs += "--device=$env:ANDROID_SERIAL" }
 
+function Start-InstallDiagnostics {
+    $dir = Join-Path $root '.local\install-diagnostics'
+    New-Item -ItemType Directory -Force $dir | Out-Null
+    $path = Join-Path $dir ("{0:yyyyMMdd-HHmmss}-{1}.log" -f (Get-Date), $Task)
+    Set-Content -LiteralPath $path -Value @(
+        "task=$Task"
+        "serial=$env:ANDROID_SERIAL"
+        "started=$((Get-Date).ToString('o'))"
+    ) -Encoding utf8
+    return $path
+}
+
+function Write-InstallDiagnostics([string]$Path, [string]$Phase) {
+    Add-Content -LiteralPath $Path -Value "`n=== $Phase $((Get-Date).ToString('o')) ==="
+    $focus = & $adb -s $env:ANDROID_SERIAL shell dumpsys window |
+        Select-String 'mCurrentFocus'
+    $package = & $adb -s $env:ANDROID_SERIAL shell dumpsys package app.missu |
+        Select-String 'lastUpdateTime|installerPackageName'
+    $sessions = & $adb -s $env:ANDROID_SERIAL shell dumpsys package |
+        Select-String 'Session \d+:|mOriginalInstallerUid|installInitiatingPackageName|installFlags=|packageSource=|mPermissionsManuallyAccepted=|mFinalMessage=|mAppPackageName=app.missu' |
+        Select-Object -Last 48
+    Add-Content -LiteralPath $Path -Value @($focus, $package, $sessions)
+}
+
+function Start-InstallDiagnosticsWatch([string]$Path) {
+    return Start-Job -ScriptBlock {
+        param($Adb, $Serial, $LogPath)
+        while ($true) {
+            try {
+                $focus = & $Adb -s $Serial shell dumpsys window | Select-String 'mCurrentFocus'
+                $sessions = & $Adb -s $Serial shell dumpsys package |
+                    Select-String 'Session \d+:|mPermissionsManuallyAccepted=|mFinalMessage=|mAppPackageName=app.missu' |
+                    Select-Object -Last 24
+                Add-Content -LiteralPath $LogPath -Value @(
+                    "`n--- POLL $((Get-Date).ToString('o')) ---"
+                    $focus
+                    $sessions
+                )
+            } catch {
+                Add-Content -LiteralPath $LogPath -Value "pollError=$($_.Exception.Message)"
+            }
+            Start-Sleep -Seconds 1
+        }
+    } -ArgumentList $adb, $env:ANDROID_SERIAL, $Path
+}
+
+$installDiagnostics = if ($Task -in @('install', 'run')) { Start-InstallDiagnostics } else { $null }
+
 Push-Location $root
 try {
+    if ($installDiagnostics) { Write-InstallDiagnostics $installDiagnostics 'BEFORE' }
+    $installDiagnosticsWatch = if ($installDiagnostics) { Start-InstallDiagnosticsWatch $installDiagnostics } else { $null }
     if ($Task -in @('trace', 'heapdump')) {
         & $android --no-metrics build :app@release -- @gradleArgs
         if ($LASTEXITCODE -ne 0) { throw "Android CLI release 构建退出码 $LASTEXITCODE" }
@@ -191,5 +241,13 @@ try {
         "SHA256: $((Get-FileHash $archive -Algorithm SHA256).Hash)"
     }
 } finally {
+    if ($installDiagnosticsWatch) {
+        Stop-Job $installDiagnosticsWatch -ErrorAction SilentlyContinue
+        Remove-Job $installDiagnosticsWatch -Force -ErrorAction SilentlyContinue
+    }
+    if ($installDiagnostics) {
+        Write-InstallDiagnostics $installDiagnostics 'AFTER'
+        "Install diagnostics: $installDiagnostics"
+    }
     Pop-Location
 }

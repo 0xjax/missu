@@ -143,7 +143,8 @@ cd D:\missu
 ```
 
 - 设备命令默认使用 `medium_phone` 模拟器；只有设 `ANDROID_SERIAL=<serial>` 才指定真机或其他设备。装机启动后默认交由用户验收，确认后再提交，不自动追加点击与截图。
-- 自动化采集输出时设 `MISSU_NO_DAEMON=1`；CLI 将详细构建日志写入系统临时目录。
+- ADB 安装是否等待确认由系统与厂商策略决定，Delta Install 不保证静默安装。本机 OriginOS 6 的 Missu shell 会话为 `installerPackageName=null`、`packageSource=1`，会进入 `PackageInterceptActivity`；系统偶尔会自动接受并结束该页，形成无感安装，但随后连续重装仍可能逐次等待确认。2026-11-24 的一次无感安装也有 `ActivityTaskManager: Displayed ... PackageInterceptActivity` 记录，所以并非完全未启动确认页。`mPermissionsManuallyAccepted=true` 既可由用户确认也可由系统自动接受，不能作为手动点击的证据。若页面停留等待确认，黑屏未处理或用户返回可能以 `INSTALL_FAILED_ABORTED: User rejected permissions` 结束；以实际会话结果和 `dumpsys package app.missu` 的 `lastUpdateTime` 验收，不以 `Sent ... MB` 或是否看见页面代替成功结果。应用商店等系统认可的安装来源可以自动完成，休眠断网或无线 ADB 失效也可能失败。
+- 自动化采集输出时设 `MISSU_NO_DAEMON=1`；CLI 将详细构建日志写入系统临时目录。`install` / `run` 另在 `.local/install-diagnostics/` 记录安装前后状态，并每秒轮询前台 Activity、安装会话确认状态与最终结果，便于对比系统自动接受和等待用户确认两种路径。
 - `scripts/build.ps1` 固定 `JAVA_HOME` 与 `ANDROID_HOME`，其余用户目录保持默认。Android CLI 与 `ANDROID_USER_HOME` 不得放到 Low IL 工作区。
 - `trace` / `heapdump` 自动安装 profileable release，避免用 debuggable 构建的 ART 开销评估性能。Compose BOM 同时提供 `runtime-tracing`；`startup.zip` 包含系统与 Compose trace，`app.hprof` 为堆快照。
 
