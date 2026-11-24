@@ -44,6 +44,7 @@ import app.missu.data.store.SettingsStore
 import app.missu.data.store.ThemeMode
 import app.missu.data.store.UsageStatsStore
 import app.missu.ui.account.AccountScreen
+import app.missu.ui.account.AuthUiState
 import app.missu.ui.account.AuthViewModel
 import app.missu.ui.account.LoginScreen
 import app.missu.ui.common.text
@@ -96,6 +97,7 @@ internal data class AppSettingsState(
     val followThemeIcon: Boolean,
     val pureBlack: Boolean,
     val singleColumnVideos: Boolean,
+    val comicColumns: Int,
 )
 
 internal data class AppSettingsActions(
@@ -105,6 +107,7 @@ internal data class AppSettingsActions(
     val onFollowThemeIconChange: (Boolean) -> Unit,
     val onPureBlackChange: (Boolean) -> Unit,
     val onSingleColumnVideosChange: (Boolean) -> Unit,
+    val onComicColumnsChange: (Int) -> Unit,
 )
 
 internal fun NavGraphBuilder.secondaryDestinations(
@@ -192,19 +195,27 @@ internal fun NavGraphBuilder.secondaryDestinations(
                 LiteratureViewModel(literatureRepository, literatureStore, LiteratureFilter.FAVORITES)
             },
         )
+        val packViewModel: LiteraturePackViewModel = viewModel(
+            factory = missuViewModelFactory { LiteraturePackViewModel(literaturePackManager) },
+        )
         val entries by literatureHistoryStore.entries.collectAsStateWithLifecycle()
         val favoritesState by favoritesViewModel.state.collectAsStateWithLifecycle()
         val favorites by literatureStore.favorites.collectAsStateWithLifecycle()
+        val packState by packViewModel.state.collectAsStateWithLifecycle()
         PageSurface {
             LiteratureLibraryScreen(
                 entries = entries,
                 favoritesState = favoritesState,
                 favorites = favorites,
+                literaturePackState = packState,
                 onToggleFavorite = literatureStore::toggleFavorite,
                 onLoadMoreFavorites = favoritesViewModel::loadMore,
                 onRetryFavorites = favoritesViewModel::refresh,
                 onOpen = { navController.navigate("literature/$it") },
                 onClearHistory = literatureHistoryStore::clear,
+                onLiteraturePackDownload = packViewModel::download,
+                onLiteraturePackCancel = packViewModel::cancelDownload,
+                onLiteraturePackRemove = packViewModel::useCore,
                 onBack = onGoBack,
             )
         }
@@ -234,6 +245,7 @@ internal fun NavGraphBuilder.secondaryDestinations(
             ComicLibraryScreen(
                 entries = entries,
                 favorites = favorites,
+                comicColumns = settingsState.comicColumns,
                 onOpen = { entry ->
                     navController.navigate(
                         "comic/reader?s=${Uri.encode(entry.source.id)}&m=${Uri.encode(entry.mangaId)}" +
@@ -246,6 +258,7 @@ internal fun NavGraphBuilder.secondaryDestinations(
                     )
                 },
                 onClear = comicHistoryStore::clear,
+                onComicColumnsChange = settingsActions.onComicColumnsChange,
                 onBack = onGoBack,
             )
         }
@@ -354,10 +367,6 @@ internal fun NavGraphBuilder.secondaryDestinations(
 
     composable("settings") {
         val currentSettings = settingsState
-        val packViewModel: LiteraturePackViewModel = viewModel(
-            factory = missuViewModelFactory { LiteraturePackViewModel(literaturePackManager) },
-        )
-        val packState by packViewModel.state.collectAsStateWithLifecycle()
         PageSurface {
             SettingsScreen(
                 appLanguage = currentSettings.appLanguage,
@@ -365,17 +374,11 @@ internal fun NavGraphBuilder.secondaryDestinations(
                 colorSource = currentSettings.colorSource,
                 followThemeIcon = currentSettings.followThemeIcon,
                 pureBlack = currentSettings.pureBlack,
-                singleColumnVideos = currentSettings.singleColumnVideos,
-                literaturePackState = packState,
                 onAppLanguageChange = settingsActions.onAppLanguageChange,
                 onThemeModeChange = settingsActions.onThemeModeChange,
                 onColorSourceChange = settingsActions.onColorSourceChange,
                 onFollowThemeIconChange = settingsActions.onFollowThemeIconChange,
                 onPureBlackChange = settingsActions.onPureBlackChange,
-                onSingleColumnVideosChange = settingsActions.onSingleColumnVideosChange,
-                onLiteraturePackDownload = packViewModel::download,
-                onLiteraturePackCancel = packViewModel::cancelDownload,
-                onLiteraturePackRemove = packViewModel::useCore,
                 onBack = onGoBack,
             )
         }
@@ -454,6 +457,8 @@ internal fun NavGraphBuilder.secondaryDestinations(
         val playlistsState by playlistsViewModel.state.collectAsStateWithLifecycle()
         val createMessage by playlistsViewModel.createMessage.collectAsStateWithLifecycle()
         val creating by playlistsViewModel.creating.collectAsStateWithLifecycle()
+        val authState by auth.state.collectAsStateWithLifecycle()
+        var autoplay by remember { mutableStateOf(settings.autoplay()) }
         LaunchedEffect(Unit) { historyViewModel.load() }
 
         ProvideHeroVisibility(this, namespace = "video-library") {
@@ -465,6 +470,9 @@ internal fun NavGraphBuilder.secondaryDestinations(
                     playlistsState = playlistsState,
                     createMessage = createMessage,
                     creating = creating,
+                    singleColumnVideos = settingsState.singleColumnVideos,
+                    autoplay = autoplay,
+                    signedIn = authState is AuthUiState.LoggedIn,
                     onOpen = { id, thumbnail -> onOpenDetail(id, thumbnail, "") },
                     onOpenList = { onOpenListQuery(it.query, it.title) },
                     onToggleListPin = historyViewModel::toggleListPin,
@@ -484,6 +492,11 @@ internal fun NavGraphBuilder.secondaryDestinations(
                         }
                     },
                     onOpenAccount = { navController.navigate("video-account") },
+                    onSingleColumnVideosChange = settingsActions.onSingleColumnVideosChange,
+                    onAutoplayChange = { enabled ->
+                        settings.setAutoplay(enabled)
+                        autoplay = enabled
+                    },
                     onBack = onGoBack,
                 )
             }

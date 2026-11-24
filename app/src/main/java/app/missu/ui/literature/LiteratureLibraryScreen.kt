@@ -27,17 +27,24 @@ import app.missu.data.literature.LiteraryWorkSummary
 import app.missu.data.store.LiteratureHistoryEntry
 import app.missu.ui.components.EmptyHint
 import app.missu.ui.components.PageTopBar
+import app.missu.ui.settings.ContentSettingsButton
+import app.missu.ui.settings.LiteraturePackSection
+import app.missu.ui.settings.LiteraturePackUiState
 
 @Composable
 fun LiteratureLibraryScreen(
     entries: List<LiteratureHistoryEntry>,
     favoritesState: LiteratureUiState,
     favorites: Set<String>,
+    literaturePackState: LiteraturePackUiState,
     onToggleFavorite: (String) -> Unit,
     onLoadMoreFavorites: () -> Unit,
     onRetryFavorites: () -> Unit,
     onOpen: (String) -> Unit,
     onClearHistory: () -> Unit,
+    onLiteraturePackDownload: () -> Unit,
+    onLiteraturePackCancel: () -> Unit,
+    onLiteraturePackRemove: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -50,6 +57,16 @@ fun LiteratureLibraryScreen(
             actions = {
                 if (selectedTab == 1 && entries.isNotEmpty()) {
                     TextButton(onClick = onClearHistory) { Text(stringResource(R.string.common_clear)) }
+                }
+                ContentSettingsButton(
+                    contentDescription = stringResource(R.string.settings_literature),
+                ) { _ ->
+                    LiteraturePackSection(
+                        state = literaturePackState,
+                        onDownload = onLiteraturePackDownload,
+                        onCancel = onLiteraturePackCancel,
+                        onRemove = onLiteraturePackRemove,
+                    )
                 }
             },
         )

@@ -345,6 +345,16 @@
     <string name="settings_video_list">Video list</string>
     <string name="settings_video_list_single">Single column</string>
     <string name="settings_video_list_double">Two columns</string>
+    <string name="settings_video">Video settings</string>
+    <string name="settings_comic">Comic settings</string>
+    <string name="settings_literature">Literature settings</string>
+    <string name="settings_account_login">Account and sign-in</string>
+    <string name="settings_video_columns">List columns</string>
+    <string name="settings_playback">Playback</string>
+    <string name="settings_comic_list">Comic list</string>
+    <string name="settings_comic_columns">Card columns</string>
+    <string name="settings_comic_columns_double">Two columns</string>
+    <string name="settings_comic_columns_triple">Three columns</string>
     <string name="settings_literature_pack">Literature library</string>
     <string name="settings_literature_pack_core">Core library: %1$d works. Full library: %2$d works, about %3$d MiB.</string>
     <string name="settings_literature_pack_full">Full library enabled · %1$d works. Favorites and history are kept when switching.</string>

@@ -338,6 +338,16 @@
     <string name="settings_video_list">视频列表</string>
     <string name="settings_video_list_single">单列</string>
     <string name="settings_video_list_double">双列</string>
+    <string name="settings_video">视频设置</string>
+    <string name="settings_comic">漫画设置</string>
+    <string name="settings_literature">诗文设置</string>
+    <string name="settings_account_login">账号与登录</string>
+    <string name="settings_video_columns">列表列数</string>
+    <string name="settings_playback">播放</string>
+    <string name="settings_comic_list">漫画列表</string>
+    <string name="settings_comic_columns">卡片列数</string>
+    <string name="settings_comic_columns_double">两列</string>
+    <string name="settings_comic_columns_triple">三列</string>
     <string name="settings_literature_pack">诗文文库</string>
     <string name="settings_literature_pack_core">当前核心文库 %1$d 篇；完整文库 %2$d 篇，下载约 %3$d MiB。</string>
     <string name="settings_literature_pack_full">完整文库已启用 · %1$d 篇。切换文库不影响收藏与阅读记录。</string>

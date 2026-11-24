@@ -20,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,6 +42,9 @@ import app.missu.ui.components.LocalFloatingNavigationBarInset
 import app.missu.ui.components.PageStateTransition
 import coil3.compose.AsyncImage
 import okhttp3.HttpUrl.Companion.toHttpUrl
+
+/** 全局漫画卡片列数，浏览与内容库共用。 */
+val LocalComicGridColumns = compositionLocalOf { 3 }
 
 @Composable
 fun ComicCover(
@@ -100,7 +104,7 @@ fun ComicListBody(
                 LazyVerticalGrid(
                     state = gridState,
                     modifier = Modifier.fillMaxSize(),
-                    columns = GridCells.Fixed(3),
+                    columns = GridCells.Fixed(LocalComicGridColumns.current),
                     contentPadding = PaddingValues(
                         start = 16.dp,
                         end = 16.dp,

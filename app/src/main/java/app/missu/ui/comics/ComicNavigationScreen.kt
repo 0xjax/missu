@@ -258,6 +258,7 @@ private fun ComicAggregateResults(
     onViewAll: (ComicSource) -> Unit,
     onRetry: (ComicSource) -> Unit,
 ) {
+    val columns = LocalComicGridColumns.current
     val gridState = rememberLazyGridState()
     LaunchedEffect(scrollToTopSignal) {
         if (scrollToTopSignal > 0) gridState.animateScrollToItem(0)
@@ -265,7 +266,7 @@ private fun ComicAggregateResults(
     LazyVerticalGrid(
         state = gridState,
         modifier = Modifier.fillMaxSize().searchGlassSource(),
-        columns = GridCells.Fixed(3),
+        columns = GridCells.Fixed(columns),
         contentPadding = PaddingValues(
             start = 16.dp,
             end = 16.dp,
@@ -321,7 +322,7 @@ private fun ComicAggregateResults(
                     }
                 }
                 is ComicListUiState.Content -> items(
-                    items = state.items.take(3),
+                    items = state.items.take(columns),
                     key = { "${source.id}:${it.id}" },
                 ) { comic ->
                     ComicGridCard(comic, onClick = { onOpen(source, comic.id) })

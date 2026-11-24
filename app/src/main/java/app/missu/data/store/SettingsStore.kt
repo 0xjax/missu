@@ -119,6 +119,13 @@ class SettingsStore(context: Context) {
         prefs.edit { putBoolean(KEY_SINGLE_COLUMN_VIDEOS, enabled) }
     }
 
+    /** 漫画卡片列数，默认三列。 */
+    fun comicColumns(): Int = prefs.getInt(KEY_COMIC_COLUMNS, 3).coerceIn(2, 3)
+
+    fun setComicColumns(value: Int) {
+        prefs.edit { putInt(KEY_COMIC_COLUMNS, value.coerceIn(2, 3)) }
+    }
+
     /**
      * 播放倍速（1f = 原速）。全局一个值，对所有影片生效。
      *
@@ -166,6 +173,7 @@ class SettingsStore(context: Context) {
         const val KEY_FOLLOW_THEME_ICON = "followThemeIcon"
         const val KEY_PURE_BLACK = "pureBlack"
         const val KEY_SINGLE_COLUMN_VIDEOS = "singleColumnVideos"
+        const val KEY_COMIC_COLUMNS = "comicColumns"
         const val KEY_PLAYBACK_SPEED = "playbackSpeed"
         const val KEY_AUTOPLAY = "autoplay"
         const val KEY_FILL_SCREEN = "fillScreen"

@@ -77,6 +77,7 @@ import app.missu.ui.account.AuthViewModel
 import app.missu.ui.challenge.ChallengeDiagnostics
 import app.missu.ui.challenge.ChallengeOverlayHost
 import app.missu.ui.challenge.ChallengeState
+import app.missu.ui.comics.LocalComicGridColumns
 import app.missu.ui.components.LocalSharedTransitionScope
 import app.missu.ui.components.LocalVideoListColumns
 import app.missu.ui.home.HomeIntroContent
@@ -158,6 +159,7 @@ private fun MissuRoot() {
     var followThemeIcon by remember { mutableStateOf(settings.followThemeIcon()) }
     var pureBlack by remember { mutableStateOf(settings.pureBlack()) }
     var singleColumnVideos by remember { mutableStateOf(settings.singleColumnVideos()) }
+    var comicColumns by remember { mutableStateOf(settings.comicColumns()) }
     val darkTheme = when (themeMode) {
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
         ThemeMode.LIGHT -> false
@@ -214,6 +216,7 @@ private fun MissuRoot() {
                     LocalVideoPreview provides previewState,
                     LocalAppDependencies provides dependencies,
                     LocalVideoListColumns provides if (singleColumnVideos) 1 else 2,
+                    LocalComicGridColumns provides comicColumns,
                 ) {
                     MissuApp(
                         settings = settings,
@@ -224,6 +227,7 @@ private fun MissuRoot() {
                         followThemeIcon = followThemeIcon,
                         pureBlack = pureBlack,
                         singleColumnVideos = singleColumnVideos,
+                        comicColumns = comicColumns,
                         onAppLanguageChange = { value ->
                             settings.setAppLanguage(value)
                             appLanguage = value
@@ -248,6 +252,10 @@ private fun MissuRoot() {
                             settings.setSingleColumnVideos(enabled)
                             singleColumnVideos = enabled
                         },
+                        onComicColumnsChange = { value ->
+                            settings.setComicColumns(value)
+                            comicColumns = value
+                        },
                     )
                     VideoPreviewHost(state = previewState)
                     ChallengeOverlayHost(state = challengeState)
@@ -266,11 +274,13 @@ private fun MissuApp(
     followThemeIcon: Boolean,
     pureBlack: Boolean,
     singleColumnVideos: Boolean,
+    comicColumns: Int,
     onThemeModeChange: (ThemeMode) -> Unit,
     onColorSourceChange: (ColorSource) -> Unit,
     onFollowThemeIconChange: (Boolean) -> Unit,
     onPureBlackChange: (Boolean) -> Unit,
     onSingleColumnVideosChange: (Boolean) -> Unit,
+    onComicColumnsChange: (Int) -> Unit,
     appLanguage: AppLanguage,
     onAppLanguageChange: (AppLanguage) -> Unit,
 ) {
@@ -356,6 +366,7 @@ private fun MissuApp(
         followThemeIcon = followThemeIcon,
         pureBlack = pureBlack,
         singleColumnVideos = singleColumnVideos,
+        comicColumns = comicColumns,
     )
     val settingsActions = AppSettingsActions(
         onAppLanguageChange = onAppLanguageChange,
@@ -364,6 +375,7 @@ private fun MissuApp(
         onFollowThemeIconChange = onFollowThemeIconChange,
         onPureBlackChange = onPureBlackChange,
         onSingleColumnVideosChange = onSingleColumnVideosChange,
+        onComicColumnsChange = onComicColumnsChange,
     )
 
     Scaffold(

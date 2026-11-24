@@ -342,6 +342,16 @@
     <string name="settings_video_list">影片列表</string>
     <string name="settings_video_list_single">單欄</string>
     <string name="settings_video_list_double">雙欄</string>
+    <string name="settings_video">影片設定</string>
+    <string name="settings_comic">漫畫設定</string>
+    <string name="settings_literature">詩文設定</string>
+    <string name="settings_account_login">帳號與登入</string>
+    <string name="settings_video_columns">列表欄數</string>
+    <string name="settings_playback">播放</string>
+    <string name="settings_comic_list">漫畫列表</string>
+    <string name="settings_comic_columns">卡片欄數</string>
+    <string name="settings_comic_columns_double">兩欄</string>
+    <string name="settings_comic_columns_triple">三欄</string>
     <string name="settings_literature_pack">詩文文庫</string>
     <string name="settings_literature_pack_core">目前核心文庫 %1$d 篇；完整文庫 %2$d 篇，下載約 %3$d MiB。</string>
     <string name="settings_literature_pack_full">完整文庫已啟用 · %1$d 篇。切換文庫不影響收藏與閱讀記錄。</string>

@@ -338,6 +338,16 @@
     <string name="settings_video_list">動画リスト</string>
     <string name="settings_video_list_single">1列</string>
     <string name="settings_video_list_double">2列</string>
+    <string name="settings_video">動画設定</string>
+    <string name="settings_comic">漫画設定</string>
+    <string name="settings_literature">詩文設定</string>
+    <string name="settings_account_login">アカウントとログイン</string>
+    <string name="settings_video_columns">リストの列数</string>
+    <string name="settings_playback">再生</string>
+    <string name="settings_comic_list">漫画リスト</string>
+    <string name="settings_comic_columns">カードの列数</string>
+    <string name="settings_comic_columns_double">2列</string>
+    <string name="settings_comic_columns_triple">3列</string>
     <string name="settings_literature_pack">詩文ライブラリ</string>
     <string name="settings_literature_pack_core">コアライブラリ：%1$d 作品。完全版：%2$d 作品、約 %3$d MiB。</string>
     <string name="settings_literature_pack_full">完全版を使用中 · %1$d 作品。切り替えてもお気に入りと閲覧履歴は保持されます。</string>

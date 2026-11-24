@@ -18,13 +18,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -50,7 +47,6 @@ import app.missu.R
 import app.missu.data.store.AppLanguage
 import app.missu.data.store.ColorSource
 import app.missu.data.store.ThemeMode
-import app.missu.ui.common.text
 import app.missu.ui.components.GroupDivider
 import app.missu.ui.components.GroupSurface
 import app.missu.ui.components.PageTopBar
@@ -58,7 +54,7 @@ import app.missu.ui.theme.resolveColorScheme
 import app.missu.ui.theme.staticColorScheme
 
 /**
- * 设置页：外观、视频列表、诗文文库与内容语言。
+ * 全局设置页：外观与内容语言。内容专属设置位于对应内容库。
  *
  * NOTE: 选中表达一律用 M3E 的列表项 + 单选控件：整行 `selectable(role = RadioButton)`，控件本身
  * 不再接收点击（onClick = null），否则读屏会看到两个可点节点。
@@ -71,17 +67,11 @@ fun SettingsScreen(
     colorSource: ColorSource,
     followThemeIcon: Boolean,
     pureBlack: Boolean,
-    singleColumnVideos: Boolean,
-    literaturePackState: LiteraturePackUiState,
     onAppLanguageChange: (AppLanguage) -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
     onColorSourceChange: (ColorSource) -> Unit,
     onFollowThemeIconChange: (Boolean) -> Unit,
     onPureBlackChange: (Boolean) -> Unit,
-    onSingleColumnVideosChange: (Boolean) -> Unit,
-    onLiteraturePackDownload: () -> Unit,
-    onLiteraturePackCancel: () -> Unit,
-    onLiteraturePackRemove: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -180,40 +170,6 @@ fun SettingsScreen(
                 }
             }
 
-            SectionLabel(stringResource(R.string.settings_video_list))
-
-            val columnOptions = listOf(
-                true to stringResource(R.string.settings_video_list_single),
-                false to stringResource(R.string.settings_video_list_double),
-            )
-            GroupSurface(
-                modifier = Modifier.padding(horizontal = 16.dp).selectableGroup(),
-            ) {
-                columnOptions.forEachIndexed { index, (single, label) ->
-                    if (index > 0) GroupDivider()
-                    ListItem(
-                        modifier = Modifier.selectable(
-                            selected = singleColumnVideos == single,
-                            role = Role.RadioButton,
-                            onClick = { onSingleColumnVideosChange(single) },
-                        ),
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        trailingContent = {
-                            RadioButton(selected = singleColumnVideos == single, onClick = null)
-                        },
-                    ) {
-                        Text(text = label, style = MaterialTheme.typography.bodyLarge)
-                    }
-                }
-            }
-
-            LiteraturePackSection(
-                state = literaturePackState,
-                onDownload = onLiteraturePackDownload,
-                onCancel = onLiteraturePackCancel,
-                onRemove = onLiteraturePackRemove,
-            )
-
             SectionLabel(stringResource(R.string.settings_language))
 
             // NOTE: 一个设置项同时决定**界面语言与站点内容语言**。不拆成两项：详情页的信息行标签
@@ -247,69 +203,6 @@ fun SettingsScreen(
                 modifier = Modifier.padding(horizontal = 24.dp),
             )
             Spacer(Modifier.height(32.dp))
-        }
-    }
-}
-
-@Composable
-private fun LiteraturePackSection(
-    state: LiteraturePackUiState,
-    onDownload: () -> Unit,
-    onCancel: () -> Unit,
-    onRemove: () -> Unit,
-) {
-    SectionLabel(stringResource(R.string.settings_literature_pack))
-    GroupSurface(modifier = Modifier.padding(horizontal = 16.dp)) {
-        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-            val progress = if (state.fullBytes > 0) {
-                (state.downloadedBytes.toFloat() / state.fullBytes).coerceIn(0f, 1f)
-            } else {
-                0f
-            }
-            val percent = (progress * 100).toInt()
-            val fullMiB = (state.fullBytes + 1024 * 1024 - 1) / (1024 * 1024)
-            val description = when {
-                state.downloading -> stringResource(R.string.settings_literature_pack_downloading, percent)
-                state.error != null -> stringResource(
-                    R.string.settings_literature_pack_error,
-                    state.workCount,
-                    state.error.text(),
-                )
-                state.fullActive -> stringResource(R.string.settings_literature_pack_full, state.workCount)
-                else -> stringResource(
-                    R.string.settings_literature_pack_core,
-                    state.workCount,
-                    state.fullWorkCount,
-                    fullMiB,
-                )
-            }
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (state.error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (state.downloading) {
-                Spacer(Modifier.height(12.dp))
-                LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
-            }
-            Spacer(Modifier.height(12.dp))
-            FilledTonalButton(
-                onClick = when {
-                    state.downloading -> onCancel
-                    state.fullActive -> onRemove
-                    else -> onDownload
-                },
-                modifier = Modifier.align(Alignment.End),
-            ) {
-                Text(
-                    text = when {
-                        state.downloading -> stringResource(R.string.settings_literature_pack_cancel_download)
-                        state.fullActive -> stringResource(R.string.settings_literature_pack_remove)
-                        state.error != null -> stringResource(R.string.settings_literature_pack_retry)
-                        else -> stringResource(R.string.settings_literature_pack_download)
-                    },
-                )
-            }
         }
     }
 }
@@ -420,14 +313,4 @@ private fun AppLanguage.label(): String = when (this) {
     AppLanguage.ZH_HANT -> "繁體中文"
     AppLanguage.EN -> "English"
     AppLanguage.JA -> "日本語"
-}
-
-@Composable
-private fun SectionLabel(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 24.dp, top = 16.dp, bottom = 8.dp),
-    )
 }
