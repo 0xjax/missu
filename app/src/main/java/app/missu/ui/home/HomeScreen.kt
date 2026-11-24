@@ -6,12 +6,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
@@ -39,12 +43,14 @@ import app.missu.data.article.Article
 import app.missu.data.store.UsageDay
 import app.missu.data.store.usageAverage
 import app.missu.data.store.usageTotal
+import app.missu.ui.components.LiquidGlassIsland
 import app.missu.ui.components.LocalFloatingNavigationBarInset
 import app.missu.ui.components.TooltipIconButton
 import app.missu.ui.components.LiquidToolbar
 import app.missu.ui.search.LocalSearchGlassState
 import app.missu.ui.search.SearchBarTopGap
 import app.missu.ui.search.SearchTopVeil
+import app.missu.ui.search.SearchToolbarChromeHeight
 import app.missu.ui.search.SearchTriggerHeight
 import app.missu.ui.usage.formatUsageDuration
 import dev.chrisbanes.haze.hazeSource
@@ -66,6 +72,7 @@ fun HomeScreen(
 ) {
     val listState = rememberLazyListState()
     val glassState = rememberHazeState()
+    val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     LaunchedEffect(scrollToTopSignal) {
         if (scrollToTopSignal > 0) listState.animateScrollToItem(0)
     }
@@ -77,7 +84,7 @@ fun HomeScreen(
                 contentPadding = PaddingValues(
                     start = 16.dp,
                     end = 16.dp,
-                    top = SearchTriggerHeight + SearchBarTopGap + 24.dp,
+                    top = statusTop + SearchToolbarChromeHeight + SearchBarTopGap + 24.dp,
                     bottom = LocalFloatingNavigationBarInset.current + 32.dp,
                 ),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -131,27 +138,25 @@ fun HomeScreen(
                 }
             }
             SearchTopVeil(
-                statusTop = 0.dp,
+                statusTop = statusTop,
                 veil = MaterialTheme.colorScheme.background.copy(alpha = 0.7f),
-                triggerHeight = SearchTriggerHeight,
+                triggerHeight = SearchToolbarChromeHeight,
             )
-            Box(Modifier.align(Alignment.TopCenter)) {
+            Box(Modifier.align(Alignment.TopCenter).padding(top = statusTop)) {
                 LiquidToolbar {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            text = stringResource(R.string.app_name),
-                            style = MaterialTheme.typography.titleLarge,
-                            modifier = Modifier.weight(1f).padding(start = 16.dp),
-                        )
-                        TooltipIconButton(
-                            icon = Icons.Outlined.Settings,
-                            contentDescription = stringResource(R.string.account_settings),
-                            onClick = onOpenSettings,
-                            modifier = Modifier.size(SearchTriggerHeight),
-                        )
+                        Spacer(Modifier.weight(1f))
+                        LiquidGlassIsland {
+                            TooltipIconButton(
+                                icon = Icons.Outlined.Settings,
+                                contentDescription = stringResource(R.string.account_settings),
+                                onClick = onOpenSettings,
+                                modifier = Modifier.size(SearchTriggerHeight),
+                            )
+                        }
                     }
                 }
             }
@@ -244,7 +249,7 @@ private fun ArticleCard(article: Article, onClick: () -> Unit, onShuffle: () -> 
                     icon = Icons.Outlined.Shuffle,
                     contentDescription = stringResource(R.string.article_shuffle),
                     onClick = onShuffle,
-                    modifier = Modifier.size(SearchTriggerHeight),
+                    modifier = Modifier.size(40.dp),
                 )
             }
             Text(text = article.title, style = MaterialTheme.typography.titleLarge)

@@ -42,6 +42,10 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoStories as FilledAutoStories
+import androidx.compose.material.icons.filled.Home as FilledHome
+import androidx.compose.material.icons.filled.MenuBook as FilledMenuBook
+import androidx.compose.material.icons.filled.VideoLibrary as FilledVideoLibrary
 import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.MenuBook
@@ -62,6 +66,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
@@ -73,7 +80,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import app.missu.data.api.MissavApi
 import app.missu.data.api.VideoListOptions
@@ -104,11 +110,11 @@ import app.missu.data.model.VideoListQuery
 import app.missu.ui.list.AutoLoadVideoList
 import app.missu.ui.list.VideoListUiState
 import app.missu.ui.list.VideoListViewModel
+import app.missu.ui.search.SearchBarTopGap
 import app.missu.ui.search.SearchBody
 import app.missu.ui.search.SearchHost
 import app.missu.ui.search.SearchUiState
 import app.missu.ui.search.SearchViewModel
-import app.missu.ui.theme.LocalDarkTheme
 import app.missu.ui.literature.LiteratureViewModel
 import app.missu.ui.literature.LiteratureNavigationScreen
 import dev.chrisbanes.haze.HazeInput
@@ -126,13 +132,15 @@ internal data class TopLevel(
     val route: String,
     @param:StringRes val labelRes: Int,
     val icon: ImageVector,
+    val selectedIcon: ImageVector,
 )
 
 internal val topLevels = listOf(
-    TopLevel("home", R.string.nav_home, Icons.Outlined.Home),
-    TopLevel("literature", R.string.nav_literature, Icons.Outlined.AutoStories),
-    TopLevel("videos", R.string.nav_videos, Icons.Outlined.VideoLibrary),
-    TopLevel("comics", R.string.nav_comics, Icons.Outlined.MenuBook),
+    TopLevel("home", R.string.nav_home, Icons.Outlined.Home, Icons.Filled.FilledHome),
+    TopLevel("literature", R.string.nav_literature, Icons.Outlined.AutoStories, Icons.Filled.FilledAutoStories),
+    TopLevel("videos", R.string.nav_videos, Icons.Outlined.VideoLibrary, Icons.Filled.FilledVideoLibrary),
+    // NOTE: 当前图标库的 MenuBook 两种字形路径相同，保留映射只为统一状态规则。
+    TopLevel("comics", R.string.nav_comics, Icons.Outlined.MenuBook, Icons.Filled.FilledMenuBook),
 )
 
 @Composable
@@ -140,9 +148,9 @@ internal fun TabsHost(
     homeIntro: HomeIntroContent,
     homeArticle: Article?,
     onShuffleArticle: () -> Unit,
-    entry: NavBackStackEntry,
     navScope: AnimatedContentScope,
-    backStackEntry: NavBackStackEntry?,
+    buttonReturn: Boolean,
+    returningFromDetail: Boolean,
     navController: NavHostController,
     tabRoute: String,
     onTabChange: (String) -> Unit,
@@ -177,14 +185,16 @@ internal fun TabsHost(
 
     val glassState = rememberHazeState()
     val navigationShape = RoundedCornerShape(32.dp)
+    val navigationHeight = 60.dp
     val navigationStyle = rememberLiquidGlassStyle(navigationShape)
-    val navigationInset = 68.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val navigationBottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val navigationInset = 68.dp + navigationBottomInset
     CompositionLocalProvider(LocalFloatingNavigationBarInset provides navigationInset) {
         Box(
             Modifier.fillMaxSize().underScrim(
                 scope = navScope,
-                covered = backStackEntry?.id != entry.id,
-                fadingIn = backStackEntry?.destination?.route?.startsWith("detail/") == true,
+                button = buttonReturn,
+                fadingIn = returningFromDetail,
             ),
         ) {
             AnimatedContent(
@@ -205,7 +215,7 @@ internal fun TabsHost(
                 when (current) {
                 "home" -> {
                     ProvideHeroVisibility(navScope, namespace = "home") {
-                        PageSurface(card = false) {
+                        PageSurface(card = false, contentInset = false) {
                             val usageDays by usageStats.days.collectAsStateWithLifecycle()
                             HomeScreen(
                                 intro = homeIntro,
@@ -404,6 +414,31 @@ internal fun TabsHost(
             }
             }
 
+            val veil = MaterialTheme.colorScheme.background.copy(alpha = 0.7f)
+            Box(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(navigationBottomInset)
+                    .background(veil),
+            )
+            Box(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = navigationBottomInset)
+                    .fillMaxWidth()
+                    .height(SearchBarTopGap + navigationHeight + 8.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            colorStops = arrayOf(
+                                0f to Color.Transparent,
+                                0.25f to veil.copy(alpha = 0.24f),
+                                0.55f to veil.copy(alpha = 0.52f),
+                                1f to veil,
+                            ),
+                        ),
+                    ),
+            )
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -417,7 +452,7 @@ internal fun TabsHost(
                     .clip(navigationShape),
                 contentAlignment = Alignment.Center,
             ) {
-                BoxWithConstraints(Modifier.fillMaxWidth().height(60.dp).selectableGroup()) {
+                BoxWithConstraints(Modifier.fillMaxWidth().height(navigationHeight).selectableGroup()) {
                     val selectedIndex = topLevels.indexOfFirst { it.route == tabRoute }.coerceAtLeast(0)
                     val itemWidth = maxWidth / topLevels.size
                     val itemWidthPx = with(LocalDensity.current) { itemWidth.toPx() }
@@ -439,18 +474,7 @@ internal fun TabsHost(
                         animationSpec = spring(dampingRatio = 0.68f, stiffness = 600f),
                         label = "navigation-press",
                     )
-                    val darkTheme = LocalDarkTheme.current
-                    val indicatorAlpha = when {
-                        pressed && darkTheme -> 0.22f
-                        pressed -> 0.16f
-                        darkTheme -> 0.16f
-                        else -> 0.10f
-                    }
-                    val indicatorColor by animateColorAsState(
-                        targetValue = MaterialTheme.colorScheme.primary.copy(alpha = indicatorAlpha),
-                        animationSpec = tween(durationMillis = 120),
-                        label = "navigation-press-color",
-                    )
+                    val indicatorColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.72f)
                     Box(
                         Modifier
                             .offset {
@@ -543,7 +567,7 @@ private fun LiquidNavigationItem(
 ) {
     val contentColor by animateColorAsState(
         targetValue = if (selected) {
-            MaterialTheme.colorScheme.primary
+            MaterialTheme.colorScheme.onSecondaryContainer
         } else {
             MaterialTheme.colorScheme.onSurfaceVariant
         },
@@ -580,10 +604,22 @@ private fun LiquidNavigationItem(
         verticalArrangement = Arrangement.Center,
     ) {
         Icon(
-            imageVector = item.icon,
+            imageVector = if (selected) item.selectedIcon else item.icon,
             contentDescription = null,
             tint = contentColor,
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier.size(24.dp).graphicsLayer {
+                if (item.route == "literature") {
+                    if (selected) {
+                        // NOTE: Filled.AutoStories 外框为 y=1…20.65，Outlined 为 y=0.5…20，校正高度与中心。
+                        scaleY = 130f / 131f
+                        translationY = -0.584.dp.toPx()
+                    } else {
+                        // NOTE: Outlined 的主体书页视觉基线较高，以书页顶端为锚点拉高，避免切换时底部缩短。
+                        transformOrigin = TransformOrigin(0.5f, 1f / 6f)
+                        scaleY = 1.08f
+                    }
+                }
+            },
         )
         Spacer(Modifier.height(2.dp))
         Text(

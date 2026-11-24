@@ -74,7 +74,6 @@ fun LiteratureList(
     onOpen: (String) -> Unit,
     modifier: Modifier = Modifier,
     scrollToTopSignal: Int = 0,
-    showIntro: Boolean = false,
     contentTopInset: androidx.compose.ui.unit.Dp = 0.dp,
 ) {
     PageStateTransition(state = state, modifier = modifier.fillMaxSize()) { current ->
@@ -88,7 +87,6 @@ fun LiteratureList(
                 onLoadMore = onLoadMore,
                 onOpen = onOpen,
                 scrollToTopSignal = scrollToTopSignal,
-                showIntro = showIntro,
                 contentTopInset = contentTopInset,
             )
         }
@@ -103,7 +101,6 @@ private fun LiteratureContent(
     onLoadMore: () -> Unit,
     onOpen: (String) -> Unit,
     scrollToTopSignal: Int,
-    showIntro: Boolean,
     contentTopInset: androidx.compose.ui.unit.Dp,
 ) {
     val focusManager = LocalFocusManager.current
@@ -132,16 +129,6 @@ private fun LiteratureContent(
         ),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        if (showIntro) {
-            item {
-                Text(
-                    text = stringResource(R.string.poetry_intro),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp),
-                )
-            }
-        }
         if (state.works.isEmpty()) {
             item {
                 EmptyHint(

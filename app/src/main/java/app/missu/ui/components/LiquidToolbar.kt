@@ -14,9 +14,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.missu.ui.search.LocalSearchGlassState
+import app.missu.ui.search.SearchGlassIslandPadding
 import dev.chrisbanes.haze.HazeInput
 import dev.chrisbanes.haze.glass.hazeGlass
 
@@ -24,7 +26,6 @@ val LocalTabAnimatedVisibilityScope = compositionLocalOf<AnimatedVisibilityScope
 
 @Composable
 fun LiquidToolbar(content: @Composable () -> Unit) {
-    val glassState = LocalSearchGlassState.current
     val sharedScope = LocalSharedTransitionScope.current
     val visibilityScope = LocalTabAnimatedVisibilityScope.current
     val sharedModifier = if (sharedScope != null && visibilityScope != null) {
@@ -39,10 +40,17 @@ fun LiquidToolbar(content: @Composable () -> Unit) {
     } else {
         Modifier
     }
-    val modifier = Modifier
-        .fillMaxWidth()
-        .padding(horizontal = 16.dp)
-        .then(sharedModifier)
+    Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp).then(sharedModifier)) {
+        content()
+    }
+}
+
+@Composable
+fun LiquidGlassIsland(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    val glassState = LocalSearchGlassState.current
     if (glassState == null) {
         Surface(
             modifier = modifier,
@@ -50,7 +58,7 @@ fun LiquidToolbar(content: @Composable () -> Unit) {
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         ) {
-            content()
+            Box(Modifier.padding(SearchGlassIslandPadding)) { content() }
         }
         return
     }
@@ -61,7 +69,8 @@ fun LiquidToolbar(content: @Composable () -> Unit) {
             input = HazeInput.Sources(glassState),
             style = style,
         ),
+        contentAlignment = Alignment.Center,
     ) {
-        content()
+        Box(Modifier.padding(SearchGlassIslandPadding)) { content() }
     }
 }

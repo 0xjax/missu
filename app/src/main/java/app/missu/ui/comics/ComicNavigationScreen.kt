@@ -46,12 +46,13 @@ import app.missu.ui.list.ToolbarOptionsButton
 import app.missu.ui.list.ToolbarOptionsSheet
 import app.missu.ui.list.ToolbarRadioGroup
 import app.missu.ui.list.VideoOptionMenu
+import app.missu.ui.components.LiquidGlassIsland
 import app.missu.ui.components.LiquidToolbar
 import app.missu.ui.search.LocalSearchBarInset
 import app.missu.ui.search.RecentSearches
 import app.missu.ui.search.SearchHostShell
 import app.missu.ui.search.SearchTopVeil
-import app.missu.ui.search.SearchTriggerHeight
+import app.missu.ui.search.SearchToolbarChromeHeight
 import app.missu.ui.search.searchGlassSource
 
 @Composable
@@ -221,6 +222,8 @@ private fun ComicSearchResults(
                     Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    LiquidGlassIsland { searchAction() }
+                    Spacer(Modifier.width(12.dp))
                     Row(
                         Modifier.weight(1f).horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -242,8 +245,6 @@ private fun ComicSearchResults(
                             optionLabel = { stringResource(it.labelRes) },
                         )
                     }
-                    Spacer(Modifier.width(12.dp))
-                    searchAction()
                 }
             }
         }
@@ -338,7 +339,7 @@ private fun BoxScope.ComicTopVeil() {
     SearchTopVeil(
         statusTop = statusTop,
         veil = MaterialTheme.colorScheme.background.copy(alpha = 0.7f),
-        triggerHeight = SearchTriggerHeight,
+        triggerHeight = SearchToolbarChromeHeight,
     )
 }
 
@@ -386,7 +387,8 @@ private fun RowScope.ComicOptions(
     libraryAction: @Composable () -> Unit,
     searchAction: @Composable () -> Unit,
 ) {
-    searchAction()
+    LiquidGlassIsland { searchAction() }
+    Spacer(Modifier.width(12.dp))
     Row(
         Modifier.weight(1f).horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -400,8 +402,9 @@ private fun RowScope.ComicOptions(
         )
     }
     Spacer(Modifier.width(12.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (feed != null && (source.supportsLatest || source == ComicSource.KALAM)) {
+    LiquidGlassIsland {
+        Row {
+            if (feed != null && (source.supportsLatest || source == ComicSource.KALAM)) {
             ToolbarOptionsButton { dismiss ->
                 ToolbarOptionsSheet {
                     if (source.supportsLatest) {
@@ -433,7 +436,8 @@ private fun RowScope.ComicOptions(
                 }
             }
         }
-        libraryAction()
+            libraryAction()
+        }
     }
 }
 

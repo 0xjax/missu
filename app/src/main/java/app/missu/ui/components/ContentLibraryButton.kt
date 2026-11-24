@@ -1,6 +1,7 @@
 package app.missu.ui.components
 
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -14,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import app.missu.ui.search.LocalSearchGlassState
+import app.missu.ui.search.SearchTriggerHeight
 
 @Composable
 fun ContentLibraryButton(
@@ -23,7 +25,7 @@ fun ContentLibraryButton(
 ) {
     FilledTonalButton(
         onClick = onClick,
-        modifier = modifier.size(40.dp),
+        modifier = modifier.size(SearchTriggerHeight),
         shape = CircleShape,
         colors = ButtonDefaults.filledTonalButtonColors(
             containerColor = if (LocalSearchGlassState.current == null) {
@@ -38,7 +40,7 @@ fun ContentLibraryButton(
         Icon(
             imageVector = Icons.Outlined.CollectionsBookmark,
             contentDescription = contentDescription,
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier.size(24.dp).offset(x = (-1).dp),
         )
     }
 }

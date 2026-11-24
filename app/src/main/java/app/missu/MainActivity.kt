@@ -30,6 +30,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -355,6 +356,16 @@ private fun MissuApp(
     val literatureStore = remember { LiteratureStore(context.applicationContext) }
     val backStackEntry = navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry.value?.destination?.route
+    val lastComposedRoute = remember { mutableStateOf(currentRoute) }
+    val lastComposedEntryId = remember { mutableStateOf(backStackEntry.value?.id) }
+    val returningFromDetail = currentRoute?.startsWith("detail/") == true ||
+        (currentRoute == TABS_ROUTE && lastComposedRoute.value?.startsWith("detail/") == true)
+    val returningByButton = buttonPopId != null &&
+        (currentRoute == TABS_ROUTE || lastComposedEntryId.value == buttonPopId)
+    SideEffect {
+        lastComposedRoute.value = currentRoute
+        lastComposedEntryId.value = backStackEntry.value?.id
+    }
     LaunchedEffect(currentRoute, tabRoute, dependencies.usageStats) {
         dependencies.usageStats.setCategory(usageCategory(currentRoute, tabRoute))
     }
@@ -411,14 +422,14 @@ private fun MissuApp(
             predictivePopEnterTransition = { missuPopEnter() },
             predictivePopExitTransition = { missuPopExit(button = false) },
         ) {
-            composable(TABS_ROUTE) { entry ->
+            composable(TABS_ROUTE) {
                 TabsHost(
                     homeIntro = HomeIntroContent(homeIntro[0], homeIntro[1]),
                     homeArticle = homeArticle,
                     onShuffleArticle = ::shuffleHomeArticle,
-                    entry = entry,
                     navScope = this,
-                    backStackEntry = backStackEntry.value,
+                    buttonReturn = returningByButton,
+                    returningFromDetail = returningFromDetail,
                     navController = navController,
                     tabRoute = tabRoute,
                     onTabChange = { tabRoute = it },

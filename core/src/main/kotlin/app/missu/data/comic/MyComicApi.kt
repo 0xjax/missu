@@ -81,7 +81,7 @@ class MyComicApi(
     private fun parseChapters(element: Element): List<ComicChapter> {
         val data = element.attr("x-data")
         return CHAPTER_REGEX.findAll(data).flatMap { match ->
-            match.value.toJsonElement().array()?.mapNotNull { item ->
+            match.groupValues[1].toJsonElement().array()?.mapNotNull { item ->
                 val chapter = item.obj() ?: return@mapNotNull null
                 val id = chapter["id"].text() ?: chapter["id"].int()?.toString() ?: return@mapNotNull null
                 ComicChapter(id, chapter["title"].text().orEmpty())
@@ -98,6 +98,6 @@ class MyComicApi(
         (if (hasAttr("data-src")) absUrl("data-src") else absUrl("src")).takeIf { it.isNotBlank() }
 
     private companion object {
-        val CHAPTER_REGEX = Regex("(?<=chapters: )\\[\\{.*?\\}]", RegexOption.DOT_MATCHES_ALL)
+        val CHAPTER_REGEX = Regex("chapters:\\s*(\\[\\s*\\{.*?\\}\\s*])", RegexOption.DOT_MATCHES_ALL)
     }
 }

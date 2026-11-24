@@ -22,6 +22,7 @@ import app.missu.R
 import app.missu.data.literature.LiteratureFilter
 import app.missu.data.literature.LiteratureSort
 import app.missu.ui.components.EmptyHint
+import app.missu.ui.components.LiquidGlassIsland
 import app.missu.ui.components.LiquidToolbar
 import app.missu.ui.list.ToolbarOptionsButton
 import app.missu.ui.list.ToolbarOptionsSheet
@@ -29,7 +30,7 @@ import app.missu.ui.list.ToolbarRadioGroup
 import app.missu.ui.search.LocalSearchBarInset
 import app.missu.ui.search.SearchHostShell
 import app.missu.ui.search.SearchTopVeil
-import app.missu.ui.search.SearchTriggerHeight
+import app.missu.ui.search.SearchToolbarChromeHeight
 import app.missu.ui.search.searchGlassSource
 
 @Composable
@@ -86,14 +87,13 @@ fun LiteratureNavigationScreen(
                 onOpen = onOpenLiterature,
                 modifier = Modifier.searchGlassSource(),
                 scrollToTopSignal = scrollToTopSignal,
-                showIntro = query.isBlank(),
                 contentTopInset = LocalSearchBarInset.current,
             )
             val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
             SearchTopVeil(
                 statusTop = statusTop,
                 veil = MaterialTheme.colorScheme.background.copy(alpha = 0.7f),
-                triggerHeight = SearchTriggerHeight,
+                triggerHeight = SearchToolbarChromeHeight,
             )
             Box(Modifier.align(Alignment.TopCenter).padding(top = statusTop)) {
                 LiquidToolbar {
@@ -101,11 +101,12 @@ fun LiteratureNavigationScreen(
                         Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        searchAction()
+                        LiquidGlassIsland { searchAction() }
                         Spacer(Modifier.weight(1f))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            ToolbarOptionsButton { dismiss ->
-                                ToolbarOptionsSheet {
+                        LiquidGlassIsland {
+                            Row {
+                                ToolbarOptionsButton { dismiss ->
+                                    ToolbarOptionsSheet {
                                     ToolbarRadioGroup(
                                         title = stringResource(R.string.list_sort_title),
                                         options = LiteratureSort.entries,
@@ -128,7 +129,8 @@ fun LiteratureNavigationScreen(
                                     )
                                 }
                             }
-                            libraryAction()
+                                libraryAction()
+                            }
                         }
                     }
                 }

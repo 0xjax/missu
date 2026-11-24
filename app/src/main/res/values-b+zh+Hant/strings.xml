@@ -220,7 +220,6 @@
     <string name="literature_history_empty_subtitle">開啟過的作品會顯示在這裡</string>
     <string name="poetry_notes">字詞注釋</string>
     <string name="literature_content_pending">本篇的注釋、意譯與賞析尚未完善，目前僅提供原文。</string>
-    <string name="poetry_intro">慢慢讀一首，不求背誦，不設打卡，也不替感受評分。</string>
     <string name="poetry_translation">白話意譯</string>
     <string name="poetry_appreciation">賞析</string>
 

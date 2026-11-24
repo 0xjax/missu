@@ -373,7 +373,7 @@ internal fun BoxScope.SearchTopVeil(
             .align(Alignment.TopCenter)
             .padding(top = statusTop)
             .fillMaxWidth()
-            .height(SearchBarTopGap + triggerHeight / 2)
+            .height(SearchBarTopGap + triggerHeight + 8.dp)
             .background(
                 Brush.verticalGradient(
                     colorStops = arrayOf(
@@ -460,7 +460,10 @@ private fun InlineSearchButton(
 }
 
 /** 行内搜索按钮与同一行选项共用的尺寸。 */
-internal val SearchTriggerHeight = 40.dp
+internal val SearchTriggerHeight = 48.dp
+
+internal val SearchGlassIslandPadding = 2.dp
+internal val SearchToolbarChromeHeight = SearchTriggerHeight + SearchGlassIslandPadding * 2
 
 /** 胶囊上方的 8dp（material3 展开态给输入框的落点）。 */
 internal val SearchBarTopGap = 8.dp
@@ -474,8 +477,8 @@ private val SearchBarBottomGap = 12.dp
 /** 搜索胶囊这一条占的高度：8 + 56 + 12 = 76dp。 */
 private val SearchBarBlock = SearchBarTopGap + SearchBarHeight + SearchBarBottomGap
 
-/** 行内悬浮工具行占的高度：8 + 40 + 8 = 56dp。 */
-private val InlineSearchBlock = SearchBarTopGap + SearchTriggerHeight + 8.dp
+/** 行内悬浮工具行占的高度：8 + 52 + 8 = 68dp。 */
+private val InlineSearchBlock = SearchBarTopGap + SearchToolbarChromeHeight + 8.dp
 
 /**
  * 搜索宿主给滚动内容预留的顶部空间；内容首帧避开工具行，滚动后从其下方穿过。
@@ -560,7 +563,7 @@ fun SearchBody(
             SearchTopVeil(
                 statusTop = statusTop,
                 veil = MaterialTheme.colorScheme.background.copy(alpha = 0.7f),
-                triggerHeight = SearchTriggerHeight,
+                triggerHeight = SearchToolbarChromeHeight,
             )
             Box(Modifier.align(Alignment.TopCenter).padding(top = statusTop)) {
                 controls()

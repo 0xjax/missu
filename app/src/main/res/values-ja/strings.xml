@@ -216,7 +216,6 @@
     <string name="literature_history_empty_subtitle">開いた作品がここに表示されます</string>
     <string name="poetry_notes">語句の注釈</string>
     <string name="literature_content_pending">本篇の注釈・現代語訳・鑑賞はまだありません。原文を表示しています。</string>
-    <string name="poetry_intro">一編をゆっくり読みます。暗唱の課題も、継続日数も、採点もありません。</string>
     <string name="poetry_translation">現代語訳</string>
     <string name="poetry_appreciation">鑑賞</string>
 

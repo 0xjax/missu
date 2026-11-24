@@ -157,7 +157,7 @@ internal fun NavGraphBuilder.secondaryDestinations(
                 onSubmit = { email, password -> auth.login(email, password, onGoBack) },
                 onBack = {
                     auth.clearLoginError()
-                    navController.popBackStack()
+                    onGoBack()
                 },
             )
         }

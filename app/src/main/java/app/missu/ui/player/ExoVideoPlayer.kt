@@ -117,15 +117,16 @@ fun ExoVideoPlayer(
 ) {
     val context = LocalContext.current
     val httpClient = LocalAppDependencies.current.httpClient
+    val settings = remember(context) { SettingsStore(context.applicationContext) }
+    var autoplay by remember { mutableStateOf(settings.autoplay()) }
 
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var controlsVisible by remember { mutableStateOf(true) }
+    var controlsVisible by remember(url) { mutableStateOf(!autoplay) }
     var seekDragging by remember { mutableStateOf(false) }
     var isPlaying by remember { mutableStateOf(false) }
     // 原生 ContentFrame 监听视频尺寸并按 ContentScale 布局，不再手工计算 TextureView 尺寸。
     // NOTE: 倍速是**全局设置**，不是本次播放的临时状态：它跟着偏好走，所以每部片的播放器
     // 建起来就按它设好（见下面 player 的 apply）。1.0x 只是没存过值时的默认。
-    val settings = remember(context) { SettingsStore(context.applicationContext) }
     // 内嵌播放器是否把宽银幕片子裁满框（偏好，见 SettingsStore.fillScreen）。
     var fillScreen by remember { mutableStateOf(settings.fillScreen()) }
     val initialSpeed = remember { settings.playbackSpeed() }
@@ -166,8 +167,8 @@ fun ExoVideoPlayer(
                 // 否则双击快进快退时播放键会闪一下 ▶（对齐 legacy 的 seekingRef）。
                 if (!playing && System.currentTimeMillis() < seekingUntil) return
                 isPlaying = playing
-                // NOTE: 这里**不**点亮控件层。控件显隐只由用户操作驱动（初始可见 + 3 秒自动隐藏
-                // + 单击唤出），否则 seek/缓冲引起的 false→true 会把整层控件唤出来。
+                // NOTE: 这里**不**点亮控件层。控件显隐只由用户操作驱动（按自动播放决定初始态
+                // + 3 秒自动隐藏 + 单击唤出），否则 seek/缓冲引起的 false→true 会把整层控件唤出来。
             }
 
             override fun onRenderedFirstFrame() {
@@ -190,9 +191,8 @@ fun ExoVideoPlayer(
         }
     }
 
-    // NOTE: 自动播放关掉时仍然 `prepare()`——首帧会画出来、控件也会出现，只是停在暂停态，
-    // 用户点一下播放键就接着走。不要在这里跳过 prepare：那样连首帧都没有，只剩一张封面。
-    var autoplay by remember { mutableStateOf(settings.autoplay()) }
+    // NOTE: 自动播放关掉时仍然 `prepare()`——首帧与初始控件照常显示，只是停在暂停态；
+    // 自动播放时初始控件隐藏，避免进入页面后调节进度时持续遮挡画面。
     LaunchedEffect(url) {
         errorMessage = null
         player.setMediaItem(MediaItem.fromUri(url))

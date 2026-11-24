@@ -222,7 +222,6 @@
     <string name="literature_history_empty_subtitle">Works you open will appear here</string>
     <string name="poetry_notes">Notes</string>
     <string name="literature_content_pending">Notes, translation and appreciation are not yet available for this work.</string>
-    <string name="poetry_intro">Read a poem slowly. No recitation targets, check-ins or scores.</string>
     <string name="poetry_translation">Modern reading</string>
     <string name="poetry_appreciation">Appreciation</string>
 

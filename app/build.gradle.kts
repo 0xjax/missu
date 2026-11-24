@@ -34,8 +34,8 @@ android {
         minSdk = 26
         //noinspection OldTargetApi — 行为仍按 36 验收；compileSdk 37.1 只为新编译 API。
         targetSdk = 36
-        versionCode = 9
-        versionName = "3.0.0-beta.1"
+        versionCode = 10
+        versionName = "3.0.0-rc.1"
         buildConfigField(
             "String",
             "LITERATURE_PACK_BASE_URL",

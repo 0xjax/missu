@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -66,7 +67,7 @@ internal fun ToolbarOptionsButton(
         Icon(
             imageVector = Icons.Outlined.Tune,
             contentDescription = stringResource(R.string.toolbar_options),
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier.size(24.dp).offset(x = 1.dp),
         )
     }
     if (open) {

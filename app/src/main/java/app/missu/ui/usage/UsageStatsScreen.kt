@@ -18,13 +18,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -54,6 +52,8 @@ import app.missu.data.store.usageTotal
 import app.missu.ui.components.GroupSurface
 import app.missu.ui.components.PageTopBar
 import app.missu.ui.components.TooltipIconButton
+import app.missu.ui.list.VideoControlButton
+import app.missu.ui.theme.LocalDarkTheme
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -232,11 +232,14 @@ private fun UsageDonut(values: List<Pair<UsageCategory, Long>>) {
 }
 
 @Composable
-private fun usageCategoryColor(category: UsageCategory): Color = when (category) {
-    UsageCategory.LITERATURE -> MaterialTheme.colorScheme.primary
-    UsageCategory.VIDEOS -> MaterialTheme.colorScheme.secondary
-    UsageCategory.COMICS -> MaterialTheme.colorScheme.tertiary
-    UsageCategory.OTHER -> MaterialTheme.colorScheme.onSurfaceVariant
+private fun usageCategoryColor(category: UsageCategory): Color {
+    val dark = LocalDarkTheme.current
+    return when (category) {
+        UsageCategory.LITERATURE -> if (dark) Color(0xFFFF8CA5) else Color(0xFF9B2C4D)
+        UsageCategory.VIDEOS -> if (dark) Color(0xFF7AB8FF) else Color(0xFF00629E)
+        UsageCategory.COMICS -> if (dark) Color(0xFFF2C14E) else Color(0xFF805900)
+        UsageCategory.OTHER -> if (dark) Color(0xFFA9ABB3) else Color(0xFF666A72)
+    }
 }
 
 @Composable
@@ -256,14 +259,11 @@ private fun UsageCategoryPicker(
             style = MaterialTheme.typography.titleSmall,
         )
         Box {
-            FilledTonalButton(onClick = { expanded = true }) {
-                Text(usageCategoryLabel(selected))
-                Spacer(Modifier.width(4.dp))
-                Icon(
-                    imageVector = Icons.Outlined.ArrowDropDown,
-                    contentDescription = null,
-                )
-            }
+            VideoControlButton(
+                text = usageCategoryLabel(selected),
+                expanded = expanded,
+                onClick = { expanded = true },
+            )
             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 DropdownMenuItem(
                     text = {

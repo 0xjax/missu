@@ -25,10 +25,10 @@ internal fun involvesDetail(initial: NavBackStackEntry, target: NavBackStackEntr
         target.destination.route?.startsWith("detail/") == true
 
 private object PopMotion {
-    const val TOTAL_MS = 500
+    const val TOTAL_MS = 300
     const val EXIT_SCALE = 0.9f
-    const val SLIDE_DELAY_MS = 300
-    const val SLIDE_MS = 200
+    const val SLIDE_DELAY_MS = 180
+    const val SLIDE_MS = 120
     const val BUTTON_MS = 260
 }
 

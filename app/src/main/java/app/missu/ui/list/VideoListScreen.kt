@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -23,8 +24,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.List
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,6 +35,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -47,12 +51,12 @@ import app.missu.ui.components.LoadMoreOnScroll
 import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.LocalVideoListColumns
 import app.missu.ui.components.LocalFloatingNavigationBarInset
+import app.missu.ui.components.LiquidGlassIsland
 import app.missu.ui.components.LiquidToolbar
 import app.missu.ui.components.PageStateTransition
 import app.missu.ui.components.PageTopBar
 import app.missu.ui.components.VideoGridCard
 import app.missu.ui.search.LocalSearchBarInset
-import app.missu.ui.search.LocalSearchGlassState
 import app.missu.ui.search.SearchTriggerHeight
 
 @Composable
@@ -185,7 +189,10 @@ internal fun VideoListControls(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-        if (searchAction != null) searchAction()
+        if (searchAction != null) {
+            LiquidGlassIsland { searchAction() }
+            Spacer(Modifier.width(12.dp))
+        }
         Row(
             modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -194,8 +201,9 @@ internal fun VideoListControls(
             controlsLeading?.invoke(this)
         }
         Spacer(Modifier.width(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ToolbarOptionsButton { dismiss ->
+        LiquidGlassIsland {
+            Row {
+                ToolbarOptionsButton { dismiss ->
                 ToolbarOptionsSheet {
                     ToolbarRadioGroup(
                         title = stringResource(R.string.list_sort_title),
@@ -218,9 +226,10 @@ internal fun VideoListControls(
                         },
                         optionLabel = { filterLabel(it) },
                     )
+                    }
                 }
+                libraryAction?.invoke()
             }
-            libraryAction?.invoke()
         }
         }
     }
@@ -309,20 +318,22 @@ internal fun VideoControlButton(
         enabled = enabled,
         shape = CircleShape,
         colors = ButtonDefaults.filledTonalButtonColors(
-            containerColor = when {
-                expanded -> MaterialTheme.colorScheme.primaryContainer
-                LocalSearchGlassState.current != null -> Color.Transparent
-                else -> MaterialTheme.colorScheme.surfaceContainerHigh
-            },
+            containerColor = Color.Transparent,
             contentColor = if (expanded) {
-                MaterialTheme.colorScheme.onPrimaryContainer
+                MaterialTheme.colorScheme.primary
             } else {
                 MaterialTheme.colorScheme.onSurface
             },
         ),
         contentPadding = PaddingValues(horizontal = 16.dp),
     ) {
-        Text(text, maxLines = 1)
+        Text(text, maxLines = 1, style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.width(4.dp))
+        Icon(
+            imageVector = Icons.Outlined.KeyboardArrowDown,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp).rotate(if (expanded) 180f else 0f),
+        )
     }
 }
 

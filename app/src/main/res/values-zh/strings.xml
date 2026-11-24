@@ -216,7 +216,6 @@
     <string name="literature_history_empty_subtitle">打开过的作品会出现在这里</string>
     <string name="poetry_notes">字词注释</string>
     <string name="literature_content_pending">本篇的注释、意译与赏析尚未完善，目前仅提供原文。</string>
-    <string name="poetry_intro">慢慢读一首，不求背诵，不设打卡，也不给感受打分。</string>
     <string name="poetry_translation">白话意译</string>
     <string name="poetry_appreciation">赏析</string>
 

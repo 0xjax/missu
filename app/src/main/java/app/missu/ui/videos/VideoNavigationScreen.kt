@@ -79,12 +79,13 @@ import app.missu.ui.list.VideoOptionMenu
 import app.missu.ui.list.VideoListContent
 import app.missu.ui.list.VideoListControls
 import app.missu.ui.list.VideoListUiState
+import app.missu.ui.components.LiquidGlassIsland
 import app.missu.ui.components.LiquidToolbar
 import app.missu.ui.search.LocalSearchBarInset
 import app.missu.ui.search.SearchBarTopGap
 import app.missu.ui.search.searchGlassSource
 import app.missu.ui.search.SearchTopVeil
-import app.missu.ui.search.SearchTriggerHeight
+import app.missu.ui.search.SearchToolbarChromeHeight
 import coil3.compose.AsyncImage
 
 /**
@@ -238,7 +239,7 @@ fun VideoNavigationScreen(
         SearchTopVeil(
             statusTop = statusTop,
             veil = MaterialTheme.colorScheme.background.copy(alpha = 0.7f),
-            triggerHeight = SearchTriggerHeight,
+            triggerHeight = SearchToolbarChromeHeight,
         )
         Box(Modifier.align(Alignment.TopCenter).padding(top = statusTop)) {
             when (tab) {
@@ -310,7 +311,8 @@ private fun VideoNavigationControlsRow(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            searchAction()
+            LiquidGlassIsland { searchAction() }
+            Spacer(Modifier.width(12.dp))
             Row(
                 modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -318,9 +320,11 @@ private fun VideoNavigationControlsRow(
                 content = content,
             )
             Spacer(Modifier.width(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                options?.invoke(this)
-                libraryAction()
+            LiquidGlassIsland {
+                Row {
+                    options?.invoke(this)
+                    libraryAction()
+                }
             }
         }
     }
