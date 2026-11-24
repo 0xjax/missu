@@ -539,7 +539,8 @@ fun SearchBody(
             onSortChange = onSortChange,
             onFilterChange = onFilterChange,
             controlsLeading = null,
-            controlsTrailing = searchAction,
+            searchAction = searchAction,
+            libraryAction = null,
         )
     }
 

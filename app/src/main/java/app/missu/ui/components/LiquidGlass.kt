@@ -15,7 +15,7 @@ internal fun rememberLiquidGlassStyle(
 ): GlassStyle {
     val darkTheme = LocalDarkTheme.current
     val background = MaterialTheme.colorScheme.surface
-    val resolvedTint = tint ?: MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.2f)
+    val resolvedTint = tint ?: MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.32f)
     return remember(darkTheme, background, resolvedTint, shape) {
         GlassStyle.regular.then {
             backgroundColor(background)

@@ -46,7 +46,7 @@ import app.missu.ui.list.ToolbarOptionsButton
 import app.missu.ui.list.ToolbarOptionsSheet
 import app.missu.ui.list.ToolbarRadioGroup
 import app.missu.ui.list.VideoOptionMenu
-import app.missu.ui.list.VideoToolbarContainer
+import app.missu.ui.components.LiquidToolbar
 import app.missu.ui.search.LocalSearchBarInset
 import app.missu.ui.search.RecentSearches
 import app.missu.ui.search.SearchHostShell
@@ -216,7 +216,7 @@ private fun ComicSearchResults(
         }
         ComicTopVeil()
         Box(Modifier.fillMaxWidth().padding(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding())) {
-            VideoToolbarContainer {
+            LiquidToolbar {
                 Row(
                     Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -354,17 +354,21 @@ private fun ComicToolbar(
 ) {
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     Box(Modifier.fillMaxWidth().padding(top = statusTop)) {
-        VideoToolbarContainer {
+        LiquidToolbar {
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                ComicOptions(source, feed, category, onSourceChange, onFeedChange, onCategoryChange)
-                Spacer(Modifier.width(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    libraryAction()
-                    searchAction()
-                }
+                ComicOptions(
+                    source = source,
+                    feed = feed,
+                    category = category,
+                    onSourceChange = onSourceChange,
+                    onFeedChange = onFeedChange,
+                    onCategoryChange = onCategoryChange,
+                    libraryAction = libraryAction,
+                    searchAction = searchAction,
+                )
             }
         }
     }
@@ -378,7 +382,10 @@ private fun RowScope.ComicOptions(
     onSourceChange: (ComicSource) -> Unit,
     onFeedChange: (ComicFeed) -> Unit,
     onCategoryChange: (KalamCategory) -> Unit,
+    libraryAction: @Composable () -> Unit,
+    searchAction: @Composable () -> Unit,
 ) {
+    searchAction()
     Row(
         Modifier.weight(1f).horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -390,6 +397,9 @@ private fun RowScope.ComicOptions(
             onSelect = onSourceChange,
             optionLabel = { it.displayName },
         )
+    }
+    Spacer(Modifier.width(12.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         if (feed != null && (source.supportsLatest || source == ComicSource.KALAM)) {
             ToolbarOptionsButton { dismiss ->
                 ToolbarOptionsSheet {
@@ -422,6 +432,7 @@ private fun RowScope.ComicOptions(
                 }
             }
         }
+        libraryAction()
     }
 }
 

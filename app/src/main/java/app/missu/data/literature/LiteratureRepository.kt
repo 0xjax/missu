@@ -39,6 +39,7 @@ class LiteratureRepository(initialDatabase: LiteratureDatabase) {
         favorites: Set<String>,
         offset: Int,
         limit: Int = PAGE_SIZE,
+        sort: LiteratureSort = LiteratureSort.PROMINENCE,
     ): LiteraturePage {
         if (filter == LiteratureFilter.FAVORITES && favorites.isEmpty()) {
             return LiteraturePage(emptyList(), nextOffset = null)
@@ -57,6 +58,7 @@ class LiteratureRepository(initialDatabase: LiteratureDatabase) {
                 favoriteOnly = filter == LiteratureFilter.FAVORITES,
                 favorites = favorites.sorted(),
                 search = searchExpression(query),
+                sort = sort.name,
                 limit = limit + 1,
                 offset = offset,
             )

@@ -18,6 +18,12 @@ enum class LiteratureFilter {
     FAVORITES,
 }
 
+enum class LiteratureSort {
+    PROMINENCE,
+    TITLE,
+    AUTHOR,
+}
+
 data class LiteraryChapter(
     val id: String,
     val title: String,

@@ -66,7 +66,10 @@ interface LiteratureDao {
         AND (:search IS NULL OR rowid IN (
             SELECT rowid FROM works_search WHERE works_search MATCH :search
         ))
-        ORDER BY prominence DESC, rowid LIMIT :limit OFFSET :offset
+        ORDER BY
+        CASE :sort WHEN 'TITLE' THEN title WHEN 'AUTHOR' THEN author END COLLATE NOCASE,
+        CASE WHEN :sort = 'AUTHOR' THEN title END COLLATE NOCASE,
+        prominence DESC, rowid LIMIT :limit OFFSET :offset
         """,
     )
     suspend fun queryWorkSummaries(
@@ -74,6 +77,7 @@ interface LiteratureDao {
         favoriteOnly: Boolean,
         favorites: List<String>,
         search: String?,
+        sort: String,
         limit: Int,
         offset: Int,
     ): List<LiteraryWorkSummaryEntity>

@@ -151,6 +151,10 @@
     <string name="literature_kind_book">典籍</string>
     <string name="literature_filter_all">すべて</string>
     <string name="literature_filter_favorites">お気に入り</string>
+    <string name="literature_filter_title">ジャンル</string>
+    <string name="literature_sort_prominence">おすすめ順</string>
+    <string name="literature_sort_title">題名</string>
+    <string name="literature_sort_author">作者</string>
     <string name="literature_search_hint">題名・作者・原文を検索</string>
     <string name="literature_empty_title">作品が見つかりません</string>
     <string name="literature_empty_subtitle">別の言葉や条件でお試しください</string>

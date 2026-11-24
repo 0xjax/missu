@@ -23,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,6 +33,13 @@ import androidx.compose.ui.unit.dp
 import app.missu.R
 import app.missu.ui.components.LocalFloatingNavigationBarInset
 import app.missu.ui.components.TooltipIconButton
+import app.missu.ui.components.LiquidToolbar
+import app.missu.ui.search.LocalSearchGlassState
+import app.missu.ui.search.SearchBarTopGap
+import app.missu.ui.search.SearchTopVeil
+import app.missu.ui.search.SearchTriggerHeight
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 
 @Composable
 fun HomeScreen(
@@ -42,56 +50,69 @@ fun HomeScreen(
     scrollToTopSignal: Int = 0,
 ) {
     val listState = rememberLazyListState()
+    val glassState = rememberHazeState()
     LaunchedEffect(scrollToTopSignal) {
         if (scrollToTopSignal > 0) listState.animateScrollToItem(0)
     }
-    LazyColumn(
-        state = listState,
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(
-            start = 16.dp,
-            end = 16.dp,
-            top = 16.dp,
-            bottom = LocalFloatingNavigationBarInset.current + 32.dp,
-        ),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        item(key = "settings") {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
+    CompositionLocalProvider(LocalSearchGlassState provides glassState) {
+        Box(modifier.fillMaxSize()) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize().hazeSource(glassState),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    top = SearchTriggerHeight + SearchBarTopGap + 24.dp,
+                    bottom = LocalFloatingNavigationBarInset.current + 32.dp,
+                ),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text(
-                    text = stringResource(R.string.app_name),
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.weight(1f),
-                )
-                TooltipIconButton(
-                    icon = Icons.Outlined.Settings,
-                    contentDescription = stringResource(R.string.account_settings),
-                    onClick = onOpenSettings,
-                )
+                item(key = "intro") { HomeIntro() }
+                item(key = "guides-title") {
+                    Text(
+                        text = stringResource(R.string.home_guides_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp),
+                    )
+                }
+                items(guideCatalog, key = { it.id }) { guide ->
+                    GuideCard(guide = guide, onClick = { onOpenGuide(guide.id) })
+                }
+                item(key = "videos") {
+                    HomeEntryCard(
+                        icon = Icons.Outlined.PlayCircle,
+                        title = stringResource(R.string.home_videos_title),
+                        body = stringResource(R.string.home_videos_body),
+                        onClick = onOpenVideos,
+                    )
+                }
             }
-        }
-        item(key = "intro") { HomeIntro() }
-        item(key = "guides-title") {
-            Text(
-                text = stringResource(R.string.home_guides_title),
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp),
+            SearchTopVeil(
+                statusTop = 0.dp,
+                veil = MaterialTheme.colorScheme.background.copy(alpha = 0.7f),
+                triggerHeight = SearchTriggerHeight,
             )
-        }
-        items(guideCatalog, key = { it.id }) { guide ->
-            GuideCard(guide = guide, onClick = { onOpenGuide(guide.id) })
-        }
-        item(key = "videos") {
-            HomeEntryCard(
-                icon = Icons.Outlined.PlayCircle,
-                title = stringResource(R.string.home_videos_title),
-                body = stringResource(R.string.home_videos_body),
-                onClick = onOpenVideos,
-            )
+            Box(Modifier.align(Alignment.TopCenter)) {
+                LiquidToolbar {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringResource(R.string.app_name),
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.weight(1f).padding(start = 16.dp),
+                        )
+                        TooltipIconButton(
+                            icon = Icons.Outlined.Settings,
+                            contentDescription = stringResource(R.string.account_settings),
+                            onClick = onOpenSettings,
+                            modifier = Modifier.size(SearchTriggerHeight),
+                        )
+                    }
+                }
+            }
         }
     }
 }

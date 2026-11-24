@@ -2,10 +2,8 @@
 
 package app.missu.ui.list
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -28,7 +26,6 @@ import androidx.compose.material.icons.automirrored.outlined.List
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -36,8 +33,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.missu.R
@@ -52,16 +47,13 @@ import app.missu.ui.components.LoadMoreOnScroll
 import app.missu.ui.components.LoadingHint
 import app.missu.ui.components.LocalVideoListColumns
 import app.missu.ui.components.LocalFloatingNavigationBarInset
+import app.missu.ui.components.LiquidToolbar
 import app.missu.ui.components.PageStateTransition
 import app.missu.ui.components.PageTopBar
-import app.missu.ui.components.rememberLiquidGlassStyle
 import app.missu.ui.components.VideoGridCard
-import app.missu.ui.search.LocalSearchAnchorCapture
 import app.missu.ui.search.LocalSearchBarInset
 import app.missu.ui.search.LocalSearchGlassState
 import app.missu.ui.search.SearchTriggerHeight
-import dev.chrisbanes.haze.HazeInput
-import dev.chrisbanes.haze.glass.hazeGlass
 
 @Composable
 internal fun AutoLoadVideoList(
@@ -139,7 +131,8 @@ fun VideoListContent(
     onOpen: (id: String, thumbnail: String?) -> Unit,
     modifier: Modifier = Modifier,
     controlsLeading: (@Composable RowScope.() -> Unit)? = null,
-    controlsTrailing: (@Composable () -> Unit)? = null,
+    searchAction: (@Composable () -> Unit)? = null,
+    libraryAction: (@Composable () -> Unit)? = null,
     showControls: Boolean = true,
     scrollToTopSignal: Int = 0,
 ) {
@@ -154,7 +147,8 @@ fun VideoListContent(
                 onSortChange = onSortChange,
                 onFilterChange = onFilterChange,
                 controlsLeading = controlsLeading,
-                controlsTrailing = controlsTrailing,
+                searchAction = searchAction,
+                libraryAction = libraryAction,
             )
         }
 
@@ -180,23 +174,27 @@ internal fun VideoListControls(
     onSortChange: (VideoListOptions.Sort?) -> Unit,
     onFilterChange: (VideoListOptions.Filter?) -> Unit,
     controlsLeading: (@Composable RowScope.() -> Unit)?,
-    controlsTrailing: (@Composable () -> Unit)?,
+    searchAction: (@Composable () -> Unit)?,
+    libraryAction: (@Composable () -> Unit)?,
 ) {
     // 站点点明了它自己当前的排序（页面头部「排序: X」），所以「默认」不再是一档：直接显示那一项。
     val current = sort ?: detectedSort
 
-    VideoToolbarContainer {
+    LiquidToolbar {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+        if (searchAction != null) searchAction()
         Row(
             modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             controlsLeading?.invoke(this)
-
+        }
+        Spacer(Modifier.width(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ToolbarOptionsButton { dismiss ->
                 ToolbarOptionsSheet {
                     ToolbarRadioGroup(
@@ -222,10 +220,7 @@ internal fun VideoListControls(
                     )
                 }
             }
-        }
-        if (controlsTrailing != null) {
-            Spacer(Modifier.width(12.dp))
-            controlsTrailing()
+            libraryAction?.invoke()
         }
         }
     }
@@ -297,37 +292,6 @@ fun VideoListBody(
                 }
             }
         }
-    }
-}
-
-@Composable
-internal fun VideoToolbarContainer(content: @Composable () -> Unit) {
-    val captureBounds = LocalSearchAnchorCapture.current
-    val glassState = LocalSearchGlassState.current
-    val modifier = Modifier
-        .fillMaxWidth()
-        .padding(horizontal = 16.dp)
-        .onGloballyPositioned { captureBounds(it.boundsInWindow()) }
-    if (glassState == null) {
-        Surface(
-            modifier = modifier,
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        ) {
-            content()
-        }
-        return
-    }
-
-    val style = rememberLiquidGlassStyle(CircleShape)
-    Box(
-        modifier.hazeGlass(
-            input = HazeInput.Sources(glassState),
-            style = style,
-        ),
-    ) {
-        content()
     }
 }
 

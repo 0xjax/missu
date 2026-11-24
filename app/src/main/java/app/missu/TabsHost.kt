@@ -5,28 +5,37 @@ import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -42,20 +51,25 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -72,6 +86,7 @@ import app.missu.data.store.LiteratureStore
 import app.missu.data.store.SearchHistoryStore
 import app.missu.ui.components.ContentLibraryButton
 import app.missu.ui.components.LocalFloatingNavigationBarInset
+import app.missu.ui.components.LocalTabAnimatedVisibilityScope
 import app.missu.ui.components.PageSurface
 import app.missu.ui.components.ProvideHeroVisibility
 import app.missu.ui.components.rememberLiquidGlassStyle
@@ -93,10 +108,13 @@ import app.missu.ui.search.SearchViewModel
 import app.missu.ui.literature.LiteratureViewModel
 import app.missu.ui.literature.LiteratureNavigationScreen
 import dev.chrisbanes.haze.HazeInput
-import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.glass.hazeGlass
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
+import kotlin.math.abs
+import kotlin.math.min
+import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 
 internal const val TABS_ROUTE = "tabs"
 
@@ -175,6 +193,7 @@ internal fun TabsHost(
                 },
                 label = "tab",
             ) { current ->
+                CompositionLocalProvider(LocalTabAnimatedVisibilityScope provides this) {
                 when (current) {
                 "home" -> {
                     ProvideHeroVisibility(navScope, namespace = "home") {
@@ -198,6 +217,7 @@ internal fun TabsHost(
                     val literatureState by literatureViewModel.state.collectAsStateWithLifecycle()
                     val query by literatureViewModel.query.collectAsStateWithLifecycle()
                     val filter by literatureViewModel.filter.collectAsStateWithLifecycle()
+                    val sort by literatureViewModel.sort.collectAsStateWithLifecycle()
                     val favorites by literatureStore.favorites.collectAsStateWithLifecycle()
                     PageSurface(card = false, contentInset = false) {
                         LiteratureNavigationScreen(
@@ -205,9 +225,11 @@ internal fun TabsHost(
                             literatureState = literatureState,
                             query = query,
                             filter = filter,
+                            sort = sort,
                             favorites = favorites,
                             onQueryChange = literatureViewModel::setQuery,
                             onFilterChange = literatureViewModel::setFilter,
+                            onSortChange = literatureViewModel::setSort,
                             onToggleFavorite = literatureStore::toggleFavorite,
                             onLoadMore = literatureViewModel::loadMore,
                             onRetry = literatureViewModel::refresh,
@@ -366,6 +388,7 @@ internal fun TabsHost(
                 }
             }
             }
+            }
 
             Box(
                 modifier = Modifier
@@ -380,20 +403,103 @@ internal fun TabsHost(
                     .clip(navigationShape),
                 contentAlignment = Alignment.Center,
             ) {
-                Row(
-                    Modifier.fillMaxWidth().height(64.dp).selectableGroup(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    topLevels.forEach { item ->
-                        LiquidNavigationItem(
-                            item = item,
-                            glassState = glassState,
-                            selected = tabRoute == item.route,
-                            onClick = {
-                                if (tabRoute == item.route) tabReselectVersion++ else onTabChange(item.route)
-                            },
-                            modifier = Modifier.weight(1f),
+                BoxWithConstraints(Modifier.fillMaxWidth().height(64.dp).selectableGroup()) {
+                    val selectedIndex = topLevels.indexOfFirst { it.route == tabRoute }.coerceAtLeast(0)
+                    val itemWidth = maxWidth / topLevels.size
+                    val itemWidthPx = with(LocalDensity.current) { itemWidth.toPx() }
+                    val indicatorIndex = remember { Animatable(selectedIndex.toFloat()) }
+                    val coroutineScope = rememberCoroutineScope()
+                    var dragging by remember { mutableStateOf(false) }
+                    var pressedRoute by remember { mutableStateOf<String?>(null) }
+                    val pressed = pressedRoute == tabRoute
+                    LaunchedEffect(selectedIndex) {
+                        indicatorIndex.animateTo(
+                            targetValue = selectedIndex.toFloat(),
+                            animationSpec = spring(dampingRatio = 0.72f, stiffness = 500f),
                         )
+                    }
+                    val travel = abs(selectedIndex.toFloat() - indicatorIndex.value)
+                    val stretch = if (dragging) 0.12f else min(0.16f, travel * 0.16f)
+                    val pressScale by animateFloatAsState(
+                        targetValue = if (pressed && !dragging) 1.06f else 1f,
+                        animationSpec = spring(dampingRatio = 0.68f, stiffness = 600f),
+                        label = "navigation-press",
+                    )
+                    val indicatorColor by animateColorAsState(
+                        targetValue = MaterialTheme.colorScheme.primary.copy(alpha = if (pressed) 0.24f else 0.16f),
+                        animationSpec = tween(durationMillis = 120),
+                        label = "navigation-press-color",
+                    )
+                    Box(
+                        Modifier
+                            .offset {
+                                IntOffset((itemWidthPx * indicatorIndex.value).roundToInt(), 0)
+                            }
+                            .width(itemWidth)
+                            .fillMaxHeight()
+                            .padding(horizontal = 4.dp, vertical = 6.dp)
+                            .graphicsLayer {
+                                scaleX = pressScale * (1f + stretch)
+                                scaleY = pressScale * (1f - stretch * 0.35f)
+                            }
+                            .background(indicatorColor, CircleShape),
+                    )
+                    Row(
+                        Modifier.fillMaxSize(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        topLevels.forEach { item ->
+                            LiquidNavigationItem(
+                                item = item,
+                                selected = tabRoute == item.route,
+                                onClick = {
+                                    if (tabRoute == item.route) tabReselectVersion++ else onTabChange(item.route)
+                                },
+                                onPressChange = { isPressed ->
+                                    if (isPressed) {
+                                        pressedRoute = item.route
+                                    } else if (pressedRoute == item.route) {
+                                        pressedRoute = null
+                                    }
+                                },
+                                onDragStart = {
+                                    dragging = true
+                                    coroutineScope.launch { indicatorIndex.stop() }
+                                },
+                                onDrag = { amount ->
+                                    coroutineScope.launch {
+                                        indicatorIndex.snapTo(
+                                            (indicatorIndex.value + amount / itemWidthPx)
+                                                .coerceIn(0f, (topLevels.size - 1).toFloat()),
+                                        )
+                                    }
+                                },
+                                onDragEnd = {
+                                    dragging = false
+                                    val target = indicatorIndex.value.roundToInt().coerceIn(topLevels.indices)
+                                    if (target == selectedIndex) {
+                                        coroutineScope.launch {
+                                            indicatorIndex.animateTo(
+                                                targetValue = target.toFloat(),
+                                                animationSpec = spring(dampingRatio = 0.72f, stiffness = 500f),
+                                            )
+                                        }
+                                    } else {
+                                        onTabChange(topLevels[target].route)
+                                    }
+                                },
+                                onDragCancel = {
+                                    dragging = false
+                                    coroutineScope.launch {
+                                        indicatorIndex.animateTo(
+                                            targetValue = selectedIndex.toFloat(),
+                                            animationSpec = spring(dampingRatio = 0.72f, stiffness = 500f),
+                                        )
+                                    }
+                                },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
                     }
                 }
             }
@@ -405,20 +511,15 @@ internal fun TabsHost(
 @Composable
 private fun LiquidNavigationItem(
     item: TopLevel,
-    glassState: HazeState,
     selected: Boolean,
     onClick: () -> Unit,
+    onPressChange: (Boolean) -> Unit,
+    onDragStart: () -> Unit,
+    onDrag: (Float) -> Unit,
+    onDragEnd: () -> Unit,
+    onDragCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val selectionProgress by animateFloatAsState(
-        targetValue = if (selected) 1f else 0f,
-        animationSpec = tween(durationMillis = 220),
-        label = "navigation-selection",
-    )
-    val selectionStyle = rememberLiquidGlassStyle(
-        shape = CircleShape,
-        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
-    )
     val contentColor by animateColorAsState(
         targetValue = if (selected) {
             MaterialTheme.colorScheme.onSurface
@@ -429,49 +530,45 @@ private fun LiquidNavigationItem(
         label = "navigation-content",
     )
     val interactionSource = remember { MutableInteractionSource() }
-    Box(modifier, contentAlignment = Alignment.Center) {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .padding(horizontal = 4.dp, vertical = 6.dp)
-                .graphicsLayer {
-                    val scale = 0.52f + 0.48f * selectionProgress
-                    scaleX = scale
-                    scaleY = scale
-                    alpha = selectionProgress
+    val interactionPressed by interactionSource.collectIsPressedAsState()
+    LaunchedEffect(selected, interactionPressed) {
+        onPressChange(selected && interactionPressed)
+    }
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .clip(CircleShape)
+            .selectable(
+                selected = selected,
+                onClick = onClick,
+                role = Role.Tab,
+                interactionSource = interactionSource,
+                indication = null,
+            )
+            .pointerInput(selected) {
+                if (selected) {
+                    detectHorizontalDragGestures(
+                        onDragStart = { onDragStart() },
+                        onDragEnd = onDragEnd,
+                        onDragCancel = onDragCancel,
+                        onHorizontalDrag = { _, amount -> onDrag(amount) },
+                    )
                 }
-                .hazeGlass(
-                    input = HazeInput.Sources(glassState),
-                    style = selectionStyle,
-                )
-                .clip(CircleShape),
+            },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Icon(
+            imageVector = item.icon,
+            contentDescription = null,
+            tint = contentColor,
+            modifier = Modifier.size(24.dp),
         )
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .clip(CircleShape)
-                .selectable(
-                    selected = selected,
-                    onClick = onClick,
-                    role = Role.Tab,
-                    interactionSource = interactionSource,
-                    indication = null,
-                ),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Icon(
-                imageVector = item.icon,
-                contentDescription = null,
-                tint = contentColor,
-                modifier = Modifier.size(24.dp),
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = stringResource(item.labelRes),
-                color = contentColor,
-                style = MaterialTheme.typography.labelMedium,
-            )
-        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = stringResource(item.labelRes),
+            color = contentColor,
+            style = MaterialTheme.typography.labelMedium,
+        )
     }
 }

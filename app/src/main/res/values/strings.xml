@@ -157,6 +157,10 @@
     <string name="literature_kind_book">Classic book</string>
     <string name="literature_filter_all">All</string>
     <string name="literature_filter_favorites">Favorites</string>
+    <string name="literature_filter_title">Type</string>
+    <string name="literature_sort_prominence">Curated first</string>
+    <string name="literature_sort_title">Title</string>
+    <string name="literature_sort_author">Author</string>
     <string name="literature_search_hint">Search title, author or original text</string>
     <string name="literature_empty_title">Nothing found</string>
     <string name="literature_empty_subtitle">Try another search or filter</string>

@@ -155,6 +155,10 @@
     <string name="literature_kind_book">典籍</string>
     <string name="literature_filter_all">全部</string>
     <string name="literature_filter_favorites">收藏</string>
+    <string name="literature_filter_title">體裁</string>
+    <string name="literature_sort_prominence">精選優先</string>
+    <string name="literature_sort_title">標題</string>
+    <string name="literature_sort_author">作者</string>
     <string name="literature_search_hint">搜尋篇名、作者或原文</string>
     <string name="literature_empty_title">沒有找到作品</string>
     <string name="literature_empty_subtitle">換個關鍵字或篩選條件試試</string>

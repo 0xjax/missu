@@ -79,7 +79,7 @@ import app.missu.ui.list.VideoOptionMenu
 import app.missu.ui.list.VideoListContent
 import app.missu.ui.list.VideoListControls
 import app.missu.ui.list.VideoListUiState
-import app.missu.ui.list.VideoToolbarContainer
+import app.missu.ui.components.LiquidToolbar
 import app.missu.ui.search.LocalSearchBarInset
 import app.missu.ui.search.SearchBarTopGap
 import app.missu.ui.search.searchGlassSource
@@ -256,29 +256,33 @@ fun VideoNavigationScreen(
                             onSelect = { tabIndex = it.ordinal },
                         )
                     },
-                    controlsTrailing = {
-                        VideoNavigationActions(libraryAction = libraryAction, searchAction = searchAction)
-                    },
+                    searchAction = searchAction,
+                    libraryAction = libraryAction,
                 )
 
                 VideoSection.ACTRESSES -> {
                     val ranking = sort == ActressFilterOptions.SORT_RANKING
-                    VideoNavigationControlsRow(searchAction = searchAction, libraryAction = libraryAction) {
+                    VideoNavigationControlsRow(
+                        searchAction = searchAction,
+                        libraryAction = libraryAction,
+                        options = {
+                            ToolbarOptionsButton { dismiss ->
+                                FilterSheet(
+                                    sort = sort,
+                                    ranking = ranking,
+                                    onSortChange = onSortChange,
+                                    filters = filters,
+                                    onFilterChange = onFilterChange,
+                                    onResetFilters = onResetFilters,
+                                    onDismiss = dismiss,
+                                )
+                            }
+                        },
+                    ) {
                         VideoSectionControl(
                             selected = tab,
                             onSelect = { tabIndex = it.ordinal },
                         )
-                        ToolbarOptionsButton { dismiss ->
-                            FilterSheet(
-                                sort = sort,
-                                ranking = ranking,
-                                onSortChange = onSortChange,
-                                filters = filters,
-                                onFilterChange = onFilterChange,
-                                onResetFilters = onResetFilters,
-                                onDismiss = dismiss,
-                            )
-                        }
                     }
                 }
 
@@ -298,13 +302,15 @@ fun VideoNavigationScreen(
 private fun VideoNavigationControlsRow(
     searchAction: @Composable () -> Unit,
     libraryAction: @Composable () -> Unit,
+    options: (@Composable RowScope.() -> Unit)? = null,
     content: @Composable RowScope.() -> Unit,
 ) {
-    VideoToolbarContainer {
+    LiquidToolbar {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            searchAction()
             Row(
                 modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -312,19 +318,11 @@ private fun VideoNavigationControlsRow(
                 content = content,
             )
             Spacer(Modifier.width(12.dp))
-            VideoNavigationActions(libraryAction = libraryAction, searchAction = searchAction)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                options?.invoke(this)
+                libraryAction()
+            }
         }
-    }
-}
-
-@Composable
-private fun VideoNavigationActions(
-    libraryAction: @Composable () -> Unit,
-    searchAction: @Composable () -> Unit,
-) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        libraryAction()
-        searchAction()
     }
 }
 

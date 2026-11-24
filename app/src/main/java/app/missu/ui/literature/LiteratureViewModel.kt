@@ -7,6 +7,7 @@ import app.missu.data.literature.LiteraryWork
 import app.missu.data.literature.LiteraryWorkSummary
 import app.missu.data.literature.LiteratureFilter
 import app.missu.data.literature.LiteratureRepository
+import app.missu.data.literature.LiteratureSort
 import app.missu.data.store.LiteratureStore
 import app.missu.ui.common.LoadMoreState
 import app.missu.ui.common.UiMessage
@@ -40,6 +41,8 @@ class LiteratureViewModel(
     val query: StateFlow<String> = _query.asStateFlow()
     private val _filter = MutableStateFlow(initialFilter)
     val filter: StateFlow<LiteratureFilter> = _filter.asStateFlow()
+    private val _sort = MutableStateFlow(LiteratureSort.PROMINENCE)
+    val sort: StateFlow<LiteratureSort> = _sort.asStateFlow()
     private var requestJob: Job? = null
     private var moreJob: Job? = null
 
@@ -67,6 +70,12 @@ class LiteratureViewModel(
         refresh()
     }
 
+    fun setSort(value: LiteratureSort) {
+        if (_sort.value == value) return
+        _sort.value = value
+        refresh()
+    }
+
     fun refresh() {
         requestJob?.cancel()
         moreJob?.cancel()
@@ -78,6 +87,7 @@ class LiteratureViewModel(
                     query = _query.value.trim(),
                     favorites = store.favorites.value,
                     offset = 0,
+                    sort = _sort.value,
                 )
                 _state.value = LiteratureUiState.Content(page.works, page.nextOffset)
             } catch (error: CancellationException) {
@@ -103,6 +113,7 @@ class LiteratureViewModel(
                     query = _query.value.trim(),
                     favorites = store.favorites.value,
                     offset = offset,
+                    sort = _sort.value,
                 )
                 val current = _state.value as? LiteratureUiState.Content ?: return@launch
                 _state.value = current.copy(

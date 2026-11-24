@@ -1,6 +1,5 @@
 package app.missu.ui.literature
 
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -11,8 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.MaterialTheme
@@ -23,9 +20,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.missu.R
 import app.missu.data.literature.LiteratureFilter
+import app.missu.data.literature.LiteratureSort
 import app.missu.ui.components.EmptyHint
-import app.missu.ui.list.VideoOptionMenu
-import app.missu.ui.list.VideoToolbarContainer
+import app.missu.ui.components.LiquidToolbar
+import app.missu.ui.list.ToolbarOptionsButton
+import app.missu.ui.list.ToolbarOptionsSheet
+import app.missu.ui.list.ToolbarRadioGroup
 import app.missu.ui.search.LocalSearchBarInset
 import app.missu.ui.search.SearchHostShell
 import app.missu.ui.search.SearchTopVeil
@@ -37,9 +37,11 @@ fun LiteratureNavigationScreen(
     literatureState: LiteratureUiState,
     query: String,
     filter: LiteratureFilter,
+    sort: LiteratureSort,
     favorites: Set<String>,
     onQueryChange: (String) -> Unit,
     onFilterChange: (LiteratureFilter) -> Unit,
+    onSortChange: (LiteratureSort) -> Unit,
     onToggleFavorite: (String) -> Unit,
     onLoadMore: () -> Unit,
     onRetry: () -> Unit,
@@ -94,31 +96,49 @@ fun LiteratureNavigationScreen(
                 triggerHeight = SearchTriggerHeight,
             )
             Box(Modifier.align(Alignment.TopCenter).padding(top = statusTop)) {
-                VideoToolbarContainer {
+                LiquidToolbar {
                     Row(
                         Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Row(
-                            Modifier.weight(1f).horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            VideoOptionMenu(
-                                text = stringResource(filter.labelRes()),
-                                options = LiteratureFilter.entries.filterNot { it == LiteratureFilter.FAVORITES },
-                                selected = filter,
-                                onSelect = onFilterChange,
-                                optionLabel = { stringResource(it.labelRes()) },
-                            )
-                        }
-                        Spacer(Modifier.width(12.dp))
+                        searchAction()
+                        Spacer(Modifier.weight(1f))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            ToolbarOptionsButton { dismiss ->
+                                ToolbarOptionsSheet {
+                                    ToolbarRadioGroup(
+                                        title = stringResource(R.string.list_sort_title),
+                                        options = LiteratureSort.entries,
+                                        selected = sort,
+                                        onSelect = { value ->
+                                            if (value != null && value != sort) onSortChange(value)
+                                            dismiss()
+                                        },
+                                        optionLabel = { stringResource(it.labelRes()) },
+                                    )
+                                    ToolbarRadioGroup(
+                                        title = stringResource(R.string.literature_filter_title),
+                                        options = LiteratureFilter.entries.filterNot { it == LiteratureFilter.FAVORITES },
+                                        selected = filter,
+                                        onSelect = { value ->
+                                            if (value != null && value != filter) onFilterChange(value)
+                                            dismiss()
+                                        },
+                                        optionLabel = { stringResource(it.labelRes()) },
+                                    )
+                                }
+                            }
                             libraryAction()
-                            searchAction()
                         }
                     }
                 }
             }
         }
     }
+}
+
+private fun LiteratureSort.labelRes(): Int = when (this) {
+    LiteratureSort.PROMINENCE -> R.string.literature_sort_prominence
+    LiteratureSort.TITLE -> R.string.literature_sort_title
+    LiteratureSort.AUTHOR -> R.string.literature_sort_author
 }
