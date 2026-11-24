@@ -108,6 +108,7 @@ import app.missu.ui.search.SearchBody
 import app.missu.ui.search.SearchHost
 import app.missu.ui.search.SearchUiState
 import app.missu.ui.search.SearchViewModel
+import app.missu.ui.theme.LocalDarkTheme
 import app.missu.ui.literature.LiteratureViewModel
 import app.missu.ui.literature.LiteratureNavigationScreen
 import dev.chrisbanes.haze.HazeInput
@@ -177,7 +178,7 @@ internal fun TabsHost(
     val glassState = rememberHazeState()
     val navigationShape = RoundedCornerShape(32.dp)
     val navigationStyle = rememberLiquidGlassStyle(navigationShape)
-    val navigationInset = 76.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val navigationInset = 68.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     CompositionLocalProvider(LocalFloatingNavigationBarInset provides navigationInset) {
         Box(
             Modifier.fillMaxSize().underScrim(
@@ -408,7 +409,7 @@ internal fun TabsHost(
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom))
-                    .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
+                    .padding(start = 16.dp, end = 16.dp, bottom = 8.dp)
                     .hazeGlass(
                         input = HazeInput.Sources(glassState),
                         style = navigationStyle,
@@ -416,7 +417,7 @@ internal fun TabsHost(
                     .clip(navigationShape),
                 contentAlignment = Alignment.Center,
             ) {
-                BoxWithConstraints(Modifier.fillMaxWidth().height(64.dp).selectableGroup()) {
+                BoxWithConstraints(Modifier.fillMaxWidth().height(60.dp).selectableGroup()) {
                     val selectedIndex = topLevels.indexOfFirst { it.route == tabRoute }.coerceAtLeast(0)
                     val itemWidth = maxWidth / topLevels.size
                     val itemWidthPx = with(LocalDensity.current) { itemWidth.toPx() }
@@ -438,8 +439,15 @@ internal fun TabsHost(
                         animationSpec = spring(dampingRatio = 0.68f, stiffness = 600f),
                         label = "navigation-press",
                     )
+                    val darkTheme = LocalDarkTheme.current
+                    val indicatorAlpha = when {
+                        pressed && darkTheme -> 0.22f
+                        pressed -> 0.16f
+                        darkTheme -> 0.16f
+                        else -> 0.10f
+                    }
                     val indicatorColor by animateColorAsState(
-                        targetValue = MaterialTheme.colorScheme.primary.copy(alpha = if (pressed) 0.24f else 0.16f),
+                        targetValue = MaterialTheme.colorScheme.primary.copy(alpha = indicatorAlpha),
                         animationSpec = tween(durationMillis = 120),
                         label = "navigation-press-color",
                     )
@@ -450,7 +458,7 @@ internal fun TabsHost(
                             }
                             .width(itemWidth)
                             .fillMaxHeight()
-                            .padding(horizontal = 4.dp, vertical = 6.dp)
+                            .padding(horizontal = 6.dp, vertical = 6.dp)
                             .graphicsLayer {
                                 scaleX = pressScale * (1f + stretch)
                                 scaleY = pressScale * (1f - stretch * 0.35f)
@@ -535,7 +543,7 @@ private fun LiquidNavigationItem(
 ) {
     val contentColor by animateColorAsState(
         targetValue = if (selected) {
-            MaterialTheme.colorScheme.onSurface
+            MaterialTheme.colorScheme.primary
         } else {
             MaterialTheme.colorScheme.onSurfaceVariant
         },
@@ -577,7 +585,7 @@ private fun LiquidNavigationItem(
             tint = contentColor,
             modifier = Modifier.size(24.dp),
         )
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(2.dp))
         Text(
             text = stringResource(item.labelRes),
             color = contentColor,
