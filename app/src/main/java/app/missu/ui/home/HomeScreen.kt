@@ -50,6 +50,7 @@ import java.time.LocalDate
 
 @Composable
 fun HomeScreen(
+    intro: HomeIntroContent,
     usageDays: List<UsageDay>,
     onOpenGuide: (String) -> Unit,
     onOpenUsage: () -> Unit,
@@ -75,7 +76,7 @@ fun HomeScreen(
                 ),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                item(key = "intro") { HomeIntro() }
+                item(key = "intro") { HomeIntro(intro) }
                 item(key = "usage") {
                     val today = LocalDate.now()
                     HomeEntryCard(
@@ -144,7 +145,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HomeIntro() {
+private fun HomeIntro(intro: HomeIntroContent) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge,
@@ -171,12 +172,12 @@ private fun HomeIntro() {
                 )
             }
             Text(
-                text = stringResource(R.string.home_intro_title),
+                text = stringResource(intro.titleRes),
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
             )
             Text(
-                text = stringResource(R.string.home_intro_body),
+                text = stringResource(intro.bodyRes),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
             )

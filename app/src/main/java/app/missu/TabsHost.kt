@@ -97,6 +97,7 @@ import app.missu.ui.comics.ComicNavigationViewModel
 import app.missu.ui.videos.VideoNavigationScreen
 import app.missu.ui.videos.VideoNavigationViewModel
 import app.missu.ui.videos.HOT_PATH
+import app.missu.ui.home.HomeIntroContent
 import app.missu.ui.home.HomeScreen
 import app.missu.data.model.VideoListQuery
 import app.missu.ui.list.AutoLoadVideoList
@@ -134,6 +135,7 @@ internal val topLevels = listOf(
 
 @Composable
 internal fun TabsHost(
+    homeIntro: HomeIntroContent,
     entry: NavBackStackEntry,
     navScope: AnimatedContentScope,
     backStackEntry: NavBackStackEntry?,
@@ -202,6 +204,7 @@ internal fun TabsHost(
                         PageSurface(card = false) {
                             val usageDays by usageStats.days.collectAsStateWithLifecycle()
                             HomeScreen(
+                                intro = homeIntro,
                                 usageDays = usageDays,
                                 scrollToTopSignal = tabReselectVersion,
                                 onOpenGuide = { navController.navigate("guide/$it") },

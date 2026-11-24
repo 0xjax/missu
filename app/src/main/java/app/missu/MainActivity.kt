@@ -78,6 +78,8 @@ import app.missu.ui.challenge.ChallengeOverlayHost
 import app.missu.ui.challenge.ChallengeState
 import app.missu.ui.components.LocalSharedTransitionScope
 import app.missu.ui.components.LocalVideoListColumns
+import app.missu.ui.home.HomeIntroContent
+import app.missu.ui.home.selectHomeIntro
 import app.missu.ui.preview.LocalVideoPreview
 import app.missu.ui.preview.VideoPreviewHost
 import app.missu.ui.preview.VideoPreviewState
@@ -88,6 +90,8 @@ import coil3.ImageLoader
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.compose.setSingletonImageLoaderFactory
 import coil3.request.crossfade
+import java.time.LocalDate
+import java.time.LocalTime
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 
@@ -277,6 +281,10 @@ private fun MissuApp(
     val literatureRepository = dependencies.literatureRepository
     val context = LocalContext.current
     val listQueryStore = remember { ListQueryStore(context.applicationContext) }
+    val homeIntro = rememberSaveable {
+        selectHomeIntro(LocalDate.now(), LocalTime.now(), dependencies.usageStats.days.value)
+            .let { intArrayOf(it.titleRes, it.bodyRes) }
+    }
 
     fun openDetail(id: String, thumbnail: String?, heroTag: String) {
         navController.navigate(
@@ -382,6 +390,7 @@ private fun MissuApp(
         ) {
             composable(TABS_ROUTE) { entry ->
                 TabsHost(
+                    homeIntro = HomeIntroContent(homeIntro[0], homeIntro[1]),
                     entry = entry,
                     navScope = this,
                     backStackEntry = backStackEntry.value,
