@@ -142,6 +142,8 @@
     <string name="home_intro_balanced_2_title">不必只選擇一種興趣</string>
     <string name="home_intro_balanced_2_body">詩文、影像和故事都可以成為入口，重要的是你此刻真正想要什麼。</string>
     <string name="home_guides_title">此刻，值得讀一點</string>
+    <string name="home_articles_title">隨機閱讀</string>
+    <string name="article_shuffle">換一篇</string>
     <string name="usage_title">使用時間</string>
     <string name="usage_home_title">今日使用 · %1$s</string>
     <string name="usage_home_body">近 7 天日均 %1$s · 僅儲存在本機</string>

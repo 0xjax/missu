@@ -18,6 +18,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import app.missu.data.api.LocalAppDependencies
 import app.missu.data.api.MissavApi
 import app.missu.data.api.VideoListOptions
 import app.missu.data.comic.ComicRepository
@@ -60,6 +61,7 @@ import app.missu.ui.detail.DetailScreen
 import app.missu.ui.detail.DetailViewModel
 import app.missu.ui.history.VideoLibraryScreen
 import app.missu.ui.history.HistoryViewModel
+import app.missu.ui.home.ArticleScreen
 import app.missu.ui.home.GuideScreen
 import app.missu.ui.home.guideById
 import app.missu.data.model.VideoListQuery
@@ -212,6 +214,15 @@ internal fun NavGraphBuilder.secondaryDestinations(
         guideById(entry.arguments?.getString("id").orEmpty())?.let { guide ->
             PageSurface {
                 GuideScreen(guide = guide, onBack = onGoBack)
+            }
+        }
+    }
+
+    composable("article/{id}") { entry ->
+        val id = entry.arguments?.getString("id").orEmpty()
+        LocalAppDependencies.current.articleRepository.findById(id)?.let { article ->
+            PageSurface {
+                ArticleScreen(article = article, onBack = onGoBack)
             }
         }
     }

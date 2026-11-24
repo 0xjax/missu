@@ -55,6 +55,7 @@
 - 不做无实测需求的状态管理、查询缓存、绘图库或抽象；优先简单实现，不顺手改相邻代码。
 - 版本与插件坐标统一在 `gradle/libs.versions.toml`；站点、播放器、Coil 共享 `AppDependencies` 的 OkHttp 基础设施，各自保留请求头、Cookie 与超时。
 - 诗文精读与补充源在 `content/literature/`；语料变更执行 `bun run literature:import`，内容变更执行 `bun run literature:build`。构建同时生成内置 `literature-core.db` 与 Release 附件 `literature-full.db.gz` / `literature-manifest.json`。不得手改数据库、`literature-pack.json` / `manifest.json` 或把正文迁回界面资源。
+- 首页公开文章终稿在 `content/articles/sources/`，变更后执行 `bun run articles:build`，不得手改生成的 `articles.json` 与 `manifest.json`。私人笔记目录只能作为人工改写素材，禁止遍历、复制、提交或作为构建输入；具体事件、第三人私密内容及带 `protected` 标记的原稿不得直接收录。公开稿须独立重写并人工脱敏复核，不保留原文件名、日期、Frontmatter、双链、附件、原始路径或外链；自动扫描不能代替审阅，完整边界见 `content/articles/README.md`。
 - 播放画面和进度状态优先 Media3 Compose 原生 API；控件外观与手势按 `DESIGN.md` 自绘。
 - 仅适配 Android；注释用中文，提交信息用英文 Conventional Commits；注释标签只用 `CRITICAL` / `WARNING` / `TODO` / `NOTE`。
 - 浮点比较、累计或链式计算前先按业务精度舍入，禁止原始 `==`。

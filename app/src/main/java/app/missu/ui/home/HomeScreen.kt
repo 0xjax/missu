@@ -17,8 +17,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.AutoStories
+import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Shuffle
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -33,6 +35,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.missu.R
+import app.missu.data.article.Article
 import app.missu.data.store.UsageDay
 import app.missu.data.store.usageAverage
 import app.missu.data.store.usageTotal
@@ -52,7 +55,10 @@ import java.time.LocalDate
 fun HomeScreen(
     intro: HomeIntroContent,
     usageDays: List<UsageDay>,
+    article: Article?,
     onOpenGuide: (String) -> Unit,
+    onOpenArticle: (String) -> Unit,
+    onShuffleArticle: () -> Unit,
     onOpenUsage: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
@@ -112,6 +118,15 @@ fun HomeScreen(
                                 modifier = Modifier.weight(1f).fillMaxHeight(),
                             )
                         }
+                    }
+                }
+                article?.let { current ->
+                    item(key = "article-${current.id}") {
+                        ArticleCard(
+                            article = current,
+                            onClick = { onOpenArticle(current.id) },
+                            onShuffle = onShuffleArticle,
+                        )
                     }
                 }
             }
@@ -197,6 +212,46 @@ private fun GuideCard(guide: Guide, onClick: () -> Unit, modifier: Modifier = Mo
                 text = stringResource(guide.categoryRes),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ArticleCard(article: Article, onClick: () -> Unit, onShuffle: () -> Unit) {
+    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                GuideIcon(icon = Icons.Outlined.MenuBook)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.home_articles_title),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        text = article.category,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                TooltipIconButton(
+                    icon = Icons.Outlined.Shuffle,
+                    contentDescription = stringResource(R.string.article_shuffle),
+                    onClick = onShuffle,
+                    modifier = Modifier.size(SearchTriggerHeight),
+                )
+            }
+            Text(text = article.title, style = MaterialTheme.typography.titleLarge)
+            Text(
+                text = article.summary,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

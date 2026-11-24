@@ -2,6 +2,7 @@ package app.missu.data.api
 
 import android.content.Context
 import androidx.compose.runtime.staticCompositionLocalOf
+import app.missu.data.article.ArticleRepository
 import app.missu.data.comic.createComicRepository
 import app.missu.data.literature.LiteraturePackManager
 import app.missu.data.literature.LiteratureRepository
@@ -17,6 +18,7 @@ class AppDependencies(context: Context, challenge: ChallengeHandler) {
     val comicRepository = createComicRepository(httpClient, AndroidCookieJar(), challenge)
     val literatureRepository = LiteratureRepository(LiteraturePackManager.openInitialDatabase(context))
     val literaturePackManager = LiteraturePackManager(context, httpClient, literatureRepository)
+    val articleRepository = ArticleRepository(context.applicationContext)
     val usageStats = UsageStatsStore(context.applicationContext)
 }
 

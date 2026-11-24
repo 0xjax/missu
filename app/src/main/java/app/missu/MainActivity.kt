@@ -52,6 +52,7 @@ import androidx.navigation.compose.rememberNavController
 import app.missu.data.api.AppDependencies
 import app.missu.data.api.LocalAppDependencies
 import app.missu.data.api.SourceConfig
+import app.missu.data.article.selectNextArticle
 import app.missu.data.comic.ComicSource
 import app.missu.data.model.VideoListQuery
 import app.missu.data.store.AppLanguage
@@ -279,6 +280,16 @@ private fun MissuApp(
     val dependencies = LocalAppDependencies.current
     val api = dependencies.api
     val literatureRepository = dependencies.literatureRepository
+    val articles = dependencies.articleRepository.articles
+    var homeArticleId by remember {
+        mutableStateOf(selectNextArticle(articles, currentId = null, recentIds = emptyList())?.id)
+    }
+    val recentArticleIds = remember { mutableListOf<String>() }
+    val homeArticle = articles.firstOrNull { it.id == homeArticleId } ?: articles.firstOrNull()
+    fun shuffleHomeArticle() {
+        homeArticleId?.let(recentArticleIds::add)
+        homeArticleId = selectNextArticle(articles, homeArticleId, recentArticleIds)?.id
+    }
     val context = LocalContext.current
     val listQueryStore = remember { ListQueryStore(context.applicationContext) }
     val homeIntro = rememberSaveable {
@@ -391,6 +402,8 @@ private fun MissuApp(
             composable(TABS_ROUTE) { entry ->
                 TabsHost(
                     homeIntro = HomeIntroContent(homeIntro[0], homeIntro[1]),
+                    homeArticle = homeArticle,
+                    onShuffleArticle = ::shuffleHomeArticle,
                     entry = entry,
                     navScope = this,
                     backStackEntry = backStackEntry.value,

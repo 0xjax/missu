@@ -138,6 +138,8 @@
     <string name="home_intro_balanced_2_title">興味を一つに絞る必要はありません</string>
     <string name="home_intro_balanced_2_body">詩文、映像、物語、どれも入口になります。大切なのは今の気持ちです。</string>
     <string name="home_guides_title">今読みたい、小さなガイド</string>
+    <string name="home_articles_title">ランダム読書</string>
+    <string name="article_shuffle">別の記事にする</string>
     <string name="usage_title">使用時間</string>
     <string name="usage_home_title">今日 · %1$s</string>
     <string name="usage_home_body">7 日間の 1 日平均 %1$s · この端末にのみ保存</string>

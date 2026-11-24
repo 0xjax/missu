@@ -1,4 +1,4 @@
-# 仓库根 = Gradle 工程根，另有 Bun 诗文内容生成工具。
+# 仓库根 = Gradle 工程根，另有 Bun 内容生成工具。
 # 归档 Expo 工程自己的忽略规则在 legacy/expo/.gitignore。
 
 # Gradle / Kotlin / Bun 构建产物

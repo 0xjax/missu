@@ -144,6 +144,8 @@
     <string name="home_intro_balanced_2_title">You do not have to choose just one interest</string>
     <string name="home_intro_balanced_2_body">Poetry, film and stories can all be entry points. What matters is what you want right now.</string>
     <string name="home_guides_title">A thoughtful place to begin</string>
+    <string name="home_articles_title">Random reading</string>
+    <string name="article_shuffle">Show another article</string>
     <string name="usage_title">Usage time</string>
     <string name="usage_home_title">Today · %1$s</string>
     <string name="usage_home_body">7-day daily average %1$s · Stored only on this device</string>

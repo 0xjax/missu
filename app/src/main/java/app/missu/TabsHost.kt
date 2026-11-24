@@ -77,6 +77,7 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import app.missu.data.api.MissavApi
 import app.missu.data.api.VideoListOptions
+import app.missu.data.article.Article
 import app.missu.data.comic.ComicRepository
 import app.missu.data.literature.LiteratureRepository
 import app.missu.data.store.ComicSourceStore
@@ -136,6 +137,8 @@ internal val topLevels = listOf(
 @Composable
 internal fun TabsHost(
     homeIntro: HomeIntroContent,
+    homeArticle: Article?,
+    onShuffleArticle: () -> Unit,
     entry: NavBackStackEntry,
     navScope: AnimatedContentScope,
     backStackEntry: NavBackStackEntry?,
@@ -206,8 +209,11 @@ internal fun TabsHost(
                             HomeScreen(
                                 intro = homeIntro,
                                 usageDays = usageDays,
+                                article = homeArticle,
                                 scrollToTopSignal = tabReselectVersion,
                                 onOpenGuide = { navController.navigate("guide/$it") },
+                                onOpenArticle = { navController.navigate("article/$it") },
+                                onShuffleArticle = onShuffleArticle,
                                 onOpenUsage = { navController.navigate("usage") },
                                 onOpenSettings = { navController.navigate("settings") },
                             )

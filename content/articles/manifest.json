@@ -1,0 +1,21 @@
+{
+  "articleCount": 3,
+  "articles": [
+    {
+      "id": "environment-and-alternatives",
+      "category": "行为与环境",
+      "title": "比忍耐更早一步：重新设计触发环境"
+    },
+    {
+      "id": "help-boundaries",
+      "category": "自我照顾",
+      "title": "什么时候，自助已经不够了？"
+    },
+    {
+      "id": "wanting-and-liking",
+      "category": "理解欲望",
+      "title": "想要，不等于喜欢"
+    }
+  ],
+  "sha256": "80470cea929cbd726dfb034d375533f7aa5c72139fdb75a545842becb2235a62"
+}
