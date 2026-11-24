@@ -51,7 +51,7 @@
 - 新内容、推荐和增长功能不得绕开以上原则；实现细节只记 `DESIGN.md`。
 - UI 使用 **Material 3 Expressive + 自己的 Compose**，不引第三方 UI 组件库；行为不可配置的组件宁自绘或换库。
 - Android API/工具用法先用 `android docs search/fetch`；性能与 R8 分析分别使用项目级 `jetpack-compose-performance` / `r8-analyzer` 技能。
-- MD3E 选型先查 `.agents/skills/md3e`；当前 material3 `1.5.0-rc01`，不用 `SegmentedButton` / `NavigationBar` / `Medium|LargeTopAppBar`。图标统一 `material-icons-extended` Outlined，仅明确状态语义用 Filled，不自绘或混入其他图标源。
+- M3E 选型先查 `.agents/skills/md3e`；当前 material3 `1.5.0-rc01`，不用 `SegmentedButton` / `NavigationBar` / `Medium|LargeTopAppBar`。图标统一 `material-icons-extended` Outlined，仅明确状态语义用 Filled，不自绘或混入其他图标源。
 - 不做无实测需求的状态管理、查询缓存、绘图库或抽象；优先简单实现，不顺手改相邻代码。
 - 版本与插件坐标统一在 `gradle/libs.versions.toml`；站点、播放器、Coil 共享 `AppDependencies` 的 OkHttp 基础设施，各自保留请求头、Cookie 与超时。
 - 诗文精读与补充源在 `content/literature/`；语料变更执行 `bun run literature:import`，内容变更执行 `bun run literature:build`。构建同时生成内置 `literature-core.db` 与 Release 附件 `literature-full.db.gz` / `literature-manifest.json`。不得手改数据库、`literature-pack.json` / `manifest.json` 或把正文迁回界面资源。

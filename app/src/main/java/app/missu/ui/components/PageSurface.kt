@@ -29,7 +29,7 @@ import androidx.compose.ui.unit.dp
 
 internal val LocalFloatingNavigationBarInset = staticCompositionLocalOf { 0.dp }
 
-/** 机器报不出屏幕圆角时的兜底（MD3 的 extraLarge）。 */
+/** 机器报不出屏幕圆角时的兜底（M3E 的 extraLarge）。 */
 private val FallbackCorner = 24.dp
 
 /**
