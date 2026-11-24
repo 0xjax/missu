@@ -15,10 +15,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
-import app.missu.ui.search.LocalSearchAnchorCapture
 import app.missu.ui.search.LocalSearchGlassState
 import dev.chrisbanes.haze.HazeInput
 import dev.chrisbanes.haze.glass.hazeGlass
@@ -27,7 +24,6 @@ val LocalTabAnimatedVisibilityScope = compositionLocalOf<AnimatedVisibilityScope
 
 @Composable
 fun LiquidToolbar(content: @Composable () -> Unit) {
-    val captureBounds = LocalSearchAnchorCapture.current
     val glassState = LocalSearchGlassState.current
     val sharedScope = LocalSharedTransitionScope.current
     val visibilityScope = LocalTabAnimatedVisibilityScope.current
@@ -47,7 +43,6 @@ fun LiquidToolbar(content: @Composable () -> Unit) {
         .fillMaxWidth()
         .padding(horizontal = 16.dp)
         .then(sharedModifier)
-        .onGloballyPositioned { captureBounds(it.boundsInWindow()) }
     if (glassState == null) {
         Surface(
             modifier = modifier,

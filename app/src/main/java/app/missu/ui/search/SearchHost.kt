@@ -2,17 +2,17 @@
 
 package app.missu.ui.search
 
+import android.view.View
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -56,6 +55,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -66,22 +66,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
-import kotlin.math.roundToInt
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import app.missu.R
 import app.missu.data.api.VideoListOptions
 import app.missu.ui.common.LoadMoreState
@@ -100,6 +101,7 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -145,7 +147,7 @@ fun SearchHost(
     )
 }
 
-/** 影片与漫画共用的搜索按钮、输入态、工具框形变和返回规则。 */
+/** 影片与漫画共用的搜索按钮、输入态、搜索页交接和返回规则。 */
 @Composable
 internal fun SearchHostShell(
     searching: Boolean,
@@ -166,10 +168,12 @@ internal fun SearchHostShell(
     val textFieldState = rememberTextFieldState(initialText = initialKeyword)
     val focusRequester = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
-    var triggerBounds by remember { mutableStateOf<Rect?>(null) }
-    var expansionAnchor by remember { mutableStateOf<Rect?>(null) }
     val expansionProgress = remember { Animatable(0f) }
     var expansionVisible by remember { mutableStateOf(false) }
+    var exiting by remember { mutableStateOf(false) }
+    var inputView by remember { mutableStateOf<View?>(null) }
+    var inputFocusManager by remember { mutableStateOf<FocusManager?>(null) }
+    var inputImeBottom by remember { mutableIntStateOf(0) }
     val expansionSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
 
     LaunchedEffect(textFieldState, onQueryChange) {
@@ -179,7 +183,15 @@ internal fun SearchHostShell(
             .collect { onQueryChange(it) }
     }
 
+    fun hideKeyboard() {
+        inputFocusManager?.clearFocus()
+        inputView?.let { view ->
+            ViewCompat.getWindowInsetsController(view)?.hide(WindowInsetsCompat.Type.ime())
+        }
+    }
+
     fun collapseSearch() {
+        hideKeyboard()
         scope.launch { searchBarState.animateToCollapsed() }
         if (inlineTrigger) {
             scope.launch {
@@ -202,7 +214,6 @@ internal fun SearchHostShell(
     }
 
     fun openSearch() {
-        expansionAnchor = triggerBounds
         expansionVisible = true
         scope.launch {
             expansionProgress.snapTo(0f)
@@ -217,8 +228,21 @@ internal fun SearchHostShell(
     fun exit() {
         val wasExpanded = searchBarState.targetValue == SearchBarValue.Expanded
         if (onExit == null || !wasExpanded) textFieldState.edit { replace(0, length, "") }
+        if (onExit != null && !wasExpanded) {
+            if (exiting) return
+            exiting = true
+            hideKeyboard()
+            scope.launch {
+                if (inputImeBottom > 0) {
+                    snapshotFlow { inputImeBottom }.first { it == 0 }
+                }
+                collapseSearch()
+                onExit()
+            }
+            return
+        }
         collapseSearch()
-        if (onExit == null) onClear() else if (!wasExpanded) onExit()
+        if (onExit == null) onClear()
     }
 
     fun back() {
@@ -236,6 +260,14 @@ internal fun SearchHostShell(
     }
 
     val inputField = @Composable {
+        val currentView = LocalView.current
+        val currentFocusManager = LocalFocusManager.current
+        val currentImeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
+        SideEffect {
+            inputView = currentView
+            inputFocusManager = currentFocusManager
+            inputImeBottom = currentImeBottom
+        }
         SearchBarDefaults.InputField(
             textFieldState = textFieldState,
             searchBarState = searchBarState,
@@ -271,10 +303,13 @@ internal fun SearchHostShell(
         )
     }
     val contentInset = statusTop + if (inlineTrigger) InlineSearchBlock else SearchBarBlock
-    Box(modifier.fillMaxSize()) {
+    Box(
+        modifier.fillMaxSize().graphicsLayer {
+            if (inlineTrigger) alpha = 1f - expansionProgress.value.coerceIn(0f, 1f)
+        },
+    ) {
         CompositionLocalProvider(
             LocalSearchBarInset provides contentInset,
-            LocalSearchAnchorCapture provides { bounds -> triggerBounds = bounds },
             LocalSearchGlassState provides (if (inlineTrigger) glassState else null),
         ) {
             Column(Modifier.fillMaxSize()) { content(searchAction) }
@@ -307,7 +342,6 @@ internal fun SearchHostShell(
         InlineSearchExpansion(
             visible = expansionVisible,
             progress = expansionProgress.value.coerceIn(0f, 1f),
-            anchor = expansionAnchor,
             statusTop = statusTop,
             inputField = inputField,
             onDismiss = { exit() },
@@ -357,7 +391,6 @@ internal fun BoxScope.SearchTopVeil(
 private fun InlineSearchExpansion(
     visible: Boolean,
     progress: Float,
-    anchor: Rect?,
     statusTop: Dp,
     inputField: @Composable () -> Unit,
     onDismiss: () -> Unit,
@@ -377,48 +410,22 @@ private fun InlineSearchExpansion(
             dialogWindow?.setDimAmount(0f)
             dialogWindow?.setWindowAnimations(0)
         }
-        BoxWithConstraints(Modifier.fillMaxSize()) {
-            val density = LocalDensity.current
-            val fullWidth = constraints.maxWidth.toFloat()
-            val fullHeight = constraints.maxHeight.toFloat()
-            val toolbarHeight = with(density) { InlineSearchBlock.toPx() }
-            val fallback = with(density) {
-                val margin = 16.dp.toPx()
-                val top = statusTop.toPx() + SearchBarTopGap.toPx()
-                Rect(margin, top, fullWidth - margin, top + toolbarHeight)
-            }
-            val start = anchor ?: fallback
-            val left = start.left * (1f - progress)
-            val top = start.top * (1f - progress)
-            val width = start.width + (fullWidth - start.width) * progress
-            val height = start.height + (fullHeight - start.height) * progress
-            val containerShape = RoundedCornerShape(InlineSearchBlock / 2 * (1f - progress))
-
-            Surface(
-                modifier = Modifier
-                    .offset { IntOffset(left.roundToInt(), top.roundToInt()) }
-                    .size(with(density) { width.toDp() }, with(density) { height.toDp() }),
-                shape = containerShape,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                border = BorderStroke(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 1f - progress),
-                ),
-            ) {
-                Column(
-                    Modifier
-                        .fillMaxSize()
-                        .graphicsLayer { alpha = progress },
-                ) {
-                    // 与原生 FullScreenSearchBarLayout 一致：顶部间距随进度增长，
-                    // 输入框在收起终点与工具框顶部重合，展开终点才落到状态栏下方。
-                    Spacer(Modifier.height((statusTop + SearchBarTopGap) * progress))
-                    Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp * progress)) {
-                        inputField()
-                    }
-                    Box(Modifier.weight(1f).padding(top = 8.dp)) {
-                        content()
-                    }
+        Surface(
+            modifier = Modifier.fillMaxSize().graphicsLayer {
+                alpha = progress
+                val scale = 0.98f + 0.02f * progress
+                scaleX = scale
+                scaleY = scale
+            },
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        ) {
+            Column(Modifier.fillMaxSize()) {
+                Spacer(Modifier.height(statusTop + SearchBarTopGap))
+                Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                    inputField()
+                }
+                Box(Modifier.weight(1f).padding(top = 8.dp)) {
+                    content()
                 }
             }
         }
@@ -474,9 +481,6 @@ private val InlineSearchBlock = SearchBarTopGap + SearchTriggerHeight + 8.dp
  * 搜索宿主给滚动内容预留的顶部空间；内容首帧避开工具行，滚动后从其下方穿过。
  */
 val LocalSearchBarInset = staticCompositionLocalOf { 0.dp }
-
-/** 当前悬浮工具框把实际窗口边界交给搜索展开容器；非搜索页面不处理。 */
-internal val LocalSearchAnchorCapture = staticCompositionLocalOf<(Rect) -> Unit> { {} }
 
 internal val LocalSearchGlassState = staticCompositionLocalOf<HazeState?> { null }
 
